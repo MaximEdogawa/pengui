@@ -5,7 +5,7 @@ import Modal from '@/shared/ui/Modal'
 import { X } from 'lucide-react'
 import { useThemeClasses } from '@/shared/hooks'
 import type { OrderBookFilters, OrderBookOrder } from '../../lib/orderBookTypes'
-import CreateOfferForm from '../make-offer/CreateOfferForm'
+import CreateOfferForm from '../limit/CreateOfferForm'
 
 interface CreateOfferModalProps {
   onClose: () => void
