@@ -4,7 +4,7 @@
     "": {
       "name": "bridge-ui",
       "dependencies": {
-        "@maximedogawa/chia-wallet-connect-react": "^0.0.2",
+        "@maximedogawa/chia-wallet-connect-react": "^0.0.4",
         "@tanstack/react-query": "^5.90.16",
         "clsx": "^2.1.1",
         "dexie": "^4.2.1",
@@ -179,7 +179,7 @@
 
     "@lit/reactive-element": ["@lit/reactive-element@1.6.3", "", { "dependencies": { "@lit-labs/ssr-dom-shim": "^1.0.0" } }, "sha512-QuTgnG52Poic7uM1AN5yJ09QMe0O28e10XzSvWDz02TJiiKee4stsiownEIadWm8nYzyDAyT+gKzUoZmiWQtsQ=="],
 
-    "@maximedogawa/chia-wallet-connect-react": ["@maximedogawa/chia-wallet-connect-react@0.0.2", "", { "dependencies": { "@headlessui/react": "^1.7.14", "@reduxjs/toolkit": "^1.9.5", "@walletconnect/modal": "^2.7.0", "@walletconnect/sign-client": "^2.23.0", "@walletconnect/types": "^2.7.6", "axios": "^1.3.5", "bech32": "^2.0.0", "qrcode.react": "^3.1.0", "react-hot-toast": "^2.4.1", "react-redux": "^8.1.2", "redux-persist": "^6.0.0", "swr": "^2.2.5" }, "peerDependencies": { "next": "^16.0.1", "react": "^18.0.0", "react-dom": "^18.0.0" } }, "sha512-lxy0w/0eAzYbN11oI+EupKeLYjkATubzxwdMHjLJchSFY3Q97fQjZ4ildLVh/Hsy+dUXqVjDVgbnfZkMBfjNzw=="],
+    "@maximedogawa/chia-wallet-connect-react": ["@maximedogawa/chia-wallet-connect-react@0.0.4", "", { "dependencies": { "@headlessui/react": "^1.7.14", "@reduxjs/toolkit": "^1.9.5", "@walletconnect/modal": "^2.7.0", "@walletconnect/sign-client": "^2.23.0", "@walletconnect/types": "^2.7.6", "axios": "^1.3.5", "bech32": "^2.0.0", "qrcode.react": "^3.1.0", "react-hot-toast": "^2.4.1", "react-redux": "^8.1.2", "redux-persist": "^6.0.0", "swr": "^2.2.5" }, "peerDependencies": { "next": "^16.0.1", "react": "^18.0.0", "react-dom": "^18.0.0" } }, "sha512-8WBBu2b1Lb0fBfPFv1VzD6+mzDwOzD1yJWrgDuownsGDIIojKdbCr8yKc5pcyy7nfUVhqgcowTAYMi01dsta1g=="],
 
     "@motionone/animation": ["@motionone/animation@10.18.0", "", { "dependencies": { "@motionone/easing": "^10.18.0", "@motionone/types": "^10.17.1", "@motionone/utils": "^10.18.0", "tslib": "^2.3.1" } }, "sha512-9z2p5GFGCm0gBsZbi8rVMOAJCtw1WqBTIPw3ozk06gDvZInBPIsQcHgYogEJ4yuHJ+akuW8g1SEIOpTOvYs8hw=="],
 
