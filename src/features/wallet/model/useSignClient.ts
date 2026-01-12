@@ -4,6 +4,7 @@ import { logger } from '@/shared/lib/logger'
 import { SIGN_CLIENT_CONFIG } from '@/shared/lib/walletConnect/constants/wallet-connect'
 import type { WalletConnectInstance } from '@/shared/lib/walletConnect/types/walletConnect.types'
 import { useQuery } from '@tanstack/react-query'
+import { useEffect } from 'react'
 import SignClient from '@walletconnect/sign-client'
 import { registerWalletConnectListeners } from './useWalletConnectEventListeners'
 
@@ -38,9 +39,13 @@ export function useSignClient() {
     refetchOnReconnect: false,
   })
 
-  // Also register listeners via hook as backup (in case SignClient was cached)
+  // Register listeners as backup via useEffect (in case SignClient was cached)
   // This ensures listeners are registered even if the query returns cached data
-  registerWalletConnectListeners(instanceQuery.data?.signClient)
+  useEffect(() => {
+    if (instanceQuery.data?.signClient) {
+      registerWalletConnectListeners(instanceQuery.data.signClient)
+    }
+  }, [instanceQuery.data?.signClient])
 
   return {
     signClient: instanceQuery.data?.signClient,
