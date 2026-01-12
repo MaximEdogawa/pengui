@@ -21,6 +21,9 @@ export { default as CreateOfferModal } from './ui/modals/CreateOfferModal'
 export { default as CreateOfferForm } from './ui/limit/CreateOfferForm'
 export { default as TakeOfferModal } from './ui/modals/TakeOfferModal'
 
+// Chart feature exports
+export * from './ui/chart'
+
 // Type exports
 export type {
   OrderBookOrder,

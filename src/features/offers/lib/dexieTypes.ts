@@ -78,6 +78,14 @@ export interface DexieHistoricalTradesResponse {
   data: DexieHistoricalTrade[]
 }
 
+export interface DexieHistoricalTradesApiResponse {
+  success: boolean
+  ticker_id: string
+  pool_id?: string
+  timestamp?: number
+  trades: DexieHistoricalTrade[]
+}
+
 export interface DexieOfferSearchParams {
   requested?: string
   offered?: string

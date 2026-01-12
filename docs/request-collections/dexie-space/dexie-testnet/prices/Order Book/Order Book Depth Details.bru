@@ -1,0 +1,16 @@
+meta {
+  name: Order Book Depth Details
+  type: http
+  seq: 1
+}
+
+get {
+  url: https://api-testnet.dexie.space/v3/prices/orderbook?ticker_id=d82dd03f8a9ad2f84353cd953c4de6b21dbaaf7de3ba3f4ddd9abe31ecba80ad_xch&depth=6
+  body: none
+  auth: inherit
+}
+
+params:query {
+  ticker_id: d82dd03f8a9ad2f84353cd953c4de6b21dbaaf7de3ba3f4ddd9abe31ecba80ad_xch
+  depth: 6
+}

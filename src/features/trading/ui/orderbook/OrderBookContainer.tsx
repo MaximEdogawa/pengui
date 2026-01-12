@@ -30,15 +30,19 @@ interface OrderBookContainerProps {
 
 export default function OrderBookContainer({ filters, onOrderClick }: OrderBookContainerProps) {
   const { filters: contextFilters } = useOrderBookFilters()
+  
+  // Always use contextFilters for data fetching (they come from the filter provider and have defaults)
+  // The filters prop is for display/UI purposes only
   const { orderBookData, orderBookLoading, orderBookHasMore, orderBookError } =
     useOrderBook(contextFilters)
 
   const { getCatTokenInfo } = useCatTokens()
 
   // Use composables for filtering, resize, and tooltip
+  // Use contextFilters for filtering to match what was fetched
   const { filteredBuyOrders, filteredSellOrders, calculatePriceFn } = useOrderBookFiltering(
     orderBookData,
-    filters
+    contextFilters
   )
 
   const { sellSectionHeight, buySectionHeight, startResize } = useOrderBookResize()
@@ -70,7 +74,7 @@ export default function OrderBookContainer({ filters, onOrderClick }: OrderBookC
 
     // Calculate numeric price for all orders
     const getNumericPrice = (order: OrderBookOrder) => {
-      return calculateOrderPriceNumeric(order, filters, { getTickerSymbol })
+      return calculateOrderPriceNumeric(order, contextFilters, { getTickerSymbol })
     }
 
     // Calculate best price (lowest for sell, highest for buy)
@@ -106,7 +110,7 @@ export default function OrderBookContainer({ filters, onOrderClick }: OrderBookC
 
     // Cap at 100% and ensure non-negative
     return Math.max(0, Math.min(100, deviation))
-  }, [hoveredOrder, filteredBuyOrders, filteredSellOrders, filters, getTickerSymbol])
+  }, [hoveredOrder, filteredBuyOrders, filteredSellOrders, contextFilters, getTickerSymbol])
 
   // Refs for scrolling
   const sellScrollRef = useRef<HTMLDivElement>(null)
@@ -125,7 +129,7 @@ export default function OrderBookContainer({ filters, onOrderClick }: OrderBookC
 
   // Calculate average price
   const averagePrice = useMemo(() => {
-    if (!filters || (!filters.buyAsset && !filters.sellAsset)) {
+    if (!contextFilters || (!contextFilters.buyAsset?.length && !contextFilters.sellAsset?.length)) {
       return 'N/A'
     }
 
@@ -138,7 +142,7 @@ export default function OrderBookContainer({ filters, onOrderClick }: OrderBookC
       calculatePriceFn,
       formatPriceForDisplay
     )
-  }, [filters, filteredSellOrders, filteredBuyOrders, calculatePriceFn])
+  }, [contextFilters, filteredSellOrders, filteredBuyOrders, calculatePriceFn])
 
   // Scroll sell side to bottom by default when orders load or change
   useEffect(() => {
@@ -174,14 +178,14 @@ export default function OrderBookContainer({ filters, onOrderClick }: OrderBookC
 
   const emptyMessage = useMemo(() => {
     if (
-      filters &&
-      ((filters.buyAsset && filters.buyAsset.length > 0) ||
-        (filters.sellAsset && filters.sellAsset.length > 0))
+      contextFilters &&
+      ((contextFilters.buyAsset && contextFilters.buyAsset.length > 0) ||
+        (contextFilters.sellAsset && contextFilters.sellAsset.length > 0))
     ) {
       return 'No orders found matching your filters. Try adjusting your filters.'
     }
     return 'No orders found. Add filters to see orders.'
-  }, [filters])
+  }, [contextFilters])
 
   const handleOrderClick = (order: OrderBookOrder) => {
     onOrderClick(order)
@@ -200,7 +204,7 @@ export default function OrderBookContainer({ filters, onOrderClick }: OrderBookC
       >
         {/* Header - Fixed at top, outside scrollable sections */}
         <div>
-          <OrderBookTableHeader filters={filters} />
+          <OrderBookTableHeader filters={contextFilters} />
         </div>
 
         {/* Sell Orders Section */}
@@ -214,7 +218,7 @@ export default function OrderBookContainer({ filters, onOrderClick }: OrderBookC
           <OrderBookTable
             orders={filteredSellOrders}
             orderType="sell"
-            filters={filters}
+            filters={contextFilters}
             onClick={handleOrderClick}
             onHover={updateTooltipPosition}
             onMouseLeave={hideTooltip}
@@ -240,7 +244,7 @@ export default function OrderBookContainer({ filters, onOrderClick }: OrderBookC
           <OrderBookTable
             orders={filteredBuyOrders}
             orderType="buy"
-            filters={filters}
+            filters={contextFilters}
             onClick={handleOrderClick}
             onHover={updateTooltipPosition}
             onMouseLeave={hideTooltip}

@@ -4,6 +4,7 @@ import { environment } from '@/shared/lib/config/environment'
 import { logger } from '@/shared/lib/logger'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type {
+  DexieHistoricalTrade,
   DexieHistoricalTradesResponse,
   DexieOfferSearchParams,
   DexieOfferSearchResponse,
@@ -212,18 +213,65 @@ export function useDexieDataService() {
       limit?: number
     }): Promise<DexieHistoricalTradesResponse> => {
       try {
-        const response = await fetch(
-          `${DEXIE_API_BASE_URL}/v3/prices/trades?ticker_id=${tickerId}&limit=${limit}`
-        )
+        const url = `${DEXIE_API_BASE_URL}/v3/prices/historical_trades?ticker_id=${tickerId}&limit=${limit}`
+        logger.info('Fetching historical trades', { url, tickerId, limit })
+        
+        const response = await fetch(url)
 
         if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`)
+          const errorText = await response.text()
+          logger.error('Historical trades API error', {
+            status: response.status,
+            statusText: response.statusText,
+            errorText,
+            tickerId,
+          })
+          throw new Error(`HTTP error! status: ${response.status}, ${errorText}`)
         }
 
         const data = await response.json()
+        
+        logger.info('Historical trades API response', {
+          tickerId,
+          rawResponse: data,
+          hasData: !!data,
+          hasTrades: !!(data && typeof data === 'object' && 'trades' in data),
+          hasDataField: !!(data && typeof data === 'object' && 'data' in data),
+          dataType: typeof data,
+          isArray: Array.isArray(data),
+          tradesLength: (data && typeof data === 'object' && 'trades' in data && Array.isArray(data.trades)) 
+            ? data.trades.length 
+            : (Array.isArray(data) ? data.length : 'N/A'),
+        })
+        
+        // Handle different response structures
+        // The API returns: {success: true, ticker_id: "...", trades: [...]}
+        let tradesData: DexieHistoricalTrade[] = []
+        
+        if (data && typeof data === 'object') {
+          // Check for 'trades' field first (current API structure)
+          if ('trades' in data && Array.isArray(data.trades)) {
+            tradesData = data.trades as DexieHistoricalTrade[]
+          }
+          // Fallback to 'data' field (legacy structure)
+          else if ('data' in data && Array.isArray(data.data)) {
+            tradesData = data.data as DexieHistoricalTrade[]
+          }
+          // If data itself is an array
+          else if (Array.isArray(data)) {
+            tradesData = data as DexieHistoricalTrade[]
+          }
+        }
+        
+        logger.info('Extracted trades data', {
+          tickerId,
+          tradesCount: tradesData.length,
+          firstTrade: tradesData[0],
+        })
+        
         return {
           success: true,
-          data: data.data || data,
+          data: tradesData,
         }
       } catch (error) {
         logger.error('Failed to fetch historical trades:', error)

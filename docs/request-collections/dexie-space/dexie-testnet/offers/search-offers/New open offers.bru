@@ -1,0 +1,15 @@
+meta {
+  name: New open offers
+  type: http
+  seq: 2
+}
+
+get {
+  url: https://api-testnet.dexie.space/v1/offers?sort=date_found
+  body: none
+  auth: inherit
+}
+
+params:query {
+  sort: date_found
+}

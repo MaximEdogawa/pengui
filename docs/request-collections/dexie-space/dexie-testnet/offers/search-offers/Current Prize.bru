@@ -1,0 +1,16 @@
+meta {
+  name: Current Prize
+  type: http
+  seq: 4
+}
+
+get {
+  url: https://api-testnet.dexie.space/v1/offers?requested=TXCH&offered=TBYC
+  body: none
+  auth: inherit
+}
+
+params:query {
+  requested: TXCH
+  offered: TBYC
+}
