@@ -1,0 +1,52 @@
+/* Style overrides to prevent app global styles from affecting WalletConnect modal */
+/* The package's styles are now imported automatically via the package's index.ts */
+
+/* Override global styles that conflict with the app */
+html,
+body {
+  /* Reset package's scrollbar-gutter - use app's own */
+  scrollbar-gutter: auto;
+}
+
+*::selection {
+  /* Reset package's selection color - use app's default */
+  background: revert;
+  color: revert;
+}
+
+/* Reset package's global scrollbar styles - use app's own */
+*::-webkit-scrollbar {
+  width: revert;
+  height: revert;
+}
+
+*::-webkit-scrollbar-button {
+  display: revert;
+  width: revert;
+  height: revert;
+}
+
+*::-webkit-scrollbar-corner {
+  background-color: revert;
+}
+
+*::-webkit-scrollbar-thumb {
+  height: revert;
+  border: revert;
+  background-clip: revert;
+  background-color: revert;
+  -webkit-border-radius: revert;
+}
+
+/* WalletConnect Modal Style Isolation */
+/* The modal uses web components with Shadow DOM - styles are injected internally */
+/* We only need to prevent app's global border style from affecting the modal host */
+
+/* Reset ONLY the border from app's global border-border style */
+/* The modal's shadow DOM isolates internal styles, so we don't need to reset everything */
+w3m-modal {
+  border: none !important;
+  /* Ensure modal is visible and above everything */
+  z-index: 9999 !important;
+  position: fixed !important;
+}
