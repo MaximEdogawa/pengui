@@ -23,7 +23,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { OrderBookOrder } from '../../lib/orderBookTypes'
 import { useOrderBook } from '../../model/useOrderBook'
 import { useOrderBookOfferSubmission } from '../../model/useOrderBookOfferSubmission'
-import OrderDetailsSection from '../take-offer/OrderDetailsSection'
+import OrderDetailsSection from '../market/OrderDetailsSection'
 import PriceAdjustmentSlider from './PriceAdjustmentSlider'
 
 interface MakerOfferContentProps {

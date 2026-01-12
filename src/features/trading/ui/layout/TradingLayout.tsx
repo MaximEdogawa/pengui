@@ -6,12 +6,12 @@ import { useCallback, useState } from 'react'
 import type { OrderBookOrder } from '../../lib/orderBookTypes'
 import { useOrderBookFilters } from '../../model/OrderBookFiltersProvider'
 import { useOrderBookOfferSubmission } from '../../model/useOrderBookOfferSubmission'
-import CreateOfferForm from '../make-offer/CreateOfferForm'
+import CreateOfferForm from '../limit/CreateOfferForm'
 import CreateOfferModal from '../modals/CreateOfferModal'
 import TakeOfferModal from '../modals/TakeOfferModal'
 import OrderBookFilters from '../orderbook/OrderBookFilters'
-import MarketOfferTab from '../take-offer/MarketOfferTab'
-import LimitOfferTab from './LimitOfferTab'
+import MarketOfferTab from '../market/MarketOfferContent'
+import LimitOfferTab from './OfferTab'
 import TradingContent from './TradingContent'
 
 interface TradingLayoutProps {
@@ -165,14 +165,7 @@ export default function TradingLayout({
           {/* Keep both components mounted to preserve state when switching tabs */}
           <div className={`${currentMode === 'taker' ? '' : 'hidden'}`}>
             <div
-              className="w-full py-4"
-              style={{
-                // Match top/bottom padding (1rem) while accounting for scrollbar-gutter on right
-                // Scrollbar gutter is typically ~15-17px, using 16px as approximation
-                // Visual spacing: left = 1rem, right = 1rem (padding) + scrollbar gutter = 1rem visually
-                paddingLeft: '1rem',
-                paddingRight: '0.25rem',
-              }}
+              className="w-full p-4"
             >
               {selectedOrderForTaking ? (
                 <MarketOfferTab
@@ -205,14 +198,7 @@ export default function TradingLayout({
 
           <div className={`${currentMode === 'maker' ? '' : 'hidden'}`}>
             <div
-              className="w-full py-4"
-              style={{
-                // Match top/bottom padding (1rem) while accounting for scrollbar-gutter on right
-                // Scrollbar gutter is typically ~15-17px, using 16px as approximation
-                // Visual spacing: left = 1rem, right = 1rem (padding) + scrollbar gutter = 1rem visually
-                paddingLeft: '1rem',
-                paddingRight: '0.25rem',
-              }}
+              className="w-full p-4"
             >
               {selectedOrderForMaking ? (
                 <CreateOfferForm

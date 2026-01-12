@@ -3,7 +3,7 @@ import { X } from 'lucide-react'
 import { useThemeClasses } from '@/shared/hooks'
 import type { OfferDetails } from '@/entities/offer'
 import type { OrderBookOrder } from '../../lib/orderBookTypes'
-import MarketOfferTab from '../take-offer/MarketOfferTab'
+import MarketOfferTab from '../market/MarketOfferContent'
 
 interface TakeOfferModalProps {
   onClose: () => void

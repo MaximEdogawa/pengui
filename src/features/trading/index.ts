@@ -16,9 +16,9 @@ export { default as OrderTooltip } from './ui/orderbook/OrderTooltip'
 export { default as TradingLayout } from './ui/layout/TradingLayout'
 export { default as TradingContent } from './ui/layout/TradingContent'
 export { default as FilterPanel } from './ui/layout/FilterPanel'
-export { default as LimitOfferTab } from './ui/layout/LimitOfferTab'
+export { default as LimitOfferTab } from './ui/layout/OfferTab'
 export { default as CreateOfferModal } from './ui/modals/CreateOfferModal'
-export { default as CreateOfferForm } from './ui/make-offer/CreateOfferForm'
+export { default as CreateOfferForm } from './ui/limit/CreateOfferForm'
 export { default as TakeOfferModal } from './ui/modals/TakeOfferModal'
 
 // Type exports
