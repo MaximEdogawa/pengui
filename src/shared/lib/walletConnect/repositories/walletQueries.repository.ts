@@ -41,17 +41,42 @@ export async function makeWalletRequest<T>(
       return { success: false, error: 'Session no longer exists' }
     }
 
+    // Get the actual session to validate chainId
+    const actualSession = activeSessions.find((s) => s.topic === session.topic)
+    if (!actualSession) {
+      logger.warn(`❌ Could not find session ${session.topic} in SignClient`)
+      return { success: false, error: 'Session not found' }
+    }
+
+    // Validate that the chainId is in the session's namespaces (if chains are available)
+    const sessionChains = actualSession.namespaces?.chia?.chains || []
+    let validChainId = session.chainId
+
+    // Only validate if the session has chains defined
+    if (sessionChains.length > 0) {
+      // If the requested chainId is not in the session's chains, use the first available chainId
+      if (!sessionChains.includes(session.chainId)) {
+        validChainId = sessionChains[0]
+        logger.warn(
+          `⚠️ Requested chainId ${session.chainId} not in session chains [${sessionChains.join(', ')}]. Using ${validChainId} instead.`
+        )
+      }
+    } else {
+      // Session doesn't have chains in namespaces - use the provided chainId
+      // This can happen during session restoration or with certain wallet implementations
+      logger.debug(`ℹ️ Session ${session.topic} has no chains in namespaces, using provided chainId: ${session.chainId}`)
+    }
+
     const timeoutPromise = new Promise<never>((_, reject) => {
       setTimeout(() => {
         reject(new Error('Request timeout after 30 seconds'))
       }, REQUEST_TIMEOUT)
     })
 
-    // Use the wallet's actual chainId from the session
-    // WalletConnect requires the chainId to match what the wallet is connected to
+    // Use the validated chainId that exists in the session's namespaces
     const walletRequestPromise = signClient.request({
       topic: session.topic,
-      chainId: session.chainId,
+      chainId: validChainId,
       request: {
         method,
         params: { fingerprint: session.fingerprint, ...data },

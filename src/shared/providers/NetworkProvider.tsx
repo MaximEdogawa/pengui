@@ -196,22 +196,32 @@ export function NetworkProvider({ children }: { children: React.ReactNode }) {
               // Try to get wallet balance as a test request
               const result = await getAssetBalance(signClient, testSession, null, null)
 
-              // If request failed, show network mismatch toast
+              // If request failed, check if there's actually a network mismatch
               if (!result.success) {
                 logger.warn(`⚠️ Wallet request failed after network switch: ${result.error}`)
-                checkNetworkMismatch(newNetwork, walletChainId, sessionData.topic)
+                // Only show mismatch toast if there's an actual network mismatch
+                const expectedChainId = networkToChainId(newNetwork)
+                if (walletChainId !== expectedChainId) {
+                  checkNetworkMismatch(newNetwork, walletChainId, sessionData.topic)
+                }
+                // If networks match but request failed, don't show toast (might be other issues)
               } else {
                 logger.info('✅ Wallet request succeeded after network switch')
                 // Request succeeded, do nothing (no toast)
               }
             } catch (error) {
               logger.error('❌ Error testing wallet connection after network switch:', error)
-              // On error, try to show mismatch toast if we have session data
+              // On error, only show mismatch toast if there's an actual network mismatch
               const sessionData = walletConnectSession || selectedSession
               if (sessionData) {
                 const chains = sessionData.namespaces?.chia?.chains
                 const walletChainId = chains && chains.length > 0 ? chains[0] : networkToChainId(newNetwork)
-                checkNetworkMismatch(newNetwork, walletChainId, sessionData.topic)
+                const expectedChainId = networkToChainId(newNetwork)
+                // Only show toast if there's an actual mismatch
+                if (walletChainId !== expectedChainId) {
+                  checkNetworkMismatch(newNetwork, walletChainId, sessionData.topic)
+                }
+                // If networks match but error occurred, don't show toast (might be other issues)
               }
             }
           }, 500) // Wait 500ms for network switch to complete

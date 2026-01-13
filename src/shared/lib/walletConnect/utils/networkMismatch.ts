@@ -23,13 +23,13 @@ export function checkNetworkMismatch(
   const expectedChainId = networkToChainId(appNetwork)
   const walletNetwork = chainIdToNetwork(walletChainId)
 
-  // Check if networks match
+  // Check if networks match - if they do, don't show toast
   if (expectedChainId === walletChainId) {
     return false // No mismatch
   }
 
   // Create unique key for deduplication
-  const toastKey = `${sessionTopic}-${walletChainId}`
+  const toastKey = `${sessionTopic}-${walletChainId}-${appNetwork}`
 
   // Only show toast once per session+network combo
   if (!shownToasts.has(toastKey)) {

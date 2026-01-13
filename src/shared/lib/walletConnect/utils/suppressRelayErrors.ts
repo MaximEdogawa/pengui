@@ -109,6 +109,22 @@ export function suppressRelayErrors() {
       return
     }
 
+    // Check for chainId validation errors (happens during session restoration)
+    const hasChainIdError = args.some((arg) => {
+      const argStr = typeof arg === 'string' ? arg : String(arg)
+      return (
+        (argStr.includes('Missing or invalid') && argStr.includes('chainId')) ||
+        (argStr.includes('request()') && argStr.includes('chainId')) ||
+        (argStr.includes('isValidRequest()') && argStr.includes('failed'))
+      )
+    })
+
+    if (hasChainIdError) {
+      // Suppress chainId validation errors - these occur during session restoration
+      // when the chainId might not match the session's namespaces yet
+      return
+    }
+
     // Also check if any argument contains relay error patterns
     const hasRelayError = args.some((arg) => {
       const argStr = typeof arg === 'string' ? arg : String(arg)
