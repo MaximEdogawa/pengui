@@ -30,6 +30,23 @@ function getCandleStartTime(timestamp: number, timeframe: Timeframe): number {
   const duration = getTimeframeDurationMs(timeframe)
   return Math.floor(timestamp / duration) * duration
 }
+
+function isValidTrade(trade: unknown): trade is DexieHistoricalTrade {
+  return (
+    !!trade &&
+    typeof trade === 'object' &&
+    'timestamp' in trade &&
+    'price' in trade &&
+    'volume' in trade &&
+    typeof (trade as DexieHistoricalTrade).timestamp === 'number' &&
+    typeof (trade as DexieHistoricalTrade).price === 'number' &&
+    typeof (trade as DexieHistoricalTrade).volume === 'number' &&
+    !isNaN((trade as DexieHistoricalTrade).timestamp) &&
+    !isNaN((trade as DexieHistoricalTrade).price) &&
+    !isNaN((trade as DexieHistoricalTrade).volume)
+  )
+}
+
 export function aggregateTradesToOHLC(
   trades: DexieHistoricalTrade[] | null | undefined,
   timeframe: Timeframe
@@ -38,21 +55,8 @@ export function aggregateTradesToOHLC(
     return []
   }
 
-  const validTrades = trades.filter(
-    (trade) =>
-      trade &&
-      typeof trade === 'object' &&
-      typeof trade.timestamp === 'number' &&
-      typeof trade.price === 'number' &&
-      typeof trade.volume === 'number' &&
-      !isNaN(trade.timestamp) &&
-      !isNaN(trade.price) &&
-      !isNaN(trade.volume)
-  )
-
-  if (validTrades.length === 0) {
-    return []
-  }
+  const validTrades = trades.filter(isValidTrade)
+  if (validTrades.length === 0) return []
 
   const sortedTrades = [...validTrades].sort((a, b) => a.timestamp - b.timestamp)
   const candlesMap = sortedTrades.reduce((map, trade) => {
@@ -212,4 +216,3 @@ export function generateSyntheticOHLCFromOrderBook(
   
   return candles
 }
-

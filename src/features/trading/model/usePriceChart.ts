@@ -14,6 +14,14 @@ interface UsePriceChartOptions {
   config: ChartConfig
 }
 
+const EMPTY_INDICATORS = {
+  sma: {},
+  ema: {},
+  rsi: [],
+  macd: [],
+  bollingerBands: [],
+}
+
 export function usePriceChart({ config }: UsePriceChartOptions) {
   const { filters } = useOrderBookFilters()
   const { data: tickersData } = useTickers()
@@ -71,15 +79,7 @@ export function usePriceChart({ config }: UsePriceChartOptions) {
   const isUsingSyntheticData = ohlcData.length === 0 && syntheticOHLC.length > 0
 
   const indicators = useMemo(() => {
-    if (chartOHLCData.length === 0) {
-      return {
-        sma: {},
-        ema: {},
-        rsi: [],
-        macd: [],
-        bollingerBands: [],
-      }
-    }
+    if (chartOHLCData.length === 0) return EMPTY_INDICATORS
 
     return calculateIndicatorsFromOHLC(chartOHLCData, {
       sma: config.indicators.sma.enabled ? config.indicators.sma.periods : undefined,

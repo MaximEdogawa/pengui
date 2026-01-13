@@ -1,292 +1,173 @@
-/**
- * Technical Indicators
- * Calculations for SMA, EMA, RSI, MACD, and Bollinger Bands
- */
+import type { OHLCData } from './chartTypes'
 
-import type { MACDData, BollingerBandsData, OHLCData } from './chartTypes'
-
-/**
- * Calculate Simple Moving Average (SMA)
- */
 export function calculateSMA(data: number[], period: number): number[] {
-  if (data.length < period) {
-    return []
-  }
+  if (data.length < period) return []
 
-  const sma: number[] = []
-  // eslint-disable-next-line no-restricted-syntax
-  for (let i = period - 1; i < data.length; i++) {
-    const sum = data.slice(i - period + 1, i + 1).reduce((a, b) => a + b, 0)
-    sma.push(sum / period)
-  }
+  const sma = Array.from({ length: data.length - period + 1 }, (_, i) => {
+    const slice = data.slice(i, i + period)
+    return slice.reduce((sum, val) => sum + val, 0) / period
+  })
 
-  return sma
+  return Array(period - 1).fill(NaN).concat(sma)
 }
 
-/**
- * Calculate Exponential Moving Average (EMA)
- */
 export function calculateEMA(data: number[], period: number): number[] {
-  if (data.length < period) {
-    return []
-  }
+  if (data.length < period) return []
 
-  const ema: number[] = []
   const multiplier = 2 / (period + 1)
+  const initialSMA = data.slice(0, period).reduce((sum, val) => sum + val, 0) / period
 
-  // Start with SMA for the first value
-  const firstSMA = data.slice(0, period).reduce((a, b) => a + b, 0) / period
-  ema.push(firstSMA)
+  const ema = data.slice(period).reduce(
+    (acc, value) => {
+      const prevEMA = acc[acc.length - 1]
+      acc.push((value - prevEMA) * multiplier + prevEMA)
+      return acc
+    },
+    [initialSMA]
+  )
 
-  // Calculate EMA for remaining values
-  // eslint-disable-next-line no-restricted-syntax
-  for (let i = period; i < data.length; i++) {
-    const currentEMA = (data[i] - ema[ema.length - 1]) * multiplier + ema[ema.length - 1]
-    ema.push(currentEMA)
-  }
-
-  return ema
+  return Array(period - 1).fill(NaN).concat(ema)
 }
 
-/**
- * Calculate Relative Strength Index (RSI)
- */
 export function calculateRSI(data: number[], period: number = 14): number[] {
-  if (data.length < period + 1) {
-    return []
-  }
+  if (data.length < period + 1) return []
 
-  const rsi: number[] = []
-  const gains: number[] = []
-  const losses: number[] = []
+  const changes = data.slice(1).map((val, i) => val - data[i])
+  const gains = changes.map(change => change > 0 ? change : 0)
+  const losses = changes.map(change => change < 0 ? -change : 0)
 
-  // Calculate price changes
-  // eslint-disable-next-line no-restricted-syntax
-  for (let i = 1; i < data.length; i++) {
-    const change = data[i] - data[i - 1]
-    gains.push(change > 0 ? change : 0)
-    losses.push(change < 0 ? Math.abs(change) : 0)
-  }
-
-  // Calculate initial average gain and loss
   let avgGain = gains.slice(0, period).reduce((a, b) => a + b, 0) / period
   let avgLoss = losses.slice(0, period).reduce((a, b) => a + b, 0) / period
 
-  // Calculate RSI for first period
-  if (avgLoss === 0) {
-    rsi.push(100)
-  } else {
-    const rs = avgGain / avgLoss
-    rsi.push(100 - 100 / (1 + rs))
+  const calculateRSIValue = (gain: number, loss: number) => {
+    if (loss === 0) return 100
+    const rs = gain / loss
+    return 100 - (100 / (1 + rs))
   }
 
-  // Calculate RSI for remaining periods using Wilder's smoothing
-  // eslint-disable-next-line no-restricted-syntax
-  for (let i = period; i < gains.length; i++) {
-    avgGain = (avgGain * (period - 1) + gains[i]) / period
-    avgLoss = (avgLoss * (period - 1) + losses[i]) / period
+  const rsi = [calculateRSIValue(avgGain, avgLoss)]
 
-    if (avgLoss === 0) {
-      rsi.push(100)
-    } else {
-      const rs = avgGain / avgLoss
-      rsi.push(100 - 100 / (1 + rs))
-    }
-  }
+  gains.slice(period).forEach((gain, i) => {
+    avgGain = (avgGain * (period - 1) + gain) / period
+    avgLoss = (avgLoss * (period - 1) + losses[period + i]) / period
+    rsi.push(calculateRSIValue(avgGain, avgLoss))
+  })
 
-  return rsi
+  return Array(period).fill(NaN).concat(rsi)
 }
 
-/**
- * Calculate MACD (Moving Average Convergence Divergence)
- */
 export function calculateMACD(
   data: number[],
   fastPeriod: number = 12,
   slowPeriod: number = 26,
   signalPeriod: number = 9
-): MACDData[] {
-  if (data.length < slowPeriod + signalPeriod) {
-    return []
-  }
-
+): Array<{ time: number; macd: number; signal: number; histogram: number }> {
   const fastEMA = calculateEMA(data, fastPeriod)
   const slowEMA = calculateEMA(data, slowPeriod)
 
-  // Calculate MACD line (fast EMA - slow EMA)
-  const macdLine: number[] = []
-  const offset = slowPeriod - fastPeriod
-
-  // eslint-disable-next-line no-restricted-syntax
-  for (let i = 0; i < slowEMA.length; i++) {
-    if (i + offset < fastEMA.length) {
-      macdLine.push(fastEMA[i + offset] - slowEMA[i])
-    }
+  if (fastEMA.length === 0 || slowEMA.length === 0) {
+    return []
   }
 
-  // Calculate signal line (EMA of MACD line)
-  const signalLine = calculateEMA(macdLine, signalPeriod)
+  const minLength = Math.min(fastEMA.length, slowEMA.length)
+  const macdLine = Array.from({ length: minLength }, (_, i) => {
+    const fast = fastEMA[i]
+    const slow = slowEMA[i]
+    return (!isNaN(fast) && !isNaN(slow)) ? fast - slow : NaN
+  })
 
-  // Calculate histogram (MACD - Signal)
-  const macdData: MACDData[] = []
+  const signalLine = calculateEMA(macdLine.filter(v => !isNaN(v)), signalPeriod)
   const signalOffset = macdLine.length - signalLine.length
 
-  // eslint-disable-next-line no-restricted-syntax
-  for (let i = 0; i < signalLine.length; i++) {
-    const macd = macdLine[i + signalOffset]
-    const signal = signalLine[i]
-    macdData.push({
-      time: 0, // Will be set by caller
-      value: macd,
-      macd,
-      signal,
-      histogram: macd - signal,
-    })
-  }
+  return macdLine.map((macdValue, i) => {
+    const signalValue = signalLine[i - signalOffset] ?? NaN
+    const histogram = (!isNaN(macdValue) && !isNaN(signalValue)) ? macdValue - signalValue : NaN
 
-  return macdData
+    return {
+      time: i,
+      macd: isNaN(macdValue) ? NaN : macdValue,
+      signal: isNaN(signalValue) ? NaN : signalValue,
+      histogram,
+    }
+  })
 }
 
-/**
- * Calculate Bollinger Bands
- */
 export function calculateBollingerBands(
   data: number[],
   period: number = 20,
   stdDev: number = 2
-): BollingerBandsData[] {
-  if (data.length < period) {
-    return []
-  }
+): Array<{ time: number; upper: number; middle: number; lower: number }> {
+  if (data.length < period) return []
 
   const sma = calculateSMA(data, period)
-  const bands: BollingerBandsData[] = []
-
-  // eslint-disable-next-line no-restricted-syntax
-  for (let i = 0; i < sma.length; i++) {
-    const startIdx = i
-    const endIdx = i + period
-    const slice = data.slice(startIdx, endIdx)
-
-    // Calculate standard deviation
-    const mean = sma[i]
-    const variance =
-      slice.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / period
+  const result = Array.from({ length: data.length - period + 1 }, (_, i) => {
+    const idx = period - 1 + i
+    const slice = data.slice(i, i + period)
+    const mean = sma[idx]
+    const variance = slice.reduce((sum, val) => sum + Math.pow(val - mean, 2), 0) / period
     const standardDeviation = Math.sqrt(variance)
 
-    bands.push({
-      time: 0, // Will be set by caller
-      value: mean,
-      upper: mean + stdDev * standardDeviation,
+    return {
+      time: idx,
+      upper: mean + (standardDeviation * stdDev),
       middle: mean,
-      lower: mean - stdDev * standardDeviation,
-    })
-  }
+      lower: mean - (standardDeviation * stdDev),
+    }
+  })
 
-  return bands
+  return Array(period - 1).fill(null).map((_, i) => ({
+    time: i,
+    upper: NaN,
+    middle: NaN,
+    lower: NaN,
+  })).concat(result)
 }
 
-/**
- * Calculate indicators from OHLC data
- */
 export function calculateIndicatorsFromOHLC(
   ohlcData: OHLCData[],
-  config: {
+  options: {
     sma?: number[]
     ema?: number[]
     rsi?: boolean
     macd?: boolean
     bollingerBands?: boolean
   }
-): {
-  sma: Record<number, number[]>
-  ema: Record<number, number[]>
-  rsi: number[]
-  macd: MACDData[]
-  bollingerBands: BollingerBandsData[]
-} {
-  const closes = ohlcData.map((c) => c.close)
-  const times = ohlcData.map((c) => c.time)
+) {
+  const closes = ohlcData.map(c => c.close)
 
-  const result: {
-    sma: Record<number, number[]>
-    ema: Record<number, number[]>
-    rsi: number[]
-    macd: MACDData[]
-    bollingerBands: BollingerBandsData[]
-  } = {
-    sma: {},
-    ema: {},
-    rsi: [],
-    macd: [],
-    bollingerBands: [],
-  }
+  const sma = options.sma
+    ? Object.fromEntries(options.sma.map(period => [period, calculateSMA(closes, period)]))
+    : {}
 
-  // Calculate SMA
-  if (config.sma) {
-    for (const period of config.sma) {
-      const smaValues = calculateSMA(closes, period)
-      // Align with original data (SMA starts after period)
-      result.sma[period] = new Array(period - 1).fill(NaN).concat(smaValues)
-    }
-  }
+  const ema = options.ema
+    ? Object.fromEntries(options.ema.map(period => [period, calculateEMA(closes, period)]))
+    : {}
 
-  // Calculate EMA
-  if (config.ema) {
-    for (const period of config.ema) {
-      const emaValues = calculateEMA(closes, period)
-      // Align with original data (EMA starts after period)
-      result.ema[period] = new Array(period - 1).fill(NaN).concat(emaValues)
-    }
-  }
+  const rsi = options.rsi ? calculateRSI(closes) : []
 
-  // Calculate RSI
-  if (config.rsi) {
-    const rsiValues = calculateRSI(closes)
-    // Align with original data (RSI starts after period + 1)
-    result.rsi = new Array(15).fill(NaN).concat(rsiValues)
-  }
-
-  // Calculate MACD
-  if (config.macd) {
-    const macdData = calculateMACD(closes)
-    // Set times from OHLC data
-    const macdOffset = closes.length - macdData.length
-    macdData.forEach((macd, idx) => {
-      macd.time = times[idx + macdOffset] || 0
-    })
-    // Align with original data
-    result.macd = new Array(closes.length - macdData.length)
-      .fill(null)
-      .map(() => ({
-        time: 0,
-        value: NaN,
-        macd: NaN,
-        signal: NaN,
-        histogram: NaN,
+  const macd = options.macd
+    ? calculateMACD(closes).map((d, idx) => ({
+        time: ohlcData[idx]?.time ?? d.time,
+        macd: d.macd,
+        signal: d.signal,
+        histogram: d.histogram,
       }))
-      .concat(macdData)
-  }
+    : []
 
-  // Calculate Bollinger Bands
-  if (config.bollingerBands) {
-    const bands = calculateBollingerBands(closes)
-    // Set times from OHLC data
-    bands.forEach((band, idx) => {
-      band.time = times[idx + 19] || 0 // period - 1 offset
-    })
-    // Align with original data
-    result.bollingerBands = new Array(19)
-      .fill(null)
-      .map(() => ({
-        time: 0,
-        value: NaN,
-        upper: NaN,
-        middle: NaN,
-        lower: NaN,
+  const bollingerBands = options.bollingerBands
+    ? calculateBollingerBands(closes).map((d, idx) => ({
+        time: ohlcData[idx]?.time ?? d.time,
+        upper: d.upper,
+        middle: d.middle,
+        lower: d.lower,
       }))
-      .concat(bands)
-  }
+    : []
 
-  return result
+  return {
+    sma,
+    ema,
+    rsi,
+    macd,
+    bollingerBands,
+  }
 }
