@@ -47,6 +47,8 @@ export async function makeWalletRequest<T>(
       }, REQUEST_TIMEOUT)
     })
 
+    // Use the wallet's actual chainId from the session
+    // WalletConnect requires the chainId to match what the wallet is connected to
     const walletRequestPromise = signClient.request({
       topic: session.topic,
       chainId: session.chainId,

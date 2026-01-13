@@ -2,8 +2,9 @@
 
 import { useDexieDataService } from '@/features/offers/api/useDexieDataService'
 import type { DexieOffer } from '@/features/offers/lib/dexieTypes'
-import { getNativeTokenTicker } from '@/shared/lib/config/environment'
+import { getNativeTokenTickerForNetwork } from '@/shared/lib/config/environment'
 import { logger } from '@/shared/lib/logger'
+import { useNetwork } from '@/shared/hooks/useNetwork'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useMemo } from 'react'
 import type {
@@ -21,6 +22,7 @@ const DEFAULT_PAGINATION: OrderBookPagination = 50
  */
 export function useOrderBook(filters?: OrderBookFilters) {
   const dexieDataService = useDexieDataService()
+  const { network } = useNetwork()
 
   // Log filters on mount and when they change (debug only, minimal data)
   useEffect(() => {
@@ -91,7 +93,7 @@ export function useOrderBook(filters?: OrderBookFilters) {
 
   // Helper function to determine if an offer is a sell order (offering native token)
   const isSellOrder = (order: OrderBookOrder): boolean => {
-    const nativeTicker = getNativeTokenTicker()
+    const nativeTicker = getNativeTokenTickerForNetwork(network)
     return order.offering.some(
       (asset) => asset.code === nativeTicker || asset.code === 'TXCH' || asset.code === 'XCH'
     )
@@ -149,7 +151,7 @@ export function useOrderBook(filters?: OrderBookFilters) {
 
   // Helper function to normalize ticker for API (XCH -> TXCH on testnet, etc.)
   const normalizeTickerForApi = (ticker: string): string => {
-    const nativeTicker = getNativeTokenTicker()
+    const nativeTicker = getNativeTokenTickerForNetwork(network)
     // If the ticker is XCH or TXCH, normalize to the correct native token for the network
     if (ticker.toUpperCase() === 'XCH' || ticker.toUpperCase() === 'TXCH') {
       return nativeTicker
@@ -279,8 +281,8 @@ export function useOrderBook(filters?: OrderBookFilters) {
     const buyKey = [...buyAssets].sort().join(',')
     const sellKey = [...sellAssets].sort().join(',')
 
-    return ['orderBook', buyKey, sellKey, pagination]
-  }, [filters?.buyAsset, filters?.sellAsset, pagination])
+    return ['orderBook', buyKey, sellKey, pagination, network]
+  }, [filters?.buyAsset, filters?.sellAsset, pagination, network])
 
   // Main order book query
   const orderBookQuery = useQuery<OrderBookQueryResult>({

@@ -1,7 +1,8 @@
 'use client'
 
 import { useCatTokens } from '@/shared/hooks/useTickers'
-import { getNativeTokenTicker } from '@/shared/lib/config/environment'
+import { getNativeTokenTickerForNetwork } from '@/shared/lib/config/environment'
+import { useNetwork } from '@/shared/hooks/useNetwork'
 import { copyToClipboard } from '@/shared/lib/utils/clipboard'
 import { Check, Copy } from 'lucide-react'
 import { useCallback, useState } from 'react'
@@ -22,6 +23,7 @@ export default function OrderDetailsSection({
   priceDeviationPercent,
 }: OrderDetailsSectionProps) {
   const { getCatTokenInfo } = useCatTokens()
+  const { network } = useNetwork()
   const [copiedId, setCopiedId] = useState(false)
   const [copiedOfferString, setCopiedOfferString] = useState(false)
   const [copiedMakerId, setCopiedMakerId] = useState(false)
@@ -29,11 +31,11 @@ export default function OrderDetailsSection({
   const getTickerSymbol = useCallback(
     (assetId: string, code?: string): string => {
       if (code) return code
-      if (!assetId) return getNativeTokenTicker()
+      if (!assetId) return getNativeTokenTickerForNetwork(network)
       const tickerInfo = getCatTokenInfo(assetId)
       return tickerInfo?.ticker || assetId.slice(0, 8)
     },
-    [getCatTokenInfo]
+    [getCatTokenInfo, network]
   )
 
   const handleCopyId = useCallback(async () => {

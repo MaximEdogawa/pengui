@@ -2,7 +2,8 @@
 
 import { useThemeClasses } from '@/shared/hooks'
 import { useCatTokens } from '@/shared/hooks/useTickers'
-import { getNativeTokenTicker } from '@/shared/lib/config/environment'
+import { getNativeTokenTickerForNetwork } from '@/shared/lib/config/environment'
+import { useNetwork } from '@/shared/hooks/useNetwork'
 import { X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { SuggestionItem } from '../../lib/orderBookTypes'
@@ -30,6 +31,7 @@ export default function OrderBookFilters({ onFiltersChange }: OrderBookFiltersPr
   } = useOrderBookFilters()
 
   const { availableCatTokens } = useCatTokens()
+  const { network } = useNetwork()
   const [showSuggestions, setShowSuggestions] = useState(false)
   const searchInputRef = useRef<HTMLInputElement>(null)
   const suggestionsRef = useRef<HTMLDivElement>(null)
@@ -46,7 +48,7 @@ export default function OrderBookFilters({ onFiltersChange }: OrderBookFiltersPr
     const suggestions: SuggestionItem[] = []
 
     // Normalize XCH searches to native token ticker based on network
-    const nativeTicker = getNativeTokenTicker().toLowerCase()
+    const nativeTicker = getNativeTokenTickerForNetwork(network).toLowerCase()
     const normalizedSearch =
       lowerSearch === 'xch' || lowerSearch === 'txch' ? nativeTicker : lowerSearch
 
@@ -161,7 +163,7 @@ export default function OrderBookFilters({ onFiltersChange }: OrderBookFiltersPr
                 setShowSuggestions(true)
               }
             }}
-            placeholder={`Search assets (e.g., ${getNativeTokenTicker()}, TBYC)...`}
+            placeholder={`Search assets (e.g., ${getNativeTokenTickerForNetwork(network)}, TBYC)...`}
             className={`w-full px-2 py-1.5 text-xs rounded-lg border-2 ${t.border} ${t.bg} ${t.text} focus:outline-none focus:ring-2 focus:ring-blue-500/50 backdrop-blur-sm`}
           />
 

@@ -1,6 +1,7 @@
 'use client'
 
 import PenguinLogo from '@/shared/ui/PenguinLogo'
+import NetworkPicker from '@/shared/ui/NetworkPicker'
 import { ConnectButton } from '@maximedogawa/chia-wallet-connect-react'
 
 export default function LoginPage() {
@@ -78,6 +79,10 @@ export default function LoginPage() {
                 </div>
               </div>
             </div>
+          </div>
+          {/* Network Picker */}
+          <div className="flex justify-center w-full">
+            <NetworkPicker />
           </div>
         </div>
 

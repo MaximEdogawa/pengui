@@ -2,7 +2,8 @@
 
 import { useThemeClasses } from '@/shared/hooks'
 import { useCatTokens } from '@/shared/hooks/useTickers'
-import { getNativeTokenTicker } from '@/shared/lib/config/environment'
+import { getNativeTokenTickerForNetwork } from '@/shared/lib/config/environment'
+import { useNetwork } from '@/shared/hooks/useNetwork'
 import { Loader2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import {
@@ -69,15 +70,16 @@ export default function OrderBookTable({
 }: OrderBookTableProps) {
   const { t } = useThemeClasses()
   const { getCatTokenInfo } = useCatTokens()
+  const { network } = useNetwork()
 
   const getTickerSymbol = useCallback(
     (assetId: string, code?: string): string => {
       if (code) return code
-      if (!assetId) return getNativeTokenTicker()
+      if (!assetId) return getNativeTokenTickerForNetwork(network)
       const tickerInfo = getCatTokenInfo(assetId)
       return tickerInfo?.ticker || assetId.slice(0, 8)
     },
-    [getCatTokenInfo]
+    [getCatTokenInfo, network]
   )
 
   const getPriceHeaderTicker = (): string => {
@@ -87,7 +89,7 @@ export default function OrderBookTable({
     if (filters?.sellAsset && filters.sellAsset.length > 0) {
       return filters.sellAsset[0]
     }
-    return getNativeTokenTicker()
+    return getNativeTokenTickerForNetwork(network)
   }
 
   const calculateOrderPrice = useCallback(
@@ -318,6 +320,8 @@ interface OrderBookTableHeaderProps {
 }
 
 export function OrderBookTableHeader({ filters }: OrderBookTableHeaderProps) {
+  const { network } = useNetwork()
+  
   const getPriceHeaderTicker = (): string => {
     if (filters?.buyAsset && filters.buyAsset.length > 0) {
       return filters.buyAsset[0]
@@ -325,7 +329,7 @@ export function OrderBookTableHeader({ filters }: OrderBookTableHeaderProps) {
     if (filters?.sellAsset && filters.sellAsset.length > 0) {
       return filters.sellAsset[0]
     }
-    return getNativeTokenTicker()
+    return getNativeTokenTickerForNetwork(network)
   }
 
   return (

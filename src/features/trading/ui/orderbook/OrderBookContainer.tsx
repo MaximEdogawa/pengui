@@ -1,7 +1,8 @@
 'use client'
 
 import { useCatTokens } from '@/shared/hooks/useTickers'
-import { getNativeTokenTicker } from '@/shared/lib/config/environment'
+import { getNativeTokenTickerForNetwork } from '@/shared/lib/config/environment'
+import { useNetwork } from '@/shared/hooks/useNetwork'
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { useOrderBookFiltering } from '../../composables/useOrderBookFiltering'
 import { useOrderBookResize } from '../../composables/useOrderBookResize'
@@ -34,6 +35,7 @@ export default function OrderBookContainer({ filters, onOrderClick }: OrderBookC
     useOrderBook(contextFilters)
 
   const { getCatTokenInfo } = useCatTokens()
+  const { network } = useNetwork()
 
   // Use composables for filtering, resize, and tooltip
   const { filteredBuyOrders, filteredSellOrders, calculatePriceFn } = useOrderBookFiltering(
@@ -50,11 +52,11 @@ export default function OrderBookContainer({ filters, onOrderClick }: OrderBookC
   const getTickerSymbol = useCallback(
     (assetId: string, code?: string): string => {
       if (code) return code
-      if (!assetId) return getNativeTokenTicker()
+      if (!assetId) return getNativeTokenTickerForNetwork(network)
       const tickerInfo = getCatTokenInfo(assetId)
       return tickerInfo?.ticker || assetId.slice(0, 8)
     },
-    [getCatTokenInfo]
+    [getCatTokenInfo, network]
   )
 
   // Calculate price deviation percentage for hovered order

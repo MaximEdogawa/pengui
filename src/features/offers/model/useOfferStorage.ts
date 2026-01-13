@@ -3,6 +3,7 @@
 import type { OfferDetails } from '@/entities/offer'
 import type { StoredOffer } from '@/shared/lib/database/indexedDB'
 import { logger } from '@/shared/lib/logger'
+import { useNetwork } from '@/shared/hooks/useNetwork'
 import {
   offerStorageService,
   type OfferStorageOptions,
@@ -11,6 +12,7 @@ import {
 import { useCallback, useMemo, useState } from 'react'
 
 export function useOfferStorage() {
+  const { network } = useNetwork()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [offers, setOffers] = useState<StoredOffer[]>([])
@@ -38,7 +40,7 @@ export function useOfferStorage() {
     setError(null)
 
     try {
-      const result = await offerStorageService.getOffers(options)
+      const result = await offerStorageService.getOffers({ ...options, network })
 
       // Handle paginated result
       if (result && typeof result === 'object' && 'offers' in result) {
@@ -154,7 +156,7 @@ export function useOfferStorage() {
     setError(null)
 
     try {
-      const statusOffers = await offerStorageService.getOffersByStatus(status, walletAddress)
+      const statusOffers = await offerStorageService.getOffersByStatus(status, walletAddress, network)
       return statusOffers
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to get offers by status')
@@ -162,7 +164,7 @@ export function useOfferStorage() {
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [network])
 
   /**
    * Get unsynced offers
@@ -172,7 +174,7 @@ export function useOfferStorage() {
     setError(null)
 
     try {
-      const unsyncedOffers = await offerStorageService.getUnsyncedOffers()
+      const unsyncedOffers = await offerStorageService.getUnsyncedOffers(network)
       return unsyncedOffers
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to get unsynced offers')
@@ -180,7 +182,7 @@ export function useOfferStorage() {
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [network])
 
   /**
    * Mark offers as synced

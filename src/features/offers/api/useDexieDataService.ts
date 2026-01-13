@@ -1,8 +1,9 @@
 'use client'
 
-import { environment } from '@/shared/lib/config/environment'
 import { logger } from '@/shared/lib/logger'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useNetwork } from '@/shared/hooks/useNetwork'
+import { getDexieApiUrl } from '@/shared/lib/utils/networkUtils'
 import type {
   DexieHistoricalTradesResponse,
   DexieOfferSearchParams,
@@ -15,16 +16,17 @@ import type {
 
 const DEXIE_KEY = 'dexie'
 const PAIRS_KEY = 'pairs'
-const DEXIE_API_BASE_URL = environment.dexie.apiBaseUrl
 
 export function useDexieDataService() {
   const queryClient = useQueryClient()
+  const { network } = useNetwork()
+  const dexieApiBaseUrl = getDexieApiUrl(network)
 
   const pairsQuery = useQuery({
-    queryKey: [DEXIE_KEY, PAIRS_KEY],
+    queryKey: [DEXIE_KEY, PAIRS_KEY, network],
     queryFn: async (): Promise<DexiePairsResponse> => {
       try {
-        const response = await fetch(`${DEXIE_API_BASE_URL}/v3/prices/pairs`)
+        const response = await fetch(`${dexieApiBaseUrl}/v3/prices/pairs`)
 
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`)
@@ -56,7 +58,7 @@ export function useDexieDataService() {
         if (params.page) queryParams.append('page', params.page.toString())
         if (params.status !== undefined) queryParams.append('status', params.status.toString())
 
-        const response = await fetch(`${DEXIE_API_BASE_URL}/v1/offers?${queryParams.toString()}`)
+        const response = await fetch(`${dexieApiBaseUrl}/v1/offers?${queryParams.toString()}`)
 
         if (!response.ok) {
           // Try to get error details from response
@@ -81,7 +83,7 @@ export function useDexieDataService() {
 
           logger.error('Dexie API error:', {
             status: response.status,
-            url: `${DEXIE_API_BASE_URL}/v1/offers?${queryParams.toString()}`,
+            url: `${dexieApiBaseUrl}/v1/offers?${queryParams.toString()}`,
             error: errorMessage,
           })
           throw new Error(errorMessage)
@@ -127,7 +129,7 @@ export function useDexieDataService() {
     mutationFn: async (dexieId: string): Promise<DexiePostOfferResponse> => {
       try {
         logger.info(`Fetching offer by ID: ${dexieId}`)
-        const response = await fetch(`${DEXIE_API_BASE_URL}/v1/offers/${dexieId}`)
+        const response = await fetch(`${dexieApiBaseUrl}/v1/offers/${dexieId}`)
 
         const result = await response.json()
         logger.info(`Response status: ${response.status}, Result:`, result)
@@ -178,7 +180,7 @@ export function useDexieDataService() {
     }): Promise<DexieOrderBookResponse> => {
       try {
         const response = await fetch(
-          `${DEXIE_API_BASE_URL}/v3/prices/orderbook?ticker_id=${tickerId}&depth=${depth}`
+          `${dexieApiBaseUrl}/v3/prices/orderbook?ticker_id=${tickerId}&depth=${depth}`
         )
 
         if (!response.ok) {
@@ -213,7 +215,7 @@ export function useDexieDataService() {
     }): Promise<DexieHistoricalTradesResponse> => {
       try {
         const response = await fetch(
-          `${DEXIE_API_BASE_URL}/v3/prices/trades?ticker_id=${tickerId}&limit=${limit}`
+          `${dexieApiBaseUrl}/v3/prices/trades?ticker_id=${tickerId}&limit=${limit}`
         )
 
         if (!response.ok) {
@@ -241,7 +243,7 @@ export function useDexieDataService() {
   const postOfferMutation = useMutation({
     mutationFn: async (params: DexiePostOfferParams): Promise<DexiePostOfferResponse> => {
       try {
-        const response = await fetch(`${DEXIE_API_BASE_URL}/v1/offers`, {
+        const response = await fetch(`${dexieApiBaseUrl}/v1/offers`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -302,11 +304,11 @@ export function useDexieDataService() {
   }
 
   const refreshPairs = async () => {
-    await queryClient.invalidateQueries({ queryKey: [DEXIE_KEY, PAIRS_KEY] })
+    await queryClient.invalidateQueries({ queryKey: [DEXIE_KEY, PAIRS_KEY, network] })
   }
 
   const refreshOffers = async () => {
-    await queryClient.invalidateQueries({ queryKey: [DEXIE_KEY, 'offers'] })
+    await queryClient.invalidateQueries({ queryKey: [DEXIE_KEY, 'offers', network] })
   }
 
   const validateOfferString = (offerString: string): boolean => {

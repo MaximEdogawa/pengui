@@ -1,7 +1,8 @@
 'use client'
 
-import { environment } from '@/shared/lib/config/environment'
 import { CHIA_ASSET_IDS, XCH_BASE_CURRENCIES } from '@/shared/lib/constants/chia-assets'
+import { getDexieApiUrl } from '@/shared/lib/utils/networkUtils'
+import { useNetwork } from '@/shared/hooks/useNetwork'
 import type { DexieTicker } from '@/features/offers/lib/dexieTypes'
 import type { Asset, Ticker } from '@/entities/asset'
 import { tickerToAsset } from '@/entities/asset'
@@ -10,11 +11,10 @@ import { useMemo } from 'react'
 
 const DEXIE_KEY = 'dexie'
 const TICKERS_KEY = 'tickers'
-const DEXIE_API_BASE_URL = environment.dexie.apiBaseUrl
 
 /**
- * @deprecated Use Asset type from @/types/asset.types instead
- * Kept for backward compatibility
+ * Legacy CAT token info interface (for backward compatibility)
+ * @deprecated Use Asset type from @/entities/asset instead
  */
 export interface CatTokenInfo {
   assetId: string
@@ -128,10 +128,13 @@ export function getCatTokenInfo(assetId: string, catMap: Map<string, CatTokenInf
  * Hook to fetch all tickers from Dexie API using TanStack Query
  */
 export function useTickers() {
+  const { network } = useNetwork()
+  const dexieApiBaseUrl = getDexieApiUrl(network)
+  
   return useQuery({
-    queryKey: [DEXIE_KEY, TICKERS_KEY],
+    queryKey: [DEXIE_KEY, TICKERS_KEY, network],
     queryFn: async () => {
-      const response = await fetch(`${DEXIE_API_BASE_URL}/v3/prices/tickers`)
+      const response = await fetch(`${dexieApiBaseUrl}/v3/prices/tickers`)
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)

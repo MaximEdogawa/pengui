@@ -1,7 +1,8 @@
 'use client'
 
 import { useCatTokens, useThemeClasses } from '@/shared/hooks'
-import { getNativeTokenTicker } from '@/shared/lib/config/environment'
+import { getNativeTokenTickerForNetwork } from '@/shared/lib/config/environment'
+import { useNetwork } from '@/shared/hooks/useNetwork'
 import { useMemo } from 'react'
 import type { OrderBookOrder } from '../../lib/orderBookTypes'
 
@@ -20,6 +21,7 @@ export default function LimitOfferTab({
 }: LimitOfferTabProps) {
   const { t, isDark } = useThemeClasses()
   const { getCatTokenInfo } = useCatTokens()
+  const { network } = useNetwork()
 
   // Determine if order is buy or sell
   const orderType = useMemo(() => {
@@ -37,7 +39,7 @@ export default function LimitOfferTab({
     // Helper to get ticker symbol
     const getTickerSymbol = (assetId: string, code?: string): string => {
       if (code) return code
-      if (!assetId) return getNativeTokenTicker()
+      if (!assetId) return getNativeTokenTickerForNetwork(network)
       const tickerInfo = getCatTokenInfo(assetId)
       return tickerInfo?.ticker || assetId.slice(0, 8)
     }
@@ -85,7 +87,7 @@ export default function LimitOfferTab({
     }
 
     return null
-  }, [selectedOrder, filters, getCatTokenInfo, activeMode])
+  }, [selectedOrder, filters, getCatTokenInfo, network, activeMode])
 
   return (
     <div

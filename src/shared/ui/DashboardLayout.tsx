@@ -20,6 +20,7 @@ import {
 import { useTheme } from 'next-themes'
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import NetworkPicker from './NetworkPicker'
 import PenguinLogo from './PenguinLogo'
 
 interface DashboardLayoutProps {
@@ -352,7 +353,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             borderRight: 'none',
             marginRight: 0,
             paddingRight: 0,
-            overflow: 'hidden',
+            overflow: 'visible',
             width: '100%',
             maxWidth: '100%',
             position: 'relative',
@@ -398,6 +399,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 className={`absolute top-0.5 right-0.5 w-1.5 h-1.5 bg-gradient-to-br ${t.accent} rounded-full`}
               ></span>
             </button>
+            {/* Network Picker */}
+            <div className="relative flex items-center flex-shrink-0">
+              <NetworkPicker />
+            </div>
             {/* Wallet Connection Status */}
             <div className="relative flex items-center flex-shrink-0">
               <ConnectButton />

@@ -132,6 +132,18 @@ export { default as DashboardLayout } from './DashboardLayout'
  */
 export { default as WalletConnectionGuard } from './WalletConnectionGuard'
 
+/**
+ * NetworkPicker Component
+ *
+ * Network picker component that allows users to switch between Chia mainnet and testnet.
+ *
+ * @example
+ * ```tsx
+ * <NetworkPicker />
+ * ```
+ */
+export { default as NetworkPicker } from './NetworkPicker'
+
 // ============================================================================
 // BRANDING COMPONENTS
 // ============================================================================
