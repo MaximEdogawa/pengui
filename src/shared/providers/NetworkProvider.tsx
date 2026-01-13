@@ -3,10 +3,12 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { useWalletConnectionState } from '@maximedogawa/chia-wallet-connect-react'
 import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react'
-import { chainIdToNetwork } from '@/shared/lib/utils/networkUtils'
+import { chainIdToNetwork, networkToChainId } from '@/shared/lib/utils/networkUtils'
 import { getStoredNetwork, setStoredNetwork, hasNetworkPreference } from '@/shared/lib/utils/networkStorage'
-import { clearNetworkMismatchTracking } from '@/shared/lib/walletConnect/utils/networkMismatch'
+import { clearNetworkMismatchTracking, checkNetworkMismatch } from '@/shared/lib/walletConnect/utils/networkMismatch'
+import { getAssetBalance } from '@/shared/lib/walletConnect/repositories/walletQueries.repository'
 import { logger } from '@/shared/lib/logger'
+import { useAppSelector } from '@maximedogawa/chia-wallet-connect-react'
 
 type Network = 'mainnet' | 'testnet'
 
@@ -22,10 +24,12 @@ const NetworkContext = createContext<NetworkContextType | undefined>(undefined)
 export function NetworkProvider({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient()
   const { isConnected, walletConnectSession } = useWalletConnectionState()
+  const selectedSession = useAppSelector((state) => state.walletConnect?.selectedSession)
   const [network, setNetworkState] = useState<Network>(() => getStoredNetwork('mainnet'))
   const [isSwitching, setIsSwitching] = useState(false)
   const hasAutoSyncedRef = useRef(false)
   const lastWalletChainIdRef = useRef<string | null>(null)
+  const testRequestTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // Auto-sync network to wallet on first connection
   useEffect(() => {
@@ -68,8 +72,22 @@ export function NetworkProvider({ children }: { children: React.ReactNode }) {
     if (!isConnected) {
       hasAutoSyncedRef.current = false
       lastWalletChainIdRef.current = null
+      // Clear test request timeout if wallet disconnects
+      if (testRequestTimeoutRef.current) {
+        clearTimeout(testRequestTimeoutRef.current)
+        testRequestTimeoutRef.current = null
+      }
     }
   }, [isConnected])
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (testRequestTimeoutRef.current) {
+        clearTimeout(testRequestTimeoutRef.current)
+      }
+    }
+  }, [])
 
   const setNetwork = useCallback(
     async (newNetwork: Network) => {
@@ -107,6 +125,97 @@ export function NetworkProvider({ children }: { children: React.ReactNode }) {
         queryClient.invalidateQueries({ queryKey: ['dexie'] })
 
         logger.info(`🔄 Network switched to: ${newNetwork}`)
+
+        // After network switch, test wallet connection with a balance request
+        // If it fails, show network mismatch toast
+        if (isConnected && walletConnectSession) {
+          // Clear any existing timeout
+          if (testRequestTimeoutRef.current) {
+            clearTimeout(testRequestTimeoutRef.current)
+          }
+
+          // Wait a bit for the network switch to complete, then test the connection
+          testRequestTimeoutRef.current = setTimeout(async () => {
+            try {
+              // Try to get SignClient from cache (may need to wait for it to initialize)
+              // Try both old and new network keys in case the new one isn't ready yet
+              let instanceData = queryClient.getQueryData<{ signClient: any }>(['walletConnect', 'instance', newNetwork])
+              if (!instanceData) {
+                // Fallback to old network's SignClient (it should still work)
+                instanceData = queryClient.getQueryData<{ signClient: any }>(['walletConnect', 'instance', network])
+              }
+              const signClient = instanceData?.signClient
+
+              if (!signClient) {
+                logger.warn('⚠️ SignClient not available for network test')
+                return
+              }
+
+              // Get session data
+              const sessionData = walletConnectSession || selectedSession
+              if (!sessionData) {
+                logger.warn('⚠️ Session not available for network test')
+                return
+              }
+
+              // Extract chainId from session
+              const chains = sessionData.namespaces?.chia?.chains
+              const accounts = sessionData.namespaces?.chia?.accounts
+              let walletChainId: string
+
+              if (chains && chains.length > 0) {
+                walletChainId = chains[0]
+              } else if (accounts && accounts.length > 0) {
+                const accountParts = accounts[0].split(':')
+                if (accountParts.length >= 4 && accountParts[1] === 'chia') {
+                  walletChainId = `chia:${accountParts[2]}`
+                } else if (accountParts.length >= 3) {
+                  if (accountParts[1] === 'chia') {
+                    walletChainId = `chia:${accountParts[2]}`
+                  } else {
+                    walletChainId = `chia:${accountParts[1]}`
+                  }
+                } else {
+                  walletChainId = networkToChainId(newNetwork)
+                }
+              } else {
+                walletChainId = networkToChainId(newNetwork)
+              }
+
+              // Create a minimal session object for the request
+              const testSession = {
+                session: sessionData,
+                chainId: walletChainId,
+                fingerprint: accounts && accounts.length > 0
+                  ? parseInt(accounts[0].split(':')[accounts[0].split(':').length - 1] || '0')
+                  : 0,
+                topic: sessionData.topic,
+                isConnected: true,
+              }
+
+              // Try to get wallet balance as a test request
+              const result = await getAssetBalance(signClient, testSession, null, null)
+
+              // If request failed, show network mismatch toast
+              if (!result.success) {
+                logger.warn(`⚠️ Wallet request failed after network switch: ${result.error}`)
+                checkNetworkMismatch(newNetwork, walletChainId, sessionData.topic)
+              } else {
+                logger.info('✅ Wallet request succeeded after network switch')
+                // Request succeeded, do nothing (no toast)
+              }
+            } catch (error) {
+              logger.error('❌ Error testing wallet connection after network switch:', error)
+              // On error, try to show mismatch toast if we have session data
+              const sessionData = walletConnectSession || selectedSession
+              if (sessionData) {
+                const chains = sessionData.namespaces?.chia?.chains
+                const walletChainId = chains && chains.length > 0 ? chains[0] : networkToChainId(newNetwork)
+                checkNetworkMismatch(newNetwork, walletChainId, sessionData.topic)
+              }
+            }
+          }, 500) // Wait 500ms for network switch to complete
+        }
       } catch (error) {
         logger.error('❌ Failed to switch network:', error)
         // Revert state on error
@@ -115,7 +224,7 @@ export function NetworkProvider({ children }: { children: React.ReactNode }) {
         setIsSwitching(false)
       }
     },
-    [network, isSwitching, queryClient]
+    [network, isSwitching, queryClient, isConnected, walletConnectSession, selectedSession]
   )
 
   const value: NetworkContextType = {

@@ -38,7 +38,7 @@ export function checkNetworkMismatch(
     toast({
       variant: 'destructive',
       title: 'Network Mismatch',
-      description: `Wallet is on ${walletNetwork === 'mainnet' ? 'Mainnet' : 'Testnet'} but app is on ${appNetwork === 'mainnet' ? 'Mainnet' : 'Testnet'}. Please switch networks or reconnect your wallet.`,
+      description: `Wallet is on ${walletNetwork === 'mainnet' ? 'Mainnet' : 'Testnet'} but app is on ${appNetwork === 'mainnet' ? 'Mainnet' : 'Testnet'}. Wallet requests will use the wallet's network.`,
     })
   }
 

@@ -63,22 +63,9 @@ export default function NetworkPicker() {
     setIsSwitching(true)
 
     try {
-      // Disconnect wallet if connected
-      if (isConnected && signClient && session.isConnected && session.topic) {
-        try {
-          await signClient.disconnect({
-            topic: session.topic,
-            reason: {
-              code: 6000,
-              message: 'Network switch requested',
-            },
-          })
-        } catch (error) {
-          // Log but don't fail - wallet might already be disconnected
-          // Error is non-critical, wallet might already be disconnected
-        }
-      }
-
+      // Keep wallet connected - session remains valid across network switches
+      // The wallet will handle requests based on its actual network
+      // We'll show a warning if there's a network mismatch, but requests will still work
       await setNetwork(newNetwork)
       setIsOpen(false)
     } catch (error) {
