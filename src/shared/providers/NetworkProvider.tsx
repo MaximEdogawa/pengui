@@ -73,6 +73,9 @@ export function NetworkProvider({ children }: { children: React.ReactNode }) {
       setNetworkState(walletNetwork)
       setStoredNetwork(walletNetwork)
       hasAutoSyncedRef.current = true
+      // Clear mismatch tracking after successful auto-sync
+      // This prevents false positives if a mismatch was detected before sync
+      clearNetworkMismatchTracking()
     }
   }, [isConnected, walletConnectSession])
 
@@ -210,9 +213,9 @@ export function NetworkProvider({ children }: { children: React.ReactNode }) {
               // If request failed, check if there's actually a network mismatch
               if (!result.success) {
                 logger.warn(`⚠️ Wallet request failed after network switch: ${result.error}`)
-                // Only show mismatch toast if there's an actual network mismatch
+                // Only show mismatch toast if there's an actual network mismatch and session is initialized
                 const expectedChainId = networkToChainId(newNetwork)
-                if (walletChainId !== expectedChainId) {
+                if (walletChainId !== expectedChainId && sessionData.topic && sessionData.topic.trim() !== '') {
                   checkNetworkMismatch(newNetwork, walletChainId, sessionData.topic)
                 }
                 // If networks match but request failed, don't show toast (might be other issues)
@@ -224,7 +227,7 @@ export function NetworkProvider({ children }: { children: React.ReactNode }) {
               logger.error('❌ Error testing wallet connection after network switch:', error)
               // On error, only show mismatch toast if there's an actual network mismatch
               const sessionData = walletConnectSession || selectedSession
-              if (sessionData) {
+              if (sessionData && sessionData.topic && sessionData.topic.trim() !== '') {
                 const chains = sessionData.namespaces?.chia?.chains
                 const walletChainId = chains && chains.length > 0 ? chains[0] : networkToChainId(newNetwork)
                 const expectedChainId = networkToChainId(newNetwork)
