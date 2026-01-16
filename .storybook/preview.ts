@@ -34,9 +34,11 @@ const preview = {
     },
   },
   decorators: [
-    (Story) => (
-      React.createElement(StoryWrapper, {}, React.createElement(Story))
-    ),
+    (Story: React.ComponentType) =>
+      React.createElement(
+        StoryWrapper,
+        { children: React.createElement(Story) }
+      ),
   ],
 };
 

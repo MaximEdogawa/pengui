@@ -9,7 +9,7 @@ echo "🔍 Running pre-commit checks..."
 
 # Run lint-staged to lint and type-check staged files
 echo "📝 Linting staged files..."
-bunx lint-staged
+bun run lint
 
 # Run build check
 echo "🏗️  Building project..."
