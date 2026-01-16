@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite'
 import { AssetSelector } from '@/shared/ui'
 
 const meta = {
-  title: 'Shared/AssetSelector',
+  title: 'Components/Forms/AssetSelector',
   component: AssetSelector,
   parameters: {
     layout: 'centered',

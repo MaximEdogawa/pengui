@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite'
 import { CopyableHexString } from '@/shared/ui'
 
 const meta = {
-  title: 'Shared UI/Utility/CopyableHexString',
+  title: 'Components/Utilities/CopyableHexString',
   component: CopyableHexString,
   parameters: {
     layout: 'centered',

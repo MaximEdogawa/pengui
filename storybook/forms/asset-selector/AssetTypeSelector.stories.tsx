@@ -4,7 +4,7 @@ import { AssetTypeSelector } from '@/shared/ui'
 import type { AssetType } from '@/entities/offer'
 
 const meta = {
-  title: 'Shared UI/Forms/AssetTypeSelector',
+  title: 'Components/Forms/AssetTypeSelector',
   component: AssetTypeSelector,
   parameters: {
     layout: 'centered',

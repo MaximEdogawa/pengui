@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { TokenSearchInput } from '@/shared/ui'
 
 const meta = {
-  title: 'Shared UI/Forms/TokenSearchInput',
+  title: 'Components/Forms/TokenSearchInput',
   component: TokenSearchInput,
   parameters: {
     layout: 'centered',

@@ -1,5 +1,32 @@
 # Storybook Setup & Build Exclusion
 
+## Storybook Organization
+
+Storybook stories are organized by layer and feature to match the application structure:
+
+```
+storybook/
+├── primitives/          # Shared UI primitives (Button, Modal, Card)
+├── forms/               # Shared UI form components
+├── layout/               # Shared UI layout components
+├── utilities/            # Shared UI utility components
+├── branding/             # Shared UI branding components
+├── icons/                # Shared UI icon components
+├── features/             # Feature-specific components
+│   ├── auth/             # Authentication feature
+│   ├── wallet/           # Wallet feature
+│   ├── trading/          # Trading feature
+│   ├── offers/            # Offers feature
+│   └── loans/             # Loans feature
+├── widgets/              # Widget components
+│   ├── dashboard-layout/ # Dashboard layout widget
+│   └── trading-layout/    # Trading layout widget
+├── entities/             # Entity components
+└── app/                  # App-level components
+```
+
+Each feature section contains stories for all UI components within that feature, making it easy to browse and document feature-specific components.
+
 ## How Storybook is Normally Set Up
 
 Storybook is typically set up with **complete separation** from the application build:

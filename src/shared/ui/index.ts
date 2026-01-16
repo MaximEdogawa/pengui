@@ -23,6 +23,7 @@
 
 export { default as Button, type ButtonProps } from './primitives/button'
 export { default as Modal, type ModalProps } from './primitives/modal'
+export { Card, type CardProps } from './primitives/card'
 
 // ============================================================================
 // FORM COMPONENTS
@@ -39,12 +40,14 @@ export {
   TokenSearchInput,
   RemoveAssetButton,
 } from './forms/asset-selector'
+export { FormInput, type FormInputProps } from './forms/form-input'
 
 // ============================================================================
 // UTILITY COMPONENTS
 // ============================================================================
 
 export { CopyableHexString } from './utilities/copyable-hex-string'
+export { EmptyState, type EmptyStateProps } from './utilities/empty-state'
 
 // ============================================================================
 // LAYOUT COMPONENTS
@@ -52,6 +55,7 @@ export { CopyableHexString } from './utilities/copyable-hex-string'
 
 export { WalletConnectionGuard } from './layout/wallet-connection-guard'
 export { NetworkPicker } from './layout/network-picker'
+export { SectionHeader, type SectionHeaderProps } from './layout/section-header'
 
 // ============================================================================
 // BRANDING COMPONENTS

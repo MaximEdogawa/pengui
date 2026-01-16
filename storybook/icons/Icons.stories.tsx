@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite'
 import { GithubIcon, XIcon } from '@/shared/ui'
 
 const meta = {
-  title: 'Shared UI/Icons',
+  title: 'Components/Icons',
   parameters: {
     layout: 'centered',
   },

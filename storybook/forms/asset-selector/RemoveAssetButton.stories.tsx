@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite'
 import { RemoveAssetButton } from '@/shared/ui'
 
 const meta = {
-  title: 'Shared UI/Forms/RemoveAssetButton',
+  title: 'Components/Forms/RemoveAssetButton',
   component: RemoveAssetButton,
   parameters: {
     layout: 'centered',

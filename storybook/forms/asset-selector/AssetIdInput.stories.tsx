@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { AssetIdInput } from '@/shared/ui'
 
 const meta = {
-  title: 'Shared UI/Forms/AssetIdInput',
+  title: 'Components/Forms/AssetIdInput',
   component: AssetIdInput,
   parameters: {
     layout: 'centered',

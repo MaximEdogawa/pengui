@@ -4,7 +4,7 @@ import { AmountInput } from '@/shared/ui'
 import type { AssetType } from '@/entities/offer'
 
 const meta = {
-  title: 'Shared UI/Forms/AmountInput',
+  title: 'Components/Forms/AmountInput',
   component: AmountInput,
   parameters: {
     layout: 'centered',

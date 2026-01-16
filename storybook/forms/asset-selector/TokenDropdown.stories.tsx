@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { TokenDropdown } from '@/shared/ui'
 
 const meta = {
-  title: 'Shared UI/Forms/TokenDropdown',
+  title: 'Components/Forms/TokenDropdown',
   component: TokenDropdown,
   parameters: {
     layout: 'centered',

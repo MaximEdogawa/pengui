@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite'
 import { PenguinLogo } from '@/shared/ui'
 
 const meta = {
-  title: 'Shared UI/Branding/PenguinLogo',
+  title: 'Components/Branding/PenguinLogo',
   component: PenguinLogo,
   parameters: {
     layout: 'centered',

@@ -25,6 +25,8 @@ const config: StorybookConfig = {
         '@/features': path.resolve(__dirname, '../src/features'),
         '@/entities': path.resolve(__dirname, '../src/entities'),
         '@/shared': path.resolve(__dirname, '../src/shared'),
+        // Mock Next.js navigation for Storybook
+        'next/navigation': path.resolve(__dirname, './mocks/next-navigation.ts'),
       };
     }
     // Suppress warnings for 'use client' directives (expected in Storybook builds)

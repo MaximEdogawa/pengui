@@ -25,6 +25,13 @@ const preview = {
         },
       ],
     },
+    nextjs: {
+      appDirectory: true,
+      navigation: {
+        pathname: '/dashboard',
+        query: {},
+      },
+    },
   },
   decorators: [
     (Story) => (

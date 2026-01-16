@@ -3,7 +3,7 @@ import { Plus } from 'lucide-react'
 import { Button } from '@/shared/ui'
 
 const meta = {
-  title: 'Shared/Button',
+  title: 'Components/Primitives/Button',
   component: Button,
   parameters: {
     layout: 'centered',

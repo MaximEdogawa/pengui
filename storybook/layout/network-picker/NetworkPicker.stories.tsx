@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/nextjs-vite'
 import { NetworkPicker } from '@/shared/ui'
 
 const meta = {
-  title: 'Shared UI/Layout/NetworkPicker',
+  title: 'Components/Layout/NetworkPicker',
   component: NetworkPicker,
   parameters: {
     layout: 'centered',
