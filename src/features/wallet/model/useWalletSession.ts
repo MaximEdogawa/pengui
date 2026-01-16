@@ -1,7 +1,6 @@
 'use client'
 
 import { useAppSelector, useWalletConnectionState } from '@maximedogawa/chia-wallet-connect-react'
-import { CHIA_MAINNET_CHAIN_ID, CHIA_TESTNET_CHAIN_ID } from '@/shared/lib/walletConnect/constants/wallet-connect'
 import { useNetwork } from '@/shared/hooks/useNetwork'
 import { networkToChainId } from '@/shared/lib/utils/networkUtils'
 import type { WalletConnectSession } from '@/shared/lib/walletConnect/types/walletConnect.types'

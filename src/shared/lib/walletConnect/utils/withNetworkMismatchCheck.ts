@@ -12,6 +12,7 @@ import type { WalletConnectSession } from '../types/walletConnect.types'
  * @param session - Wallet session
  * @returns Wrapped function that checks network mismatch before calling the original
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function withNetworkMismatchCheck<T extends (...args: any[]) => Promise<any>>(
   fn: T,
   network: 'mainnet' | 'testnet',

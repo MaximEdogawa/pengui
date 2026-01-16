@@ -194,6 +194,8 @@ export default function CreateOfferForm({
 
     if (order) {
       // Call useAsTemplate to populate form - this updates state synchronously
+      // useAsTemplate is a callback function returned from useOrderBookOfferSubmission hook, not a hook itself
+      // eslint-disable-next-line react-hooks/rules-of-hooks
       useAsTemplate(order)
 
       // Store base amounts for sliders - use precomputed values for instant update

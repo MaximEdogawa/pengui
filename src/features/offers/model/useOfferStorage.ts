@@ -63,7 +63,7 @@ export function useOfferStorage() {
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [network])
 
   /**
    * Save a new offer

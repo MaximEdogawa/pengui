@@ -1,9 +1,8 @@
 /**
  * Suppresses WalletConnect relay message errors from console
  * These are internal SDK errors that are non-critical and can be safely ignored
+ * This file intentionally modifies console methods
  */
-
-/* eslint-disable no-console */
 let originalConsoleError: typeof console.error | null = null
 let isSuppressing = false
 

@@ -346,8 +346,18 @@ Contributions are welcome! Please ensure:
 - [WalletConnect Integration](./src/shared/lib/walletConnect/README.md)
 - [Component Catalog](./src/shared/ui/COMPONENT_CATALOG.md)
 - [Quick Start Guide](./src/shared/ui/QUICK_START.md)
+- [Infinite Loop Guardrails](./docs/development/infinite-loop-guardrails.md) - Preventing infinite loops in useEffect hooks
 
 ## 🐛 Troubleshooting
+
+### Infinite Loop / Continuous Compilation
+
+If Turbopack shows "compiling..." indefinitely or pages won't switch:
+
+- Check browser console for infinite loop warnings
+- Review `useEffect` dependency arrays (see [Infinite Loop Guardrails](./docs/development/infinite-loop-guardrails.md))
+- Run `bun run lint` to check for React Hooks issues
+- Look for `useEffect` hooks that update state included in their dependency array
 
 ### Wallet Connection Issues
 

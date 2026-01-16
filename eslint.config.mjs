@@ -1,5 +1,6 @@
 import eslint from '@eslint/js'
 import tseslint from 'typescript-eslint'
+import reactHooks from 'eslint-plugin-react-hooks'
 
 export default tseslint.config(
   {
@@ -20,11 +21,21 @@ export default tseslint.config(
   ...tseslint.configs.recommended,
   {
     files: ['**/*.{ts,tsx}'],
-  },
-  {
+    plugins: {
+      'react-hooks': reactHooks,
+    },
     rules: {
+      // React Hooks rules - critical for preventing infinite loops
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': [
+        'warn',
+        {
+          // Warn about missing dependencies but allow intentional omissions
+          additionalHooks: '(useMemo|useCallback)',
+        },
+      ],
       'max-lines': ['error', { max: 1000, skipBlankLines: true, skipComments: true }],
-      'no-console': 'error',
+      'no-console': ['error', { allow: ['warn', 'error'] }],
       'no-debugger': 'error',
       'no-var': 'error',
       'prefer-const': 'error',

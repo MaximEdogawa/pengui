@@ -9,6 +9,7 @@ import { clearNetworkMismatchTracking, checkNetworkMismatch } from '@/shared/lib
 import { getAssetBalance } from '@/shared/lib/walletConnect/repositories/walletQueries.repository'
 import { logger } from '@/shared/lib/logger'
 import { useAppSelector } from '@maximedogawa/chia-wallet-connect-react'
+import { trackEffectRun } from '@/shared/lib/utils/useEffectGuard'
 
 type Network = 'mainnet' | 'testnet'
 
@@ -32,7 +33,12 @@ export function NetworkProvider({ children }: { children: React.ReactNode }) {
   const testRequestTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   // Auto-sync network to wallet on first connection
+  // ⚠️ CRITICAL: Do NOT include 'network' in dependency array!
+  // Including 'network' here causes infinite loops because setNetworkState() updates 'network',
+  // which triggers this effect again. Use getStoredNetwork() to read current value instead.
+  // See: docs/development/infinite-loop-guardrails.md
   useEffect(() => {
+    trackEffectRun('NetworkProvider: auto-sync')
     if (typeof window === 'undefined') return
 
     // Check if we've already auto-synced or if there's a user preference
@@ -142,9 +148,11 @@ export function NetworkProvider({ children }: { children: React.ReactNode }) {
             try {
               // Try to get SignClient from cache (may need to wait for it to initialize)
               // Try both old and new network keys in case the new one isn't ready yet
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               let instanceData = queryClient.getQueryData<{ signClient: any }>(['walletConnect', 'instance', newNetwork])
               if (!instanceData) {
                 // Fallback to old network's SignClient (it should still work)
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 instanceData = queryClient.getQueryData<{ signClient: any }>(['walletConnect', 'instance', network])
               }
               const signClient = instanceData?.signClient

@@ -1,8 +1,6 @@
 'use client'
 
 import { useNetwork } from '@/shared/hooks/useNetwork'
-import { useWalletConnection, useSignClient, useWalletSession } from '@/features/wallet'
-import { getThemeClasses } from '@/shared/lib/theme'
 import { useTheme } from 'next-themes'
 import { usePathname } from 'next/navigation'
 import { Check, ChevronDown, Loader2 } from 'lucide-react'
@@ -11,15 +9,11 @@ import { useToast } from '@/shared/hooks/useToast'
 import { NETWORK_OPTIONS } from './NetworkPicker/constants'
 
 export default function NetworkPicker() {
-  const { network, setNetwork, isMainnet, isTestnet } = useNetwork()
-  const { isConnected } = useWalletConnection()
-  const { signClient } = useSignClient()
-  const session = useWalletSession()
+  const { network, setNetwork, isMainnet } = useNetwork()
   const { theme: currentTheme, systemTheme } = useTheme()
   const pathname = usePathname()
   const isLoginPage = pathname === '/login'
   const isDark = currentTheme === 'dark' || (currentTheme === 'system' && systemTheme === 'dark')
-  const t = getThemeClasses(isDark)
   const [isOpen, setIsOpen] = useState(false)
   const [isSwitching, setIsSwitching] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -68,7 +62,7 @@ export default function NetworkPicker() {
       // We'll show a warning if there's a network mismatch, but requests will still work
       await setNetwork(newNetwork)
       setIsOpen(false)
-    } catch (error) {
+    } catch (_error) {
       toast({
         variant: 'destructive',
         title: 'Network Switch Failed',

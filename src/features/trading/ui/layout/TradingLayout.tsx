@@ -51,6 +51,8 @@ export default function TradingLayout({
         // Maker mode: show limit offer
         if (isMobile) {
           // Mobile: open CreateOfferModal with order data
+          // useAsTemplate is a callback function returned from useOrderBookOfferSubmission hook, not a hook itself
+          // eslint-disable-next-line react-hooks/rules-of-hooks
           useAsTemplate(order)
           setShowCreateOfferModal(true)
         }
