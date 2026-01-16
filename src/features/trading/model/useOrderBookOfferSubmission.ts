@@ -1,7 +1,7 @@
 'use client'
 
 import { useDexieDataService } from '@/features/offers/api/useDexieDataService'
-import { useCatTokens } from '@/shared/hooks/useTickers'
+import { useCatTokens } from '@/entities/asset'
 import { getNativeTokenTickerForNetwork } from '@/shared/lib/config/environment'
 import { useNetwork } from '@/shared/hooks/useNetwork'
 import { logger } from '@/shared/lib/logger'

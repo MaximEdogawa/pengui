@@ -7,7 +7,7 @@ import { useCreateOffer, useWalletAddress } from '@/features/wallet'
 import { convertToSmallestUnit } from '@/shared/lib/utils/chia-units'
 import { logger } from '@/shared/lib/logger'
 import { useQueryClient } from '@tanstack/react-query'
-import type { ExtendedAsset as ExtendedOfferAsset } from '@/shared/ui/AssetSelector'
+import type { ExtendedAsset as ExtendedOfferAsset } from '@/shared/ui'
 import { useOrderBook } from '../../../../model/useOrderBook'
 
 interface UseFormSubmissionProps {

@@ -2,7 +2,7 @@
 
 import type { OfferDetails } from '@/entities/offer'
 import { Check, Copy, CheckCircle, ExternalLink } from 'lucide-react'
-import Button from '@/shared/ui/Button'
+import { Button } from '@/shared/ui'
 import type { ThemeClasses } from '@/shared/lib/theme'
 import { OfferStatusSection } from './OfferStatusSection'
 import { OfferAssetsSection } from './OfferAssetsSection'

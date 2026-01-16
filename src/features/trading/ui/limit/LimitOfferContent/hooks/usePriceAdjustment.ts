@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { OrderBookOrder } from '../../../../lib/orderBookTypes'
-import { useCatTokens } from '@/shared/hooks'
+import { useCatTokens } from '@/entities/asset'
 import type { AssetItem } from '../../../../model/useOrderBookOfferSubmission'
 
 interface UsePriceAdjustmentOptions {

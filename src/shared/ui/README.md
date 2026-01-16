@@ -161,19 +161,27 @@ import { GithubIcon, XIcon } from '@/shared/ui'
 import { Button, Modal, AssetSelector } from '@/shared/ui'
 ```
 
-### Default Imports
+### Direct Imports by Category
 
 ```tsx
-import Button from '@/shared/ui/Button'
-import Modal from '@/shared/ui/Modal'
-```
+// Primitives
+import { Button } from '@/shared/ui/primitives/button'
+import { Modal } from '@/shared/ui/primitives/modal'
 
-### Sub-component Imports
+// Forms
+import { AssetSelector, AmountInput } from '@/shared/ui/forms/asset-selector'
 
-```tsx
-import { AmountInput, TokenDropdown } from '@/shared/ui'
-// or
-import AmountInput from '@/shared/ui/AssetSelector/AmountInput'
+// Layout
+import { NetworkPicker } from '@/shared/ui/layout/network-picker'
+
+// Utilities
+import { CopyableHexString } from '@/shared/ui/utilities/copyable-hex-string'
+
+// Branding
+import { PenguinLogo } from '@/shared/ui/branding/penguin-logo'
+
+// Icons
+import GithubIcon from '@/shared/ui/icons/GithubIcon'
 ```
 
 ## Design Principles

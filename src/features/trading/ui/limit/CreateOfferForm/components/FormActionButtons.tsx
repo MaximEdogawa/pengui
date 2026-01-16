@@ -1,5 +1,5 @@
 import { Loader2, Plus } from 'lucide-react'
-import Button from '@/shared/ui/Button'
+import { Button } from '@/shared/ui'
 import type { OrderBookOrder } from '../../../../lib/orderBookTypes'
 
 interface FormActionButtonsProps {

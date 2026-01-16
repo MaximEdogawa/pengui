@@ -1,7 +1,7 @@
 'use client'
 
 import { Loader2, Trash2 } from 'lucide-react'
-import Modal from '@/shared/ui/Modal'
+import { Modal } from '@/shared/ui'
 import type { ThemeClasses } from '@/shared/lib/theme'
 
 interface DeleteAllConfirmationProps {

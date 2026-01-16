@@ -4,9 +4,8 @@ import { cn } from '@/shared/lib/utils/index'
 import { suppressRelayErrors } from '@/shared/lib/walletConnect/utils/suppressRelayErrors'
 import ReactQueryProvider from '@/shared/providers/ReactQueryProvider'
 import { NetworkProvider } from '@/shared/providers/NetworkProvider'
-import { ToastProvider } from '@/shared/providers/ToastProvider'
-import DashboardLayout from '@/shared/ui/DashboardLayout'
-import WalletConnectionGuard from '@/shared/ui/WalletConnectionGuard'
+import { DashboardLayout } from '@/widgets/dashboard-layout'
+import { WalletConnectionGuard } from '@/shared/ui'
 import {
   WalletManager,
   persistor,
@@ -140,11 +139,9 @@ export default function UILayout({ children }: { children: React.ReactNode }) {
               <div className="wallet-connect-scope">
                 <ReactQueryProvider>
                   <NetworkProvider>
-                    <ToastProvider>
-                      <WalletConnectionGuard>
-                        <DashboardLayoutWrapper>{children}</DashboardLayoutWrapper>
-                      </WalletConnectionGuard>
-                    </ToastProvider>
+                    <WalletConnectionGuard>
+                      <DashboardLayoutWrapper>{children}</DashboardLayoutWrapper>
+                    </WalletConnectionGuard>
                   </NetworkProvider>
                 </ReactQueryProvider>
               </div>

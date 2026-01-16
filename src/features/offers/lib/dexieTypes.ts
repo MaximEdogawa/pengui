@@ -2,6 +2,11 @@
  * Dexie API Types
  */
 
+import type { DexieOffer } from '@/entities/offer'
+
+// Re-export for backward compatibility
+export type { DexieOffer, DexieAsset } from '@/entities/offer'
+
 export interface DexieTicker {
   ticker_id: string
   base_currency: string
@@ -87,29 +92,6 @@ export interface DexieOfferSearchParams {
   status?: number
 }
 
-export interface DexieAsset {
-  id: string
-  code: string
-  name: string
-  amount: number
-}
-
-export interface DexieOffer {
-  id: string
-  status: number // Legacy field - we'll calculate state from dates instead
-  offer?: string // Original offer string (available in POST responses)
-  date_found: string
-  date_completed?: string | null
-  date_pending?: string | null
-  date_expiry?: string | null
-  block_expiry?: number | null
-  spent_block_index?: number | null
-  price: number
-  offered: DexieAsset[]
-  requested: DexieAsset[]
-  fees: number
-  known_taker?: unknown | null // null = cancelled, not null = completed
-}
 
 export interface DexieOfferSearchResponse {
   success: boolean

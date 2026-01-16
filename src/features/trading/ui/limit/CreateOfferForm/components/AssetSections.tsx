@@ -1,7 +1,7 @@
 import { Plus } from 'lucide-react'
-import AssetSelector, { type ExtendedAsset as ExtendedOfferAsset } from '@/shared/ui/AssetSelector'
-import Button from '@/shared/ui/Button'
+import { AssetSelector, type ExtendedAsset as ExtendedOfferAsset, Button } from '@/shared/ui'
 import type { ThemeClasses } from '@/shared/lib/theme'
+import { useCatTokens } from '@/entities/asset'
 
 interface AssetSectionsProps {
   extendedMakerAssets: ExtendedOfferAsset[]
@@ -29,6 +29,24 @@ export function AssetSections({
   addRequestedAsset,
   t,
 }: AssetSectionsProps) {
+  const { availableCatTokens, availableAssets, isLoading: isLoadingTickers } = useCatTokens()
+
+  // Prepare token data for AssetSelector
+  const availableTokens =
+    availableAssets.length > 0
+      ? availableAssets.map((asset) => ({
+          assetId: asset.assetId,
+          ticker: asset.ticker,
+          symbol: asset.symbol,
+          name: asset.name,
+        }))
+      : availableCatTokens.map((token) => ({
+          assetId: token.assetId,
+          ticker: token.ticker,
+          symbol: token.symbol,
+          name: token.name,
+        }))
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
       {/* Offered Section */}
@@ -49,6 +67,8 @@ export function AssetSections({
               asset={asset}
               onUpdate={(updatedAsset) => updateOfferedAsset(index, updatedAsset)}
               onRemove={() => removeOfferedAsset(index)}
+              availableTokens={availableTokens}
+              isLoadingTickers={isLoadingTickers}
             />
           ))}
           <Button
@@ -81,6 +101,8 @@ export function AssetSections({
               asset={asset}
               onUpdate={(updatedAsset) => updateRequestedAsset(index, updatedAsset)}
               onRemove={() => removeRequestedAsset(index)}
+              availableTokens={availableTokens}
+              isLoadingTickers={isLoadingTickers}
             />
           ))}
           <Button

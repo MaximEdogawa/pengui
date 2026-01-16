@@ -1,4 +1,4 @@
-import type { DexieOffer } from '@/features/offers/lib/dexieTypes'
+import type { DexieOffer } from '@/entities/offer'
 import type { OrderBookOrder } from './orderBookTypes'
 
 /**

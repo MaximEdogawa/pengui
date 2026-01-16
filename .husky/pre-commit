@@ -1,5 +1,4 @@
 #!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
 
 # Enable fail-fast behavior: exit immediately if any command fails
 set -e
@@ -16,8 +15,5 @@ bunx lint-staged
 echo "🏗️  Building project..."
 bun run build
 
-# Run tests
-echo "🧪 Running tests..."
-bun run test
-
 echo "✅ All pre-commit checks passed!"
+

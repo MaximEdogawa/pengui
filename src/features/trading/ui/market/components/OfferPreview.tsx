@@ -1,9 +1,8 @@
 'use client'
 
 import { formatAssetAmount, formatXchAmount } from '@/shared/lib/utils/chia-units'
-import { getDexieStatusDescription } from '@/shared/lib/utils/offerUtils'
+import { getDexieStatusDescription, type OfferAsset } from '@/entities/offer'
 import { useThemeClasses } from '@/shared/hooks'
-import type { OfferAsset } from '@/entities/offer'
 import { formatPriceForDisplay } from '../../../lib/formatAmount'
 
 interface OfferPreviewProps {

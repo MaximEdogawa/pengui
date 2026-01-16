@@ -1,6 +1,6 @@
 'use client'
 
-import Button from '@/shared/ui/Button'
+import { Button } from '@/shared/ui'
 import { Loader2, ShoppingCart } from 'lucide-react'
 
 interface MarketOfferActionsProps {

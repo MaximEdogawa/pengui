@@ -7,7 +7,7 @@ import {
 } from '../lib/services/orderFiltering'
 import { calculateOrderPrice } from '../lib/services/priceCalculation'
 import { areAssetsEqual, getTickerSymbol, isNativeToken } from '../lib/utils/assetUtils'
-import { useCatTokens } from '@/shared/hooks/useTickers'
+import { useCatTokens } from '@/entities/asset'
 
 export function useOrderBookFiltering(
   orderBookData: OrderBookOrder[],

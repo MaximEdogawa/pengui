@@ -1,7 +1,7 @@
-import AssetSelector, { type ExtendedAsset as ExtendedOfferAsset } from '@/shared/ui/AssetSelector'
-import Button from '@/shared/ui/Button'
+import { AssetSelector, type ExtendedAsset as ExtendedOfferAsset, Button } from '@/shared/ui'
 import { Plus } from 'lucide-react'
 import { useThemeClasses } from '@/shared/hooks'
+import { useCatTokens } from '@/entities/asset'
 
 interface AssetSectionProps {
   title: string
@@ -23,6 +23,23 @@ export function AssetSection({
   prefix,
 }: AssetSectionProps) {
   const { t } = useThemeClasses()
+  const { availableCatTokens, availableAssets, isLoading: isLoadingTickers } = useCatTokens()
+
+  // Prepare token data for AssetSelector
+  const availableTokens =
+    availableAssets.length > 0
+      ? availableAssets.map((asset) => ({
+          assetId: asset.assetId,
+          ticker: asset.ticker,
+          symbol: asset.symbol,
+          name: asset.name,
+        }))
+      : availableCatTokens.map((token) => ({
+          assetId: token.assetId,
+          ticker: token.ticker,
+          symbol: token.symbol,
+          name: token.name,
+        }))
 
   return (
     <div className="space-y-3">
@@ -37,6 +54,8 @@ export function AssetSection({
             asset={asset}
             onUpdate={(updatedAsset) => onUpdate(index, updatedAsset)}
             onRemove={() => onRemove(index)}
+            availableTokens={availableTokens}
+            isLoadingTickers={isLoadingTickers}
           />
         ))}
         <Button type="button" onClick={onAdd} variant="secondary" icon={Plus} className="w-full">

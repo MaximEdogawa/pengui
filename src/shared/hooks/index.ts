@@ -1,4 +1,5 @@
 // Public API for shared hooks
 export { useThemeClasses } from './useThemeClasses'
-export { useTickers, useCatTokens } from './useTickers'
 export { useResponsive } from './useResponsive'
+export { useNetwork } from './useNetwork'
+export { useWalletConnection } from './useWalletConnection'

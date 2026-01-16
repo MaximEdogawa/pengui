@@ -1,8 +1,7 @@
 'use client'
 
 import type { OfferDetails } from '@/entities/offer'
-import Button from '@/shared/ui/Button'
-import Modal from '@/shared/ui/Modal'
+import { Button, Modal } from '@/shared/ui'
 import { Loader2, X } from 'lucide-react'
 import type { ThemeClasses } from '@/shared/lib/theme'
 

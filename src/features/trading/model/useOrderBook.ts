@@ -1,7 +1,7 @@
 'use client'
 
 import { useDexieDataService } from '@/features/offers/api/useDexieDataService'
-import type { DexieOffer } from '@/features/offers/lib/dexieTypes'
+import type { DexieOffer } from '@/entities/offer'
 import { logger } from '@/shared/lib/logger'
 import { useNetwork } from '@/shared/hooks/useNetwork'
 import { useQuery } from '@tanstack/react-query'

@@ -1,7 +1,7 @@
 'use client'
 
 import type { OfferDetails } from '@/entities/offer'
-import Modal from '@/shared/ui/Modal'
+import { Modal } from '@/shared/ui'
 import { X } from 'lucide-react'
 import { useThemeClasses } from '@/shared/hooks'
 import type { OrderBookFilters, OrderBookOrder } from '../../lib/orderBookTypes'
