@@ -58,14 +58,17 @@ export function NetworkProvider({ children }: { children: React.ReactNode }) {
     // Extract network from chain ID
     const walletNetwork = chainIdToNetwork(walletChainId)
 
-    // Auto-sync if no user preference exists
-    if (!hasNetworkPreference() && walletNetwork !== network) {
+    // Get current network from state (don't use dependency to avoid re-renders)
+    const currentNetwork = getStoredNetwork('mainnet')
+
+    // Auto-sync if no user preference exists and networks differ
+    if (!hasNetworkPreference() && walletNetwork !== currentNetwork) {
       logger.info(`🔄 Auto-syncing network to wallet: ${walletNetwork}`)
       setNetworkState(walletNetwork)
       setStoredNetwork(walletNetwork)
       hasAutoSyncedRef.current = true
     }
-  }, [isConnected, walletConnectSession, network])
+  }, [isConnected, walletConnectSession])
 
   // Reset auto-sync flag when wallet disconnects
   useEffect(() => {
