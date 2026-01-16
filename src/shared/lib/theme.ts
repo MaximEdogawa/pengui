@@ -40,6 +40,8 @@ export const theme = {
   },
 }
 
-export function getThemeClasses(isDark: boolean) {
+export type ThemeClasses = typeof theme.dark
+
+export function getThemeClasses(isDark: boolean): ThemeClasses {
   return isDark ? theme.dark : theme.light
 }

@@ -18,6 +18,8 @@ export default function WalletConnectionGuard({ children }: { children: React.Re
   const [wasConnected, setWasConnected] = useState(false)
   const redirectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const checkModalIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const hasRedirectedRef = useRef(false)
+  const lastPathnameRef = useRef(pathname)
 
   // Wait for Redux store to rehydrate from persistence
   useEffect(() => {
@@ -60,6 +62,12 @@ export default function WalletConnectionGuard({ children }: { children: React.Re
   useEffect(() => {
     if (!isHydrated) return
 
+    // Prevent infinite loops by checking if pathname actually changed
+    if (lastPathnameRef.current === pathname && hasRedirectedRef.current) {
+      return
+    }
+    lastPathnameRef.current = pathname
+
     const isLoginPage = pathname === '/login' || pathname === '/'
 
     // Track if connection state just changed (new connection)
@@ -68,12 +76,13 @@ export default function WalletConnectionGuard({ children }: { children: React.Re
       setWasConnected(true)
     } else if (!isConnected && wasConnected) {
       setWasConnected(false)
+      hasRedirectedRef.current = false // Reset on disconnect
     }
 
     // If connected → redirect to dashboard (but wait for modal to close if on login page)
     if (isConnected) {
       // If on login page, wait for modal to close before redirecting
-      if (isLoginPage) {
+      if (isLoginPage && !hasRedirectedRef.current) {
         // Clear any existing timeout
         if (redirectTimeoutRef.current) {
           clearTimeout(redirectTimeoutRef.current)
@@ -87,10 +96,10 @@ export default function WalletConnectionGuard({ children }: { children: React.Re
 
         // Check if modal is open, and wait for it to close before redirecting
         const checkAndRedirect = () => {
-          if (!isModalOpen()) {
-            // Modal is closed, safe to redirect
+          if (!isModalOpen() && !hasRedirectedRef.current) {
+            hasRedirectedRef.current = true
             router.replace('/dashboard')
-          } else {
+          } else if (!hasRedirectedRef.current) {
             // Modal is still open, check again in 500ms
             redirectTimeoutRef.current = setTimeout(checkAndRedirect, 500)
           }
@@ -101,26 +110,22 @@ export default function WalletConnectionGuard({ children }: { children: React.Re
 
         // Also set up an interval to check modal state (as backup)
         checkModalIntervalRef.current = setInterval(() => {
-          if (!isModalOpen() && isConnected && isLoginPage) {
+          if (!isModalOpen() && isConnected && isLoginPage && !hasRedirectedRef.current) {
             if (redirectTimeoutRef.current) {
               clearTimeout(redirectTimeoutRef.current)
             }
             clearInterval(checkModalIntervalRef.current!)
+            hasRedirectedRef.current = true
             router.replace('/dashboard')
           }
         }, 500)
-      } else {
-        // Already on a different page and connected - no redirect needed
-        // Just ensure we're not on login page
-        if (pathname === '/login' || pathname === '/') {
-          router.replace('/dashboard')
-        }
       }
       return
     }
 
     // If not connected and not on login page → redirect to login (protect all routes)
-    if (!isConnected && !isLoginPage) {
+    if (!isConnected && !isLoginPage && !hasRedirectedRef.current) {
+      hasRedirectedRef.current = true
       // Use window.location for more forceful redirect if router doesn't work
       if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
         window.location.href = '/login'
@@ -128,7 +133,7 @@ export default function WalletConnectionGuard({ children }: { children: React.Re
         router.replace('/login')
       }
     }
-  }, [isConnected, isHydrated, pathname, router, wasConnected])
+  }, [isConnected, isHydrated, pathname, wasConnected, router])
 
   // Cleanup timeouts on unmount
   useEffect(() => {

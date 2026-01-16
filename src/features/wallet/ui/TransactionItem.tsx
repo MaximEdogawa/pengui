@@ -7,6 +7,14 @@ import { useThemeClasses } from '@/shared/hooks'
 import type { StoredTransaction } from '@/shared/lib/walletConnect/utils/transactionStorage'
 import { ArrowUpRight, ArrowDownLeft, Clock, CheckCircle2, XCircle } from 'lucide-react'
 
+// Color constants to avoid duplication
+const RED_COLOR_DARK = 'text-red-400'
+const RED_COLOR_LIGHT = 'text-red-600'
+const EMERALD_COLOR_DARK = 'text-emerald-400'
+const EMERALD_COLOR_LIGHT = 'text-emerald-600'
+const YELLOW_COLOR_DARK = 'text-yellow-400'
+const YELLOW_COLOR_LIGHT = 'text-yellow-600'
+
 interface TransactionItemProps {
   transaction: StoredTransaction
 }
@@ -39,10 +47,10 @@ export default function TransactionItem({ transaction: tx }: TransactionItemProp
             }`}
           >
             {isSend ? (
-              <ArrowUpRight className={isDark ? 'text-red-400' : 'text-red-600'} size={16} />
+              <ArrowUpRight className={isDark ? RED_COLOR_DARK : RED_COLOR_LIGHT} size={16} />
             ) : (
               <ArrowDownLeft
-                className={isDark ? 'text-emerald-400' : 'text-emerald-600'}
+                className={isDark ? EMERALD_COLOR_DARK : EMERALD_COLOR_LIGHT}
                 size={16}
               />
             )}
@@ -51,16 +59,16 @@ export default function TransactionItem({ transaction: tx }: TransactionItemProp
             <div className="flex items-center gap-2">
               <p className={`${t.text} text-sm font-medium`}>{isSend ? 'Sent' : 'Received'}</p>
               {tx.status === 'pending' && (
-                <Clock className={`${isDark ? 'text-yellow-400' : 'text-yellow-600'}`} size={14} />
+                <Clock className={isDark ? YELLOW_COLOR_DARK : YELLOW_COLOR_LIGHT} size={14} />
               )}
               {tx.status === 'confirmed' && (
                 <CheckCircle2
-                  className={`${isDark ? 'text-emerald-400' : 'text-emerald-600'}`}
+                  className={isDark ? EMERALD_COLOR_DARK : EMERALD_COLOR_LIGHT}
                   size={14}
                 />
               )}
               {tx.status === 'failed' && (
-                <XCircle className={`${isDark ? 'text-red-400' : 'text-red-600'}`} size={14} />
+                <XCircle className={isDark ? RED_COLOR_DARK : RED_COLOR_LIGHT} size={14} />
               )}
             </div>
             <p className={`${t.textSecondary} text-xs truncate`}>
@@ -78,11 +86,11 @@ export default function TransactionItem({ transaction: tx }: TransactionItemProp
             className={`text-sm font-semibold ${
               isSend
                 ? isDark
-                  ? 'text-red-400'
-                  : 'text-red-600'
+                  ? RED_COLOR_DARK
+                  : RED_COLOR_LIGHT
                 : isDark
-                  ? 'text-emerald-400'
-                  : 'text-emerald-600'
+                  ? EMERALD_COLOR_DARK
+                  : EMERALD_COLOR_LIGHT
             }`}
           >
             {isSend ? '-' : '+'}

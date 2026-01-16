@@ -62,17 +62,23 @@ export default [
           args: 'none',
         },
       ],
+      // Code Duplication Detection Rules
+      'no-duplicate-imports': 'warn', // Warn on duplicate imports from the same module
+      'no-duplicate-case': 'error', // Disallow duplicate case labels in switch statements
+      'no-dupe-keys': 'error', // Disallow duplicate keys in object literals
+      'no-dupe-class-members': 'error', // Disallow duplicate class member names
+      'no-dupe-else-if': 'warn', // Disallow duplicate conditions in if-else-if chains
       // Clean Code Principles (Robert C. Martin) - Fast Built-in Rules
       // These rules are fast because they use built-in ESLint analyzers (no AST traversal overhead)
       // Maximum 3 parameters per function (Clean Code: "The ideal number of arguments is zero")
-      'max-params': ['warn', 5], // Clean Code: functions should have 3 or fewer parameters
+      'max-params': ['warn', 4], // Clean Code: functions should have 4 or fewer parameters
       // Cyclomatic complexity - measures decision points (fast built-in rule)
-      complexity: ['warn', { max: 50 }], // Clean Code: keep functions simple (adjusted to 20 for practicality)
-      // Function length - Clean Code recommends ~20 lines, we use 50 for React components
+      complexity: ['warn', { max: 30 }], // Clean Code: keep functions simple (adjusted to 30 for practicality)
+      // Function length - Clean Code recommends ~20 lines, we use 185 for React components
       'max-lines-per-function': [
         'warn',
         {
-          max: 500,
+          max: 185,
           skipBlankLines: true,
           skipComments: true,
           IIFEs: true,

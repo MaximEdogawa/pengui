@@ -3,9 +3,8 @@
 import { useState, useMemo } from 'react'
 import { List, Briefcase, Plus, TrendingUp } from 'lucide-react'
 import type { LoanFilters, AmountFilter } from '@/entities/loan'
-import { useLoansData } from '@/features/loans'
-import { filterLoans } from '@/features/loans/model/useLoanFilters'
 import {
+  useLoansData,
   LoansPageHeader,
   LoansTabNavigation,
   LoanFilters as LoanFiltersComponent,
@@ -15,6 +14,7 @@ import {
   MyCreatedLoans,
   LoanIncomeAnalytics,
 } from '@/features/loans'
+import { filterLoans } from '@/features/loans/model/useLoanFilters'
 
 const TAKER_TABS = [
   { label: 'Available Loans', value: 'available', icon: List },

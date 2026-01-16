@@ -1,13 +1,15 @@
 'use client'
 
 import { useQueryClient } from '@tanstack/react-query'
-import { useWalletConnectionState } from '@maximedogawa/chia-wallet-connect-react'
+import {
+  useWalletConnectionState,
+  useAppSelector,
+} from '@maximedogawa/chia-wallet-connect-react'
 import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react'
 import { chainIdToNetwork, networkToChainId } from '@/shared/lib/utils/networkUtils'
 import { getStoredNetwork, setStoredNetwork, hasNetworkPreference } from '@/shared/lib/utils/networkStorage'
 import { getAssetBalance } from '@/shared/lib/walletConnect/repositories/walletQueries.repository'
 import { logger } from '@/shared/lib/logger'
-import { useAppSelector } from '@maximedogawa/chia-wallet-connect-react'
 import { trackEffectRun } from '@/shared/lib/utils/useEffectGuard'
 
 type Network = 'mainnet' | 'testnet'

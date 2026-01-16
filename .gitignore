@@ -46,6 +46,7 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
+.next/cache/.tsbuildinfo
 
 # os
 .DS_Store

@@ -3,11 +3,11 @@
 import { useDexieDataService } from '../api/useDexieDataService'
 import { useOfferStorage } from './useOfferStorage'
 import type { DexiePostOfferResponse } from '../lib/dexieTypes'
-import { calculateOfferState } from '../lib/dexieUtils'
 import { logger } from '@/shared/lib/logger'
 import type { OfferDetails } from '@/entities/offer'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useMemo, useRef } from 'react'
+import { processOfferUpdate } from '../lib/offerPollingUtils'
 
 const POLLING_INTERVAL = 30000 // 30 seconds
 
@@ -84,87 +84,16 @@ export function useDexieOfferPolling(offers: OfferDetails[]) {
     if (!pollResults.data || pollResults.data.length === 0) return
 
     const updatePromises = pollResults.data.map(async ({ offerId, result }) => {
-      if (!result.success || !result.offer) return
-
-      // Extract date fields from Dexie offer (needed for both updateKey and needsUpdate check)
-      const dateFound = result.offer.date_found
-      const dateCompleted = result.offer.date_completed
-      const datePending = result.offer.date_pending
-      const dateExpiry = result.offer.date_expiry
-      const blockExpiry = result.offer.block_expiry
-      const spentBlockIndex = result.offer.spent_block_index
-      const knownTaker = result.offer.known_taker
-
-      // Create a unique key for this update to prevent duplicate processing
-      // Must include ALL fields that are checked in needsUpdate and updated in the database
-      // This ensures changes to any tracked field (date_expiry, block_expiry, spent_block_index, known_taker)
-      // are properly detected and not short-circuited by processedUpdatesRef
-      const updateKey = `${offerId}-${dateFound || ''}-${dateCompleted || ''}-${datePending || ''}-${dateExpiry || ''}-${blockExpiry || ''}-${spentBlockIndex || ''}-${knownTaker !== null && knownTaker !== undefined ? String(knownTaker) : ''}`
-
-      // Skip if we've already processed this exact update
-      if (processedUpdatesRef.current.has(updateKey)) {
-        return
-      }
-
       // Get current offer from the ref to avoid dependency on offers array
       const currentOffer = offersRef.current.find((o) => o.id === offerId)
-      if (!currentOffer) return
 
-      // Calculate the offer state from date fields
-      const calculatedState = calculateOfferState(result.offer)
-
-      // Map calculated state to legacy status
-      let newStatus = currentOffer.status
-      if (calculatedState === 'Completed') {
-        newStatus = 'completed'
-      } else if (calculatedState === 'Cancelled' || calculatedState === 'Expired') {
-        newStatus = 'cancelled'
-      } else if (calculatedState === 'Pending') {
-        newStatus = 'pending'
-      } else if (calculatedState === 'Open') {
-        newStatus = 'active'
-      }
-
-      // Check if we need to update (compare state or date fields)
-      const currentState = currentOffer.dexieStatus || currentOffer.state
-      const needsUpdate =
-        currentState !== calculatedState ||
-        currentOffer.datePending !== datePending ||
-        currentOffer.dateCompleted !== dateCompleted ||
-        currentOffer.dateFound !== dateFound ||
-        currentOffer.dateExpiry !== dateExpiry
-
-      if (needsUpdate) {
-        // Mark this update as processed
-        processedUpdatesRef.current.add(updateKey)
-
-        // Clean up old processed updates (keep only last 100 to prevent memory leak)
-        if (processedUpdatesRef.current.size > 100) {
-          const entries = Array.from(processedUpdatesRef.current)
-          processedUpdatesRef.current.clear()
-          entries.slice(-50).forEach((key) => processedUpdatesRef.current.add(key))
-        }
-
-        // Update in IndexedDB with all date fields and calculated state
-        await offerStorage.updateOffer(offerId, {
-          dexieOfferData: result.offer,
-          dexieStatus: calculatedState,
-          state: calculatedState,
-          status: newStatus,
-          dateFound,
-          dateCompleted: dateCompleted || undefined,
-          datePending: datePending || undefined,
-          dateExpiry: dateExpiry || undefined,
-          blockExpiry: blockExpiry || undefined,
-          spentBlockIndex: spentBlockIndex || undefined,
-          knownTaker,
-        })
-
-        // Trigger a refresh event so the UI updates
-        if (typeof window !== 'undefined') {
-          window.dispatchEvent(new CustomEvent('offer-status-updated', { detail: { offerId } }))
-        }
-      }
+      await processOfferUpdate({
+        offerId,
+        result,
+        currentOffer,
+        processedUpdatesRef,
+        updateOffer: offerStorage.updateOffer.bind(offerStorage),
+      })
     })
 
     Promise.allSettled(updatePromises).catch((error) => {

@@ -48,6 +48,134 @@ const isSingleAssetPair = (order: OrderBookOrder): boolean => {
   return order.offering.length === 1 && order.requesting.length === 1
 }
 
+// Helper function to get price header ticker
+const getPriceHeaderTicker = (
+  filters?: { buyAsset?: string[]; sellAsset?: string[] },
+  network: 'mainnet' | 'testnet' = 'mainnet'
+): string => {
+  if (filters?.buyAsset && filters.buyAsset.length > 0) {
+    return filters.buyAsset[0]
+  }
+  if (filters?.sellAsset && filters.sellAsset.length > 0) {
+    return filters.sellAsset[0]
+  }
+  return getNativeTokenTickerForNetwork(network)
+}
+
+// Helper to create calculateOrderPrice function
+const createCalculateOrderPrice = (
+  getTickerSymbol: (assetId: string, code?: string) => string,
+  filters?: { buyAsset?: string[]; sellAsset?: string[] }
+) => {
+  return (order: OrderBookOrder): string => {
+    if (isSingleAssetPair(order)) {
+      const requestingAsset = order.requesting[0]
+      const offeringAsset = order.offering[0]
+
+      if (
+        requestingAsset &&
+        offeringAsset &&
+        requestingAsset.amount > 0 &&
+        offeringAsset.amount > 0
+      ) {
+        let price
+
+        if (
+          filters?.buyAsset &&
+          filters.buyAsset.length > 0 &&
+          filters?.sellAsset &&
+          filters.sellAsset.length > 0
+        ) {
+          const requestingIsBuyAsset = filters.buyAsset.some(
+            (filterAsset) =>
+              getTickerSymbol(requestingAsset.id, requestingAsset.code).toLowerCase() ===
+                filterAsset.toLowerCase() ||
+              requestingAsset.id.toLowerCase() === filterAsset.toLowerCase() ||
+              (requestingAsset.code &&
+                requestingAsset.code.toLowerCase() === filterAsset.toLowerCase())
+          )
+
+          const offeringIsBuyAsset = filters.buyAsset.some(
+            (filterAsset) =>
+              getTickerSymbol(offeringAsset.id, offeringAsset.code).toLowerCase() ===
+                filterAsset.toLowerCase() ||
+              offeringAsset.id.toLowerCase() === filterAsset.toLowerCase() ||
+              (offeringAsset.code &&
+                offeringAsset.code.toLowerCase() === filterAsset.toLowerCase())
+          )
+
+          if (requestingIsBuyAsset && !offeringIsBuyAsset) {
+            price = requestingAsset.amount / offeringAsset.amount
+          } else if (offeringIsBuyAsset && !requestingIsBuyAsset) {
+            price = offeringAsset.amount / requestingAsset.amount
+          } else {
+            price = offeringAsset.amount / requestingAsset.amount
+          }
+
+          return formatPriceForDisplay(price)
+        } else {
+          price = offeringAsset.amount / requestingAsset.amount
+          return formatPriceForDisplay(price)
+        }
+      }
+    }
+
+    return `$${order.offeringUsdValue.toLocaleString('en-US', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    })}`
+  }
+}
+
+// Helper to calculate best price
+const calculateBestPrice = (
+  orders: OrderBookOrder[],
+  orderType: 'buy' | 'sell',
+  getNumericPrice: (order: OrderBookOrder) => number
+): number | null => {
+  if (orders.length === 0) return null
+
+  const prices = orders
+    .map(getNumericPrice)
+    .filter((price) => price > 0 && isFinite(price) && !isNaN(price))
+
+  if (prices.length === 0) return null
+  if (prices.length === 1) return prices[0]
+
+  if (orderType === 'sell') {
+    const minPrice = Math.min(...prices)
+    return isFinite(minPrice) && !isNaN(minPrice) ? minPrice : null
+  } else {
+    const maxPrice = Math.max(...prices)
+    return isFinite(maxPrice) && !isNaN(maxPrice) ? maxPrice : null
+  }
+}
+
+// Helper to create price count map
+const createPriceCountMap = (
+  orders: OrderBookOrder[],
+  getNumericPrice: (order: OrderBookOrder) => number
+): Map<string, number> => {
+  const countMap = new Map<string, number>()
+
+  const normalizePrice = (price: number): string => {
+    if (!isFinite(price) || isNaN(price) || price <= 0) return ''
+    return price.toFixed(8)
+  }
+
+  orders.forEach((order) => {
+    const numericPrice = getNumericPrice(order)
+    const normalizedPrice = normalizePrice(numericPrice)
+
+    if (normalizedPrice) {
+      const currentCount = countMap.get(normalizedPrice) || 0
+      countMap.set(normalizedPrice, currentCount + 1)
+    }
+  })
+
+  return countMap
+}
+
 export default function OrderBookTable({
   orders,
   orderType,
@@ -82,80 +210,8 @@ export default function OrderBookTable({
     [getCatTokenInfo, network]
   )
 
-  const getPriceHeaderTicker = (): string => {
-    if (filters?.buyAsset && filters.buyAsset.length > 0) {
-      return filters.buyAsset[0]
-    }
-    if (filters?.sellAsset && filters.sellAsset.length > 0) {
-      return filters.sellAsset[0]
-    }
-    return getNativeTokenTickerForNetwork(network)
-  }
-
   const calculateOrderPrice = useCallback(
-    (order: OrderBookOrder): string => {
-      if (isSingleAssetPair(order)) {
-        const requestingAsset = order.requesting[0]
-        const offeringAsset = order.offering[0]
-
-        if (
-          requestingAsset &&
-          offeringAsset &&
-          requestingAsset.amount > 0 &&
-          offeringAsset.amount > 0
-        ) {
-          let price
-
-          if (
-            filters?.buyAsset &&
-            filters.buyAsset.length > 0 &&
-            filters?.sellAsset &&
-            filters.sellAsset.length > 0
-          ) {
-            // Calculate price from buy side perspective: buyAsset/sellAsset
-            // Example: buy TXCH, sell TDBX -> price = TXCH/TDBX (how much buyAsset per sellAsset)
-
-            // Determine which asset is the buy asset and which is the sell asset
-            const requestingIsBuyAsset = filters.buyAsset.some(
-              (filterAsset) =>
-                getTickerSymbol(requestingAsset.id, requestingAsset.code).toLowerCase() ===
-                  filterAsset.toLowerCase() ||
-                requestingAsset.id.toLowerCase() === filterAsset.toLowerCase() ||
-                (requestingAsset.code &&
-                  requestingAsset.code.toLowerCase() === filterAsset.toLowerCase())
-            )
-
-            const offeringIsBuyAsset = filters.buyAsset.some(
-              (filterAsset) =>
-                getTickerSymbol(offeringAsset.id, offeringAsset.code).toLowerCase() ===
-                  filterAsset.toLowerCase() ||
-                offeringAsset.id.toLowerCase() === filterAsset.toLowerCase() ||
-                (offeringAsset.code &&
-                  offeringAsset.code.toLowerCase() === filterAsset.toLowerCase())
-            )
-
-            if (requestingIsBuyAsset && !offeringIsBuyAsset) {
-              price = requestingAsset.amount / offeringAsset.amount
-            } else if (offeringIsBuyAsset && !requestingIsBuyAsset) {
-              price = offeringAsset.amount / requestingAsset.amount
-            } else {
-              price = offeringAsset.amount / requestingAsset.amount
-            }
-
-            return formatPriceForDisplay(price)
-          } else {
-            price = offeringAsset.amount / requestingAsset.amount
-            return formatPriceForDisplay(price)
-          }
-        }
-      }
-
-      // For multiple asset pairs, show USD total
-      return `$${order.offeringUsdValue.toLocaleString('en-US', {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-      })}`
-    },
+    (order: OrderBookOrder) => createCalculateOrderPrice(getTickerSymbol, filters)(order),
     [filters, getTickerSymbol]
   )
 
@@ -170,56 +226,15 @@ export default function OrderBookTable({
     [filters, getTickerSymbol]
   )
 
-  // Calculate best price for this side
-  const bestPrice = useMemo(() => {
-    // Handle edge case: empty orders array
-    if (orders.length === 0) return null
+  const bestPrice = useMemo(
+    () => calculateBestPrice(orders, orderType, getNumericPrice),
+    [orders, orderType, getNumericPrice]
+  )
 
-    // Get all valid prices (positive and finite)
-    const prices = orders
-      .map(getNumericPrice)
-      .filter((price) => price > 0 && isFinite(price) && !isNaN(price))
-
-    // Handle edge case: no valid prices
-    if (prices.length === 0) return null
-
-    // Handle edge case: only one order (it's the best)
-    if (prices.length === 1) return prices[0]
-
-    if (orderType === 'sell') {
-      // For sell orders, best price is the lowest (most competitive for buyers)
-      const minPrice = Math.min(...prices)
-      return isFinite(minPrice) && !isNaN(minPrice) ? minPrice : null
-    } else {
-      // For buy orders, best price is the highest (most competitive for sellers)
-      const maxPrice = Math.max(...prices)
-      return isFinite(maxPrice) && !isNaN(maxPrice) ? maxPrice : null
-    }
-  }, [orders, orderType, getNumericPrice])
-
-  // Group orders by price and calculate count for each price level
-  const priceCountMap = useMemo(() => {
-    const countMap = new Map<string, number>()
-
-    // Helper to normalize price for grouping (round to 8 decimal places to handle floating point differences)
-    const normalizePrice = (price: number): string => {
-      if (!isFinite(price) || isNaN(price) || price <= 0) return ''
-      // Round to 8 decimal places for grouping
-      return price.toFixed(8)
-    }
-
-    orders.forEach((order) => {
-      const numericPrice = getNumericPrice(order)
-      const normalizedPrice = normalizePrice(numericPrice)
-
-      if (normalizedPrice) {
-        const currentCount = countMap.get(normalizedPrice) || 0
-        countMap.set(normalizedPrice, currentCount + 1)
-      }
-    })
-
-    return countMap
-  }, [orders, getNumericPrice])
+  const priceCountMap = useMemo(
+    () => createPriceCountMap(orders, getNumericPrice),
+    [orders, getNumericPrice]
+  )
 
   return (
     <div className={`w-full ${className}`}>
@@ -240,30 +255,26 @@ export default function OrderBookTable({
         {!isLoading && !error && (
           <>
             {showHeader && (
-              /* Header */
               <div
                 className={`grid grid-cols-12 gap-2 px-2 py-1 backdrop-blur-xl ${t.card} border-b ${t.border} text-[10px] font-medium ${t.textSecondary} ${
-                  stickyHeader ? 'sticky top-0 z-10' : ''
+                  stickyHeader ? 'sticky top-0 z-10 shadow-sm' : ''
                 }`}
-                style={{
-                  boxShadow: stickyHeader
-                    ? '0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)'
-                    : undefined,
-                }}
+                style={
+                  stickyHeader
+                    ? {
+                        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)',
+                      }
+                    : undefined
+                }
               >
-                {/* Count */}
                 <div className="col-span-1 text-left flex items-center">Count</div>
-
-                {/* Buy */}
                 <div className="col-span-3 text-right flex items-center justify-end">Buy</div>
-
-                {/* Sell */}
                 <div className="col-span-3 text-right flex items-center justify-end">Sell</div>
-
-                {/* Price */}
                 <div className="col-span-5 text-right flex items-center justify-end">
                   <div className="flex items-center gap-1">
-                    <span className="text-[9px] opacity-70">({getPriceHeaderTicker()})</span>
+                    <span className="text-[9px] opacity-70">
+                      ({getPriceHeaderTicker(filters, network)})
+                    </span>
                     <span className="font-mono">Price</span>
                   </div>
                 </div>
@@ -474,12 +485,9 @@ function OrderBookTableRow({
     >
       {/* Dynamic background based on price deviation - width scales from 0% to 100%, fills from right to left */}
       <div
-        className={`absolute ${bgColorClass} transition-all duration-300`}
+        className={`absolute right-0 top-0 bottom-0 ${bgColorClass} transition-all duration-300`}
         style={{
           width: backgroundWidth,
-          right: 0,
-          top: 0,
-          bottom: 0,
         }}
       />
 
