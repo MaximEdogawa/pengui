@@ -1,8 +1,9 @@
 'use client'
 
 import type { OfferDetails } from '@/entities/offer'
-import { useCatTokens, useThemeClasses } from '@/shared/hooks'
-import Modal from '@/shared/ui/Modal'
+import { useThemeClasses } from '@/shared/hooks'
+import { useCatTokens } from '@/entities/asset'
+import { Modal } from '@/shared/ui'
 import { useMyOffers } from '../model'
 import { useOfferDetailsActions } from './OfferDetailsModal/hooks/useOfferDetailsActions'
 import { OfferDetailsHeader } from './OfferDetailsModal/components/OfferDetailsHeader'

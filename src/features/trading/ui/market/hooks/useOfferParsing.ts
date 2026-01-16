@@ -1,10 +1,9 @@
 'use client'
 
-import {  type OfferAsset } from '@/entities/offer'
 import { useDexieDataService } from '@/features/offers/api/useDexieDataService'
-import type { DexieOffer } from '@/features/offers/lib/dexieTypes'
+import { type DexieOffer, type OfferAsset } from '@/entities/offer'
 import { useOfferInspection } from '@/features/offers/model/useOfferInspection'
-import { useCatTokens } from '@/shared/hooks'
+import { useCatTokens } from '@/entities/asset'
 import { useNetwork } from '@/shared/hooks/useNetwork'
 import { logger } from '@/shared/lib/logger'
 import { useQuery, useQueryClient } from '@tanstack/react-query'

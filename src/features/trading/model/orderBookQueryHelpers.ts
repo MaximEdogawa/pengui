@@ -4,8 +4,8 @@
  */
 
 import { logger } from '@/shared/lib/logger'
+import type { DexieOffer } from '@/entities/offer'
 import type {
-  DexieOffer,
   DexieOfferSearchParams,
   DexieOfferSearchResponse,
 } from '@/features/offers/lib/dexieTypes'

@@ -1,8 +1,12 @@
-import { convertOfferStateToStatus, type OfferAsset } from '@/entities/offer'
-import type { DexieOffer, DexiePostOfferResponse } from '@/features/offers/lib/dexieTypes'
-import { calculateOfferState } from '@/features/offers/lib/dexieUtils'
+import {
+  calculateOfferState,
+  convertOfferStateToStatus,
+  validateOfferString,
+  type DexieOffer,
+  type OfferAsset,
+} from '@/entities/offer'
+import type { DexiePostOfferResponse } from '@/features/offers/lib/dexieTypes'
 import { logger } from '@/shared/lib/logger'
-import { validateOfferString } from '@/shared/lib/utils/offerUtils'
 
 /**
  * Convert Dexie offer to app offer format

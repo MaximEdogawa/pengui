@@ -58,3 +58,8 @@ thumbs.db
 
 # husky
 .husky/_/*
+
+*storybook.log
+storybook-static
+# Storybook stories directory (optional - uncomment if you want to ignore stories)
+# storybook/

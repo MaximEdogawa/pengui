@@ -14,7 +14,7 @@ import { FeeInput } from './LimitOfferContent/components/FeeInput'
 import { FormActions } from './LimitOfferContent/components/FormActions'
 import { FormMessages } from './LimitOfferContent/components/FormMessages'
 import { OrderDetailsCollapsible } from './LimitOfferContent/components/OrderDetailsCollapsible'
-import type { ExtendedAsset as ExtendedOfferAsset } from '@/shared/ui/AssetSelector'
+import type { ExtendedAsset as ExtendedOfferAsset } from '@/shared/ui'
 
 interface MakerOfferContentProps {
   order?: OrderBookOrder

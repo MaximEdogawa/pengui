@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react'
 import { formatAssetAmountForInput } from '@/shared/lib/utils/chia-units'
-import type { ExtendedAsset as ExtendedOfferAsset } from '@/shared/ui/AssetSelector'
-import { useCatTokens } from '@/shared/hooks'
+import type { ExtendedAsset as ExtendedOfferAsset } from '@/shared/ui'
+import { useCatTokens } from '@/entities/asset'
 
 /**
  * Extract preview calculations to reduce complexity

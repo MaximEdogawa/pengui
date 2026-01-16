@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import type { ExtendedAsset as ExtendedOfferAsset } from '@/shared/ui/AssetSelector'
+import type { ExtendedAsset as ExtendedOfferAsset } from '@/shared/ui'
 
 /**
  * Extract form validation logic to reduce complexity

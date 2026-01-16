@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import type { ExtendedAsset as ExtendedOfferAsset } from '@/shared/ui/AssetSelector'
+import type { ExtendedAsset as ExtendedOfferAsset } from '@/shared/ui'
 
 interface AssetItem {
   assetId: string

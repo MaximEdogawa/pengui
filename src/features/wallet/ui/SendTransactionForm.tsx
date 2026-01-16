@@ -13,7 +13,7 @@ import { useSendTransaction, useRefreshBalance, useTransactionForm } from '../mo
 import { useThemeClasses } from '@/shared/hooks'
 import { Send, RefreshCw } from 'lucide-react'
 import { useState } from 'react'
-import TransactionStatus from './TransactionStatus'
+import { TransactionStatus } from '@/entities/transaction'
 import { logger } from '@/shared/lib/logger'
 import { saveTransaction } from '@/shared/lib/walletConnect/utils/transactionStorage'
 import FormInput from './shared/FormInput'

@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { useCatTokens } from '@/shared/hooks'
+import { useCatTokens } from '@/entities/asset'
 import { getNativeTokenTickerForNetwork } from '@/shared/lib/config/environment'
 import { useNetwork } from '@/shared/hooks/useNetwork'
 import type { OrderBookFilters, OrderBookOrder } from '../../../../lib/orderBookTypes'

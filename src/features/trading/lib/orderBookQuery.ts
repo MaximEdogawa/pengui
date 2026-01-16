@@ -1,5 +1,5 @@
 import { logger } from '@/shared/lib/logger'
-import type { DexieOffer } from '@/features/offers/lib/dexieTypes'
+import type { DexieOffer } from '@/entities/offer'
 import type { OrderBookFilters, OrderBookOrder, OrderBookPagination } from './orderBookTypes'
 import {
   fetchBidirectionalPair,

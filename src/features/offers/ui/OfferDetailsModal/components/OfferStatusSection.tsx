@@ -1,7 +1,6 @@
 'use client'
 
-import type { OfferDetails } from '@/entities/offer'
-import { getDexieStatusDescription } from '@/shared/lib/utils/offerUtils'
+import { getDexieStatusDescription, type OfferDetails } from '@/entities/offer'
 import type { ThemeClasses } from '@/shared/lib/theme'
 
 interface OfferStatusSectionProps {

@@ -1,6 +1,6 @@
 'use client'
 
-import { useCatTokens } from '@/shared/hooks'
+import { useCatTokens } from '@/entities/asset'
 import { formatAssetAmount } from '@/shared/lib/utils/chia-units'
 import { useCallback, useEffect, useRef } from 'react'
 import type { UseMyOffersState, UseMyOffersSetters } from '../useMyOffersState'

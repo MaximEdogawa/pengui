@@ -2,8 +2,7 @@
 
 import { Loader2, Trash2 } from 'lucide-react'
 import type { OfferDetails } from '@/entities/offer'
-import Button from '@/shared/ui/Button'
-import Modal from '@/shared/ui/Modal'
+import { Button, Modal } from '@/shared/ui'
 import type { ThemeClasses } from '@/shared/lib/theme'
 
 interface DeleteOfferConfirmationProps {

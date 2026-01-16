@@ -1,6 +1,6 @@
 'use client'
 
-import { useCatTokens } from '@/shared/hooks'
+import { useCatTokens } from '@/entities/asset'
 import { useNetwork } from '@/shared/hooks/useNetwork'
 import { getNativeTokenTickerForNetwork } from '@/shared/lib/config/environment'
 import { useMemo, useCallback } from 'react'
