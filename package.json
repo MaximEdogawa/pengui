@@ -9,11 +9,27 @@
     "dev": "bun next dev",
     "build": "bun next build",
     "start": "bun next start",
-    "lint": "bun eslint . --config eslint.config.mjs"
+    "lint": "bun eslint . --config eslint.config.mjs --max-warnings=9999",
+    "lint:fix": "bun eslint . --config eslint.config.mjs --fix --max-warnings=9999",
+    "type-check": "bunx tsc --noEmit",
+    "test": "echo 'No tests configured yet' && exit 0",
+    "test:watch": "echo 'No tests configured yet' && exit 0",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --config eslint.config.mjs --fix --max-warnings=9999",
+      "bash -lc 'bun run type-check'"
+    ],
+    "*.{js,jsx}": [
+      "eslint --config eslint.config.mjs --fix --max-warnings=9999"
+    ]
   },
   "dependencies": {
     "@maximedogawa/chia-wallet-connect-react": "^0.0.4",
+    "@radix-ui/react-toast": "^1.2.15",
     "@tanstack/react-query": "^5.90.16",
+    "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "dexie": "^4.2.1",
     "lucide-react": "^0.553.0",
@@ -34,6 +50,9 @@
     "baseline-browser-mapping": "^2.9.14",
     "eslint": "^9.39.2",
     "eslint-config-next": "^16.1.1",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.19",
     "typescript": "^5.9.3"

@@ -7,6 +7,8 @@ import {
 } from '@/shared/lib/database/indexedDB'
 import type { OfferDetails } from '@/entities/offer'
 import { logger } from '@/shared/lib/logger'
+import { getStoredNetwork } from '@/shared/lib/utils/networkStorage'
+import { filterOffersByNetwork } from '@/shared/lib/utils/offerNetworkFilter'
 
 export interface OfferStorageOptions {
   walletAddress?: string
@@ -15,6 +17,7 @@ export interface OfferStorageOptions {
   status?: string
   page?: number
   pageSize?: number
+  network?: 'mainnet' | 'testnet' // Filter by network (defaults to current network from localStorage)
 }
 
 export interface PaginatedOffersResult {
@@ -26,6 +29,15 @@ export interface PaginatedOffersResult {
 }
 
 export class OfferStorageService {
+  /**
+   * Get current network from parameter or localStorage
+   * @param network - Optional network parameter
+   * @returns The network to use
+   */
+  private getCurrentNetwork(network?: 'mainnet' | 'testnet'): 'mainnet' | 'testnet' {
+    return network || getStoredNetwork('mainnet')
+  }
+
   /**
    * Save an offer to IndexedDB
    */
@@ -55,12 +67,16 @@ export class OfferStorageService {
         return { ...existingOffer, ...offer, id: offer.id }
       }
 
+      // Get current network from localStorage (defaults to mainnet)
+      const currentNetwork = this.getCurrentNetwork()
+
       const storedOffer: StoredOffer = {
         ...offer,
         lastModified: new Date(),
         isLocal,
         walletAddress: walletAddress || this.getCurrentWalletAddress(),
         syncedAt: isLocal ? undefined : new Date(),
+        network: currentNetwork,
       }
 
       await withTimeout(db.offers.add(storedOffer), 5000, 'saveOffer (add)')
@@ -172,25 +188,33 @@ export class OfferStorageService {
         throw new Error('Database is not ready')
       }
 
-      // Sort by createdAt (date) in descending order (newest first)
-      let query = db.offers.orderBy('createdAt').reverse()
+      // Get current network from options or localStorage (defaults to mainnet)
+      const network = this.getCurrentNetwork(options.network)
 
-      // Filter by status if provided
+      // Fetch all offers first, then apply filters (more efficient than chained Dexie filters)
+      let allOffers = await withTimeout(
+        db.offers.orderBy('createdAt').reverse().toArray(),
+        5000,
+        'getOffers (fetch)'
+      )
+
+      // Filter by network first
+      allOffers = filterOffersByNetwork(allOffers, network)
+
+      // Apply additional filters
       if (options.status) {
-        query = query.filter((offer) => offer.status === options.status)
+        allOffers = allOffers.filter((offer) => offer.status === options.status)
       }
 
-      // Filter by wallet address if provided
       if (options.walletAddress) {
-        query = query.filter((offer) => offer.walletAddress === options.walletAddress)
+        allOffers = allOffers.filter((offer) => offer.walletAddress === options.walletAddress)
       }
 
-      // Filter by local/synced status
       if (options.includeLocal === false) {
-        query = query.filter((offer) => !offer.isLocal)
+        allOffers = allOffers.filter((offer) => !offer.isLocal)
       }
       if (options.includeSynced === false) {
-        query = query.filter((offer) => offer.isLocal)
+        allOffers = allOffers.filter((offer) => offer.isLocal)
       }
 
       // If pagination is requested, return paginated result
@@ -199,17 +223,12 @@ export class OfferStorageService {
         const pageSize = Math.max(1, options.pageSize)
         const offset = (page - 1) * pageSize
 
-        // Get total count first (need to apply filters)
-        const allOffers = await withTimeout(query.toArray(), 5000, 'getOffers (count)')
+        // Get total count (already filtered)
         const total = allOffers.length
         const totalPages = Math.ceil(total / pageSize)
 
         // Get paginated offers
-        const offers = await withTimeout(
-          query.offset(offset).limit(pageSize).toArray(),
-          5000,
-          'getOffers (paginated)'
-        )
+        const offers = allOffers.slice(offset, offset + pageSize)
 
         logger.info('✅ Retrieved paginated offers from IndexedDB:', {
           count: offers.length,
@@ -229,10 +248,9 @@ export class OfferStorageService {
       }
 
       // No pagination - return all offers
-      const offers = await withTimeout(query.toArray(), 5000, 'getOffers')
-      logger.info('✅ Retrieved offers from IndexedDB:', { count: offers.length })
+      logger.info('✅ Retrieved offers from IndexedDB:', { count: allOffers.length })
 
-      return offers
+      return allOffers
     } catch (error) {
       logger.error('❌ Failed to get offers from IndexedDB:', error)
       // Return empty result instead of throwing to prevent UI crashes
@@ -252,7 +270,11 @@ export class OfferStorageService {
   /**
    * Get offers by status
    */
-  async getOffersByStatus(status: string, walletAddress?: string): Promise<StoredOffer[]> {
+  async getOffersByStatus(
+    status: string,
+    walletAddress?: string,
+    network?: 'mainnet' | 'testnet'
+  ): Promise<StoredOffer[]> {
     try {
       await ensureDatabaseReady()
 
@@ -260,18 +282,24 @@ export class OfferStorageService {
         return []
       }
 
+      // Get current network from parameter or localStorage (defaults to mainnet)
+      const currentNetwork = this.getCurrentNetwork(network)
+
       let query = db.offers.where('status').equals(status)
 
       if (walletAddress) {
         query = query.and((offer) => offer.walletAddress === walletAddress)
       }
 
-      // Sort by createdAt (date) in descending order (newest first)
-      const offers = await withTimeout(
+      // Get all offers first, then filter by network
+      const allOffers = await withTimeout(
         query.reverse().sortBy('createdAt'),
         5000,
         'getOffersByStatus'
       )
+
+      // Filter by network
+      const offers = filterOffersByNetwork(allOffers, currentNetwork)
       logger.info('✅ Retrieved offers by status from IndexedDB:', { status, count: offers.length })
 
       return offers
@@ -366,7 +394,7 @@ export class OfferStorageService {
   /**
    * Get unsynced offers
    */
-  async getUnsyncedOffers(): Promise<StoredOffer[]> {
+  async getUnsyncedOffers(network?: 'mainnet' | 'testnet'): Promise<StoredOffer[]> {
     try {
       await ensureDatabaseReady()
 
@@ -374,11 +402,19 @@ export class OfferStorageService {
         return []
       }
 
-      const offers = await withTimeout(
-        db.offers.filter((offer) => offer.isLocal).toArray(),
+      // Get current network from parameter or localStorage (defaults to mainnet)
+      const currentNetwork = this.getCurrentNetwork(network)
+
+      // Get all offers that are local (not synced)
+      const allOffers = await withTimeout(
+        db.offers.filter((offer) => offer.isLocal === true).toArray(),
         5000,
         'getUnsyncedOffers'
       )
+
+      // Filter by network
+      const offers = filterOffersByNetwork(allOffers, currentNetwork)
+
       logger.info('✅ Retrieved unsynced offers from IndexedDB:', { count: offers.length })
 
       return offers

@@ -2,7 +2,7 @@
 
 import { formatAddress } from '@/shared/lib/utils/addressUtils'
 import { useThemeClasses } from '@/shared/hooks'
-import { ConnectButton, useWalletConnectionState } from '@maximedogawa/chia-wallet-connect-react'
+import { useWalletConnectionState } from '@maximedogawa/chia-wallet-connect-react'
 import { Wallet, Copy } from 'lucide-react'
 import { useState } from 'react'
 
@@ -23,18 +23,7 @@ export default function WalletAddress() {
   }
 
   if (!isConnected || !address) {
-    return (
-      <div
-        className={`backdrop-blur-xl ${
-          isDark ? 'bg-white/[0.03] border-white/5' : 'bg-white/50 border-cyan-200/30'
-        } rounded-xl p-3 border transition-all duration-200 flex flex-col items-center justify-center py-6`}
-      >
-        <p className={`${t.textSecondary} text-sm mb-4 text-center`}>
-          Connect your wallet to view your address
-        </p>
-        <ConnectButton />
-      </div>
-    )
+    return null
   }
 
   return (

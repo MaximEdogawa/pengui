@@ -2,7 +2,8 @@
 
 import { useDexieDataService } from '@/features/offers/api/useDexieDataService'
 import { useCatTokens } from '@/shared/hooks/useTickers'
-import { getNativeTokenTicker } from '@/shared/lib/config/environment'
+import { getNativeTokenTickerForNetwork } from '@/shared/lib/config/environment'
+import { useNetwork } from '@/shared/hooks/useNetwork'
 import { logger } from '@/shared/lib/logger'
 import { useCallback, useState } from 'react'
 import type { OrderBookOrder } from '../lib/orderBookTypes'
@@ -19,6 +20,7 @@ interface AssetItem {
 export function useOrderBookOfferSubmission() {
   const dexieDataService = useDexieDataService()
   const { getCatTokenInfo } = useCatTokens()
+  const { network } = useNetwork()
 
   const [selectedOrderForTaking, setSelectedOrderForTaking] = useState<OrderBookOrder | null>(null)
   const [fetchedOfferString, setFetchedOfferString] = useState<string>('')
@@ -37,11 +39,11 @@ export function useOrderBookOfferSubmission() {
   const getTickerSymbol = useCallback(
     (assetId: string, code?: string): string => {
       if (code) return code
-      if (!assetId) return getNativeTokenTicker()
+      if (!assetId) return getNativeTokenTickerForNetwork(network)
       const tickerInfo = getCatTokenInfo(assetId)
       return tickerInfo?.ticker || assetId.slice(0, 8)
     },
-    [getCatTokenInfo]
+    [getCatTokenInfo, network]
   )
 
   /**

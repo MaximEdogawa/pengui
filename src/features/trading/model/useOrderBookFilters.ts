@@ -1,8 +1,9 @@
 'use client'
 
-import { getNativeTokenTicker } from '@/shared/lib/config/environment'
+import { getNativeTokenTickerForNetwork } from '@/shared/lib/config/environment'
+import { useNetwork } from '@/shared/hooks/useNetwork'
 import { useQueryClient } from '@tanstack/react-query'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, useRef } from 'react'
 import type { OrderBookFilters, OrderBookPagination, SuggestionItem } from '../lib/orderBookTypes'
 
 const STORAGE_KEY = 'orderBookFilterState'
@@ -27,6 +28,8 @@ const defaultFilters: OrderBookFilters = {
 
 export function useOrderBookFilters() {
   const queryClient = useQueryClient()
+  const { network } = useNetwork()
+  const prevNetworkRef = useRef<typeof network | null>(null)
   const [state, setState] = useState<FilterState>(() => {
     // Load from localStorage on init
     if (typeof window !== 'undefined') {
@@ -43,7 +46,7 @@ export function useOrderBookFilters() {
               (!loadedFilters.buyAsset || loadedFilters.buyAsset.length === 0) &&
               (!loadedFilters.sellAsset || loadedFilters.sellAsset.length === 0)
             ) {
-              const nativeTicker = getNativeTokenTicker()
+              const nativeTicker = getNativeTokenTickerForNetwork('mainnet') // Default to mainnet for initial load
               loadedFilters.buyAsset = [nativeTicker]
               loadedFilters.sellAsset = ['TBYC']
             }
@@ -70,7 +73,7 @@ export function useOrderBookFilters() {
     }
 
     // Set default filter if no saved state
-    const nativeTicker = getNativeTokenTicker()
+    const nativeTicker = getNativeTokenTickerForNetwork('mainnet') // Default to mainnet for initial load
     const defaultState: FilterState = {
       filters: {
         buyAsset: [nativeTicker],
@@ -88,6 +91,33 @@ export function useOrderBookFilters() {
     return defaultState
   })
 
+  // Clear all filters when network changes
+  useEffect(() => {
+    // Clear filters when network changes (but not on initial mount)
+    if (prevNetworkRef.current !== null && prevNetworkRef.current !== network) {
+      // Network changed - clear all filters
+      setState((prev) => ({
+        ...prev,
+        filters: defaultFilters,
+        searchValue: '',
+        filteredSuggestions: [],
+        assetsSwapped: false,
+        userClearedFilters: true,
+      }))
+      // Clear from localStorage
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.removeItem(STORAGE_KEY)
+        } catch (error) {
+          // Silently fail
+          void error
+        }
+      }
+    }
+    
+    prevNetworkRef.current = network
+  }, [network])
+
   // Ensure default filters are set on mount if not already set
   useEffect(() => {
     if (
@@ -95,7 +125,7 @@ export function useOrderBookFilters() {
       (!state.filters.sellAsset || state.filters.sellAsset.length === 0) &&
       !state.userClearedFilters
     ) {
-      const nativeTicker = getNativeTokenTicker()
+      const nativeTicker = getNativeTokenTickerForNetwork(network)
       setState((prev) => ({
         ...prev,
         filters: {
@@ -105,7 +135,7 @@ export function useOrderBookFilters() {
         },
       }))
     }
-  }, []) // Only run on mount
+  }, [network, state.filters.buyAsset, state.filters.sellAsset, state.userClearedFilters])
 
   // Save to localStorage whenever state changes
   useEffect(() => {

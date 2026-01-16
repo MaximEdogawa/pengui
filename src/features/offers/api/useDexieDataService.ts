@@ -1,8 +1,15 @@
 'use client'
 
-import { environment } from '@/shared/lib/config/environment'
 import { logger } from '@/shared/lib/logger'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useNetwork } from '@/shared/hooks/useNetwork'
+import { getDexieApiUrl } from '@/shared/lib/utils/networkUtils'
+import {
+  buildOfferSearchParams,
+  extractErrorMessage,
+  parseOffersData,
+  logApiError,
+} from './dexieApiHelpers'
 import type {
   DexieHistoricalTradesResponse,
   DexieOfferSearchParams,
@@ -15,16 +22,17 @@ import type {
 
 const DEXIE_KEY = 'dexie'
 const PAIRS_KEY = 'pairs'
-const DEXIE_API_BASE_URL = environment.dexie.apiBaseUrl
 
 export function useDexieDataService() {
   const queryClient = useQueryClient()
+  const { network } = useNetwork()
+  const dexieApiBaseUrl = getDexieApiUrl(network)
 
   const pairsQuery = useQuery({
-    queryKey: [DEXIE_KEY, PAIRS_KEY],
+    queryKey: [DEXIE_KEY, PAIRS_KEY, network],
     queryFn: async (): Promise<DexiePairsResponse> => {
       try {
-        const response = await fetch(`${DEXIE_API_BASE_URL}/v3/prices/pairs`)
+        const response = await fetch(`${dexieApiBaseUrl}/v3/prices/pairs`)
 
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`)
@@ -47,68 +55,25 @@ export function useDexieDataService() {
   const searchOffersMutation = useMutation({
     mutationFn: async (params: DexieOfferSearchParams = {}): Promise<DexieOfferSearchResponse> => {
       try {
-        const queryParams = new URLSearchParams()
-
-        if (params.requested) queryParams.append('requested', params.requested)
-        if (params.offered) queryParams.append('offered', params.offered)
-        if (params.maker) queryParams.append('maker', params.maker)
-        if (params.page_size) queryParams.append('page_size', params.page_size.toString())
-        if (params.page) queryParams.append('page', params.page.toString())
-        if (params.status !== undefined) queryParams.append('status', params.status.toString())
-
-        const response = await fetch(`${DEXIE_API_BASE_URL}/v1/offers?${queryParams.toString()}`)
+        const queryParams = buildOfferSearchParams(params)
+        const url = `${dexieApiBaseUrl}/v1/offers?${queryParams.toString()}`
+        const response = await fetch(url)
 
         if (!response.ok) {
-          // Try to get error details from response
-          let errorMessage = `HTTP error! status: ${response.status}`
-          // Read body as text first (can only be read once)
-          const responseText = await response.text()
-
-          if (responseText) {
-            try {
-              // Try to parse as JSON to extract structured error data
-              const errorData = JSON.parse(responseText)
-              if (errorData.message || errorData.error) {
-                errorMessage = `${errorMessage}: ${errorData.message || errorData.error}`
-              } else {
-                errorMessage = `${errorMessage}: ${responseText}`
-              }
-            } catch {
-              // If parsing fails, use the raw text as error message
-              errorMessage = `${errorMessage}: ${responseText}`
-            }
-          }
-
-          logger.error('Dexie API error:', {
-            status: response.status,
-            url: `${DEXIE_API_BASE_URL}/v1/offers?${queryParams.toString()}`,
-            error: errorMessage,
-          })
+          const errorMessage = await extractErrorMessage(response)
+          logApiError('searchOffers', url, response.status, errorMessage)
           throw new Error(errorMessage)
         }
 
         const data = await response.json()
-
-        // Handle different response structures
-        let offersData: unknown[] = []
-        if (Array.isArray(data)) {
-          offersData = data
-        } else if (data && typeof data === 'object') {
-          if (Array.isArray(data.data)) {
-            offersData = data.data
-          } else if (Array.isArray(data.offers)) {
-            offersData = data.offers
-          } else if (Array.isArray(data.results)) {
-            offersData = data.results
-          }
-        }
+        const parsed = parseOffersData(data)
 
         return {
           success: true,
-          data: offersData,
-          total: data.total || offersData.length,
-          page: data.page || 1,
-          page_size: data.page_size || 10,
+          data: parsed.offers,
+          total: parsed.total,
+          page: parsed.page,
+          page_size: parsed.page_size,
         }
       } catch (error) {
         logger.error('Failed to search offers:', error)
@@ -127,7 +92,7 @@ export function useDexieDataService() {
     mutationFn: async (dexieId: string): Promise<DexiePostOfferResponse> => {
       try {
         logger.info(`Fetching offer by ID: ${dexieId}`)
-        const response = await fetch(`${DEXIE_API_BASE_URL}/v1/offers/${dexieId}`)
+        const response = await fetch(`${dexieApiBaseUrl}/v1/offers/${dexieId}`)
 
         const result = await response.json()
         logger.info(`Response status: ${response.status}, Result:`, result)
@@ -178,7 +143,7 @@ export function useDexieDataService() {
     }): Promise<DexieOrderBookResponse> => {
       try {
         const response = await fetch(
-          `${DEXIE_API_BASE_URL}/v3/prices/orderbook?ticker_id=${tickerId}&depth=${depth}`
+          `${dexieApiBaseUrl}/v3/prices/orderbook?ticker_id=${tickerId}&depth=${depth}`
         )
 
         if (!response.ok) {
@@ -213,7 +178,7 @@ export function useDexieDataService() {
     }): Promise<DexieHistoricalTradesResponse> => {
       try {
         const response = await fetch(
-          `${DEXIE_API_BASE_URL}/v3/prices/trades?ticker_id=${tickerId}&limit=${limit}`
+          `${dexieApiBaseUrl}/v3/prices/trades?ticker_id=${tickerId}&limit=${limit}`
         )
 
         if (!response.ok) {
@@ -241,7 +206,7 @@ export function useDexieDataService() {
   const postOfferMutation = useMutation({
     mutationFn: async (params: DexiePostOfferParams): Promise<DexiePostOfferResponse> => {
       try {
-        const response = await fetch(`${DEXIE_API_BASE_URL}/v1/offers`, {
+        const response = await fetch(`${dexieApiBaseUrl}/v1/offers`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -302,11 +267,11 @@ export function useDexieDataService() {
   }
 
   const refreshPairs = async () => {
-    await queryClient.invalidateQueries({ queryKey: [DEXIE_KEY, PAIRS_KEY] })
+    await queryClient.invalidateQueries({ queryKey: [DEXIE_KEY, PAIRS_KEY, network] })
   }
 
   const refreshOffers = async () => {
-    await queryClient.invalidateQueries({ queryKey: [DEXIE_KEY, 'offers'] })
+    await queryClient.invalidateQueries({ queryKey: [DEXIE_KEY, 'offers', network] })
   }
 
   const validateOfferString = (offerString: string): boolean => {

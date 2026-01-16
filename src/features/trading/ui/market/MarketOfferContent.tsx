@@ -8,7 +8,8 @@ import { calculateOfferState } from '@/features/offers/lib/dexieUtils'
 import { useOfferInspection } from '@/features/offers/model/useOfferInspection'
 import { useTakeOffer } from '@/features/wallet'
 import { useCatTokens, useThemeClasses } from '@/shared/hooks'
-import { getNativeTokenTicker } from '@/shared/lib/config/environment'
+import { useNetwork } from '@/shared/hooks/useNetwork'
+import { getNativeTokenTickerForNetwork } from '@/shared/lib/config/environment'
 import { logger } from '@/shared/lib/logger'
 import {
   assetInputAmounts,
@@ -101,6 +102,7 @@ export default function MarketOfferTab({
   mode = 'inline',
   filters,
 }: MarketOfferTabProps) {
+  const { network } = useNetwork()
   const { t } = useThemeClasses()
   const { postOffer, isPosting } = useOfferInspection()
   const takeOfferMutation = useTakeOffer()
@@ -129,7 +131,7 @@ export default function MarketOfferTab({
     // Helper to get ticker symbol
     const getTickerSymbol = (assetId: string, code?: string): string => {
       if (code) return code
-      if (!assetId) return getNativeTokenTicker()
+      if (!assetId) return getNativeTokenTickerForNetwork(network)
       const tickerInfo = getCatTokenInfo(assetId)
       return tickerInfo?.ticker || assetId.slice(0, 8)
     }
@@ -177,11 +179,11 @@ export default function MarketOfferTab({
   const getTickerSymbolForPrice = useCallback(
     (assetId: string, code?: string): string => {
       if (code) return code
-      if (!assetId) return getNativeTokenTicker()
+      if (!assetId) return getNativeTokenTickerForNetwork(network)
       const tickerInfo = getCatTokenInfo(assetId)
       return tickerInfo?.ticker || assetId.slice(0, 8)
     },
-    [getCatTokenInfo]
+    [getCatTokenInfo, network]
   )
 
   // Calculate price deviation percentage for the order
@@ -253,8 +255,8 @@ export default function MarketOfferTab({
     if (filters?.sellAsset && filters.sellAsset.length > 0) {
       return filters.sellAsset[0]
     }
-    return getNativeTokenTicker()
-  }, [filters])
+    return getNativeTokenTickerForNetwork(network)
+  }, [filters, network])
 
   // Form state
   const [offerString, setOfferString] = useState('')
@@ -294,7 +296,7 @@ export default function MarketOfferTab({
       offerString: string
       fullMakerAddress: string
       offer: DexieOffer
-    }>(['orderBookDetails', order.id])
+    }>(['orderBookDetails', order.id, network])
 
     if (cached) {
       return {
@@ -385,7 +387,7 @@ export default function MarketOfferTab({
     fullMakerAddress: string
     offer: DexieOffer
   } | null>({
-    queryKey: ['orderBookDetails', order?.id], // Individual key per order - same structure as useOrderBookDetails
+    queryKey: ['orderBookDetails', order?.id, network], // Individual key per order - same structure as useOrderBookDetails
     queryFn: async () => {
       if (!order?.id) return null
       const response = await dexieDataService.inspectOffer(order.id)

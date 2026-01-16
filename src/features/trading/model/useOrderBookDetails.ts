@@ -2,6 +2,7 @@
 
 import { useDexieDataService } from '@/features/offers/api/useDexieDataService'
 import type { DexieOffer } from '@/features/offers/lib/dexieTypes'
+import { useNetwork } from '@/shared/hooks/useNetwork'
 import { useQueries } from '@tanstack/react-query'
 import { useMemo } from 'react'
 
@@ -27,6 +28,7 @@ interface OrderDetail {
  */
 export function useOrderBookDetails(visibleOrderIds: string[]) {
   const dexieDataService = useDexieDataService()
+  const { network } = useNetwork()
 
   // Limit to max 50 orders and deduplicate
   const limitedOrderIds = useMemo(() => {
@@ -37,7 +39,7 @@ export function useOrderBookDetails(visibleOrderIds: string[]) {
   // Use useQueries for individual queries - better cache reuse
   const detailQueries = useQueries({
     queries: limitedOrderIds.map((orderId) => ({
-      queryKey: ['orderBookDetails', orderId], // Individual key per order
+      queryKey: ['orderBookDetails', orderId, network], // Individual key per order with network
       queryFn: async (): Promise<OrderDetail> => {
         const response = await dexieDataService.inspectOffer(orderId)
         if (response.success && response.offer) {

@@ -1,9 +1,9 @@
 /**
  * Suppresses WalletConnect relay message errors from console
  * These are internal SDK errors that are non-critical and can be safely ignored
+ * This file intentionally modifies console methods
  */
-
-/* eslint-disable no-console */
+ 
 let originalConsoleError: typeof console.error | null = null
 let isSuppressing = false
 
@@ -95,9 +95,19 @@ export function suppressRelayErrors() {
     const message = args[0]
     const messageStr = typeof message === 'string' ? message : String(message)
 
+    // Check if error is an object with msg property containing relay error
+    const isRelayErrorObject = 
+      message &&
+      typeof message === 'object' &&
+      'msg' in message &&
+      typeof (message as { msg?: unknown }).msg === 'string' &&
+      ((message as { msg: string }).msg.includes('onRelayMessage()') ||
+       (message as { msg: string }).msg.includes('failed to process an inbound message'))
+
     // Check if this is a WalletConnect relay message error
     // These errors often contain base64-encoded data and specific error patterns
     if (
+      isRelayErrorObject ||
       messageStr.includes('onRelayMessage()') ||
       messageStr.includes('failed to process an inbound message') ||
       (messageStr.includes('relay') && messageStr.includes('failed')) ||
@@ -109,8 +119,33 @@ export function suppressRelayErrors() {
       return
     }
 
+    // Check for chainId validation errors (happens during session restoration)
+    const hasChainIdError = args.some((arg) => {
+      const argStr = typeof arg === 'string' ? arg : String(arg)
+      return (
+        (argStr.includes('Missing or invalid') && argStr.includes('chainId')) ||
+        (argStr.includes('request()') && argStr.includes('chainId')) ||
+        (argStr.includes('isValidRequest()') && argStr.includes('failed') && argStr.includes('chainId'))
+      )
+    })
+
+    if (hasChainIdError) {
+      // Suppress chainId validation errors - these occur during session restoration
+      // when the chainId might not match the session's namespaces yet
+      return
+    }
+
     // Also check if any argument contains relay error patterns
     const hasRelayError = args.some((arg) => {
+      // Check if argument is an object with msg property
+      if (arg && typeof arg === 'object' && 'msg' in arg && typeof (arg as { msg?: unknown }).msg === 'string') {
+        const msgStr = (arg as { msg: string }).msg
+        return (
+          msgStr.includes('onRelayMessage') ||
+          msgStr.includes('failed to process an inbound message')
+        )
+      }
+      // Check if argument is a string
       const argStr = typeof arg === 'string' ? arg : String(arg)
       return (
         argStr.includes('onRelayMessage') ||

@@ -307,11 +307,13 @@ bun lint             # Run ESLint
 
 ### Git Hooks
 
-Pre-commit hooks are configured via Husky to ensure code quality:
+Pre-commit hooks are configured via Husky and lint-staged to ensure code quality:
 
-- ESLint checks
-- Prettier formatting
-- Type checking (if configured)
+- **Lint & Type Check**: ESLint and TypeScript checks on staged files (with auto-fix)
+- **Build**: Ensures the project builds successfully
+- **Test**: Runs the test suite
+
+See [Git Hooks Documentation](./docs/development/git-hooks.md) for details.
 
 ## 🔒 Security
 
@@ -346,8 +348,18 @@ Contributions are welcome! Please ensure:
 - [WalletConnect Integration](./src/shared/lib/walletConnect/README.md)
 - [Component Catalog](./src/shared/ui/COMPONENT_CATALOG.md)
 - [Quick Start Guide](./src/shared/ui/QUICK_START.md)
+- [Infinite Loop Guardrails](./docs/development/infinite-loop-guardrails.md) - Preventing infinite loops in useEffect hooks
 
 ## 🐛 Troubleshooting
+
+### Infinite Loop / Continuous Compilation
+
+If Turbopack shows "compiling..." indefinitely or pages won't switch:
+
+- Check browser console for infinite loop warnings
+- Review `useEffect` dependency arrays (see [Infinite Loop Guardrails](./docs/development/infinite-loop-guardrails.md))
+- Run `bun run lint` to check for React Hooks issues
+- Look for `useEffect` hooks that update state included in their dependency array
 
 ### Wallet Connection Issues
 

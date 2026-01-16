@@ -50,14 +50,12 @@ class LoggerService implements Logger {
 
   warn(message: string, ...args: unknown[]): void {
     if (this.shouldLog('warn')) {
-      // eslint-disable-next-line no-console
       console.warn(this.formatMessage('warn', message), ...args)
     }
   }
 
   error(message: string, ...args: unknown[]): void {
     if (this.shouldLog('error')) {
-      // eslint-disable-next-line no-console
       console.error(this.formatMessage('error', message), ...args)
     }
   }

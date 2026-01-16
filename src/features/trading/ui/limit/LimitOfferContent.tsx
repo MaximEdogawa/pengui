@@ -75,6 +75,8 @@ export default function MakerOfferContent({
   // Fill form from order when order changes
   useEffect(() => {
     if (order) {
+      // useAsTemplate is a callback function returned from useOrderBookOfferSubmission hook, not a hook itself
+      // eslint-disable-next-line react-hooks/rules-of-hooks
       useAsTemplate(order)
 
       // Store original amounts for sliders

@@ -10,6 +10,7 @@ export interface StoredOffer extends OfferDetails {
   lastModified: Date
   isLocal: boolean
   walletAddress?: string
+  network: 'mainnet' | 'testnet' // Network the offer belongs to
 }
 
 // Database class
@@ -20,9 +21,32 @@ export class PenguiDB extends Dexie {
   constructor() {
     super(environment.database.indexedDB.name)
 
-    this.version(environment.database.indexedDB.version).stores({
+    // Version 1: Initial schema
+    this.version(1).stores({
       offers: '++id, id, tradeId, status, createdAt, lastModified, walletAddress, syncedAt',
     })
+
+    // Version 2: Add network field
+    this.version(2)
+      .stores({
+        offers: '++id, id, tradeId, status, createdAt, lastModified, walletAddress, syncedAt, network',
+      })
+      .upgrade(async (tx) => {
+        // Migration: Add network field to all existing offers (default to 'mainnet')
+        const offers = await tx.table('offers').toArray()
+        let migratedCount = 0
+        await Promise.all(
+          offers.map(async (offer) => {
+            if (!('network' in offer) || !offer.network) {
+              migratedCount++
+              await tx.table('offers').update(offer.id, { network: 'mainnet' })
+            }
+          })
+        )
+        if (migratedCount > 0) {
+          logger.info(`✅ Migrated ${migratedCount} offers to include network field`)
+        }
+      })
   }
 }
 

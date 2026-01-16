@@ -5,7 +5,7 @@ const getCurrentUrl = (): string => {
   if (typeof window !== 'undefined') {
     return window.location.origin
   }
-  return 'https://penguin.pool'
+  return 'https://pengui.pool'
 }
 
 export const environment = {
@@ -35,10 +35,7 @@ export const environment = {
         chia: {
           mainnet: CHIA_MAINNET_CHAIN_ID,
           testnet: CHIA_TESTNET_CHAIN_ID,
-          current: (() => {
-            const network = process.env.NEXT_PUBLIC_CHIA_NETWORK || 'testnet'
-            return network === 'mainnet' ? CHIA_MAINNET_CHAIN_ID : CHIA_TESTNET_CHAIN_ID
-          })(),
+          current: CHIA_MAINNET_CHAIN_ID, // Default to mainnet
         },
       },
       relayUrl: process.env.NEXT_PUBLIC_WALLET_CONNECT_RELAY_URL || 'wss://relay.walletconnect.com',
@@ -54,32 +51,27 @@ export const environment = {
   database: {
     indexedDB: {
       name: 'pengui-db',
-      version: 1,
+      version: 2, // Updated to version 2 to support network field
     },
   },
 } as const
 
 /**
- * Get the current Chia network (mainnet or testnet)
+ * Get native token ticker for a specific network
+ * @param network - The network type ('mainnet' | 'testnet')
+ * @returns 'TXCH' for testnet, 'XCH' for mainnet
  */
-export function getChiaNetwork(): 'mainnet' | 'testnet' {
-  const network = process.env.NEXT_PUBLIC_CHIA_NETWORK || 'testnet'
-  return network === 'mainnet' ? 'mainnet' : 'testnet'
+export function getNativeTokenTickerForNetwork(network: 'mainnet' | 'testnet'): 'TXCH' | 'XCH' {
+  return network === 'testnet' ? 'TXCH' : 'XCH'
 }
 
 /**
- * Check if the current network is testnet
+ * Check if a network is testnet
+ * @param network - The network type ('mainnet' | 'testnet')
+ * @returns true if testnet, false if mainnet
  */
-export function isTestnet(): boolean {
-  return getChiaNetwork() === 'testnet'
-}
-
-/**
- * Get the native token ticker based on the current network
- * Returns 'TXCH' for testnet, 'XCH' for mainnet
- */
-export function getNativeTokenTicker(): 'TXCH' | 'XCH' {
-  return isTestnet() ? 'TXCH' : 'XCH'
+export function isNetworkTestnet(network: 'mainnet' | 'testnet'): boolean {
+  return network === 'testnet'
 }
 
 export type Environment = typeof environment

@@ -6,7 +6,8 @@ import { useOfferStorage } from '@/features/offers/model/useOfferStorage'
 import { useOfferUpload } from '@/features/offers/model/useOfferUpload'
 import { useCreateOffer, useWalletAddress } from '@/features/wallet'
 import { useCatTokens, useThemeClasses } from '@/shared/hooks'
-import { getNativeTokenTicker } from '@/shared/lib/config/environment'
+import { getNativeTokenTickerForNetwork } from '@/shared/lib/config/environment'
+import { useNetwork } from '@/shared/hooks/useNetwork'
 import { logger } from '@/shared/lib/logger'
 import {
   assetInputAmounts,
@@ -46,6 +47,7 @@ export default function CreateOfferForm({
   filters,
 }: CreateOfferFormProps) {
   const { t } = useThemeClasses()
+  const { network } = useNetwork()
   const createOfferMutation = useCreateOffer()
   const offerStorage = useOfferStorage()
   const { uploadOfferToDexie, isUploading: isUploadingToDexie } = useOfferUpload()
@@ -69,7 +71,7 @@ export default function CreateOfferForm({
     // Helper to get ticker symbol
     const getTickerSymbol = (assetId: string, code?: string): string => {
       if (code) return code
-      if (!assetId) return getNativeTokenTicker()
+      if (!assetId) return getNativeTokenTickerForNetwork(network)
       const tickerInfo = getCatTokenInfo(assetId)
       return tickerInfo?.ticker || assetId.slice(0, 8)
     }
@@ -111,6 +113,7 @@ export default function CreateOfferForm({
     filters?.buyAsset,
     filters?.sellAsset,
     getCatTokenInfo,
+    network,
   ])
 
   const { makerAssets, setMakerAssets, takerAssets, setTakerAssets, useAsTemplate, resetForm } =
@@ -191,6 +194,8 @@ export default function CreateOfferForm({
 
     if (order) {
       // Call useAsTemplate to populate form - this updates state synchronously
+      // useAsTemplate is a callback function returned from useOrderBookOfferSubmission hook, not a hook itself
+      // eslint-disable-next-line react-hooks/rules-of-hooks
       useAsTemplate(order)
 
       // Store base amounts for sliders - use precomputed values for instant update
