@@ -18,7 +18,8 @@
   },
   "lint-staged": {
     "*.{ts,tsx}": [
-      "eslint --config eslint.config.mjs --fix --max-warnings=9999"
+      "eslint --config eslint.config.mjs --fix --max-warnings=9999",
+      "bash -lc 'bun run type-check'"
     ],
     "*.{js,jsx}": [
       "eslint --config eslint.config.mjs --fix --max-warnings=9999"

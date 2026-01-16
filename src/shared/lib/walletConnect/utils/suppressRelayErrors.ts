@@ -95,9 +95,19 @@ export function suppressRelayErrors() {
     const message = args[0]
     const messageStr = typeof message === 'string' ? message : String(message)
 
+    // Check if error is an object with msg property containing relay error
+    const isRelayErrorObject = 
+      message &&
+      typeof message === 'object' &&
+      'msg' in message &&
+      typeof (message as { msg?: unknown }).msg === 'string' &&
+      ((message as { msg: string }).msg.includes('onRelayMessage()') ||
+       (message as { msg: string }).msg.includes('failed to process an inbound message'))
+
     // Check if this is a WalletConnect relay message error
     // These errors often contain base64-encoded data and specific error patterns
     if (
+      isRelayErrorObject ||
       messageStr.includes('onRelayMessage()') ||
       messageStr.includes('failed to process an inbound message') ||
       (messageStr.includes('relay') && messageStr.includes('failed')) ||
@@ -127,6 +137,15 @@ export function suppressRelayErrors() {
 
     // Also check if any argument contains relay error patterns
     const hasRelayError = args.some((arg) => {
+      // Check if argument is an object with msg property
+      if (arg && typeof arg === 'object' && 'msg' in arg && typeof (arg as { msg?: unknown }).msg === 'string') {
+        const msgStr = (arg as { msg: string }).msg
+        return (
+          msgStr.includes('onRelayMessage') ||
+          msgStr.includes('failed to process an inbound message')
+        )
+      }
+      // Check if argument is a string
       const argStr = typeof arg === 'string' ? arg : String(arg)
       return (
         argStr.includes('onRelayMessage') ||

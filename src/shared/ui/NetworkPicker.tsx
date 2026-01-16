@@ -59,7 +59,7 @@ export default function NetworkPicker() {
     try {
       // Keep wallet connected - session remains valid across network switches
       // The wallet will handle requests based on its actual network
-      // We'll show a warning if there's a network mismatch, but requests will still work
+      // Wallet requests will use the wallet's network
       await setNetwork(newNetwork)
       setIsOpen(false)
     } catch (_error) {

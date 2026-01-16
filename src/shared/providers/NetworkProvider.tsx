@@ -5,7 +5,6 @@ import { useWalletConnectionState } from '@maximedogawa/chia-wallet-connect-reac
 import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react'
 import { chainIdToNetwork, networkToChainId } from '@/shared/lib/utils/networkUtils'
 import { getStoredNetwork, setStoredNetwork, hasNetworkPreference } from '@/shared/lib/utils/networkStorage'
-import { clearNetworkMismatchTracking, checkNetworkMismatch } from '@/shared/lib/walletConnect/utils/networkMismatch'
 import { getAssetBalance } from '@/shared/lib/walletConnect/repositories/walletQueries.repository'
 import { logger } from '@/shared/lib/logger'
 import { useAppSelector } from '@maximedogawa/chia-wallet-connect-react'
@@ -31,6 +30,30 @@ export function NetworkProvider({ children }: { children: React.ReactNode }) {
   const hasAutoSyncedRef = useRef(false)
   const lastWalletChainIdRef = useRef<string | null>(null)
   const testRequestTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Helper function to perform core network switch operations
+  // This ensures both manual network switches and auto-sync perform the same cache invalidation
+  const applyNetworkChange = useCallback(
+    (newNetwork: Network) => {
+      // Update React state
+      setNetworkState(newNetwork)
+      // Update localStorage
+      setStoredNetwork(newNetwork)
+      // Clear TanStack Query cache
+      queryClient.clear()
+      // Invalidate WalletConnect SignClient instance to force reinitialization
+      queryClient.invalidateQueries({ queryKey: ['walletConnect', 'instance'] })
+      // Invalidate all wallet queries to force refetch with new network
+      queryClient.invalidateQueries({ queryKey: ['walletConnect'] })
+      // Invalidate order book data (limit and market orders)
+      queryClient.invalidateQueries({ queryKey: ['orderBook'] })
+      queryClient.invalidateQueries({ queryKey: ['orderBookDetails'] })
+      // Invalidate Dexie API data (pairs, tickers, offers)
+      queryClient.invalidateQueries({ queryKey: ['dexie'] })
+      logger.info(`🔄 Network switched to: ${newNetwork}`)
+    },
+    [queryClient]
+  )
 
   // Auto-sync network to wallet on first connection
   // ⚠️ CRITICAL: Do NOT include 'network' in dependency array!
@@ -70,14 +93,11 @@ export function NetworkProvider({ children }: { children: React.ReactNode }) {
     // Auto-sync if no user preference exists and networks differ
     if (!hasNetworkPreference() && walletNetwork !== currentNetwork) {
       logger.info(`🔄 Auto-syncing network to wallet: ${walletNetwork}`)
-      setNetworkState(walletNetwork)
-      setStoredNetwork(walletNetwork)
+      // Use the shared helper to ensure cache invalidation and SignClient refresh
+      applyNetworkChange(walletNetwork)
       hasAutoSyncedRef.current = true
-      // Clear mismatch tracking after successful auto-sync
-      // This prevents false positives if a mismatch was detected before sync
-      clearNetworkMismatchTracking()
     }
-  }, [isConnected, walletConnectSession])
+  }, [isConnected, walletConnectSession, applyNetworkChange])
 
   // Reset auto-sync flag when wallet disconnects
   useEffect(() => {
@@ -113,33 +133,10 @@ export function NetworkProvider({ children }: { children: React.ReactNode }) {
         // Mark as user-selected (not auto-synced)
         hasAutoSyncedRef.current = true
 
-        // Update state
-        setNetworkState(newNetwork)
-        setStoredNetwork(newNetwork)
-
-        // Clear TanStack Query cache
-        queryClient.clear()
-
-        // Clear network mismatch toast tracking
-        clearNetworkMismatchTracking()
-
-        // Invalidate WalletConnect SignClient instance to force reinitialization
-        queryClient.invalidateQueries({ queryKey: ['walletConnect', 'instance'] })
-        
-        // Invalidate all wallet queries to force refetch with new network
-        queryClient.invalidateQueries({ queryKey: ['walletConnect'] })
-
-        // Invalidate order book data (limit and market orders)
-        queryClient.invalidateQueries({ queryKey: ['orderBook'] })
-        queryClient.invalidateQueries({ queryKey: ['orderBookDetails'] })
-
-        // Invalidate Dexie API data (pairs, tickers, offers)
-        queryClient.invalidateQueries({ queryKey: ['dexie'] })
-
-        logger.info(`🔄 Network switched to: ${newNetwork}`)
+        // Use the shared helper to ensure cache invalidation and SignClient refresh
+        applyNetworkChange(newNetwork)
 
         // After network switch, test wallet connection with a balance request
-        // If it fails, show network mismatch toast
         if (isConnected && walletConnectSession) {
           // Clear any existing timeout
           if (testRequestTimeoutRef.current) {
@@ -210,33 +207,14 @@ export function NetworkProvider({ children }: { children: React.ReactNode }) {
               // Try to get wallet balance as a test request
               const result = await getAssetBalance(signClient, testSession, null, null)
 
-              // If request failed, check if there's actually a network mismatch
+              // Log request result
               if (!result.success) {
                 logger.warn(`⚠️ Wallet request failed after network switch: ${result.error}`)
-                // Only show mismatch toast if there's an actual network mismatch and session is initialized
-                const expectedChainId = networkToChainId(newNetwork)
-                if (walletChainId !== expectedChainId && sessionData.topic && sessionData.topic.trim() !== '') {
-                  checkNetworkMismatch(newNetwork, walletChainId, sessionData.topic)
-                }
-                // If networks match but request failed, don't show toast (might be other issues)
               } else {
                 logger.info('✅ Wallet request succeeded after network switch')
-                // Request succeeded, do nothing (no toast)
               }
             } catch (error) {
               logger.error('❌ Error testing wallet connection after network switch:', error)
-              // On error, only show mismatch toast if there's an actual network mismatch
-              const sessionData = walletConnectSession || selectedSession
-              if (sessionData && sessionData.topic && sessionData.topic.trim() !== '') {
-                const chains = sessionData.namespaces?.chia?.chains
-                const walletChainId = chains && chains.length > 0 ? chains[0] : networkToChainId(newNetwork)
-                const expectedChainId = networkToChainId(newNetwork)
-                // Only show toast if there's an actual mismatch
-                if (walletChainId !== expectedChainId) {
-                  checkNetworkMismatch(newNetwork, walletChainId, sessionData.topic)
-                }
-                // If networks match but error occurred, don't show toast (might be other issues)
-              }
             }
           }, 500) // Wait 500ms for network switch to complete
         }
@@ -248,7 +226,7 @@ export function NetworkProvider({ children }: { children: React.ReactNode }) {
         setIsSwitching(false)
       }
     },
-    [network, isSwitching, queryClient, isConnected, walletConnectSession, selectedSession]
+    [network, isSwitching, queryClient, isConnected, walletConnectSession, selectedSession, applyNetworkChange]
   )
 
   const value: NetworkContextType = {

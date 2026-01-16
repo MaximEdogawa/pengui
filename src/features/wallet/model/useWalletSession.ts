@@ -52,13 +52,11 @@ export function useWalletSession(): WalletConnectSession {
         const networkPart = accountParts[2] // "mainnet" or "testnet"
         walletChainId = `chia:${networkPart}`
       } else if (accountParts.length >= 3) {
-        // Format: chia:mainnet:fingerprint or chia:chia:mainnet:fingerprint
-        // Try to detect if parts[1] is "chia" (namespace) or network name
-        if (accountParts[1] === 'chia' && accountParts.length >= 3) {
-          // Format: chia:chia:mainnet -> chainId = "chia:mainnet"
+        // Format: chia:mainnet:fingerprint (3-part format)
+        // If parts[1] is "chia", use parts[2] as network; otherwise use parts[1] as network
+        if (accountParts[1] === 'chia') {
           walletChainId = `chia:${accountParts[2]}`
         } else {
-          // Format: chia:mainnet:fingerprint -> chainId = "chia:mainnet"
           walletChainId = `chia:${accountParts[1]}`
         }
       } else if (accountParts.length >= 2) {
@@ -80,10 +78,12 @@ export function useWalletSession(): WalletConnectSession {
             const accountParts = accounts[0].split(':')
             if (accountParts.length >= 4) {
               // Format: chia:chia:mainnet:fingerprint
-              return parseInt(accountParts[3] || '0')
+              const parsed = parseInt(accountParts[3] || '0', 10)
+              return Number.isNaN(parsed) ? 0 : parsed
             } else if (accountParts.length >= 3) {
               // Format: chia:mainnet:fingerprint
-              return parseInt(accountParts[2] || '0')
+              const parsed = parseInt(accountParts[2] || '0', 10)
+              return Number.isNaN(parsed) ? 0 : parsed
             }
             return 0
           })()

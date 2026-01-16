@@ -22,7 +22,7 @@ export function buildOfferSearchParams(params: {
   if (params.offered) queryParams.append('offered', params.offered)
   if (params.maker) queryParams.append('maker', params.maker)
   if (params.page_size) queryParams.append('page_size', params.page_size.toString())
-  if (params.page) queryParams.append('page', params.page.toString())
+  if (params.page !== undefined) queryParams.append('page', params.page.toString())
   if (params.status !== undefined) queryParams.append('status', params.status.toString())
 
   return queryParams

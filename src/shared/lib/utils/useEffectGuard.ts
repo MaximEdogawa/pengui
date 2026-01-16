@@ -51,20 +51,27 @@ export function trackEffectRun(effectName: string): void {
 
   if (run) {
     const timeSinceLastRun = now - run.timestamp
-    const runsInLastSecond = run.count
+    let newCount: number
 
-    if (timeSinceLastRun < 1000 && runsInLastSecond >= WARNING_THRESHOLD) {
-       
+    // If a new second has started (timeSinceLastRun >= 1000), reset counter to 1
+    // Otherwise, increment the existing count for runs within the same second
+    if (timeSinceLastRun >= 1000) {
+      newCount = 1
+    } else {
+      newCount = run.count + 1
+    }
+
+    // Check thresholds using the actual runs-per-second (newCount)
+    if (timeSinceLastRun < 1000 && newCount >= WARNING_THRESHOLD) {
       console.warn(
         `⚠️ [trackEffectRun] Potential infinite loop detected in "${effectName}"\n` +
-          `  - Runs in last second: ${runsInLastSecond}\n` +
+          `  - Runs in last second: ${newCount}\n` +
           `  - Time since last run: ${timeSinceLastRun}ms\n` +
           `  - Check dependency array and state updates\n` +
           `  - See: docs/development/infinite-loop-guardrails.md`
       )
 
-      if (runsInLastSecond >= MAX_RUNS_PER_SECOND) {
-         
+      if (newCount >= MAX_RUNS_PER_SECOND) {
         console.error(
           `🚨 [trackEffectRun] CRITICAL: Effect "${effectName}" is running too frequently!\n` +
             `  This will cause performance issues and may prevent page navigation.\n` +
@@ -76,7 +83,7 @@ export function trackEffectRun(effectName: string): void {
     effectRuns.set(effectName, {
       name: effectName,
       timestamp: now,
-      count: runsInLastSecond + 1,
+      count: newCount,
     })
   } else {
     effectRuns.set(effectName, {

@@ -17,16 +17,17 @@ export function extractErrorInfo(error: unknown): ExtractedError {
   let errorMessage = 'Unknown error'
   let errorCode: number | undefined
 
-  if (error && typeof error === 'object') {
+  if (error instanceof Error) {
+    errorMessage = error.message
+  } else if (error && typeof error === 'object' && !(error instanceof Error)) {
     // Handle WalletConnect error format: {code: number, message: string}
+    // Skip Error instances (already handled above)
     if ('message' in error && typeof error.message === 'string') {
       errorMessage = error.message
     }
     if ('code' in error && typeof error.code === 'number') {
       errorCode = error.code
     }
-  } else if (error instanceof Error) {
-    errorMessage = error.message
   } else if (typeof error === 'string') {
     errorMessage = error
   }

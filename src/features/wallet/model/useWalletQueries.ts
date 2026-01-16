@@ -2,7 +2,6 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNetwork } from '@/shared/hooks/useNetwork'
-import { withNetworkMismatchCheck } from '@/shared/lib/walletConnect/utils/withNetworkMismatchCheck'
 import type { AssetType, CoinSpend } from '@/shared/lib/walletConnect/types/command.types'
 import type {
   CancelOfferRequest,
@@ -38,15 +37,11 @@ export function useWalletBalance(type?: AssetType | null, assetId?: string | nul
   const session = useWalletSession()
   const { network } = useNetwork()
 
-  const queryFn = withNetworkMismatchCheck(
-    async () => {
-      const result = await getAssetBalance(signClient, session, type ?? null, assetId ?? null)
-      if (!result.success) throw new Error(result.error)
-      return result.data
-    },
-    network,
-    session
-  )
+  const queryFn = async () => {
+    const result = await getAssetBalance(signClient, session, type ?? null, assetId ?? null)
+    if (!result.success) throw new Error(result.error)
+    return result.data
+  }
 
   return useQuery({
     queryKey: [WALLET_CONNECT_KEY, BALANCE_KEY, type, assetId, network],
@@ -65,15 +60,11 @@ export function useWalletAddress() {
   const session = useWalletSession()
   const { network } = useNetwork()
 
-  const queryFn = withNetworkMismatchCheck(
-    async () => {
-      const result = await getWalletAddress(signClient, session)
-      if (!result.success) throw new Error(result.error)
-      return result.data
-    },
-    network,
-    session
-  )
+  const queryFn = async () => {
+    const result = await getWalletAddress(signClient, session)
+    if (!result.success) throw new Error(result.error)
+    return result.data
+  }
 
   return useQuery({
     queryKey: [WALLET_CONNECT_KEY, ADDRESS_KEY, network],
@@ -92,15 +83,11 @@ export function useAssetCoins(type?: AssetType | null, assetId?: string | null) 
   const session = useWalletSession()
   const { network } = useNetwork()
 
-  const queryFn = withNetworkMismatchCheck(
-    async () => {
-      const result = await getAssetCoins(signClient, session, type ?? null, assetId ?? null)
-      if (!result.success) throw new Error(result.error)
-      return result.data
-    },
-    network,
-    session
-  )
+  const queryFn = async () => {
+    const result = await getAssetCoins(signClient, session, type ?? null, assetId ?? null)
+    if (!result.success) throw new Error(result.error)
+    return result.data
+  }
 
   return useQuery({
     queryKey: [WALLET_CONNECT_KEY, ASSET_COINS_KEY, type, assetId, network],
@@ -117,18 +104,13 @@ export function useAssetCoins(type?: AssetType | null, assetId?: string | null) 
 export function useSignCoinSpends() {
   const { signClient } = useSignClient()
   const session = useWalletSession()
-  const { network } = useNetwork()
   const queryClient = useQueryClient()
 
-  const mutationFn = withNetworkMismatchCheck(
-    async (params: { walletId: number; coinSpends: CoinSpend[] }) => {
-      const result = await signCoinSpends(params, signClient, session)
-      if (!result.success) throw new Error(result.error)
-      return result.data
-    },
-    network,
-    session
-  )
+  const mutationFn = async (params: { walletId: number; coinSpends: CoinSpend[] }) => {
+    const result = await signCoinSpends(params, signClient, session)
+    if (!result.success) throw new Error(result.error)
+    return result.data
+  }
 
   return useMutation({
     mutationFn,
@@ -145,18 +127,13 @@ export function useSignCoinSpends() {
 export function useSignMessage() {
   const { signClient } = useSignClient()
   const session = useWalletSession()
-  const { network } = useNetwork()
   const queryClient = useQueryClient()
 
-  const mutationFn = withNetworkMismatchCheck(
-    async (data: SignMessageRequest) => {
-      const result = await signMessage(data, signClient, session)
-      if (!result.success) throw new Error(result.error)
-      return result.data
-    },
-    network,
-    session
-  )
+  const mutationFn = async (data: SignMessageRequest) => {
+    const result = await signMessage(data, signClient, session)
+    if (!result.success) throw new Error(result.error)
+    return result.data
+  }
 
   return useMutation({
     mutationFn,
@@ -173,18 +150,13 @@ export function useSignMessage() {
 export function useSendTransaction() {
   const { signClient } = useSignClient()
   const session = useWalletSession()
-  const { network } = useNetwork()
   const queryClient = useQueryClient()
 
-  const mutationFn = withNetworkMismatchCheck(
-    async (data: TransactionRequest) => {
-      const result = await sendTransaction(data, signClient, session)
-      if (!result.success) throw new Error(result.error)
-      return result.data
-    },
-    network,
-    session
-  )
+  const mutationFn = async (data: TransactionRequest) => {
+    const result = await sendTransaction(data, signClient, session)
+    if (!result.success) throw new Error(result.error)
+    return result.data
+  }
 
   return useMutation({
     mutationFn,
@@ -202,20 +174,15 @@ export function useSendTransaction() {
 export function useGetBalance() {
   const { signClient } = useSignClient()
   const session = useWalletSession()
-  const { network } = useNetwork()
   const queryClient = useQueryClient()
 
-  const mutationFn = withNetworkMismatchCheck(
-    async (data?: { type?: AssetType | null; assetId?: string | null }) => {
-      const type = data?.type ?? null
-      const assetId = data?.assetId ?? null
-      const result = await getAssetBalance(signClient, session, type, assetId)
-      if (!result.success) throw new Error(result.error)
-      return result.data
-    },
-    network,
-    session
-  )
+  const mutationFn = async (data?: { type?: AssetType | null; assetId?: string | null }) => {
+    const type = data?.type ?? null
+    const assetId = data?.assetId ?? null
+    const result = await getAssetBalance(signClient, session, type, assetId)
+    if (!result.success) throw new Error(result.error)
+    return result.data
+  }
 
   return useMutation({
     mutationFn,
@@ -234,18 +201,13 @@ export function useGetBalance() {
 export function useCreateOffer() {
   const { signClient } = useSignClient()
   const session = useWalletSession()
-  const { network } = useNetwork()
   const queryClient = useQueryClient()
 
-  const mutationFn = withNetworkMismatchCheck(
-    async (data: OfferRequest) => {
-      const result = await createOffer(data, signClient, session)
-      if (!result.success) throw new Error(result.error)
-      return result.data
-    },
-    network,
-    session
-  )
+  const mutationFn = async (data: OfferRequest) => {
+    const result = await createOffer(data, signClient, session)
+    if (!result.success) throw new Error(result.error)
+    return result.data
+  }
 
   return useMutation({
     mutationFn,
@@ -263,18 +225,13 @@ export function useCreateOffer() {
 export function useCancelOffer() {
   const { signClient } = useSignClient()
   const session = useWalletSession()
-  const { network } = useNetwork()
   const queryClient = useQueryClient()
 
-  const mutationFn = withNetworkMismatchCheck(
-    async (data: CancelOfferRequest) => {
-      const result = await cancelOffer(data, signClient, session)
-      if (!result.success) throw new Error(result.error)
-      return result.data
-    },
-    network,
-    session
-  )
+  const mutationFn = async (data: CancelOfferRequest) => {
+    const result = await cancelOffer(data, signClient, session)
+    if (!result.success) throw new Error(result.error)
+    return result.data
+  }
 
   return useMutation({
     mutationFn,
@@ -292,18 +249,13 @@ export function useCancelOffer() {
 export function useTakeOffer() {
   const { signClient } = useSignClient()
   const session = useWalletSession()
-  const { network } = useNetwork()
   const queryClient = useQueryClient()
 
-  const mutationFn = withNetworkMismatchCheck(
-    async (data: TakeOfferRequest) => {
-      const result = await takeOffer(data, signClient, session)
-      if (!result.success) throw new Error(result.error)
-      return result.data
-    },
-    network,
-    session
-  )
+  const mutationFn = async (data: TakeOfferRequest) => {
+    const result = await takeOffer(data, signClient, session)
+    if (!result.success) throw new Error(result.error)
+    return result.data
+  }
 
   return useMutation({
     mutationFn,

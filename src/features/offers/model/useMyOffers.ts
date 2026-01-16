@@ -180,19 +180,25 @@ export function useMyOffers() {
   const handleOfferCancelled = useCallback(
     async (offer: OfferDetails) => {
       setStateOffers((prev) => updateOfferStatus(prev, offer.id, 'cancelled'))
-      state.setSelectedOffer(null)
+      // Only clear selection if the cancelled offer is currently selected
+      if (state.selectedOffer && state.selectedOffer.id === offer.id) {
+        state.setSelectedOffer(null)
+      }
       await refreshOffers()
     },
-    [refreshOffers, setStateOffers, state.setSelectedOffer]
+    [refreshOffers, setStateOffers, state.setSelectedOffer, state.selectedOffer]
   )
 
   const handleOfferDeleted = useCallback(
     async (offer: OfferDetails) => {
       setStateOffers((prev) => removeOfferFromState(prev, offer.id))
-      state.setSelectedOffer(null)
+      // Only clear selection if the deleted offer is currently selected
+      if (state.selectedOffer && state.selectedOffer.id === offer.id) {
+        state.setSelectedOffer(null)
+      }
       await refreshOffers()
     },
-    [refreshOffers, setStateOffers, state.setSelectedOffer]
+    [refreshOffers, setStateOffers, state.setSelectedOffer, state.selectedOffer]
   )
 
   const handleOfferUpdated = useCallback(
