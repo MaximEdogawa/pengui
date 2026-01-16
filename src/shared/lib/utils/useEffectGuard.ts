@@ -54,6 +54,7 @@ export function trackEffectRun(effectName: string): void {
     const runsInLastSecond = run.count
 
     if (timeSinceLastRun < 1000 && runsInLastSecond >= WARNING_THRESHOLD) {
+       
       console.warn(
         `⚠️ [trackEffectRun] Potential infinite loop detected in "${effectName}"\n` +
           `  - Runs in last second: ${runsInLastSecond}\n` +
@@ -63,6 +64,7 @@ export function trackEffectRun(effectName: string): void {
       )
 
       if (runsInLastSecond >= MAX_RUNS_PER_SECOND) {
+         
         console.error(
           `🚨 [trackEffectRun] CRITICAL: Effect "${effectName}" is running too frequently!\n` +
             `  This will cause performance issues and may prevent page navigation.\n` +

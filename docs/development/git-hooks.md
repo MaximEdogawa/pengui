@@ -15,6 +15,7 @@ The pre-commit hook automatically runs on every `git commit` and executes three 
 #### 1. Lint & Type Check (via lint-staged)
 - **ESLint**: All staged `.ts`, `.tsx`, `.js`, and `.jsx` files are linted
 - **Auto-fix**: Automatically fixes ESLint issues that can be auto-fixed
+- **Warnings allowed**: ESLint warnings (up to 9999) are allowed; only errors will fail the commit
 - **TypeScript**: Type checking on staged `.ts` and `.tsx` files
 - **React Hooks**: Enforces React Hooks rules to prevent common mistakes
 
@@ -56,11 +57,11 @@ Configuration is in `package.json` under the `lint-staged` key:
 {
   "lint-staged": {
     "*.{ts,tsx}": [
-      "eslint --config eslint.config.mjs --fix",
+      "eslint --config eslint.config.mjs --fix --max-warnings=9999",
       "bunx tsc --noEmit --pretty"
     ],
     "*.{js,jsx}": [
-      "eslint --config eslint.config.mjs --fix"
+      "eslint --config eslint.config.mjs --fix --max-warnings=9999"
     ]
   }
 }
@@ -105,6 +106,8 @@ If the pre-commit hook isn't running:
 If the hook fails:
 
 1. **ESLint errors**: Fix the errors shown in the output, or run `bun run lint:fix` manually
+   - Note: ESLint **warnings** are allowed and won't fail the commit
+   - Only **errors** will cause the commit to fail
 2. **Type errors**: Fix TypeScript errors shown in the output, or run `bun run type-check` manually
 3. **Build errors**: Fix build errors shown in the output, or run `bun run build` manually
 4. **Test failures**: Fix failing tests, or run `bun run test` manually

@@ -3,6 +3,7 @@
  * These are internal SDK errors that are non-critical and can be safely ignored
  * This file intentionally modifies console methods
  */
+ 
 let originalConsoleError: typeof console.error | null = null
 let isSuppressing = false
 

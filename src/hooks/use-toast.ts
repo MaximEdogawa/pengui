@@ -183,7 +183,8 @@ function useToast() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const runs = ((globalThis as any).__toastEffectRuns as number) || 0
       if (runs > 5) {
-      console.warn(
+         
+        console.warn(
           `⚠️ [useToast] Effect "${effectName}" has run ${runs} times. ` +
             `This may indicate an infinite loop. Check dependency array.`
         )

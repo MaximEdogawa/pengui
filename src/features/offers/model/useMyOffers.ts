@@ -1,12 +1,20 @@
 'use client'
 
-import type { OfferDetails, OfferFilters } from '@/entities/offer'
+import type { OfferDetails } from '@/entities/offer'
 import { useCancelOffer } from '@/features/wallet'
 import { useCatTokens } from '@/shared/hooks'
-import { logger } from '@/shared/lib/logger'
 import { formatAssetAmount } from '@/shared/lib/utils/chia-units'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo } from 'react'
+import { trackEffectRun } from '@/shared/lib/utils/useEffectGuard'
 import { useOfferStorage } from './useOfferStorage'
+import {
+  createOfferCreatedEvent,
+  updateOfferStatus,
+  removeOfferFromState,
+  updateOfferInState,
+  cancelAllActiveOffers,
+} from './useMyOffersHandlers'
+import { useMyOffersState } from './useMyOffersState'
 
 /**
  * Hook for managing user's offers
@@ -18,65 +26,58 @@ export function useMyOffers() {
   const offerStorage = useOfferStorage()
   const { getCatTokenInfo } = useCatTokens()
 
-  // State
-  const [offers, setOffers] = useState<OfferDetails[]>([])
-  const [isLoading, setIsLoading] = useState(false)
-  const [selectedOffer, setSelectedOffer] = useState<OfferDetails | null>(null)
-  const [isCopied, setIsCopied] = useState<string | null>(null)
-  const [showCancelConfirmation, setShowCancelConfirmation] = useState(false)
-  const [offerToCancel, setOfferToCancel] = useState<OfferDetails | null>(null)
-  const [isCancelling, setIsCancelling] = useState(false)
-  const [cancelError, setCancelError] = useState('')
-  const [showCancelAllConfirmation, setShowCancelAllConfirmation] = useState(false)
-  const [isCancellingAll, setIsCancellingAll] = useState(false)
-  const [cancelAllError, setCancelAllError] = useState('')
-  const [showDeleteAllConfirmation, setShowDeleteAllConfirmation] = useState(false)
-  const [isDeletingAll, setIsDeletingAll] = useState(false)
-  const [deleteAllError, setDeleteAllError] = useState('')
-  const [filters, setFilters] = useState<OfferFilters>({
-    status: '',
-  })
-  const [currentPage, setCurrentPage] = useState(1)
-  const [pageSize, setPageSize] = useState(10)
-  const [totalOffers, setTotalOffers] = useState(0)
-  const [totalPages, setTotalPages] = useState(0)
+  // State (extracted to separate hook)
+  const state = useMyOffersState()
 
   // Computed - offers are already filtered by status in the query
-  const filteredOffers = useMemo(() => offers, [offers])
+  const filteredOffers = useMemo(() => state.offers, [state.offers])
 
-  // Extract stable references - these are stable because they're from useCallback/useState
+  // Extract stable references
   const loadOffersFromStorage = offerStorage.loadOffers
   const storageOffers = offerStorage.offers
   const pagination = offerStorage.pagination
+
+  // Extract stable setters (they don't change between renders)
+  const {
+    setIsLoading,
+    setTotalOffers,
+    setTotalPages,
+    setOffers: setStateOffers,
+    setCurrentPage,
+  } = state
 
   // Methods
   const refreshOffers = useCallback(async () => {
     setIsLoading(true)
     try {
-      // Load offers from IndexedDB with pagination and status filter
       await loadOffersFromStorage({
-        page: currentPage,
-        pageSize,
-        status: filters.status || undefined,
+        page: state.currentPage,
+        pageSize: state.pageSize,
+        status: state.filters.status || undefined,
       })
     } catch {
       // Failed to refresh offers
     } finally {
       setIsLoading(false)
     }
-  }, [loadOffersFromStorage, currentPage, pageSize, filters.status])
+  }, [loadOffersFromStorage, state.currentPage, state.pageSize, state.filters.status, setIsLoading])
 
   // Update pagination state when storage pagination changes
+  // ⚠️ CRITICAL: Do NOT include 'state' in dependency array!
+  // Only depend on 'pagination' which is the external value we're watching
   useEffect(() => {
+    trackEffectRun('useMyOffers: pagination-sync')
     if (pagination) {
       setTotalOffers(pagination.total)
       setTotalPages(pagination.totalPages)
     }
-  }, [pagination])
+  }, [pagination, setTotalOffers, setTotalPages])
 
-  // Sync offers from storage to local state when storage offers change
-  // Simple approach: sync whenever storageOffers changes (React handles re-render optimization)
+  // Sync offers from storage to local state
+  // ⚠️ CRITICAL: Do NOT include 'state' in dependency array!
+  // Only depend on 'storageOffers' which is the external value we're watching
   useEffect(() => {
+    trackEffectRun('useMyOffers: offers-sync')
     const loadedOffers = storageOffers.map((storedOffer) => ({
       id: storedOffer.id,
       tradeId: storedOffer.tradeId,
@@ -100,67 +101,69 @@ export function useMyOffers() {
       spentBlockIndex: storedOffer.spentBlockIndex,
       knownTaker: storedOffer.knownTaker,
     }))
-    setOffers(loadedOffers)
-  }, [storageOffers])
+    setStateOffers(loadedOffers)
+  }, [storageOffers, setStateOffers])
 
-  const viewOffer = useCallback((offer: OfferDetails | null) => {
-    setSelectedOffer(offer)
-  }, [])
+  const viewOffer = useCallback(
+    (offer: OfferDetails | null) => {
+      state.setSelectedOffer(offer)
+    },
+    [state.setSelectedOffer]
+  )
 
-  const cancelOffer = useCallback((offer: OfferDetails) => {
-    setOfferToCancel(offer)
-    setCancelError('') // Clear any previous errors
-    setShowCancelConfirmation(true)
-  }, [])
+  const cancelOffer = useCallback(
+    (offer: OfferDetails) => {
+      state.setOfferToCancel(offer)
+      state.setCancelError('')
+      state.setShowCancelConfirmation(true)
+    },
+    [state.setOfferToCancel, state.setCancelError, state.setShowCancelConfirmation]
+  )
 
   const confirmCancelOffer = useCallback(async () => {
-    if (!offerToCancel) return
+    if (!state.offerToCancel) return
 
-    setIsCancelling(true)
-    setCancelError('')
+    state.setIsCancelling(true)
+    state.setCancelError('')
 
     try {
       await cancelOfferMutation.mutateAsync({
-        id: offerToCancel.tradeId,
-        fee: offerToCancel.fee,
+        id: state.offerToCancel.tradeId,
+        fee: state.offerToCancel.fee,
       })
-
-      await offerStorage.updateOffer(offerToCancel.id, { status: 'cancelled' })
-      setShowCancelConfirmation(false)
-      setOfferToCancel(null)
-      // Refresh offers to update the list
+      await offerStorage.updateOffer(state.offerToCancel.id, { status: 'cancelled' })
+      state.setShowCancelConfirmation(false)
+      state.setOfferToCancel(null)
       await refreshOffers()
     } catch (error) {
-      setCancelError(
+      state.setCancelError(
         `Failed to cancel offer: ${error instanceof Error ? error.message : 'Unknown error'}`
       )
     } finally {
-      setIsCancelling(false)
+      state.setIsCancelling(false)
     }
-  }, [offerToCancel, cancelOfferMutation, offerStorage, refreshOffers])
+  }, [
+    state.offerToCancel,
+    state.setIsCancelling,
+    state.setCancelError,
+    state.setShowCancelConfirmation,
+    state.setOfferToCancel,
+    cancelOfferMutation,
+    offerStorage,
+    refreshOffers,
+  ])
 
   const handleCancelDialogClose = useCallback(() => {
-    setShowCancelConfirmation(false)
-    setOfferToCancel(null)
-    setCancelError('') // Clear error when closing dialog
-  }, [])
+    state.setShowCancelConfirmation(false)
+    state.setOfferToCancel(null)
+    state.setCancelError('')
+  }, [state.setShowCancelConfirmation, state.setOfferToCancel, state.setCancelError])
 
   const handleOfferCreated = useCallback(
     async (offer: OfferDetails) => {
-      // Refresh offers from storage to ensure we have the latest data
       await refreshOffers()
-
-      // Trigger upload notification
       if (typeof window !== 'undefined') {
-        window.dispatchEvent(
-          new CustomEvent('offer-created', {
-            detail: {
-              offer: offer,
-              offerString: offer.offerString,
-              source: 'offer-page',
-            },
-          })
-        )
+        window.dispatchEvent(createOfferCreatedEvent(offer))
       }
     },
     [refreshOffers]
@@ -168,50 +171,37 @@ export function useMyOffers() {
 
   const handleOfferTaken = useCallback(
     async (offer: OfferDetails) => {
-      // Update local state immediately for UI responsiveness
-      setOffers((prev) =>
-        prev.map((o) => (o.id === offer.id ? { ...o, status: 'completed' as const } : o))
-      )
-      // Refresh from storage to ensure all components see the updated state
+      setStateOffers((prev) => updateOfferStatus(prev, offer.id, 'completed'))
       await refreshOffers()
     },
-    [refreshOffers]
+    [refreshOffers, setStateOffers]
   )
 
   const handleOfferCancelled = useCallback(
     async (offer: OfferDetails) => {
-      // Update local state immediately for UI responsiveness
-      setOffers((prev) =>
-        prev.map((o) => (o.id === offer.id ? { ...o, status: 'cancelled' as const } : o))
-      )
-      setSelectedOffer(null)
-      // Refresh from storage to ensure all components see the updated state
+      setStateOffers((prev) => updateOfferStatus(prev, offer.id, 'cancelled'))
+      state.setSelectedOffer(null)
       await refreshOffers()
     },
-    [refreshOffers]
+    [refreshOffers, setStateOffers, state.setSelectedOffer]
   )
 
   const handleOfferDeleted = useCallback(
     async (offer: OfferDetails) => {
-      // Update local state immediately for UI responsiveness
-      setOffers((prev) => prev.filter((o) => o.id !== offer.id))
-      setSelectedOffer(null)
-      // Refresh from storage to ensure all components see the updated state
+      setStateOffers((prev) => removeOfferFromState(prev, offer.id))
+      state.setSelectedOffer(null)
       await refreshOffers()
     },
-    [refreshOffers]
+    [refreshOffers, setStateOffers, state.setSelectedOffer]
   )
 
   const handleOfferUpdated = useCallback(
     async (offer: OfferDetails) => {
-      // Update local state immediately for UI responsiveness
-      setOffers((prev) => prev.map((o) => (o.id === offer.id ? { ...o, ...offer } : o)))
-      // Update the selected offer to reflect changes in the modal
-      setSelectedOffer((prev) => (prev && prev.id === offer.id ? { ...prev, ...offer } : prev))
-      // Refresh from storage to ensure all components see the updated state
+      setStateOffers((prev) => updateOfferInState(prev, offer))
+      state.setSelectedOffer((prev) => (prev && prev.id === offer.id ? { ...prev, ...offer } : prev))
       await refreshOffers()
     },
-    [refreshOffers]
+    [refreshOffers, setStateOffers, state.setSelectedOffer]
   )
 
   const getStatusClass = useCallback((status: string) => {
@@ -229,19 +219,22 @@ export function useMyOffers() {
     return `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`
   }, [])
 
-  const copyOfferString = useCallback(async (offerString: string) => {
-    if (!offerString) return
+  const copyOfferString = useCallback(
+    async (offerString: string) => {
+      if (!offerString) return
 
-    try {
-      await navigator.clipboard.writeText(offerString)
-      setIsCopied(offerString)
-      setTimeout(() => {
-        setIsCopied(null)
-      }, 2000)
-    } catch {
-      // Failed to copy offer string
-    }
-  }, [])
+      try {
+        await navigator.clipboard.writeText(offerString)
+        state.setIsCopied(offerString)
+        setTimeout(() => {
+          state.setIsCopied(null)
+        }, 2000)
+      } catch {
+        // Failed to copy offer string
+      }
+    },
+    [state.setIsCopied]
+  )
 
   const getTickerSymbol = useCallback(
     (assetId: string): string => {
@@ -255,138 +248,140 @@ export function useMyOffers() {
   // Pagination handlers
   const goToPage = useCallback(
     (page: number) => {
-      setCurrentPage(Math.max(1, Math.min(page, totalPages || 1)))
+      setCurrentPage(Math.max(1, Math.min(page, state.totalPages || 1)))
     },
-    [totalPages]
+    [setCurrentPage, state.totalPages]
   )
 
-  const changePageSize = useCallback((newPageSize: number) => {
-    setPageSize(newPageSize)
-    setCurrentPage(1) // Reset to first page when changing page size
-  }, [])
+  const changePageSize = useCallback(
+    (newPageSize: number) => {
+      state.setPageSize(newPageSize)
+      setCurrentPage(1)
+    },
+    [state.setPageSize, setCurrentPage]
+  )
 
-  // Update page when filters change and refresh
+  // Update page when filters change
+  // ⚠️ CRITICAL: Do NOT include 'state' in dependency array!
   useEffect(() => {
-    setCurrentPage(1) // Reset to first page when filters change
-  }, [filters.status])
+    trackEffectRun('useMyOffers: filter-change')
+    setCurrentPage(1)
+  }, [state.filters.status, setCurrentPage])
 
   // Refresh offers when page, pageSize, or filters change
+  // ⚠️ CRITICAL: Only depend on specific values, not the entire state object!
   useEffect(() => {
+    trackEffectRun('useMyOffers: refresh-offers')
     refreshOffers()
-  }, [currentPage, pageSize, filters.status, refreshOffers])
+  }, [state.currentPage, state.pageSize, state.filters.status, refreshOffers])
 
   // Cancel all active offers
   const cancelAllOffers = useCallback(() => {
-    setShowCancelAllConfirmation(true)
-    setCancelAllError('')
-  }, [])
+    state.setShowCancelAllConfirmation(true)
+    state.setCancelAllError('')
+  }, [state.setShowCancelAllConfirmation, state.setCancelAllError])
 
   const confirmCancelAllOffers = useCallback(async () => {
-    setIsCancellingAll(true)
-    setCancelAllError('')
+    state.setIsCancellingAll(true)
+    state.setCancelAllError('')
 
     try {
-      // Get all active offers
       const activeOffers = await offerStorage.getOffersByStatus('active')
 
       if (activeOffers.length === 0) {
-        setCancelAllError('No active offers to cancel')
-        setIsCancellingAll(false)
+        state.setCancelAllError('No active offers to cancel')
+        state.setIsCancellingAll(false)
         return
       }
 
-      // Cancel each offer
-      const cancelPromises = activeOffers.map(async (offer) => {
-        try {
-          await cancelOfferMutation.mutateAsync({
-            id: offer.tradeId,
-            fee: offer.fee,
-          })
-          await offerStorage.updateOffer(offer.id, { status: 'cancelled' })
-        } catch (error) {
-          // Continue with other offers even if one fails
-          logger.error(`Failed to cancel offer ${offer.id}:`, error)
-        }
-      })
-
-      await Promise.allSettled(cancelPromises)
-      setShowCancelAllConfirmation(false)
+      await cancelAllActiveOffers(activeOffers, cancelOfferMutation, offerStorage.updateOffer)
+      state.setShowCancelAllConfirmation(false)
       await refreshOffers()
     } catch (error) {
-      setCancelAllError(
+      state.setCancelAllError(
         `Failed to cancel all offers: ${error instanceof Error ? error.message : 'Unknown error'}`
       )
     } finally {
-      setIsCancellingAll(false)
+      state.setIsCancellingAll(false)
     }
-  }, [cancelOfferMutation, offerStorage, refreshOffers])
+  }, [
+    state.setIsCancellingAll,
+    state.setCancelAllError,
+    state.setShowCancelAllConfirmation,
+    cancelOfferMutation,
+    offerStorage,
+    refreshOffers,
+  ])
 
   const handleCancelAllDialogClose = useCallback(() => {
-    setShowCancelAllConfirmation(false)
-    setCancelAllError('')
-  }, [])
+    state.setShowCancelAllConfirmation(false)
+    state.setCancelAllError('')
+  }, [state.setShowCancelAllConfirmation, state.setCancelAllError])
 
   // Delete all offers
   const deleteAllOffers = useCallback(() => {
-    setShowDeleteAllConfirmation(true)
-    setDeleteAllError('')
-  }, [])
+    state.setShowDeleteAllConfirmation(true)
+    state.setDeleteAllError('')
+  }, [state.setShowDeleteAllConfirmation, state.setDeleteAllError])
 
   const confirmDeleteAllOffers = useCallback(async () => {
-    setIsDeletingAll(true)
-    setDeleteAllError('')
+    state.setIsDeletingAll(true)
+    state.setDeleteAllError('')
 
     try {
-      // Clear all offers from database
       await offerStorage.clearAllOffers()
-
-      // Update local state immediately for instant UI feedback
-      // The useEffect will also sync from storageOffers, but this ensures immediate update
-      setOffers([])
+      setStateOffers([])
       setTotalOffers(0)
       setTotalPages(0)
       setCurrentPage(1)
-
-      // Close modal
-      setShowDeleteAllConfirmation(false)
+      state.setShowDeleteAllConfirmation(false)
     } catch (error) {
-      setDeleteAllError(
+      state.setDeleteAllError(
         `Failed to delete all offers: ${error instanceof Error ? error.message : 'Unknown error'}`
       )
     } finally {
-      setIsDeletingAll(false)
+      state.setIsDeletingAll(false)
     }
-  }, [offerStorage])
+  }, [
+    state.setIsDeletingAll,
+    state.setDeleteAllError,
+    state.setShowDeleteAllConfirmation,
+    setStateOffers,
+    setTotalOffers,
+    setTotalPages,
+    setCurrentPage,
+    offerStorage,
+  ])
 
   const handleDeleteAllDialogClose = useCallback(() => {
-    setShowDeleteAllConfirmation(false)
-    setDeleteAllError('')
-  }, [])
+    state.setShowDeleteAllConfirmation(false)
+    state.setDeleteAllError('')
+  }, [state.setShowDeleteAllConfirmation, state.setDeleteAllError])
 
   return {
     // State
-    offers,
-    isLoading,
-    selectedOffer,
-    isCopied,
-    showCancelConfirmation,
-    offerToCancel,
-    isCancelling,
-    cancelError,
-    showCancelAllConfirmation,
-    isCancellingAll,
-    cancelAllError,
-    showDeleteAllConfirmation,
-    isDeletingAll,
-    deleteAllError,
-    filters,
-    setFilters,
+    offers: state.offers,
+    isLoading: state.isLoading,
+    selectedOffer: state.selectedOffer,
+    isCopied: state.isCopied,
+    showCancelConfirmation: state.showCancelConfirmation,
+    offerToCancel: state.offerToCancel,
+    isCancelling: state.isCancelling,
+    cancelError: state.cancelError,
+    showCancelAllConfirmation: state.showCancelAllConfirmation,
+    isCancellingAll: state.isCancellingAll,
+    cancelAllError: state.cancelAllError,
+    showDeleteAllConfirmation: state.showDeleteAllConfirmation,
+    isDeletingAll: state.isDeletingAll,
+    deleteAllError: state.deleteAllError,
+    filters: state.filters,
+    setFilters: state.setFilters,
 
     // Pagination
-    currentPage,
-    pageSize,
-    totalOffers,
-    totalPages,
+    currentPage: state.currentPage,
+    pageSize: state.pageSize,
+    totalOffers: state.totalOffers,
+    totalPages: state.totalPages,
     goToPage,
     changePageSize,
 

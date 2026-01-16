@@ -7,6 +7,11 @@ import { logger } from '@/shared/lib/logger'
 import { useNetwork } from '@/shared/hooks/useNetwork'
 import { useQuery } from '@tanstack/react-query'
 import { useEffect, useMemo } from 'react'
+import {
+  fetchBidirectionalPair,
+  fetchSingleFilter,
+  fetchAllOrders,
+} from './orderBookQueryHelpers'
 import type {
   OrderBookFilters,
   OrderBookOrder,
@@ -295,237 +300,65 @@ export function useOrderBook(filters?: OrderBookFilters) {
         sellAssetCount: filters?.sellAsset?.length || 0,
         pagination,
       })
-      const allOrders: OrderBookOrder[] = []
-      let totalCount = 0
-      // Track per-query "hasMore" indicators (whether each query returned a full page)
-      const queryHasMoreFlags: boolean[] = []
 
-      // If we have both buy and sell assets, fetch both directions
+      let result: { orders: OrderBookOrder[]; total: number; hasMore: boolean }
+
+      // Route to appropriate fetch function based on filter state
       if (
         filters?.buyAsset &&
         filters.buyAsset.length > 0 &&
         filters?.sellAsset &&
         filters.sellAsset.length > 0
       ) {
-        const buyAsset = filters.buyAsset[0]
-        const sellAsset = filters.sellAsset[0]
-
-        logger.debug(`Fetching orders for pair (bidirectional)`)
-
-        // Handle pagination for "all" case
-        if (pagination === 'all') {
-          // Fetch all pages for both directions using recursive helper
-          const result1 = await fetchAllPages(buyAsset, sellAsset)
-          allOrders.push(...result1.orders)
-          totalCount += result1.total
-
-          const result2 = await fetchAllPages(sellAsset, buyAsset)
-          allOrders.push(...result2.orders)
-          totalCount += result2.total
-        } else {
-          // Query 1: Original direction (buyAsset/sellAsset)
-          const params1 = buildSearchParams(0, buyAsset, sellAsset)
-          logger.debug('Query 1', {
-            page: params1.page,
-            pageSize: params1.page_size,
-            hasRequested: !!params1.requested,
-            hasOffered: !!params1.offered,
-          })
-          const response1 = await dexieDataService.searchOffers(params1)
-          logger.debug('Query 1 response', {
-            success: response1.success,
-            count: response1.data?.length || 0,
-          })
-
-          if (response1.success && Array.isArray(response1.data)) {
-            const orders1 = (response1.data as DexieOffer[])
-              .filter((offer: DexieOffer) => offer && offer.offered && offer.requested)
-              .map(convertDexieOfferToOrderBookOrder)
-            allOrders.push(...orders1)
-            totalCount += response1.total || orders1.length
-            // Check if this query returned a full page (indicating more data available)
-            queryHasMoreFlags.push(orders1.length >= params1.page_size)
-            logger.debug(`Query 1: Added ${orders1.length} orders`)
-          }
-
-          // Query 2: Reverse direction (sellAsset/buyAsset)
-          const params2 = buildSearchParams(0, sellAsset, buyAsset)
-          logger.debug('Query 2', {
-            page: params2.page,
-            pageSize: params2.page_size,
-            hasRequested: !!params2.requested,
-            hasOffered: !!params2.offered,
-          })
-          const response2 = await dexieDataService.searchOffers(params2)
-          logger.debug('Query 2 response', {
-            success: response2.success,
-            count: response2.data?.length || 0,
-          })
-
-          if (response2.success && Array.isArray(response2.data)) {
-            const orders2 = (response2.data as DexieOffer[])
-              .filter((offer: DexieOffer) => offer && offer.offered && offer.requested)
-              .map(convertDexieOfferToOrderBookOrder)
-            allOrders.push(...orders2)
-            totalCount += response2.total || orders2.length
-            // Check if this query returned a full page (indicating more data available)
-            queryHasMoreFlags.push(orders2.length >= params2.page_size)
-            logger.debug(`Query 2: Added ${orders2.length} orders`)
-          }
-        }
+        // Both filters: bidirectional pair
+        result = await fetchBidirectionalPair(
+          filters.buyAsset[0],
+          filters.sellAsset[0],
+          pagination,
+          buildSearchParams,
+          fetchAllPages,
+          dexieDataService.searchOffers,
+          convertDexieOfferToOrderBookOrder
+        )
       } else if (
         (filters?.buyAsset && filters.buyAsset.length > 0) ||
         (filters?.sellAsset && filters.sellAsset.length > 0)
       ) {
-        // Single filter case: fetch orders in both directions to populate both buy and sell sides
-        const buyAsset = filters?.buyAsset?.[0]
-        const sellAsset = filters?.sellAsset?.[0]
-
-        logger.debug('Fetching orders with single filter')
-
-        // If only buyAsset is set: fetch orders where buyAsset is requested (user wants to buy) AND offered (to populate sell side)
-        // If only sellAsset is set: fetch orders where sellAsset is offered (user wants to sell) AND requested (to populate buy side)
-        // This ensures we get both buy and sell sides populated
-
-        if (buyAsset && !sellAsset) {
-          // Query 1: Orders where buyAsset is requested (user wants to buy it)
-          const params1 = buildSearchParams(0, buyAsset, undefined)
-          logger.debug('Query 1 (offered)', {
-            page: params1.page,
-            pageSize: params1.page_size,
-            hasOffered: !!params1.offered,
-          })
-          const response1 = await dexieDataService.searchOffers(params1)
-          if (response1.success && Array.isArray(response1.data)) {
-            const orders1 = (response1.data as DexieOffer[])
-              .filter((offer: DexieOffer) => offer && offer.offered && offer.requested)
-              .map(convertDexieOfferToOrderBookOrder)
-            allOrders.push(...orders1)
-            totalCount += response1.total || orders1.length
-            // Check if this query returned a full page (indicating more data available)
-            queryHasMoreFlags.push(orders1.length >= params1.page_size)
-            logger.debug(`Query 1: Added ${orders1.length} orders`)
-          }
-
-          // Query 2: Orders where buyAsset is offered (to populate sell side - opposite direction)
-          const params2 = buildSearchParams(0, null, buyAsset)
-          logger.debug('Query 2 (requested)', {
-            page: params2.page,
-            pageSize: params2.page_size,
-            hasRequested: !!params2.requested,
-          })
-          const response2 = await dexieDataService.searchOffers(params2)
-          if (response2.success && Array.isArray(response2.data)) {
-            const orders2 = (response2.data as DexieOffer[])
-              .filter((offer: DexieOffer) => offer && offer.offered && offer.requested)
-              .map(convertDexieOfferToOrderBookOrder)
-            allOrders.push(...orders2)
-            totalCount += response2.total || orders2.length
-            // Check if this query returned a full page (indicating more data available)
-            queryHasMoreFlags.push(orders2.length >= params2.page_size)
-            logger.debug(`Query 2: Added ${orders2.length} orders`)
-          }
-        } else if (sellAsset && !buyAsset) {
-          // Query 1: Orders where sellAsset is offered (user wants to sell it)
-          const params1 = buildSearchParams(0, undefined, sellAsset)
-          logger.debug('Query 1 (requested)', {
-            page: params1.page,
-            pageSize: params1.page_size,
-            hasRequested: !!params1.requested,
-          })
-          const response1 = await dexieDataService.searchOffers(params1)
-          if (response1.success && Array.isArray(response1.data)) {
-            const orders1 = (response1.data as DexieOffer[])
-              .filter((offer: DexieOffer) => offer && offer.offered && offer.requested)
-              .map(convertDexieOfferToOrderBookOrder)
-            allOrders.push(...orders1)
-            totalCount += response1.total || orders1.length
-            // Check if this query returned a full page (indicating more data available)
-            queryHasMoreFlags.push(orders1.length >= params1.page_size)
-            logger.debug(`Query 1: Added ${orders1.length} orders`)
-          }
-
-          // Query 2: Orders where sellAsset is requested (to populate buy side - opposite direction)
-          const params2 = buildSearchParams(0, sellAsset, null)
-          logger.debug('Query 2 (offered)', {
-            page: params2.page,
-            pageSize: params2.page_size,
-            hasOffered: !!params2.offered,
-          })
-          const response2 = await dexieDataService.searchOffers(params2)
-          if (response2.success && Array.isArray(response2.data)) {
-            const orders2 = (response2.data as DexieOffer[])
-              .filter((offer: DexieOffer) => offer && offer.offered && offer.requested)
-              .map(convertDexieOfferToOrderBookOrder)
-            allOrders.push(...orders2)
-            totalCount += response2.total || orders2.length
-            // Check if this query returned a full page (indicating more data available)
-            queryHasMoreFlags.push(orders2.length >= params2.page_size)
-            logger.debug(`Query 2: Added ${orders2.length} orders`)
-          }
-        }
+        // Single filter
+        result = await fetchSingleFilter(
+          filters?.buyAsset?.[0],
+          filters?.sellAsset?.[0],
+          buildSearchParams,
+          dexieDataService.searchOffers,
+          convertDexieOfferToOrderBookOrder
+        )
       } else {
-        // No filters - fetch all orders
-        logger.debug('Fetching all orders (no filters)')
-        if (pagination === 'all') {
-          // Fetch all pages using recursive helper
-          const result = await fetchAllPages(undefined, undefined)
-          allOrders.push(...result.orders)
-          totalCount = result.total
-        } else {
-          const params = buildSearchParams(0)
-          logger.debug('Query params', {
-            page: params.page,
-            pageSize: params.page_size,
-            status: params.status,
-          })
-          const response = await dexieDataService.searchOffers(params)
-          logger.debug('Query response', {
-            success: response.success,
-            count: response.data?.length || 0,
-          })
-
-          if (response.success && Array.isArray(response.data)) {
-            const orders = (response.data as DexieOffer[])
-              .filter((offer: DexieOffer) => offer && offer.offered && offer.requested)
-              .map(convertDexieOfferToOrderBookOrder)
-            allOrders.push(...orders)
-            totalCount = response.total || orders.length
-            // Check if this query returned a full page (indicating more data available)
-            queryHasMoreFlags.push(orders.length >= params.page_size)
-            logger.debug(`Added ${orders.length} orders`)
-          }
-        }
+        // No filters: fetch all
+        result = await fetchAllOrders(
+          pagination,
+          buildSearchParams,
+          fetchAllPages,
+          dexieDataService.searchOffers,
+          convertDexieOfferToOrderBookOrder
+        )
       }
 
-      // Capture raw count before deduplication for hasMore calculation
-      const rawOrdersCount = allOrders.length
-      logger.debug(`Total orders fetched: ${rawOrdersCount}`)
-
-      // Deduplicate orders by ID to prevent duplicate keys
+      // Deduplicate and sort orders
       const uniqueOrdersMap = new Map<string, OrderBookOrder>()
-      allOrders.forEach((order) => {
+      result.orders.forEach((order) => {
         if (!uniqueOrdersMap.has(order.id)) {
           uniqueOrdersMap.set(order.id, order)
         }
       })
       const deduplicatedOrders = Array.from(uniqueOrdersMap.values())
-      logger.debug(`Orders after deduplication: ${deduplicatedOrders.length}`)
-
-      // Sort all orders by price before returning
       const sortedOrders = sortOrdersByPrice(deduplicatedOrders)
 
-      // Determine hasMore based on pre-deduplication count or per-query indicators
-      const pageSize = pagination === 'all' ? 100 : pagination
-      // Use OR of per-query flags if available, otherwise use raw count vs pageSize
-      const hasMore =
-        pagination !== 'all' &&
-        (queryHasMoreFlags.some((flag) => flag) || rawOrdersCount >= pageSize)
+      logger.debug(`Orders after deduplication: ${sortedOrders.length}`)
 
       return {
         orders: sortedOrders,
-        hasMore,
-        total: totalCount,
+        hasMore: result.hasMore,
+        total: result.total,
       }
     },
     staleTime: calculateStaleTime(pagination),
