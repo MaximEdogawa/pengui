@@ -3,11 +3,10 @@
 import { useCatTokens } from '@/shared/hooks/useTickers'
 import { getNativeTokenTickerForNetwork } from '@/shared/lib/config/environment'
 import { useNetwork } from '@/shared/hooks/useNetwork'
-import { copyToClipboard } from '@/shared/lib/utils/clipboard'
-import { Check, Copy } from 'lucide-react'
-import { useCallback, useState } from 'react'
-import { formatAmountForTooltip } from '../../lib/formatAmount'
+import { useCallback } from 'react'
 import type { OrderBookOrder } from '../../lib/orderBookTypes'
+import { CopyableField } from './OrderDetailsSection/components/CopyableField'
+import { AssetList } from './OrderDetailsSection/components/AssetList'
 
 interface OrderDetailsSectionProps {
   order: OrderBookOrder
@@ -24,9 +23,6 @@ export default function OrderDetailsSection({
 }: OrderDetailsSectionProps) {
   const { getCatTokenInfo } = useCatTokens()
   const { network } = useNetwork()
-  const [copiedId, setCopiedId] = useState(false)
-  const [copiedOfferString, setCopiedOfferString] = useState(false)
-  const [copiedMakerId, setCopiedMakerId] = useState(false)
 
   const getTickerSymbol = useCallback(
     (assetId: string, code?: string): string => {
@@ -38,32 +34,6 @@ export default function OrderDetailsSection({
     [getCatTokenInfo, network]
   )
 
-  const handleCopyId = useCallback(async () => {
-    const result = await copyToClipboard(order.id)
-    if (result.success) {
-      setCopiedId(true)
-      setTimeout(() => setCopiedId(false), 2000)
-    }
-  }, [order.id])
-
-  const handleCopyOfferString = useCallback(async () => {
-    if (!offerString) return
-    const result = await copyToClipboard(offerString)
-    if (result.success) {
-      setCopiedOfferString(true)
-      setTimeout(() => setCopiedOfferString(false), 2000)
-    }
-  }, [offerString])
-
-  const handleCopyMakerId = useCallback(async () => {
-    if (!order.maker) return
-    const result = await copyToClipboard(order.maker)
-    if (result.success) {
-      setCopiedMakerId(true)
-      setTimeout(() => setCopiedMakerId(false), 2000)
-    }
-  }, [order.maker])
-
   const containerClass = mode === 'modal' ? 'space-y-4' : 'space-y-3'
 
   return (
@@ -71,126 +41,33 @@ export default function OrderDetailsSection({
       <div className="text-sm font-semibold text-gray-900 dark:text-white">Offer Details</div>
 
       {/* Offer ID */}
-      <div>
-        <div className="flex items-center justify-between mb-1">
-          <span className="text-xs text-gray-500 dark:text-gray-400">Offer ID:</span>
-          <button
-            type="button"
-            onClick={handleCopyId}
-            className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
-          >
-            {copiedId ? (
-              <>
-                <Check className="w-3 h-3" />
-                <span>Copied</span>
-              </>
-            ) : (
-              <>
-                <Copy className="w-3 h-3" />
-                <span>Copy</span>
-              </>
-            )}
-          </button>
-        </div>
-        <div className="text-xs font-mono text-gray-900 dark:text-white break-all bg-gray-50 dark:bg-gray-800/50 p-2 rounded">
-          {order.id}
-        </div>
-      </div>
+      <CopyableField label="Offer ID" value={order.id} />
 
       {/* Offer String */}
       {offerString && (
-        <div>
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-xs text-gray-500 dark:text-gray-400">Offer String:</span>
-            <button
-              type="button"
-              onClick={handleCopyOfferString}
-              className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
-            >
-              {copiedOfferString ? (
-                <>
-                  <Check className="w-3 h-3" />
-                  <span>Copied</span>
-                </>
-              ) : (
-                <>
-                  <Copy className="w-3 h-3" />
-                  <span>Copy</span>
-                </>
-              )}
-            </button>
-          </div>
-          <div
-            className="text-xs font-mono text-gray-900 dark:text-white break-all bg-gray-50 dark:bg-gray-800/50 p-2 rounded max-h-32 overflow-y-auto"
-            style={{ scrollbarGutter: 'stable' }}
-          >
-            {offerString}
-          </div>
-        </div>
+        <CopyableField
+          label="Offer String"
+          value={offerString}
+          className="max-h-32 overflow-y-auto"
+        />
       )}
 
       {/* Maker Address */}
-      {order.maker && (
-        <div>
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-xs text-gray-500 dark:text-gray-400">Trade ID Hash:</span>
-            <button
-              type="button"
-              onClick={handleCopyMakerId}
-              className="flex items-center gap-1 text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300"
-            >
-              {copiedMakerId ? (
-                <>
-                  <Check className="w-3 h-3" />
-                  <span>Copied</span>
-                </>
-              ) : (
-                <>
-                  <Copy className="w-3 h-3" />
-                  <span>Copy</span>
-                </>
-              )}
-            </button>
-          </div>
-          <div className="text-xs font-mono text-gray-900 dark:text-white break-all bg-gray-50 dark:bg-gray-800/50 p-2 rounded">
-            {order.maker}
-          </div>
-        </div>
-      )}
+      {order.maker && <CopyableField label="Trade ID Hash" value={order.maker} />}
 
       {/* Offering Assets */}
-      <div>
-        <span className="text-xs text-gray-500 dark:text-gray-400">Buy (Offering):</span>
-        <div className="mt-1 space-y-1">
-          {order.offering.map((asset, idx) => (
-            <div key={idx} className="flex items-center justify-between text-xs">
-              <span className="text-gray-900 dark:text-white">
-                {asset.code || getTickerSymbol(asset.id)}
-              </span>
-              <span className="font-mono text-gray-700 dark:text-gray-300">
-                {formatAmountForTooltip(asset.amount || 0)}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
+      <AssetList
+        label="Buy (Offering)"
+        assets={order.offering}
+        getTickerSymbol={getTickerSymbol}
+      />
 
       {/* Requesting Assets */}
-      <div>
-        <span className="text-xs text-gray-500 dark:text-gray-400">Sell (Requesting):</span>
-        <div className="mt-1 space-y-1">
-          {order.requesting.map((asset, idx) => (
-            <div key={idx} className="flex items-center justify-between text-xs">
-              <span className="text-gray-900 dark:text-white">
-                {asset.code || getTickerSymbol(asset.id)}
-              </span>
-              <span className="font-mono text-gray-700 dark:text-gray-300">
-                {formatAmountForTooltip(asset.amount || 0)}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
+      <AssetList
+        label="Sell (Requesting)"
+        assets={order.requesting}
+        getTickerSymbol={getTickerSymbol}
+      />
 
       {/* Price Range Percentage */}
       {priceDeviationPercent !== null && priceDeviationPercent !== undefined && (

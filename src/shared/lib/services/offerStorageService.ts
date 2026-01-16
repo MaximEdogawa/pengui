@@ -125,6 +125,25 @@ export class OfferStorageService {
   }
 
   /**
+   * Remove a single duplicate offer
+   */
+  private async removeDuplicateOffer(
+    offerId: string,
+    duplicate: StoredOffer
+  ): Promise<void> {
+    const storedOffer = await withTimeout(
+      db.offers.where('tradeId').equals(duplicate.tradeId).first(),
+      5000,
+      'removeDuplicates (find duplicate)'
+    )
+    if (!storedOffer || typeof storedOffer.id !== 'number') {
+      return
+    }
+    await withTimeout(db.offers.delete(storedOffer.id), 5000, 'removeDuplicates (delete)')
+    logger.info('🗑️ Removed duplicate offer:', { offerId, duplicateId: duplicate.id })
+  }
+
+  /**
    * Remove duplicate offers (keep the most recent one)
    * Note: This is now a manual operation and not called automatically
    */
@@ -149,24 +168,16 @@ export class OfferStorageService {
 
       // Remove duplicates, keeping the most recent
       for (const [offerId, offers] of offerGroups) {
-        if (offers.length > 1) {
-          // Sort by lastModified, keep the most recent
-          offers.sort((a, b) => b.lastModified.getTime() - a.lastModified.getTime())
-          const duplicatesToRemove = offers.slice(1)
+        if (offers.length <= 1) {
+          continue
+        }
+        // Sort by lastModified, keep the most recent
+        offers.sort((a, b) => b.lastModified.getTime() - a.lastModified.getTime())
+        const duplicatesToRemove = offers.slice(1)
 
-          // Remove duplicates
-          for (const duplicate of duplicatesToRemove) {
-            // Dexie uses the primary key (++id) for deletion, but we need to find it by tradeId
-            const storedOffer = await withTimeout(
-              db.offers.where('tradeId').equals(duplicate.tradeId).first(),
-              5000,
-              'removeDuplicates (find duplicate)'
-            )
-            if (storedOffer && typeof storedOffer.id === 'number') {
-              await withTimeout(db.offers.delete(storedOffer.id), 5000, 'removeDuplicates (delete)')
-              logger.info('🗑️ Removed duplicate offer:', { offerId, duplicateId: duplicate.id })
-            }
-          }
+        // Remove duplicates
+        for (const duplicate of duplicatesToRemove) {
+          await this.removeDuplicateOffer(offerId, duplicate)
         }
       }
     } catch (error) {

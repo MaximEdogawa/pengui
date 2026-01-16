@@ -8,7 +8,7 @@ import { logger } from '@/shared/lib/logger'
 import { useCallback, useState } from 'react'
 import type { OrderBookOrder } from '../lib/orderBookTypes'
 
-interface AssetItem {
+export interface AssetItem {
   assetId: string
   amount: number
   type: 'xch' | 'cat' | 'nft'

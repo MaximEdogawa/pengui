@@ -57,12 +57,9 @@ export default function AssetSelector({
       : availableCatTokens
 
   // Filter available asset types based on enabledAssetTypes prop
-  const availableAssetTypes = enabledAssetTypes.filter((type) => {
-    if (type === 'xch' || type === 'cat' || type === 'nft' || type === 'option') {
-      return true
-    }
-    return false
-  })
+  const availableAssetTypes = enabledAssetTypes.filter(
+    (type) => type === 'xch' || type === 'cat' || type === 'nft' || type === 'option'
+  )
 
   const filteredTokens = useCallback(
     (searchQuery: string) => {
@@ -138,18 +135,16 @@ export default function AssetSelector({
     setShowDropdown(false)
   }, [])
 
-  const getAssetTypePlaceholder = (type: AssetType): string => {
-    switch (type) {
-      case 'cat':
-        return isLoadingTickers ? 'Loading tokens...' : 'Search tokens (XCH, CAT tokens)...'
-      case 'nft':
-        return 'NFT Asset ID'
-      case 'option':
-        return 'Option Contract ID'
-      default:
-        return placeholder
-    }
-  }
+  const getAssetTypePlaceholder = (type: AssetType): string =>
+    type === 'cat'
+      ? isLoadingTickers
+        ? 'Loading tokens...'
+        : 'Search tokens (XCH, CAT tokens)...'
+      : type === 'nft'
+        ? 'NFT Asset ID'
+        : type === 'option'
+          ? 'Option Contract ID'
+          : placeholder
 
   // Check if amount input should be hidden (NFT and Option always have amount = 1)
   const hideAmountInput = asset.type === 'nft' || asset.type === 'option'

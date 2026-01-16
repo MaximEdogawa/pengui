@@ -4,10 +4,12 @@
  */
 
 import { logger } from '@/shared/lib/logger'
-import type { DexieOffer } from '@/features/offers/lib/dexieTypes'
+import type {
+  DexieOffer,
+  DexieOfferSearchParams,
+  DexieOfferSearchResponse,
+} from '@/features/offers/lib/dexieTypes'
 import type { OrderBookOrder, OrderBookPagination } from '../lib/orderBookTypes'
-
-import type { DexieOfferSearchParams, DexieOfferSearchResponse } from '@/features/offers/lib/dexieTypes'
 
 /**
  * Type for Dexie data service searchOffers method
@@ -21,6 +23,86 @@ export interface QueryResult {
   orders: OrderBookOrder[]
   total: number
   hasMore: boolean
+}
+
+/**
+ * Configuration for building search parameters
+ */
+export interface BuildSearchParamsConfig {
+  page: number
+  buyAsset?: string | null
+  sellAsset?: string | null
+  pageSize?: number
+}
+
+/**
+ * Configuration for fetching all pages
+ */
+export interface FetchAllPagesConfig {
+  buyAsset?: string | null
+  sellAsset?: string | null
+  page?: number
+  accumulatedOrders?: OrderBookOrder[]
+  accumulatedTotal?: number
+}
+
+/**
+ * Configuration for bidirectional pair query
+ */
+export interface BidirectionalPairConfig {
+  buyAsset: string
+  sellAsset: string
+  pagination: OrderBookPagination
+  buildSearchParams: (page: number, buy?: string | null, sell?: string | null) => {
+    requested?: string | null
+    offered?: string | null
+    page: number
+    page_size: number
+    status?: number
+  }
+  fetchAllPages: (options?: {
+    buyAsset?: string | null
+    sellAsset?: string | null
+  }) => Promise<{ orders: OrderBookOrder[]; total: number }>
+  searchOffers: DexieSearchOffers
+  convertFn: (offer: DexieOffer) => OrderBookOrder
+}
+
+/**
+ * Configuration for single filter query
+ */
+export interface SingleFilterConfig {
+  buyAsset: string | undefined
+  sellAsset: string | undefined
+  buildSearchParams: (page: number, buy?: string | null, sell?: string | null) => {
+    requested?: string | null
+    offered?: string | null
+    page: number
+    page_size: number
+    status?: number
+  }
+  searchOffers: DexieSearchOffers
+  convertFn: (offer: DexieOffer) => OrderBookOrder
+}
+
+/**
+ * Configuration for all orders query
+ */
+export interface AllOrdersConfig {
+  pagination: OrderBookPagination
+  buildSearchParams: (page: number) => {
+    requested?: string | null
+    offered?: string | null
+    page: number
+    page_size: number
+    status?: number
+  }
+  fetchAllPages: (options?: {
+    buyAsset?: string | null
+    sellAsset?: string | null
+  }) => Promise<{ orders: OrderBookOrder[]; total: number }>
+  searchOffers: DexieSearchOffers
+  convertFn: (offer: DexieOffer) => OrderBookOrder
 }
 
 /**
@@ -97,33 +179,19 @@ export async function executeSearchQuery(
  * Fetch orders for bidirectional pair (both buyAsset and sellAsset)
  */
 export async function fetchBidirectionalPair(
-  buyAsset: string,
-  sellAsset: string,
-  pagination: OrderBookPagination,
-  buildSearchParams: (page: number, buy?: string | null, sell?: string | null) => {
-    requested?: string | null
-    offered?: string | null
-    page: number
-    page_size: number
-    status?: number
-  },
-  fetchAllPages: (
-    buy?: string | undefined,
-    sell?: string | undefined
-  ) => Promise<{ orders: OrderBookOrder[]; total: number }>,
-  searchOffers: DexieSearchOffers,
-  convertFn: (offer: DexieOffer) => OrderBookOrder
+  config: BidirectionalPairConfig
 ): Promise<{ orders: OrderBookOrder[]; total: number; hasMore: boolean }> {
+  const { buyAsset, sellAsset, pagination, buildSearchParams, fetchAllPages, searchOffers, convertFn } = config
   const allOrders: OrderBookOrder[] = []
   let totalCount = 0
   const queryHasMoreFlags: boolean[] = []
 
   if (pagination === 'all') {
-    const result1 = await fetchAllPages(buyAsset, sellAsset)
+    const result1 = await fetchAllPages({ buyAsset, sellAsset })
     allOrders.push(...result1.orders)
     totalCount += result1.total
 
-    const result2 = await fetchAllPages(sellAsset, buyAsset)
+    const result2 = await fetchAllPages({ buyAsset: sellAsset, sellAsset: buyAsset })
     allOrders.push(...result2.orders)
     totalCount += result2.total
   } else {
@@ -151,18 +219,9 @@ export async function fetchBidirectionalPair(
  * Fetch orders for single filter (buyAsset or sellAsset only)
  */
 export async function fetchSingleFilter(
-  buyAsset: string | undefined,
-  sellAsset: string | undefined,
-  buildSearchParams: (page: number, buy?: string | null, sell?: string | null) => {
-    requested?: string | null
-    offered?: string | null
-    page: number
-    page_size: number
-    status?: number
-  },
-  searchOffers: DexieSearchOffers,
-  convertFn: (offer: DexieOffer) => OrderBookOrder
+  config: SingleFilterConfig
 ): Promise<{ orders: OrderBookOrder[]; total: number; hasMore: boolean }> {
+  const { buyAsset, sellAsset, buildSearchParams, searchOffers, convertFn } = config
   const allOrders: OrderBookOrder[] = []
   let totalCount = 0
   const queryHasMoreFlags: boolean[] = []
@@ -204,20 +263,12 @@ export async function fetchSingleFilter(
  * Fetch all orders (no filters)
  */
 export async function fetchAllOrders(
-  pagination: OrderBookPagination,
-  buildSearchParams: (page: number) => {
-    requested?: string | null
-    offered?: string | null
-    page: number
-    page_size: number
-    status?: number
-  },
-  fetchAllPages: () => Promise<{ orders: OrderBookOrder[]; total: number }>,
-  searchOffers: DexieSearchOffers,
-  convertFn: (offer: DexieOffer) => OrderBookOrder
+  config: AllOrdersConfig
 ): Promise<{ orders: OrderBookOrder[]; total: number; hasMore: boolean }> {
+  const { pagination, buildSearchParams, fetchAllPages, searchOffers, convertFn } = config
+
   if (pagination === 'all') {
-    const result = await fetchAllPages()
+    const result = await fetchAllPages({})
     return { orders: result.orders, total: result.total, hasMore: false }
   }
 

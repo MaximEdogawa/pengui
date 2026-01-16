@@ -4,10 +4,10 @@ import { useNetwork } from '@/shared/hooks/useNetwork'
 import { useTheme } from 'next-themes'
 import { usePathname } from 'next/navigation'
 import { Check, ChevronDown, Loader2 } from 'lucide-react'
-import { useState, useRef, useEffect } from 'react'
-import { useToast } from '@/shared/hooks/useToast'
+import { useState, useRef } from 'react'
 import { NETWORK_OPTIONS } from './NetworkPicker/constants'
-import { logger } from '../lib/logger'
+import { useNetworkSwitch } from './NetworkPicker/useNetworkSwitch'
+import { useClickOutside } from './NetworkPicker/useClickOutside'
 
 export default function NetworkPicker() {
   const { network, setNetwork, isMainnet } = useNetwork()
@@ -16,33 +16,24 @@ export default function NetworkPicker() {
   const isLoginPage = pathname === '/login'
   const isDark = currentTheme === 'dark' || (currentTheme === 'system' && systemTheme === 'dark')
   const [isOpen, setIsOpen] = useState(false)
-  const [isSwitching, setIsSwitching] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
-  const { toast } = useToast()
 
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      const target = event.target as Node
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(target) &&
-        buttonRef.current &&
-        !buttonRef.current.contains(target) &&
-        containerRef.current &&
-        !containerRef.current.contains(target)
-      ) {
-        setIsOpen(false)
-      }
-    }
+  // Extract network switching logic
+  const { isSwitching, switchNetwork } = useNetworkSwitch({
+    setNetwork,
+    onSwitchComplete: () => setIsOpen(false),
+  })
 
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside)
-      return () => document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [isOpen])
+  // Extract click outside handler
+  useClickOutside({
+    isOpen,
+    onClose: () => setIsOpen(false),
+    containerRef,
+    buttonRef,
+    dropdownRef,
+  })
 
   const handleNetworkSelect = async (newNetwork: 'mainnet' | 'testnet') => {
     if (newNetwork === network || isSwitching) {
@@ -52,36 +43,6 @@ export default function NetworkPicker() {
 
     // Switch network directly
     await switchNetwork(newNetwork)
-  }
-
-  const switchNetwork = async (newNetwork: 'mainnet' | 'testnet') => {
-    setIsSwitching(true)
-
-    try {
-      // Keep wallet connected - session remains valid across network switches
-      // The wallet will handle requests based on its actual network
-      // Wallet requests will use the wallet's network
-      const success = await setNetwork(newNetwork)
-      if (!success) {
-        toast({
-          variant: 'destructive',
-          title: 'Network Switch Failed',
-          description: 'Failed to switch network. Please try again.',
-        })
-        return
-      }
-      setIsOpen(false)
-    } catch (error) {
-      logger.error('Network switch failed:', error)
-      // Handle any unexpected errors that might be thrown
-      toast({
-        variant: 'destructive',
-        title: 'Network Switch Failed',
-        description: 'Failed to switch network. Please try again.',
-      })
-    } finally {
-      setIsSwitching(false)
-    }
   }
 
   return (
@@ -141,6 +102,7 @@ export default function NetworkPicker() {
               shadow-2xl
               border transition-all duration-200
               min-w-[140px]
+              z-[10001]
               ${
                 isLoginPage
                   ? 'left-1/2 -translate-x-1/2'
@@ -154,7 +116,6 @@ export default function NetworkPicker() {
               animate-in fade-in slide-in-from-top-2
             `}
             style={{
-              zIndex: 10001,
               boxShadow: isDark
                 ? '0 20px 40px -12px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.05)'
                 : '0 20px 40px -12px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(255, 255, 255, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.1)',

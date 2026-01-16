@@ -193,9 +193,8 @@ export default function OrderBookContainer({ filters, onOrderClick }: OrderBookC
     <div className="h-full flex flex-col">
       {/* Order Book Display */}
       <div
-        className="order-book-container flex-1 flex flex-col overflow-hidden rounded-xl backdrop-blur-2xl bg-white/5 dark:bg-black/5"
+        className="order-book-container flex-1 flex flex-col overflow-hidden rounded-xl backdrop-blur-2xl bg-white/5 dark:bg-black/5 border border-white/15"
         style={{
-          border: '1px solid rgba(255, 255, 255, 0.15)',
           boxShadow:
             '0 0 0 1px rgba(255, 255, 255, 0.08), 0 0 30px rgba(255, 255, 255, 0.03), 0 2px 8px rgba(0, 0, 0, 0.03), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
         }}

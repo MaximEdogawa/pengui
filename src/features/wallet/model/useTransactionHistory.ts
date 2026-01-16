@@ -1,7 +1,6 @@
 'use client'
 
-import { getTransactions } from '@/shared/lib/walletConnect/utils/transactionStorage'
-import type { StoredTransaction } from '@/shared/lib/walletConnect/utils/transactionStorage'
+import { getTransactions, type StoredTransaction } from '@/shared/lib/walletConnect/utils/transactionStorage'
 import { useEffect, useState } from 'react'
 
 /**

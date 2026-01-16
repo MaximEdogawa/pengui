@@ -22,7 +22,7 @@ export default function Modal({
 
   return (
     <div
-      className={`absolute inset-0 flex items-center justify-center p-4 z-50 ${
+      className={`fixed inset-0 flex items-center justify-center p-4 z-[60] ${
         isDark ? 'bg-black/50' : 'bg-black/30'
       } backdrop-blur-sm`}
       onClick={(e) => {

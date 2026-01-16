@@ -28,6 +28,88 @@ export interface DexieOffer {
 }
 
 /**
+ * Check if offer is cancelled (spent_block_index exists)
+ */
+function isCancelled(spentBlockIndex: number | null | undefined): boolean {
+  return spentBlockIndex !== null && spentBlockIndex !== undefined
+}
+
+/**
+ * Check if offer is completed (date_completed exists AND known_taker is not null)
+ */
+function isCompleted(
+  dateCompleted: Date | null,
+  knownTaker: unknown | null | undefined
+): boolean {
+  const hasValidKnownTaker = knownTaker !== null && knownTaker !== undefined
+  return dateCompleted !== null && hasValidKnownTaker
+}
+
+/**
+ * Check if offer is pending (date_pending exists)
+ */
+function isPending(datePending: Date | null): boolean {
+  return datePending !== null
+}
+
+/**
+ * Check if offer has expired based on date_expiry
+ */
+function isExpiredByDate(dateExpiry: Date | null): boolean {
+  if (!dateExpiry) return false
+  const now = new Date()
+  return dateExpiry < now
+}
+
+/**
+ * Check if offer has expired based on block_expiry
+ */
+function isExpiredByBlock(
+  blockExpiry: number | null | undefined,
+  currentBlockHeight: number | null | undefined
+): boolean {
+  if (blockExpiry === null || blockExpiry === undefined) return false
+  if (currentBlockHeight === null || currentBlockHeight === undefined) return false
+  return currentBlockHeight >= blockExpiry
+}
+
+/**
+ * Check if offer is within expiry window
+ */
+function isWithinExpiry(
+  dateExpiry: Date | null,
+  blockExpiry: number | null | undefined,
+  currentBlockHeight: number | null | undefined
+): boolean {
+  const now = new Date()
+  const isWithinDateExpiry = !dateExpiry || dateExpiry >= now
+  const hasValidBlockExpiry = blockExpiry !== null && blockExpiry !== undefined
+  const isWithinBlockExpiry =
+    !hasValidBlockExpiry ||
+    currentBlockHeight === null ||
+    currentBlockHeight === undefined ||
+    currentBlockHeight < blockExpiry
+
+  return isWithinDateExpiry && isWithinBlockExpiry
+}
+
+/**
+ * Check if offer is open (date_found exists, no completion, within expiry)
+ */
+function isOpen(
+  dateFound: Date | null,
+  dateCompleted: Date | null,
+  expiryConfig: {
+    dateExpiry: Date | null
+    blockExpiry: number | null | undefined
+    currentBlockHeight: number | null | undefined
+  }
+): boolean {
+  if (!dateFound || dateCompleted) return false
+  return isWithinExpiry(expiryConfig.dateExpiry, expiryConfig.blockExpiry, expiryConfig.currentBlockHeight)
+}
+
+/**
  * Calculate offer state based on date fields and known_taker according to the specified logic:
  * Priority order (checked in sequence):
  * 1. CANCELLED: if spent_block_index exists (coin was spent = cancelled, highest priority)
@@ -54,56 +136,22 @@ export function calculateOfferState(
   const spentBlockIndex = offer.spent_block_index
   const knownTaker = offer.known_taker
 
-  const hasValidKnownTaker = knownTaker !== null && knownTaker !== undefined
-  const hasValidSpentBlockIndex = spentBlockIndex !== null && spentBlockIndex !== undefined
-  const hasValidBlockExpiry = blockExpiry !== null && blockExpiry !== undefined
-
   // 1. CANCELLED: spent_block_index exists (coin was spent, offer cancelled) - highest priority
-  // This takes precedence because if the coin was spent, the offer is definitely cancelled
-  if (hasValidSpentBlockIndex) return 'Cancelled'
+  if (isCancelled(spentBlockIndex)) return 'Cancelled'
 
   // 2. COMPLETED: date_completed exists AND known_taker is not null
-  // If completed and has a known taker, it's completed
-  if (dateCompleted && hasValidKnownTaker) return 'Completed'
+  if (isCompleted(dateCompleted, knownTaker)) return 'Completed'
 
   // 3. PENDING: date_pending exists (but only if not cancelled or completed)
-  // If date_pending exists, the offer is in pending state
-  if (datePending) return 'Pending'
+  if (isPending(datePending)) return 'Pending'
 
   // 4. EXPIRED: Check if offer has expired based on date or block height
-  const now = new Date()
-
-  // Check date_expiry: compare with current time, not date_found
-  // An offer expires when date_expiry is in the past
-  if (dateExpiry && dateExpiry < now) {
-    return 'Expired'
-  }
-
-  // Check block_expiry: only mark as expired if current block height is available
-  // and has reached or exceeded the expiry block
-  // TODO: This requires access to current blockchain height. Without it, we cannot
-  // accurately determine if block_expiry has been reached. Consider fetching current
-  // block height from wallet/chain service when available.
-  if (hasValidBlockExpiry && currentBlockHeight !== null && currentBlockHeight !== undefined) {
-    if (currentBlockHeight >= blockExpiry) {
-      return 'Expired'
-    }
-  }
+  if (isExpiredByDate(dateExpiry)) return 'Expired'
+  if (isExpiredByBlock(blockExpiry, currentBlockHeight)) return 'Expired'
 
   // 5. OPEN: date_found exists, no completion, no spending, within expiry (if any)
-  // If found but not completed, cancelled, or expired, it's open
-  if (dateFound && !dateCompleted) {
-    // Check if still within expiry window
-    const isWithinDateExpiry = !dateExpiry || dateExpiry >= now
-    const isWithinBlockExpiry =
-      !hasValidBlockExpiry ||
-      currentBlockHeight === null ||
-      currentBlockHeight === undefined ||
-      currentBlockHeight < blockExpiry
-
-    if (isWithinDateExpiry && isWithinBlockExpiry) {
-      return 'Open'
-    }
+  if (isOpen(dateFound, dateCompleted, { dateExpiry, blockExpiry, currentBlockHeight })) {
+    return 'Open'
   }
 
   // 6. UNKNOWN: if every date is null

@@ -35,13 +35,21 @@ function createTimeoutPromise(): Promise<never> {
 /**
  * Execute the wallet request with timeout
  */
-async function executeWalletRequest<T>(
-  signClient: SignClient,
-  session: WalletConnectSession,
-  method: string,
-  data: Record<string, unknown>,
+interface ExecuteWalletRequestOptions {
+  signClient: SignClient
+  session: WalletConnectSession
+  method: string
+  data: Record<string, unknown>
   validChainId: string
-): Promise<T | { error: Record<string, unknown> } | { error: string }> {
+}
+
+async function executeWalletRequest<T>({
+  signClient,
+  session,
+  method,
+  data,
+  validChainId,
+}: ExecuteWalletRequestOptions): Promise<T | { error: Record<string, unknown> } | { error: string }> {
   const timeoutPromise = createTimeoutPromise()
   const walletRequestPromise = signClient.request({
     topic: session.topic,
@@ -102,7 +110,13 @@ export async function makeWalletRequest<T>(
     const validChainId = chainIdValidation.validChainId || session.chainId
 
     // Execute request with timeout
-    const result = await executeWalletRequest<T>(signClient!, session, method, data, validChainId)
+    const result = await executeWalletRequest<T>({
+      signClient: signClient!,
+      session,
+      method,
+      data,
+      validChainId,
+    })
 
     // Process and return result
     return processWalletRequestResult(result, method)

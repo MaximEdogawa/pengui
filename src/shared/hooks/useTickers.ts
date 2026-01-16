@@ -4,8 +4,7 @@ import { CHIA_ASSET_IDS, XCH_BASE_CURRENCIES } from '@/shared/lib/constants/chia
 import { getDexieApiUrl } from '@/shared/lib/utils/networkUtils'
 import { useNetwork } from '@/shared/hooks/useNetwork'
 import type { DexieTicker } from '@/features/offers/lib/dexieTypes'
-import type { Asset, Ticker } from '@/entities/asset'
-import { tickerToAsset } from '@/entities/asset'
+import { tickerToAsset, type Asset, type Ticker } from '@/entities/asset'
 import { useQuery } from '@tanstack/react-query'
 import { useMemo } from 'react'
 

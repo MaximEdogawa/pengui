@@ -2,8 +2,9 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNetwork } from '@/shared/hooks/useNetwork'
-import type { AssetType, CoinSpend } from '@/shared/lib/walletConnect/types/command.types'
 import type {
+  AssetType,
+  CoinSpend,
   CancelOfferRequest,
   OfferRequest,
   SignMessageRequest,
