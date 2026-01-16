@@ -54,3 +54,6 @@ thumbs.db
 
 # turbo build log
 **/.turbo/*
+
+# husky
+.husky/_/*

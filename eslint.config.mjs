@@ -2,7 +2,7 @@ import eslint from '@eslint/js'
 import tseslint from 'typescript-eslint'
 import reactHooks from 'eslint-plugin-react-hooks'
 
-export default tseslint.config(
+export default [
   {
     ignores: [
       '**/dist/**',
@@ -20,22 +20,14 @@ export default tseslint.config(
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
   {
-    files: ['**/*.{ts,tsx}'],
+    files: ['**/*.{ts,tsx,js,jsx}'],
     plugins: {
       'react-hooks': reactHooks,
     },
     rules: {
-      // React Hooks rules - critical for preventing infinite loops
-      'react-hooks/rules-of-hooks': 'error',
-      'react-hooks/exhaustive-deps': [
-        'warn',
-        {
-          // Warn about missing dependencies but allow intentional omissions
-          additionalHooks: '(useMemo|useCallback)',
-        },
-      ],
+      // App Style Guide Rules - matches style-guide-rules configuration
       'max-lines': ['error', { max: 1000, skipBlankLines: true, skipComments: true }],
-      'no-console': ['error', { allow: ['warn', 'error'] }],
+      'no-console': 'error',
       'no-debugger': 'error',
       'no-var': 'error',
       'prefer-const': 'error',
@@ -70,6 +62,15 @@ export default tseslint.config(
           args: 'none',
         },
       ],
+      // React Hooks rules - critical for preventing infinite loops
+      'react-hooks/rules-of-hooks': 'error',
+      'react-hooks/exhaustive-deps': [
+        'warn',
+        {
+          // Warn about missing dependencies but allow intentional omissions
+          additionalHooks: '(useMemo|useCallback)',
+        },
+      ],
     },
   },
-)
+]

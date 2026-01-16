@@ -307,11 +307,13 @@ bun lint             # Run ESLint
 
 ### Git Hooks
 
-Pre-commit hooks are configured via Husky to ensure code quality:
+Pre-commit hooks are configured via Husky and lint-staged to ensure code quality:
 
-- ESLint checks
-- Prettier formatting
-- Type checking (if configured)
+- **Lint & Type Check**: ESLint and TypeScript checks on staged files (with auto-fix)
+- **Build**: Ensures the project builds successfully
+- **Test**: Runs the test suite
+
+See [Git Hooks Documentation](./docs/development/git-hooks.md) for details.
 
 ## 🔒 Security
 
