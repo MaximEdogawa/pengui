@@ -125,7 +125,7 @@ export function suppressRelayErrors() {
       return (
         (argStr.includes('Missing or invalid') && argStr.includes('chainId')) ||
         (argStr.includes('request()') && argStr.includes('chainId')) ||
-        (argStr.includes('isValidRequest()') && argStr.includes('failed'))
+        (argStr.includes('isValidRequest()') && argStr.includes('failed') && argStr.includes('chainId'))
       )
     })
 

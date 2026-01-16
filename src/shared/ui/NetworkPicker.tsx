@@ -7,6 +7,7 @@ import { Check, ChevronDown, Loader2 } from 'lucide-react'
 import { useState, useRef, useEffect } from 'react'
 import { useToast } from '@/shared/hooks/useToast'
 import { NETWORK_OPTIONS } from './NetworkPicker/constants'
+import { logger } from '../lib/logger'
 
 export default function NetworkPicker() {
   const { network, setNetwork, isMainnet } = useNetwork()
@@ -60,9 +61,19 @@ export default function NetworkPicker() {
       // Keep wallet connected - session remains valid across network switches
       // The wallet will handle requests based on its actual network
       // Wallet requests will use the wallet's network
-      await setNetwork(newNetwork)
+      const success = await setNetwork(newNetwork)
+      if (!success) {
+        toast({
+          variant: 'destructive',
+          title: 'Network Switch Failed',
+          description: 'Failed to switch network. Please try again.',
+        })
+        return
+      }
       setIsOpen(false)
-    } catch (_error) {
+    } catch (error) {
+      logger.error('Network switch failed:', error)
+      // Handle any unexpected errors that might be thrown
       toast({
         variant: 'destructive',
         title: 'Network Switch Failed',

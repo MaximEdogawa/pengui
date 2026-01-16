@@ -14,7 +14,7 @@ type Network = 'mainnet' | 'testnet'
 
 interface NetworkContextType {
   network: Network
-  setNetwork: (network: Network) => Promise<void>
+  setNetwork: (network: Network) => Promise<boolean>
   isMainnet: boolean
   isTestnet: boolean
 }
@@ -122,9 +122,9 @@ export function NetworkProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const setNetwork = useCallback(
-    async (newNetwork: Network) => {
+    async (newNetwork: Network): Promise<boolean> => {
       if (newNetwork === network || isSwitching) {
-        return
+        return true
       }
 
       setIsSwitching(true)
@@ -222,9 +222,12 @@ export function NetworkProvider({ children }: { children: React.ReactNode }) {
         logger.error('❌ Failed to switch network:', error)
         // Revert state on error
         setNetworkState(network)
+        return false
       } finally {
         setIsSwitching(false)
       }
+      
+      return true
     },
     [network, isSwitching, queryClient, isConnected, walletConnectSession, selectedSession, applyNetworkChange]
   )

@@ -4,7 +4,7 @@ import type { OfferDetails } from '@/entities/offer'
 import { useCancelOffer } from '@/features/wallet'
 import { useCatTokens } from '@/shared/hooks'
 import { formatAssetAmount } from '@/shared/lib/utils/chia-units'
-import { useCallback, useEffect, useMemo } from 'react'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { trackEffectRun } from '@/shared/lib/utils/useEffectGuard'
 import { useOfferStorage } from './useOfferStorage'
 import {
@@ -28,6 +28,9 @@ export function useMyOffers() {
 
   // State (extracted to separate hook)
   const state = useMyOffersState()
+
+  // Timer ref for copy offer string timeout
+  const copyTimerRef = useRef<NodeJS.Timeout | null>(null)
 
   // Computed - offers are already filtered by status in the query
   const filteredOffers = useMemo(() => state.offers, [state.offers])
@@ -232,8 +235,16 @@ export function useMyOffers() {
       try {
         await navigator.clipboard.writeText(offerString)
         state.setIsCopied(offerString)
-        setTimeout(() => {
+        
+        // Clear any existing timer before creating a new one
+        if (copyTimerRef.current) {
+          clearTimeout(copyTimerRef.current)
+        }
+        
+        // Store the new timer ID
+        copyTimerRef.current = setTimeout(() => {
           state.setIsCopied(null)
+          copyTimerRef.current = null
         }, 2000)
       } catch {
         // Failed to copy offer string
@@ -280,6 +291,16 @@ export function useMyOffers() {
     trackEffectRun('useMyOffers: refresh-offers')
     refreshOffers()
   }, [state.currentPage, state.pageSize, state.filters.status, refreshOffers])
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (copyTimerRef.current) {
+        clearTimeout(copyTimerRef.current)
+        copyTimerRef.current = null
+      }
+    }
+  }, [])
 
   // Cancel all active offers
   const cancelAllOffers = useCallback(() => {
