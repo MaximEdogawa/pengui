@@ -15,8 +15,6 @@
     "storybook:dev": "storybook dev -p 6006",
     "storybook:build": "storybook build",
     "storybook:lint": "bun eslint storybook --config eslint.config.mjs --max-warnings=100",
-    "test": "bun test",
-    "test:watch": "bun test --watch",
     "test:unit": "bun test src/shared/**/*.test.{ts,tsx} src/features/**/*.test.{ts,tsx} src/entities/**/*.test.{ts,tsx}",
     "test:integration": "bun test src/tests/integration/**/*.test.{ts,tsx}",
     "test:coverage": "bun test --coverage",

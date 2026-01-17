@@ -50,7 +50,7 @@ export function formatXchAmount(xchAmount: AssetAmount, precision: number = 6): 
 
   // Handle invalid numbers
   if (isNaN(numAmount)) {
-    return '0'.padEnd(precision + 2, '0') // Return "0.000000" for 6 precision
+    return `0.${'0'.repeat(precision)}` // Return "0.000000" for 6 precision
   }
 
   return numAmount.toFixed(precision)

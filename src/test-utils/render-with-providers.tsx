@@ -4,7 +4,7 @@
  */
 
 import React, { type ReactElement } from 'react'
-import { render, type RenderOptions } from '@testing-library/react'
+import { render, type RenderOptions, cleanup } from '@testing-library/react'
 import { Provider } from 'react-redux'
 import { PersistGate } from 'redux-persist/integration/react'
 import { store, persistor } from '@maximedogawa/chia-wallet-connect-react'
@@ -68,4 +68,4 @@ export function renderWithProviders(
 export * from '@testing-library/react'
 
 // Override render method
-export { renderWithProviders as render }
+export { renderWithProviders as render, cleanup }

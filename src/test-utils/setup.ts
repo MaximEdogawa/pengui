@@ -1,5 +1,6 @@
 import '@testing-library/jest-dom'
 import { Window } from 'happy-dom'
+import { afterEach } from 'bun:test'
 
 // Initialize DOM environment for Bun tests
 if (typeof window === 'undefined') {
@@ -71,3 +72,12 @@ global.IntersectionObserver = class IntersectionObserver {
     return []
   }
 } as typeof IntersectionObserver
+
+// Clean up DOM after each test to prevent test pollution
+// Manually clear document.body to ensure tests don't interfere with each other
+afterEach(() => {
+  if (typeof document !== 'undefined' && document.body) {
+    // Remove all children from body to prevent test pollution
+    document.body.replaceChildren()
+  }
+})

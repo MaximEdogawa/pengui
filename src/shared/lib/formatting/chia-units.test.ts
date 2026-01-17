@@ -88,12 +88,17 @@ describe('xchToMojos', () => {
 
   describe('isValidChiaAddress', () => {
     it('should validate mainnet addresses', () => {
-      expect(isValidChiaAddress('xch1test1234567890abcdefghijklmnopqrstuvwxyz1234567890')).toBe(true)
+      // Valid Chia address format: xch1 followed by exactly 58 alphanumeric characters
       expect(isValidChiaAddress(`xch1${'a'.repeat(58)}`)).toBe(true)
+      expect(isValidChiaAddress(`xch1${'1'.repeat(58)}`)).toBe(true)
+      // Generate exactly 58 characters: 'a1b2c3' is 6 chars, repeat 10 times = 60, substring to 58
+      expect(isValidChiaAddress(`xch1${'a1b2c3'.repeat(10).substring(0, 58)}`)).toBe(true)
     })
 
     it('should validate testnet addresses', () => {
-      expect(isValidChiaAddress('txch1test1234567890abcdefghijklmnopqrstuvwxyz1234567890')).toBe(true)
+      // Valid testnet Chia address format: txch1 followed by exactly 58 alphanumeric characters
+      expect(isValidChiaAddress(`txch1${'a'.repeat(58)}`)).toBe(true)
+      expect(isValidChiaAddress(`txch1${'1'.repeat(58)}`)).toBe(true)
     })
 
     it('should reject invalid addresses', () => {
@@ -101,10 +106,13 @@ describe('xchToMojos', () => {
       expect(isValidChiaAddress('xch1short')).toBe(false)
       expect(isValidChiaAddress('btc1test1234567890abcdefghijklmnopqrstuvwxyz1234567890')).toBe(false)
       expect(isValidChiaAddress('')).toBe(false)
+      // Wrong length
+      expect(isValidChiaAddress(`xch1${'a'.repeat(57)}`)).toBe(false)
+      expect(isValidChiaAddress(`xch1${'a'.repeat(59)}`)).toBe(false)
     })
 
     it('should handle whitespace', () => {
-      expect(isValidChiaAddress(' xch1test1234567890abcdefghijklmnopqrstuvwxyz1234567890 ')).toBe(true)
+      expect(isValidChiaAddress(` xch1${'a'.repeat(58)} `)).toBe(true)
     })
   })
 

@@ -35,7 +35,10 @@ describe('Login Flow Integration', () => {
   it('should display connect wallet message', () => {
     render(<LoginForm />)
 
-    expect(screen.getByText(/connect your wallet to get started/i)).toBeInTheDocument()
+    // Use getAllByText since the message appears multiple times, then check first occurrence
+    const messages = screen.getAllByText(/connect your wallet to get started/i)
+    expect(messages.length).toBeGreaterThan(0)
+    expect(messages[0]).toBeInTheDocument()
   })
 
   // Note: Full wallet connection flow testing would require:

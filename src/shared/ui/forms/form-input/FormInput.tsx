@@ -9,14 +9,17 @@ export interface FormInputProps extends Omit<InputHTMLAttributes<HTMLInputElemen
   helperText?: ReactNode
 }
 
-export default function FormInput({ label, error, helperText, ...inputProps }: FormInputProps) {
+export default function FormInput({ label, error, helperText, name, id, ...inputProps }: FormInputProps) {
   const { isDark, t } = useThemeClasses()
+  const inputId = id || name || `input-${Math.random().toString(36).substr(2, 9)}`
 
   return (
     <div>
-      <label className={`${t.textSecondary} text-xs font-medium mb-2 block`}>{label}</label>
+      <label htmlFor={inputId} className={`${t.textSecondary} text-xs font-medium mb-2 block`}>{label}</label>
       <input
         {...inputProps}
+        id={inputId}
+        name={name}
         className={`w-full px-4 py-3 rounded-xl backdrop-blur-xl ${t.input} ${t.text} placeholder:${t.textSecondary} focus:outline-none focus:ring-2 ${
           error ? 'ring-2 ring-red-500/50' : t.focusRing
         } transition-all`}
