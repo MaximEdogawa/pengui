@@ -1,4 +1,4 @@
-import { Page, Locator } from '@playwright/test'
+import { Page, Locator, expect } from '@playwright/test'
 
 /**
  * Page Object Model for Dashboard Page
@@ -25,6 +25,8 @@ export class DashboardPage {
 
   async isVisible() {
     // Verify dashboard elements are visible
-    // Adjust based on actual implementation
+    await expect(this.balanceCard).toBeVisible()
+    await expect(this.statsGrid).toBeVisible()
+    await expect(this.transactionList).toBeVisible()
   }
 }

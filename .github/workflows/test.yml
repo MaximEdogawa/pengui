@@ -11,8 +11,8 @@ jobs:
     name: Run Tests
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    # Run tests only on pull requests
-    if: github.event_name == 'pull_request'
+    # Run tests on pull requests and develop branch pushes
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/develop')
 
     steps:
       - name: Checkout code
@@ -21,7 +21,7 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version: 1.2.23
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -60,7 +60,7 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version: 1.2.23
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -74,7 +74,7 @@ jobs:
       - name: Run E2E tests
         run: bun run test:e2e
         env:
-          PLAYWRIGHT_TEST_BASE_URL: http://localhost:3000
+          CI: true
 
       - name: Upload test results
         uses: actions/upload-artifact@v4
@@ -106,7 +106,7 @@ jobs:
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
         with:
-          bun-version: latest
+          bun-version: 1.2.23
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -120,4 +120,4 @@ jobs:
       - name: Run smoke tests
         run: bunx playwright test tests/e2e/smoke --project=chromium
         env:
-          PLAYWRIGHT_TEST_BASE_URL: http://localhost:3000
+          CI: true

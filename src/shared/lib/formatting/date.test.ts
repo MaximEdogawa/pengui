@@ -3,20 +3,38 @@ import { formatRelativeTime } from './date'
 
 describe('date formatting', () => {
   let mockNow: number
-
+  let originalDate: typeof Date
   let originalDateNow: typeof Date.now
 
   beforeEach(() => {
-    // Mock current time
-    mockNow = Date.now()
-    // Store original Date.now() before mocking
+    // Store original Date and Date.now before mocking
+    originalDate = Date
     originalDateNow = Date.now
-    // Mock Date.now() to return our fixed time
+    // Set fixed time for tests
+    mockNow = 1700000000000 // Fixed timestamp: 2023-11-14
+    // Mock Date.now to return fixed time
+    Date.now = () => mockNow
+    // Mock Date constructor to use our fixed time when called without arguments
+    // @ts-expect-error - We're intentionally overriding Date constructor
+    global.Date = class extends Date {
+      constructor(...args: unknown[]) {
+        if (args.length === 0) {
+          super(mockNow)
+        } else {
+          super(...(args as []))
+        }
+      }
+      static now() {
+        return mockNow
+      }
+    } as typeof Date
+    // Ensure Date.now is also mocked
     Date.now = () => mockNow
   })
 
   afterEach(() => {
-    // Restore original Date.now()
+    // Restore original Date and Date.now
+    global.Date = originalDate
     Date.now = originalDateNow
   })
 

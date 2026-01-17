@@ -26,13 +26,19 @@ describe('Modal', () => {
       </Modal>
     )
 
-    // Find the overlay (the outer div)
+    // Find the overlay (the outer div with fixed class)
     const overlay = screen.getByText('Modal Content').closest('.fixed')
-    if (overlay) {
-      // Click on the overlay itself, not the content
-      await userEvent.click(overlay)
-      expect(closed).toBe(true)
-    }
+    expect(overlay).toBeInTheDocument()
+    
+    // Get bounding rect to click on the backdrop (not the centered content)
+    const rect = overlay!.getBoundingClientRect()
+    // Click near the top-left corner of the overlay (backdrop area)
+    await userEvent.click(overlay!, {
+      // Use coordinates to target the backdrop, not the centered content
+      clientX: rect.left + 10,
+      clientY: rect.top + 10,
+    })
+    expect(closed).toBe(true)
   })
 
   it('should not call onClose when clicking content', async () => {
@@ -66,10 +72,15 @@ describe('Modal', () => {
     )
 
     const overlay = screen.getByText('Modal Content').closest('.fixed')
-    if (overlay) {
-      await userEvent.click(overlay)
-      expect(closed).toBe(false)
-    }
+    expect(overlay).toBeInTheDocument()
+    
+    // Get bounding rect to click on the backdrop
+    const rect = overlay!.getBoundingClientRect()
+    await userEvent.click(overlay!, {
+      clientX: rect.left + 10,
+      clientY: rect.top + 10,
+    })
+    expect(closed).toBe(false)
   })
 
   it('should apply custom maxWidth', () => {

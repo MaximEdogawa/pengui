@@ -26,13 +26,17 @@ describe('Transaction Flow Integration', () => {
       balance: 1000,
     })
 
+    // Assert balance is present and valid
+    expect(asset.balance).toBeDefined()
+    expect(asset.balance).toBeGreaterThanOrEqual(0)
+
     const transaction = createTransaction({
       amount: 100,
       assetType: 'xch',
     })
 
     // Transaction amount should not exceed balance
-    expect(transaction.amount).toBeLessThanOrEqual(asset.balance || 0)
+    expect(transaction.amount).toBeLessThanOrEqual(asset.balance)
   })
 
   // Note: Full transaction flow testing requires:

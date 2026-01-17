@@ -45,15 +45,21 @@ export function mojosToXch(mojosAmount: number | string | bigint): AssetAmount {
  * @returns Formatted string
  */
 export function formatXchAmount(xchAmount: AssetAmount, precision: number = 6): string {
+  // Validate precision: must be finite, non-negative integer within safe range
+  const validatedPrecision = Math.max(
+    0,
+    Math.min(20, Math.floor(Number.isFinite(precision) ? precision : 6))
+  )
+
   // Ensure amount is a number
   const numAmount = typeof xchAmount === 'string' ? parseFloat(xchAmount) : xchAmount
 
   // Handle invalid numbers
   if (isNaN(numAmount)) {
-    return `0.${'0'.repeat(precision)}` // Return "0.000000" for 6 precision
+    return `0.${'0'.repeat(validatedPrecision)}` // Return "0.000000" for 6 precision
   }
 
-  return numAmount.toFixed(precision)
+  return numAmount.toFixed(validatedPrecision)
 }
 
 /**

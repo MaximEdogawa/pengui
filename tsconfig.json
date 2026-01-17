@@ -46,6 +46,9 @@
     ".next",
     "storybook-static",
     "storybook",
-    "storybook-stories"
+    "storybook-stories",
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "src/test-utils/**/*"
   ]
 }

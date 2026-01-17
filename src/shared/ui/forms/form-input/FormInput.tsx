@@ -1,7 +1,7 @@
 'use client'
 
 import { useThemeClasses } from '@/shared/hooks'
-import { InputHTMLAttributes, ReactNode } from 'react'
+import { InputHTMLAttributes, ReactNode, useId } from 'react'
 
 export interface FormInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'className'> {
   label: string | ReactNode
@@ -11,7 +11,8 @@ export interface FormInputProps extends Omit<InputHTMLAttributes<HTMLInputElemen
 
 export default function FormInput({ label, error, helperText, name, id, ...inputProps }: FormInputProps) {
   const { isDark, t } = useThemeClasses()
-  const inputId = id || name || `input-${Math.random().toString(36).substr(2, 9)}`
+  const reactId = useId()
+  const inputId = id || name || reactId
 
   return (
     <div>
