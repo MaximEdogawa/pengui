@@ -13,6 +13,8 @@ export default [{
     '**/*.d.ts',
     '**/next-env.d.ts',
     '**/coverage/**',
+    '**/playwright-report/**',
+    '**/test-results/**',
     '**/*.config.{js,mjs,cjs}',
     '**/next.config.*',
     '**/postcss.config.*',

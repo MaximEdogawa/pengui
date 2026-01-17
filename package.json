@@ -25,15 +25,6 @@
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:debug": "playwright test --debug"
   },
-  "lint-staged": {
-    "*.{ts,tsx}": [
-      "eslint --config eslint.config.mjs --fix --max-warnings=1000",
-      "bash -lc 'bun run type-check'"
-    ],
-    "*.{js,jsx}": [
-      "eslint --config eslint.config.mjs --fix --max-warnings=1000"
-    ]
-  },
   "dependencies": {
     "@maximedogawa/chia-wallet-connect-react": "^0.0.4",
     "@tanstack/react-query": "^5.90.16",
