@@ -1,0 +1,21 @@
+# Bun configuration for testing
+[test]
+# Preload test setup file
+preload = ["./src/test-utils/setup.ts"]
+
+# Coverage configuration
+coverage = true
+coverageDir = "coverage"
+coverageExclude = [
+  "**/node_modules/**",
+  "**/.next/**",
+  "**/storybook/**",
+  "**/storybook-static/**",
+  "**/tests/**",
+  "**/test-utils/**",
+  "**/*.stories.tsx",
+  "**/*.config.*",
+]
+
+# Test timeout (30 seconds)
+timeout = 30000

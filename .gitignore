@@ -63,3 +63,8 @@ thumbs.db
 storybook-static
 # Storybook stories directory (optional - uncomment if you want to ignore stories)
 # storybook/
+
+# Test coverage
+coverage/
+*.lcov
+.nyc_output/

@@ -14,7 +14,16 @@
     "prepare": "husky && sh .husky/pre-commit",
     "storybook:dev": "storybook dev -p 6006",
     "storybook:build": "storybook build",
-    "storybook:lint": "bun eslint storybook --config eslint.config.mjs --max-warnings=100"
+    "storybook:lint": "bun eslint storybook --config eslint.config.mjs --max-warnings=100",
+    "test": "bun test",
+    "test:watch": "bun test --watch",
+    "test:unit": "bun test src/shared/**/*.test.{ts,tsx} src/features/**/*.test.{ts,tsx} src/entities/**/*.test.{ts,tsx}",
+    "test:integration": "bun test src/tests/integration/**/*.test.{ts,tsx}",
+    "test:coverage": "bun test --coverage",
+    "test:ci": "bun test --coverage --reporter=verbose",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:debug": "playwright test --debug"
   },
   "lint-staged": {
     "*.{ts,tsx}": [
@@ -41,10 +50,14 @@
     "tailwind-merge": "^2.6.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.48.0",
     "@storybook/addon-a11y": "^10.1.11",
     "@storybook/addon-docs": "^10.1.11",
     "@storybook/nextjs-vite": "^10.1.11",
     "@tanstack/react-query-devtools": "^5.91.2",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.1.0",
+    "@testing-library/user-event": "^14.5.2",
     "@types/node": "^20.19.28",
     "@types/react": "^19.2.8",
     "@types/react-dom": "^19.2.3",
@@ -55,6 +68,7 @@
     "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-storybook": "^10.1.11",
+    "happy-dom": "^20.3.1",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
     "postcss": "^8.5.6",
