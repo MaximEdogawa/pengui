@@ -11,7 +11,7 @@
     "start": "bun next start",
     "lint": "bun eslint . --config eslint.config.mjs --max-warnings=1000",
     "type-check": "bunx tsc --noEmit",
-    "prepare": "husky && .husky/pre-commit",
+    "prepare": "bunx husky && .husky/pre-commit",
     "storybook:dev": "storybook dev -p 6006",
     "storybook:build": "storybook build",
     "storybook:lint": "bun eslint storybook --config eslint.config.mjs --max-warnings=100",
