@@ -11,19 +11,17 @@
     "start": "bun next start",
     "lint": "bun eslint . --config eslint.config.mjs --max-warnings=1000",
     "type-check": "bunx tsc --noEmit",
-    "prepare": "husky && sh .husky/pre-commit",
+    "prepare": "bunx husky && .husky/pre-commit",
     "storybook:dev": "storybook dev -p 6006",
     "storybook:build": "storybook build",
-    "storybook:lint": "bun eslint storybook --config eslint.config.mjs --max-warnings=100"
-  },
-  "lint-staged": {
-    "*.{ts,tsx}": [
-      "eslint --config eslint.config.mjs --fix --max-warnings=1000",
-      "bash -lc 'bun run type-check'"
-    ],
-    "*.{js,jsx}": [
-      "eslint --config eslint.config.mjs --fix --max-warnings=1000"
-    ]
+    "storybook:lint": "bun eslint storybook --config eslint.config.mjs --max-warnings=100",
+    "test:unit": "bun test src/shared/**/*.test.{ts,tsx} src/features/**/*.test.{ts,tsx} src/entities/**/*.test.{ts,tsx}",
+    "test:integration": "bun test src/tests/integration/**/*.test.{ts,tsx}",
+    "test:coverage": "bun test --coverage",
+    "test:ci": "bun test --coverage --reporter=verbose",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:debug": "playwright test --debug"
   },
   "dependencies": {
     "@maximedogawa/chia-wallet-connect-react": "^0.0.4",
@@ -41,20 +39,26 @@
     "tailwind-merge": "^2.6.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.48.0",
     "@storybook/addon-a11y": "^10.1.11",
     "@storybook/addon-docs": "^10.1.11",
     "@storybook/nextjs-vite": "^10.1.11",
     "@tanstack/react-query-devtools": "^5.91.2",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.1.0",
+    "@testing-library/user-event": "^14.5.2",
     "@types/node": "^20.19.28",
     "@types/react": "^19.2.8",
     "@types/react-dom": "^19.2.3",
     "autoprefixer": "^10.4.23",
     "baseline-browser-mapping": "^2.9.14",
+    "bun-types": "^1.3.6",
     "eslint": "^9.39.2",
     "eslint-config-next": "^16.1.1",
     "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-storybook": "^10.1.11",
+    "happy-dom": "^20.3.1",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
     "postcss": "^8.5.6",

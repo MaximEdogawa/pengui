@@ -1,4 +1,4 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 
 # Enable fail-fast behavior: exit immediately if any command fails
 set -e
@@ -10,6 +10,14 @@ echo "🔍 Running pre-commit checks..."
 # Run lint-staged to lint and type-check staged files
 echo "📝 Linting staged files..."
 bun run lint
+
+# Run unit tests for changed files (fast feedback)
+echo "🧪 Running unit tests..."
+bun run test:unit
+
+# Run integration tests (affected features)
+echo "🔗 Running integration tests..."
+bun run test:integration
 
 # Run build check
 echo "🏗️  Building project..."

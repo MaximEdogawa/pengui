@@ -31,16 +31,24 @@
   },
   "include": [
     "next-env.d.ts",
+    "types/**/*.d.ts",
     "src/**/*.ts",
     "src/**/*.tsx",
     ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts"
+    ".next/dev/types/**/*.ts",
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "tests/**/*.ts",
+    "tests/**/*.tsx"
   ],
   "exclude": [
     "node_modules",
     ".next",
     "storybook-static",
     "storybook",
-    "storybook-stories"
+    "storybook-stories",
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "src/test-utils/**/*"
   ]
 }

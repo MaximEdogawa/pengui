@@ -1,7 +1,7 @@
 'use client'
 
 import { useThemeClasses } from '@/shared/hooks'
-import { InputHTMLAttributes, ReactNode } from 'react'
+import { InputHTMLAttributes, ReactNode, useId } from 'react'
 
 export interface FormInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'className'> {
   label: string | ReactNode
@@ -9,14 +9,18 @@ export interface FormInputProps extends Omit<InputHTMLAttributes<HTMLInputElemen
   helperText?: ReactNode
 }
 
-export default function FormInput({ label, error, helperText, ...inputProps }: FormInputProps) {
+export default function FormInput({ label, error, helperText, name, id, ...inputProps }: FormInputProps) {
   const { isDark, t } = useThemeClasses()
+  const reactId = useId()
+  const inputId = id || name || reactId
 
   return (
     <div>
-      <label className={`${t.textSecondary} text-xs font-medium mb-2 block`}>{label}</label>
+      <label htmlFor={inputId} className={`${t.textSecondary} text-xs font-medium mb-2 block`}>{label}</label>
       <input
         {...inputProps}
+        id={inputId}
+        name={name}
         className={`w-full px-4 py-3 rounded-xl backdrop-blur-xl ${t.input} ${t.text} placeholder:${t.textSecondary} focus:outline-none focus:ring-2 ${
           error ? 'ring-2 ring-red-500/50' : t.focusRing
         } transition-all`}
