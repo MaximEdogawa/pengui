@@ -9,11 +9,11 @@ import { usePriceData } from './usePriceData'
 import { resolveTickerId, getTickerById } from '../lib/tickerResolution'
 import { transformOrderBookForChart, generateSyntheticOHLCFromOrderBook } from '../lib/utils/chartUtils'
 import { calculateIndicatorsFromOHLC } from '../lib/indicators'
-import { logger } from '@/shared/lib/logger'
 import type { ChartConfig } from '../lib/chartTypes'
 
 interface UsePriceChartOptions {
   config: ChartConfig
+  isUserScrolling?: boolean
 }
 
 const EMPTY_INDICATORS = {
@@ -24,7 +24,7 @@ const EMPTY_INDICATORS = {
   bollingerBands: [],
 }
 
-export function usePriceChart({ config }: UsePriceChartOptions) {
+export function usePriceChart({ config, isUserScrolling = false }: UsePriceChartOptions) {
   const { network } = useNetwork()
   const { filters } = useOrderBookFilters()
   const { data: tickersData, isLoading: isLoadingTickers } = useTickers()
@@ -65,6 +65,7 @@ export function usePriceChart({ config }: UsePriceChartOptions) {
     timeframe: config.timeframe,
     filters,
     enabled: !!tickerId,
+    isUserScrolling,
   })
 
   const { orderBookData } = useOrderBook(filters)
@@ -99,44 +100,6 @@ export function usePriceChart({ config }: UsePriceChartOptions) {
   // Only use synthetic if we have no real data and no cached/successful data is available
   const chartOHLCData = ohlcData.length > 0 ? ohlcData : syntheticOHLC
   const isUsingSyntheticData = ohlcData.length === 0 && !hasCachedData && !isPriceDataSuccess && syntheticOHLC.length > 0
-
-  // Debug logging to trace data flow
-  useMemo(() => {
-    logger.info('📊 Price chart data state summary', {
-      tickerId: tickerId || 'NOT SET',
-      tickerDisplayName: tickerDisplayName || 'NOT SET',
-      filters: {
-        buyAsset: filters?.buyAsset || [],
-        sellAsset: filters?.sellAsset || [],
-      },
-      dataFlow: {
-        ohlcDataLength: ohlcData.length,
-        syntheticOHLCLength: syntheticOHLC.length,
-        chartOHLCLength: chartOHLCData.length,
-        hasCachedData,
-        isPriceDataSuccess,
-        isLoadingOHLC,
-        isUsingSyntheticData,
-      },
-      firstCandle: chartOHLCData[0] ? {
-        time: chartOHLCData[0].time,
-        timeType: typeof chartOHLCData[0].time,
-        open: chartOHLCData[0].open,
-        high: chartOHLCData[0].high,
-        low: chartOHLCData[0].low,
-        close: chartOHLCData[0].close,
-        volume: chartOHLCData[0].volume,
-      } : 'NO DATA',
-      lastCandle: chartOHLCData.length > 0 ? {
-        time: chartOHLCData[chartOHLCData.length - 1].time,
-        open: chartOHLCData[chartOHLCData.length - 1].open,
-        high: chartOHLCData[chartOHLCData.length - 1].high,
-        low: chartOHLCData[chartOHLCData.length - 1].low,
-        close: chartOHLCData[chartOHLCData.length - 1].close,
-        volume: chartOHLCData[chartOHLCData.length - 1].volume,
-      } : 'NO DATA',
-    })
-  }, [tickerId, ohlcData.length, syntheticOHLC.length, hasCachedData, isPriceDataSuccess, isLoadingOHLC, isUsingSyntheticData, chartOHLCData, tickerDisplayName, filters])
 
   const indicators = useMemo(() => {
     if (chartOHLCData.length === 0) return EMPTY_INDICATORS

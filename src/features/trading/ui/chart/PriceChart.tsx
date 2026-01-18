@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { BarChart3, LineChart } from 'lucide-react'
 import { usePriceChart } from '../../model/usePriceChart'
 import { LightweightChart } from './LightweightChart'
 import type { ChartConfig, Timeframe } from '../../lib/chartTypes'
@@ -46,7 +47,7 @@ function ErrorState({ error }: { error?: unknown }) {
 
 export default function PriceChart() {
   const [config, setConfig] = useState<ChartConfig>(DEFAULT_CONFIG)
-  const [showDebug, setShowDebug] = useState(false)
+  const [isUserScrolling, setIsUserScrolling] = useState(false)
 
   const {
     ohlcData,
@@ -55,10 +56,7 @@ export default function PriceChart() {
     ohlcError,
     indicators,
     isUsingSyntheticData,
-    tickerId,
-    tickerDisplayName,
-    filters,
-  } = usePriceChart({ config })
+  } = usePriceChart({ config, isUserScrolling })
 
   const updateConfig = (updates: Partial<ChartConfig>) => {
     setConfig((prev) => ({ ...prev, ...updates }))
@@ -70,121 +68,32 @@ export default function PriceChart() {
   // Always show the chart, even if there's no data - it will display empty gracefully
   return (
     <div className="h-full flex flex-col relative bg-[#131722]">
-      {/* Debug Panel */}
-      {showDebug && (
-        <div className="absolute top-3 left-3 z-20 bg-[#1e222d]/95 backdrop-blur-sm rounded-lg p-4 text-xs text-[#d1d4dc] border border-[#2a2e39] max-w-md max-h-[80vh] overflow-auto">
-          <div className="flex justify-between items-center mb-3">
-            <h3 className="font-semibold text-sm">Chart Debug Info</h3>
-            <button
-              onClick={() => setShowDebug(false)}
-              className="text-[#868993] hover:text-[#d1d4dc]"
-            >
-              ✕
-            </button>
-          </div>
-          
-          <div className="space-y-3">
-            <div>
-              <div className="text-[#868993] mb-1">Trading Pair:</div>
-              <div className="font-mono text-xs">
-                {tickerDisplayName || 'Not set'}
-              </div>
-              <div className="text-[#868993] text-xs mt-1">
-                Ticker ID: {tickerId || 'Not resolved'}
-              </div>
-            </div>
-
-            <div>
-              <div className="text-[#868993] mb-1">Filters:</div>
-              <div className="font-mono text-xs">
-                Buy: {filters?.buyAsset?.join(', ') || 'None'}
-                <br />
-                Sell: {filters?.sellAsset?.join(', ') || 'None'}
-              </div>
-            </div>
-
-            <div>
-              <div className="text-[#868993] mb-1">Chart Requirements:</div>
-              <div className="font-mono text-xs space-y-1">
-                <div>✓ OHLC Data: Array of objects with:</div>
-                <div className="pl-4 text-[#868993]">
-                  • time: number (Unix seconds)
-                  <br />
-                  • open: number
-                  <br />
-                  • high: number
-                  <br />
-                  • low: number
-                  <br />
-                  • close: number
-                  <br />
-                  • volume: number
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <div className="text-[#868993] mb-1">Current Data:</div>
-              <div className="font-mono text-xs">
-                <div>OHLC Candles: {ohlcData.length}</div>
-                <div>Using Synthetic: {isUsingSyntheticData ? 'Yes' : 'No'}</div>
-                {ohlcData.length > 0 && (
-                  <div className="mt-2 text-[#868993]">
-                    First candle:
-                    <br />
-                    <div className="pl-2">
-                      time: {ohlcData[0].time}
-                      <br />
-                      open: {ohlcData[0].open}
-                      <br />
-                      high: {ohlcData[0].high}
-                      <br />
-                      low: {ohlcData[0].low}
-                      <br />
-                      close: {ohlcData[0].close}
-                      <br />
-                      volume: {ohlcData[0].volume}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div>
-              <div className="text-[#868993] mb-1">Status:</div>
-              <div className="font-mono text-xs">
-                {isLoadingOHLC ? '⏳ Loading...' : ohlcData.length === 0 ? '❌ No data' : '✅ Ready'}
-              </div>
-            </div>
-          </div>
+      <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2">
+        {/* Chart Type Toggle - Glass morphism style */}
+        <div className="flex items-center gap-0.5 p-0.5 backdrop-blur-xl bg-white/5 border border-white/10 rounded-lg shadow-lg">
+          <button
+            onClick={() => updateConfig({ chartType: 'candlestick' })}
+            className={`p-1.5 rounded-md transition-all duration-200 ${
+              config.chartType === 'candlestick'
+                ? 'bg-white/20 text-white shadow-sm'
+                : 'text-white/60 hover:text-white/80 hover:bg-white/5'
+            }`}
+            title="Candlestick Chart"
+          >
+            <BarChart3 className="w-3.5 h-3.5" strokeWidth={2} />
+          </button>
+          <button
+            onClick={() => updateConfig({ chartType: 'line' })}
+            className={`p-1.5 rounded-md transition-all duration-200 ${
+              config.chartType === 'line'
+                ? 'bg-white/20 text-white shadow-sm'
+                : 'text-white/60 hover:text-white/80 hover:bg-white/5'
+            }`}
+            title="Line Chart"
+          >
+            <LineChart className="w-3.5 h-3.5" strokeWidth={2} />
+          </button>
         </div>
-      )}
-
-      <div className="absolute top-3 right-3 z-10 flex items-center gap-2">
-        <button
-          onClick={() => setShowDebug(!showDebug)}
-          className={`px-3 py-1.5 text-xs font-medium rounded-md border transition-colors ${
-            showDebug
-              ? 'bg-[#2962ff] text-white border-[#2962ff]'
-              : 'bg-[#1e222d] text-[#d1d4dc] border-[#2a2e39] hover:bg-[#252936]'
-          }`}
-          title="Toggle debug info"
-        >
-          Debug
-        </button>
-        <select
-          value={config.chartType}
-          onChange={(e) => {
-            const newType = e.target.value as 'candlestick' | 'line'
-            if (newType === 'candlestick' || newType === 'line') {
-              updateConfig({ chartType: newType })
-            }
-          }}
-          className={CONTROL_CLASS}
-        >
-          <option value="candlestick">Candles</option>
-          <option value="line">Line</option>
-        </select>
 
         <select
           value={config.timeframe}
@@ -197,19 +106,6 @@ export default function PriceChart() {
             </option>
           ))}
         </select>
-
-        <button
-          onClick={() => updateConfig({ 
-            indicators: { ...config.indicators, volume: !config.indicators.volume }
-          })}
-          className={`px-3 py-1.5 text-xs font-medium rounded-md border transition-colors ${
-            config.indicators.volume
-              ? 'bg-[#2962ff] text-white border-[#2962ff] hover:bg-[#1e53e5]'
-              : 'bg-[#1e222d] text-[#d1d4dc] border-[#2a2e39] hover:bg-[#252936]'
-          }`}
-        >
-          Vol
-        </button>
       </div>
 
       <LightweightChart
@@ -217,6 +113,7 @@ export default function PriceChart() {
         config={config}
         indicators={indicators}
         isUsingSyntheticData={isUsingSyntheticData}
+        onScrollingChange={setIsUserScrolling}
       />
     </div>
   )

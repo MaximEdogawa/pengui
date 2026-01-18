@@ -14,41 +14,25 @@ interface UsePriceDataOptions {
   timeframe: Timeframe
   filters?: OrderBookFilters
   enabled?: boolean
+  isUserScrolling?: boolean // Prevent refetch when user is scrolling
 }
 
 function getLimitForTimeframe(timeframe: Timeframe): number {
+  // Increased limits to fetch maximum available historical data
+  // The API should handle these limits, but we request as much as possible
   const limits: Record<Timeframe, number> = {
-    '1m': 100,
-    '5m': 200,
-    '15m': 300,
-    '1h': 500,
-    '4h': 1000,
-    '1D': 2000,
-    '1W': 3000,
-    '1M': 5000,
+    '1m': 10000,   // Increased significantly for detailed minute data
+    '5m': 10000,   // Increased for 5-minute candles
+    '15m': 10000,  // Increased for 15-minute candles
+    '1h': 10000,   // Increased for hourly candles
+    '4h': 10000,   // Increased for 4-hour candles
+    '1D': 50000,   // Maximum for daily candles - fetch all available historical data
+    '1W': 50000,   // Maximum for weekly candles
+    '1M': 50000,   // Maximum for monthly candles
   }
   return limits[timeframe]
 }
 
-function logRawDataStructure(tradesArray: unknown[], queryKey: unknown[], tickerId: string | null) {
-  if (tradesArray.length === 0) return
-  
-  const firstItem = tradesArray[0] as Record<string, unknown> | undefined
-  logger.debug('Raw API data structure', {
-    arrayLength: tradesArray.length,
-    firstItem: firstItem ? {
-      keys: Object.keys(firstItem),
-      hasTradeTimestamp: 'trade_timestamp' in firstItem,
-      hasTimestamp: 'timestamp' in firstItem,
-      hasBaseVolume: 'base_volume' in firstItem,
-      hasVolume: 'volume' in firstItem,
-      hasPrice: 'price' in firstItem,
-      sample: firstItem,
-    } : null,
-    queryKey,
-    tickerId,
-  })
-}
 
 function getCachedPriceData(
   queryClient: ReturnType<typeof useQueryClient>,
@@ -64,20 +48,12 @@ function getCachedPriceData(
     if (!cached && tickerId) {
       const oldKey = ['priceData', network, tickerId, timeframe, limit]
       cached = queryClient.getQueryData(oldKey)
-      if (cached) {
-        logger.debug('Found cached data with old key format', { oldKey, newKey: queryKey })
-      }
     }
     
     // Also try to find any priceData query that might match
     if (!cached) {
       const queryCache = queryClient.getQueryCache()
       const allPriceDataQueries = queryCache.findAll({ queryKey: ['priceData'] })
-      logger.debug('All priceData queries in cache', {
-        count: allPriceDataQueries.length,
-        keys: allPriceDataQueries.map(q => q.queryKey),
-        currentKey: queryKey,
-      })
       
       // Try to find a matching query by timeframe and network
       const matchingQuery = allPriceDataQueries.find(q => {
@@ -87,22 +63,7 @@ function getCachedPriceData(
       
       if (matchingQuery) {
         cached = matchingQuery.state.data
-        logger.debug('Found matching cached query', {
-          matchedKey: matchingQuery.queryKey,
-          currentKey: queryKey,
-        })
       }
-    }
-    
-    // Log for debugging
-    if (cached) {
-      logger.debug('Found cached price data', {
-        queryKey,
-        hasData: Array.isArray(cached) ? cached.length : 'not array',
-        tickerId,
-      })
-    } else {
-      logger.debug('No cached price data found', { queryKey, tickerId })
     }
     
     return cached
@@ -143,18 +104,13 @@ function processOHLCData(
   tickerId: string | null
 ): OHLCData[] {
   if (!dataToUse) {
-    logger.debug('No data to use for OHLC aggregation', { queryKey, tickerId })
     return []
   }
   
   const tradesArray = Array.isArray(dataToUse) ? dataToUse : []
   if (tradesArray.length === 0) {
-    logger.debug('Trades array is empty', { queryKey, tickerId, dataToUse })
     return []
   }
-
-  // Log raw data structure for debugging
-  logRawDataStructure(tradesArray, queryKey, tickerId)
 
   try {
     // Check if data is already in OHLC format (from cache or previous aggregation)
@@ -173,48 +129,12 @@ function processOHLCData(
     
     if (isAlreadyOHLC) {
       // Data is already in OHLC format, normalize it
-      logger.debug('Data is already in OHLC format, normalizing', {
-        inputLength: tradesArray.length,
-        queryKey,
-      })
       aggregated = normalizeOHLCData(tradesArray)
     } else {
       // Data is in trade format, aggregate it
       aggregated = aggregateTradesToOHLC(tradesArray, timeframe)
     }
 
-    logger.info('Price data aggregation successful', {
-      inputTrades: tradesArray.length,
-      outputOHLC: aggregated.length,
-      timeframe,
-      queryKey,
-      wasAlreadyOHLC: isAlreadyOHLC,
-      firstCandle: aggregated[0] ? {
-        time: aggregated[0].time,
-        timeType: typeof aggregated[0].time,
-        open: aggregated[0].open,
-        high: aggregated[0].high,
-        low: aggregated[0].low,
-        close: aggregated[0].close,
-        volume: aggregated[0].volume,
-      } : null,
-      lastCandle: aggregated.length > 0 ? {
-        time: aggregated[aggregated.length - 1].time,
-        open: aggregated[aggregated.length - 1].open,
-        high: aggregated[aggregated.length - 1].high,
-        low: aggregated[aggregated.length - 1].low,
-        close: aggregated[aggregated.length - 1].close,
-        volume: aggregated[aggregated.length - 1].volume,
-      } : null,
-    })
-    
-    if (aggregated.length === 0) {
-      logger.warn('Aggregation returned empty array', {
-        inputTrades: tradesArray.length,
-        firstTrade: tradesArray[0],
-        timeframe,
-      })
-    }
     
     return aggregated
   } catch (error) {
@@ -228,7 +148,7 @@ function processOHLCData(
   }
 }
 
-export function usePriceData({ tickerId, timeframe, filters, enabled = true }: UsePriceDataOptions) {
+export function usePriceData({ tickerId, timeframe, filters, enabled = true, isUserScrolling = false }: UsePriceDataOptions) {
   const { network } = useNetwork()
   const queryClient = useQueryClient()
   const dexieDataService = useDexieDataService()
@@ -270,7 +190,16 @@ export function usePriceData({ tickerId, timeframe, filters, enabled = true }: U
         throw new Error('Failed to fetch historical trades')
       }
 
-      return parseTradesData(response.data)
+      const parsedData = parseTradesData(response.data)
+      
+      logger.info('Historical trades fetched', {
+        tickerId,
+        requestedLimit: limit,
+        receivedTrades: parsedData.length,
+        timeframe,
+      })
+      
+      return parsedData
     },
     enabled: enabled && !!tickerId,
     // Use cached data as initial data if available
@@ -280,7 +209,13 @@ export function usePriceData({ tickerId, timeframe, filters, enabled = true }: U
     // Ensure we can use stale data
     gcTime: Infinity, // Keep data in cache indefinitely
     staleTime: timeframe === '1m' ? 10 * 1000 : timeframe === '5m' ? 30 * 1000 : 60 * 1000,
-    refetchInterval: enabled && !!tickerId ? (timeframe === '1m' ? 10 * 1000 : timeframe === '5m' ? 30 * 1000 : 60 * 1000) : false,
+    // Only auto-refetch for short timeframes when enabled and user is not scrolling
+    // Longer timeframes (1D, 1W, 1M) don't need frequent updates
+    refetchInterval: enabled && !!tickerId && !isUserScrolling && (timeframe === '1m' || timeframe === '5m' || timeframe === '15m' || timeframe === '1h')
+      ? (timeframe === '1m' ? 10 * 1000 : timeframe === '5m' ? 30 * 1000 : 60 * 1000)
+      : false,
+    // Don't refetch on window focus for longer timeframes or when scrolling
+    refetchOnWindowFocus: !isUserScrolling && (timeframe === '1m' || timeframe === '5m' || timeframe === '15m' || timeframe === '1h'),
     retry: 2,
   })
 
@@ -288,23 +223,6 @@ export function usePriceData({ tickerId, timeframe, filters, enabled = true }: U
   // TanStack Query should return cached data in query.data even when disabled, but we have a fallback
   const dataToUse = query.data ?? cachedData ?? undefined
 
-  // Log data state for debugging
-  useMemo(() => {
-    logger.debug('Price data state', {
-      hasQueryData: !!query.data,
-      hasCachedData: !!cachedData,
-      dataToUse: dataToUse ? (Array.isArray(dataToUse) ? dataToUse.length : 'not array') : null,
-      queryEnabled: enabled && !!tickerId,
-      tickerId,
-      queryKey,
-      queryStatus: {
-        isLoading: query.isLoading,
-        isError: query.isError,
-        isSuccess: query.isSuccess,
-        status: query.status,
-      },
-    })
-  }, [query.data, cachedData, dataToUse, enabled, tickerId, queryKey, query.isLoading, query.isError, query.isSuccess, query.status])
 
   const ohlcData = useMemo<OHLCData[]>(
     () => processOHLCData(dataToUse, timeframe, queryKey, tickerId),

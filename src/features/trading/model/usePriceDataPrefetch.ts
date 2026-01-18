@@ -14,15 +14,16 @@ import type { Timeframe } from '../lib/chartTypes'
 const PREFETCH_TIMEFRAMES: Timeframe[] = ['1h', '4h', '1D']
 
 function getLimitForTimeframe(timeframe: Timeframe): number {
+  // Match the limits in usePriceData to ensure consistent prefetching
   const limits: Record<Timeframe, number> = {
-    '1m': 100,
-    '5m': 200,
-    '15m': 300,
-    '1h': 500,
-    '4h': 1000,
-    '1D': 2000,
-    '1W': 3000,
-    '1M': 5000,
+    '1m': 10000,
+    '5m': 10000,
+    '15m': 10000,
+    '1h': 10000,
+    '4h': 10000,
+    '1D': 50000,
+    '1W': 50000,
+    '1M': 50000,
   }
   return limits[timeframe]
 }
@@ -62,12 +63,8 @@ export function usePriceDataPrefetch(filters?: OrderBookFilters) {
       // Check if data is already cached
       const cachedData = queryClient.getQueryData(queryKey)
       if (cachedData) {
-        logger.debug('Price data already cached, skipping prefetch', { queryKey, tickerId, timeframe })
         return
       }
-
-      // Prefetch the data
-      logger.debug('Prefetching price data', { queryKey, tickerId, timeframe })
       
       queryClient.prefetchQuery({
         queryKey,

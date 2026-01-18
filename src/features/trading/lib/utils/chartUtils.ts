@@ -22,12 +22,39 @@ function getTimeframeDurationMs(timeframe: Timeframe): number {
     '4h': 4 * 60 * 60 * 1000,
     '1D': 24 * 60 * 60 * 1000,
     '1W': 7 * 24 * 60 * 60 * 1000,
-    '1M': 30 * 24 * 60 * 60 * 1000,
+    '1M': 30 * 24 * 60 * 60 * 1000, // Not used for monthly, but kept for other calculations
   }
   return durations[timeframe]
 }
 
 function getCandleStartTime(timestamp: number, timeframe: Timeframe): number {
+  // For monthly candles, use actual calendar month boundaries
+  if (timeframe === '1M') {
+    const date = new Date(timestamp)
+    // Set to the first day of the month at 00:00:00 UTC
+    const monthStart = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1, 0, 0, 0, 0))
+    return monthStart.getTime()
+  }
+  
+  // For weekly candles, use Monday as the start of the week
+  if (timeframe === '1W') {
+    const date = new Date(timestamp)
+    const dayOfWeek = date.getUTCDay() // 0 = Sunday, 1 = Monday, etc.
+    const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1 // Convert to days from Monday
+    const weekStart = new Date(date)
+    weekStart.setUTCDate(date.getUTCDate() - daysToMonday)
+    weekStart.setUTCHours(0, 0, 0, 0)
+    return weekStart.getTime()
+  }
+  
+  // For daily candles, use midnight UTC
+  if (timeframe === '1D') {
+    const date = new Date(timestamp)
+    const dayStart = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), 0, 0, 0, 0))
+    return dayStart.getTime()
+  }
+  
+  // For all other timeframes, use fixed duration buckets
   const duration = getTimeframeDurationMs(timeframe)
   return Math.floor(timestamp / duration) * duration
 }
@@ -111,99 +138,71 @@ export function normalizeOHLCData(data: unknown[]): OHLCData[] {
     .filter((candle): candle is OHLCData => candle !== null && candle.time > 0)
 }
 
-export function aggregateTradesToOHLC(
-  trades: DexieHistoricalTrade[] | null | undefined,
+function logInvalidTrades(trades: DexieHistoricalTrade[]) {
+  if (trades.length === 0) return
+  
+  const sample = trades[0] as unknown as Record<string, unknown>
+  logger.error('No valid trades found after filtering', {
+    totalTrades: trades.length,
+    sampleTrade: {
+      keys: Object.keys(sample),
+      trade_id: sample.trade_id,
+      price: sample.price,
+      trade_timestamp: sample.trade_timestamp,
+      timestamp: sample.timestamp,
+      base_volume: sample.base_volume,
+      volume: sample.volume,
+      target_volume: sample.target_volume,
+      type: sample.type,
+    },
+    validationChecks: {
+      hasPrice: 'price' in sample && (typeof sample.price === 'number' || (typeof sample.price === 'string' && !isNaN(parseFloat(sample.price)))),
+      hasTimestamp: ('timestamp' in sample && (typeof sample.timestamp === 'number' || (typeof sample.timestamp === 'string' && !isNaN(parseFloat(sample.timestamp as string))))) ||
+                    ('trade_timestamp' in sample && (typeof sample.trade_timestamp === 'number' || (typeof sample.trade_timestamp === 'string' && !isNaN(parseFloat(sample.trade_timestamp as string))))),
+      hasVolume: ('volume' in sample && (typeof sample.volume === 'number' || (typeof sample.volume === 'string' && !isNaN(parseFloat(sample.volume as string))))) ||
+                 ('base_volume' in sample && (typeof sample.base_volume === 'number' || (typeof sample.base_volume === 'string' && !isNaN(parseFloat(sample.base_volume as string))))) ||
+                 ('target_volume' in sample && (typeof sample.target_volume === 'number' || (typeof sample.target_volume === 'string' && !isNaN(parseFloat(sample.target_volume as string))))),
+    },
+  })
+}
+
+function toNumber(val: unknown): number {
+  if (typeof val === 'number') return val
+  if (typeof val === 'string') {
+    const parsed = parseFloat(val)
+    return isNaN(parsed) ? 0 : parsed
+  }
+  return 0
+}
+
+function normalizeTrade(trade: DexieHistoricalTrade, index: number) {
+  // Get timestamp (prefer trade_timestamp, fallback to timestamp)
+  const timestamp = trade.trade_timestamp ?? trade.timestamp ?? 0
+  const timestampNum = toNumber(timestamp)
+  
+  // Get volume (prefer base_volume, then volume, fallback to target_volume)
+  const volume = trade.base_volume ?? trade.volume ?? trade.target_volume ?? 0
+  const volumeNum = toNumber(volume)
+  
+  // Get price (ensure it's a number)
+  const priceNum = toNumber(trade.price)
+  
+  const normalized = {
+    ...trade,
+    timestamp: timestampNum,
+    volume: volumeNum,
+    price: priceNum,
+  }
+  
+  return normalized
+}
+
+function createCandlesFromTrades(
+  normalizedTrades: Array<ReturnType<typeof normalizeTrade>>,
   timeframe: Timeframe
 ): OHLCData[] {
-  if (!trades || !Array.isArray(trades) || trades.length === 0) {
-    return []
-  }
-
-  const validTrades = trades.filter(isValidTrade)
-  if (validTrades.length === 0) {
-    // Log sample of invalid trades for debugging
-    if (trades.length > 0) {
-      const sample = trades[0] as unknown as Record<string, unknown>
-      logger.error('No valid trades found after filtering', {
-        totalTrades: trades.length,
-        sampleTrade: {
-          keys: Object.keys(sample),
-          trade_id: sample.trade_id,
-          price: sample.price,
-          trade_timestamp: sample.trade_timestamp,
-          timestamp: sample.timestamp,
-          base_volume: sample.base_volume,
-          volume: sample.volume,
-          target_volume: sample.target_volume,
-          type: sample.type,
-        },
-        validationChecks: {
-          hasPrice: 'price' in sample && (typeof sample.price === 'number' || (typeof sample.price === 'string' && !isNaN(parseFloat(sample.price)))),
-          hasTimestamp: ('timestamp' in sample && (typeof sample.timestamp === 'number' || (typeof sample.timestamp === 'string' && !isNaN(parseFloat(sample.timestamp as string))))) ||
-                        ('trade_timestamp' in sample && (typeof sample.trade_timestamp === 'number' || (typeof sample.trade_timestamp === 'string' && !isNaN(parseFloat(sample.trade_timestamp as string))))),
-          hasVolume: ('volume' in sample && (typeof sample.volume === 'number' || (typeof sample.volume === 'string' && !isNaN(parseFloat(sample.volume as string))))) ||
-                     ('base_volume' in sample && (typeof sample.base_volume === 'number' || (typeof sample.base_volume === 'string' && !isNaN(parseFloat(sample.base_volume as string))))) ||
-                     ('target_volume' in sample && (typeof sample.target_volume === 'number' || (typeof sample.target_volume === 'string' && !isNaN(parseFloat(sample.target_volume as string))))),
-        },
-      })
-    }
-    return []
-  }
-
-  // Normalize trades to have consistent field names and convert strings to numbers
-  const normalizedTrades = validTrades.map((trade, index) => {
-    // Helper to convert value to number (handles both string and number)
-    const toNumber = (val: unknown): number => {
-      if (typeof val === 'number') return val
-      if (typeof val === 'string') {
-        const parsed = parseFloat(val)
-        return isNaN(parsed) ? 0 : parsed
-      }
-      return 0
-    }
-    
-    // Get timestamp (prefer trade_timestamp, fallback to timestamp)
-    const timestamp = trade.trade_timestamp ?? trade.timestamp ?? 0
-    const timestampNum = toNumber(timestamp)
-    
-    // Get volume (prefer base_volume, then volume, fallback to target_volume)
-    const volume = trade.base_volume ?? trade.volume ?? trade.target_volume ?? 0
-    const volumeNum = toNumber(volume)
-    
-    // Get price (ensure it's a number)
-    const priceNum = toNumber(trade.price)
-    
-    const normalized = {
-      ...trade,
-      timestamp: timestampNum,
-      volume: volumeNum,
-      price: priceNum,
-    }
-    
-    // Log first trade structure for debugging
-    if (index === 0) {
-      logger.debug('Normalized trade structure', {
-        original: {
-          trade_timestamp: trade.trade_timestamp,
-          timestamp: trade.timestamp,
-          base_volume: trade.base_volume,
-          volume: trade.volume,
-          target_volume: trade.target_volume,
-          price: trade.price,
-        },
-        normalized: {
-          timestamp: normalized.timestamp,
-          volume: normalized.volume,
-          price: normalized.price,
-        },
-      })
-    }
-    
-    return normalized
-  })
-
-  const sortedNormalizedTrades = [...normalizedTrades].sort((a, b) => a.timestamp - b.timestamp)
-  const candlesMap = sortedNormalizedTrades.reduce((map, trade) => {
+  const sortedTrades = [...normalizedTrades].sort((a, b) => a.timestamp - b.timestamp)
+  const candlesMap = sortedTrades.reduce((map, trade) => {
     // Handle timestamp: if < 10000000000, it's in seconds, otherwise milliseconds
     const tradeTime = trade.timestamp < 10000000000 ? trade.timestamp * 1000 : trade.timestamp
     const candleStart = getCandleStartTime(tradeTime, timeframe)
@@ -215,7 +214,7 @@ export function aggregateTradesToOHLC(
     return map
   }, new Map<number, typeof normalizedTrades[0][]>())
 
-  const candles = Array.from(candlesMap.entries())
+  return Array.from(candlesMap.entries())
     .filter(([, trades]) => trades.length > 0)
     .map(([candleStart, candleTrades]) => ({
       time: toSeconds(candleStart),
@@ -225,8 +224,45 @@ export function aggregateTradesToOHLC(
       close: candleTrades[candleTrades.length - 1].price,
       volume: candleTrades.reduce((sum, t) => sum + (t.volume || 0), 0),
     }))
+    .sort((a, b) => a.time - b.time)
+}
 
-  return candles.sort((a, b) => a.time - b.time)
+export function aggregateTradesToOHLC(
+  trades: DexieHistoricalTrade[] | null | undefined,
+  timeframe: Timeframe
+): OHLCData[] {
+  if (!trades || !Array.isArray(trades) || trades.length === 0) {
+    return []
+  }
+
+  const validTrades = trades.filter(isValidTrade)
+  if (validTrades.length === 0) {
+    logInvalidTrades(trades)
+    return []
+  }
+
+  // Normalize trades to have consistent field names and convert strings to numbers
+  const normalizedTrades = validTrades.map((trade, index) => normalizeTrade(trade, index))
+
+  const sortedCandles = createCandlesFromTrades(normalizedTrades, timeframe)
+  
+  // Log aggregation summary
+  logger.info('Trade aggregation summary', {
+    inputTrades: trades.length,
+    validTrades: validTrades.length,
+    normalizedTrades: normalizedTrades.length,
+    outputCandles: sortedCandles.length,
+    timeframe,
+    tradesPerCandle: validTrades.length > 0 ? (validTrades.length / sortedCandles.length).toFixed(2) : 0,
+    firstCandleTime: sortedCandles[0]?.time,
+    lastCandleTime: sortedCandles[sortedCandles.length - 1]?.time,
+    dateRange: sortedCandles.length > 0 ? {
+      from: new Date(sortedCandles[0].time * 1000).toISOString(),
+      to: new Date(sortedCandles[sortedCandles.length - 1].time * 1000).toISOString(),
+    } : null,
+  })
+  
+  return sortedCandles
 }
 
 export function ohlcToPricePoints(ohlcData: OHLCData[]): PriceDataPoint[] {

@@ -31,6 +31,12 @@ interface LightweightChartProps {
     bollingerBands: Array<{ time: number; upper: number; middle: number; lower: number }>
   }
   isUsingSyntheticData: boolean
+  onScrollingChange?: (isScrolling: boolean) => void
+}
+
+// Custom price formatter to show prices with 6 decimal places
+const priceFormatter = (price: number): string => {
+  return price.toFixed(6)
 }
 
 const CHART_OPTIONS = {
@@ -48,6 +54,13 @@ const CHART_OPTIONS = {
     secondsVisible: false,
     borderColor: '#1a1d29',
     rightOffset: 5,
+    visible: true,
+    barSpacing: 6, // Default spacing between bars (increased for better visibility)
+    minBarSpacing: 1, // Minimum spacing when zoomed in (prevents bars from overlapping)
+    maxBarSpacing: 50, // Maximum spacing when zoomed out (prevents bars from being too spread out)
+    fixLeftEdge: false, // Allow scrolling to the left
+    fixRightEdge: false, // Allow scrolling to the right
+    lockVisibleTimeRangeOnResize: true, // Keep zoom level when window resizes
   },
   rightPriceScale: {
     borderColor: '#1a1d29',
@@ -59,6 +72,18 @@ const CHART_OPTIONS = {
     vertLine: { width: 1, color: '#2962ff', style: LineStyle.Solid, labelBackgroundColor: '#2962ff' },
     horzLine: { width: 1, color: '#2962ff', style: LineStyle.Solid, labelBackgroundColor: '#2962ff' },
   },
+  localization: {
+    priceFormatter: priceFormatter,
+  },
+  handleScale: {
+    mouseWheel: false, // Disable default wheel zoom, we'll use custom handler for faster zoom
+    pinch: true, // Keep pinch zoom for touch devices
+    axisPressedMouseMove: {
+      time: true,
+      price: false,
+    },
+    axisDoubleClickReset: true,
+  },
 } as const
 
 const CANDLESTICK_OPTIONS = {
@@ -67,6 +92,11 @@ const CANDLESTICK_OPTIONS = {
   borderVisible: false,
   wickUpColor: '#26a69a',
   wickDownColor: '#ef5350',
+  priceFormat: {
+    type: 'price' as const,
+    precision: 6,
+    minMove: 0.000001,
+  },
 } as const
 
 const LINE_OPTIONS = {
@@ -74,6 +104,11 @@ const LINE_OPTIONS = {
   lineWidth: 2,
   priceLineVisible: false,
   lastValueVisible: true,
+  priceFormat: {
+    type: 'price' as const,
+    precision: 6,
+    minMove: 0.000001,
+  },
 } as const
 
 const RSI_LEVELS = [
@@ -94,6 +129,72 @@ function isValidPoint(p: { time: number; value: number }): boolean {
   return !!(p.time && !isNaN(p.time) && !isNaN(p.value))
 }
 
+/**
+ * Calculate price bounds ignoring outliers using aggressive percentile filtering
+ * This improves chart readability by excluding extreme price movements
+ * Uses 1st and 99th percentiles to filter out outliers more aggressively
+ */
+function calculatePriceBounds(ohlcData: OHLCData[]): { min: number; max: number; hasOutliers: boolean } | null {
+  if (ohlcData.length === 0) return null
+
+  // Extract all price values (high and low from each candle)
+  const prices: number[] = []
+  ohlcData.forEach(candle => {
+    if (isValidCandle(candle)) {
+      prices.push(candle.high, candle.low)
+    }
+  })
+
+  if (prices.length === 0) return null
+
+  // Sort prices
+  const sortedPrices = [...prices].sort((a, b) => a - b)
+
+  // Use very aggressive percentiles to filter outliers (0.5th and 99.5th percentile)
+  // This excludes the top 0.5% and bottom 0.5% of extreme values
+  const p05Index = Math.floor(sortedPrices.length * 0.005)
+  const p995Index = Math.floor(sortedPrices.length * 0.995)
+  const p05 = sortedPrices[Math.max(0, p05Index)]
+  const p995 = sortedPrices[Math.min(sortedPrices.length - 1, p995Index)]
+
+  // Also use 1st and 99th percentiles as a less aggressive fallback
+  const p1Index = Math.floor(sortedPrices.length * 0.01)
+  const p99Index = Math.floor(sortedPrices.length * 0.99)
+  const p1 = sortedPrices[Math.max(0, p1Index)]
+  const p99 = sortedPrices[Math.min(sortedPrices.length - 1, p99Index)]
+
+  // Calculate IQR for additional filtering
+  const q1Index = Math.floor(sortedPrices.length * 0.25)
+  const q3Index = Math.floor(sortedPrices.length * 0.75)
+  const q1 = sortedPrices[q1Index]
+  const q3 = sortedPrices[q3Index]
+  const iqr = q3 - q1
+
+  // Use very tight IQR bounds (0.5 * IQR) for extremely aggressive filtering
+  const lowerBound = q1 - 0.5 * iqr
+  const upperBound = q3 + 0.5 * iqr
+
+  // Use the most conservative bounds (tightest range) - prefer 99.5th percentile for max
+  // This ensures we exclude the most extreme outliers
+  const min = Math.max(lowerBound, p05, p1, 0) // Don't go below 0
+  const max = Math.min(upperBound, p995, p99)
+
+  // Check if there are significant outliers
+  const absoluteMin = sortedPrices[0]
+  const absoluteMax = sortedPrices[sortedPrices.length - 1]
+  const hasOutliers = (absoluteMin < min) || (absoluteMax > max)
+
+  // Add small padding (3%) for better visualization
+  const range = max - min
+  const padding = range * 0.03
+
+  return {
+    min: Math.max(0, min - padding),
+    max: max + padding,
+    hasOutliers,
+  }
+}
+
 function removeSeries(chart: IChartApi, series: ISeriesApi<'Candlestick' | 'Line' | 'Histogram'> | null) {
   if (series) {
     try {
@@ -111,36 +212,6 @@ function setupMainSeries(
 ): ISeriesApi<'Candlestick' | 'Line'> {
   // Filter and validate candles
   const validCandles = ohlcData.filter(isValidCandle)
-  
-  logger.debug('Setting up main series', {
-    totalCandles: ohlcData.length,
-    validCandles: validCandles.length,
-    chartType,
-    firstValidCandle: validCandles[0] ? {
-      time: validCandles[0].time,
-      open: validCandles[0].open,
-      high: validCandles[0].high,
-      low: validCandles[0].low,
-      close: validCandles[0].close,
-    } : null,
-  })
-
-  if (validCandles.length === 0) {
-    logger.warn('No valid candles to display', {
-      totalCandles: ohlcData.length,
-      sampleCandle: ohlcData[0] ? {
-        time: ohlcData[0].time,
-        timeType: typeof ohlcData[0].time,
-        open: ohlcData[0].open,
-        openType: typeof ohlcData[0].open,
-        high: ohlcData[0].high,
-        low: ohlcData[0].low,
-        close: ohlcData[0].close,
-        volume: ohlcData[0].volume,
-        isValid: isValidCandle(ohlcData[0]),
-      } : null,
-    })
-  }
 
   if (chartType === 'candlestick') {
     const series = chart.addSeries(CandlestickSeries, CANDLESTICK_OPTIONS)
@@ -151,18 +222,6 @@ function setupMainSeries(
       low: c.low,
       close: c.close,
     })) as CandlestickData<Time>[]
-    
-    logger.debug('Setting candlestick data', {
-      dataPoints: chartData.length,
-      firstPoint: chartData[0] ? {
-        time: chartData[0].time,
-        timeType: typeof chartData[0].time,
-        open: chartData[0].open,
-        high: chartData[0].high,
-        low: chartData[0].low,
-        close: chartData[0].close,
-      } : null,
-    })
     
     series.setData(chartData)
     return series
@@ -175,15 +234,6 @@ function setupMainSeries(
         time: p.time as Time,
         value: p.value,
       })) as LineData<Time>[]
-    
-    logger.debug('Setting line data', {
-      dataPoints: chartData.length,
-      firstPoint: chartData[0] ? {
-        time: chartData[0].time,
-        timeType: typeof chartData[0].time,
-        value: chartData[0].value,
-      } : null,
-    })
     
     series.setData(chartData)
     return series
@@ -407,11 +457,104 @@ function setupCurrentPriceLine(
   }
 }
 
+
+function setupAllIndicators(
+  chart: IChartApi,
+  ohlcData: OHLCData[],
+  options: {
+    config: ChartConfig
+    indicators: LightweightChartProps['indicators']
+    indicatorSeriesRef: React.MutableRefObject<Array<ISeriesApi<'Line' | 'Histogram'>>>
+    volumeSeriesRef: React.MutableRefObject<ISeriesApi<'Histogram'> | null>
+  }
+) {
+  const { config, indicators, indicatorSeriesRef, volumeSeriesRef } = options
+  // Volume is always shown
+  volumeSeriesRef.current = setupVolumeSeries(chart, ohlcData)
+  indicatorSeriesRef.current.push(volumeSeriesRef.current)
+
+  if (config.indicators.sma.enabled) {
+    const smaSeries = setupMovingAverages(chart, ohlcData, {
+      periods: config.indicators.sma.periods,
+      values: indicators.sma,
+      type: 'sma',
+    })
+    indicatorSeriesRef.current.push(...smaSeries)
+  }
+
+  if (config.indicators.ema.enabled) {
+    const emaSeries = setupMovingAverages(chart, ohlcData, {
+      periods: config.indicators.ema.periods,
+      values: indicators.ema,
+      type: 'ema',
+    })
+    indicatorSeriesRef.current.push(...emaSeries)
+  }
+
+  if (config.indicators.rsi && indicators.rsi.length > 0) {
+    const rsiSeries = setupRSI(chart, ohlcData, indicators.rsi)
+    if (rsiSeries) {
+      indicatorSeriesRef.current.push(rsiSeries)
+    }
+  }
+
+  if (config.indicators.macd && indicators.macd.length > 0) {
+    const macdSeries = setupMACD(chart, indicators.macd)
+    indicatorSeriesRef.current.push(...macdSeries)
+  }
+
+  if (config.indicators.bollingerBands && indicators.bollingerBands.length > 0) {
+    const bbSeries = setupBollingerBands(chart, indicators.bollingerBands)
+    indicatorSeriesRef.current.push(...bbSeries)
+  }
+}
+
+function applyPriceScaleConfiguration(
+  series: ISeriesApi<'Candlestick' | 'Line'> | null,
+  ohlcData: OHLCData[],
+  config: ChartConfig
+) {
+  if (!series || ohlcData.length === 0) return
+
+  try {
+    const priceScale = series.priceScale()
+    const priceBounds = calculatePriceBounds(ohlcData)
+    
+    if (priceBounds && priceBounds.hasOutliers) {
+      // Use extremely large margins to push outliers completely out of the main view
+      const isMonthlyChart = config.timeframe === '1M'
+      const marginSize = isMonthlyChart ? 0.45 : 0.35
+      
+      priceScale.applyOptions({
+        autoScale: true,
+        scaleMargins: {
+          top: marginSize,
+          bottom: marginSize,
+        },
+        entireTextOnly: false,
+      })
+      
+    } else {
+      priceScale.applyOptions({
+        autoScale: true,
+        scaleMargins: {
+          top: 0.1,
+          bottom: 0.1,
+        },
+        entireTextOnly: false,
+      })
+    }
+  } catch (error) {
+    logger.warn('Failed to apply price scale configuration', { error })
+  }
+}
+
 export function LightweightChart({
   ohlcData,
   config,
   indicators,
   isUsingSyntheticData,
+  onScrollingChange,
 }: LightweightChartProps) {
   const chartContainerRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<IChartApi | null>(null)
@@ -419,6 +562,8 @@ export function LightweightChart({
   const volumeSeriesRef = useRef<ISeriesApi<'Histogram'> | null>(null)
   const indicatorSeriesRef = useRef<Array<ISeriesApi<'Line' | 'Histogram'>>>([])
   const priceLineRef = useRef<ReturnType<ISeriesApi<'Candlestick' | 'Line'>['createPriceLine']> | null>(null)
+  const isUserScrollingRef = useRef(false)
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
     if (!chartContainerRef.current || chartRef.current) return
@@ -430,6 +575,71 @@ export function LightweightChart({
     })
 
     chartRef.current = chart
+
+    // Track when user is scrolling/panning to prevent unnecessary refetches
+    const timeScale = chart.timeScale()
+    
+    const handleVisibleRangeChange = () => {
+      isUserScrollingRef.current = true
+      onScrollingChange?.(true)
+      
+      // Clear existing timeout
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current)
+      }
+      
+      // Reset scrolling flag after user stops interacting
+      scrollTimeoutRef.current = setTimeout(() => {
+        isUserScrollingRef.current = false
+        onScrollingChange?.(false)
+      }, 2000) // 2 seconds after last scroll
+    }
+    
+    timeScale.subscribeVisibleTimeRangeChange(handleVisibleRangeChange)
+
+    // Custom mouse wheel handler for faster zoom
+    const handleWheel = (e: WheelEvent) => {
+      if (!chartContainerRef.current || !chartRef.current) return
+      
+      // Only handle wheel events when over the chart
+      const rect = chartContainerRef.current.getBoundingClientRect()
+      const isOverChart = 
+        e.clientX >= rect.left && 
+        e.clientX <= rect.right && 
+        e.clientY >= rect.top && 
+        e.clientY <= rect.bottom
+      
+      if (!isOverChart) return
+      
+      // Prevent default scrolling
+      e.preventDefault()
+      
+      const zoomMultiplier = 2.5 // Increase zoom speed by 2.5x
+      const currentOptions = timeScale.options()
+      const currentBarSpacing = currentOptions.barSpacing || 6
+      const minBarSpacing = currentOptions.minBarSpacing || 1
+      const maxBarSpacing = currentOptions.maxBarSpacing || 50
+      
+      // Calculate new bar spacing based on wheel delta
+      // Negative deltaY means zoom in (decrease spacing), positive means zoom out (increase spacing)
+      const delta = e.deltaY * -0.01 * zoomMultiplier // Negative to invert direction, multiply for speed
+      let newBarSpacing = currentBarSpacing + delta
+      
+      // Clamp to min/max bounds
+      newBarSpacing = Math.max(minBarSpacing, Math.min(maxBarSpacing, newBarSpacing))
+      
+      // Apply the new bar spacing for faster zoom
+      timeScale.applyOptions({
+        barSpacing: newBarSpacing,
+      })
+      
+      // Mark as scrolling
+      handleVisibleRangeChange()
+    }
+    
+    // Add wheel event listener to container
+    const container = chartContainerRef.current
+    container.addEventListener('wheel', handleWheel, { passive: false })
 
     const handleResize = () => {
       if (chartRef.current && chartContainerRef.current) {
@@ -443,47 +653,19 @@ export function LightweightChart({
     window.addEventListener('resize', handleResize)
     return () => {
       window.removeEventListener('resize', handleResize)
+      if (container) {
+        container.removeEventListener('wheel', handleWheel)
+      }
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current)
+      }
       chartRef.current?.remove()
       chartRef.current = null
     }
-  }, [])
+  }, [onScrollingChange])
 
   useEffect(() => {
     if (!chartRef.current) return
-
-    // Log data received by chart component
-    logger.debug('LightweightChart received data', {
-      ohlcDataLength: ohlcData.length,
-      firstCandle: ohlcData[0] ? {
-        time: ohlcData[0].time,
-        open: ohlcData[0].open,
-        high: ohlcData[0].high,
-        low: ohlcData[0].low,
-        close: ohlcData[0].close,
-        volume: ohlcData[0].volume,
-        timeType: typeof ohlcData[0].time,
-      } : null,
-      lastCandle: ohlcData.length > 0 ? {
-        time: ohlcData[ohlcData.length - 1].time,
-        open: ohlcData[ohlcData.length - 1].open,
-        high: ohlcData[ohlcData.length - 1].high,
-        low: ohlcData[ohlcData.length - 1].low,
-        close: ohlcData[ohlcData.length - 1].close,
-        volume: ohlcData[ohlcData.length - 1].volume,
-      } : null,
-      isValidCandles: ohlcData.filter(isValidCandle).length,
-      isUsingSyntheticData,
-    })
-
-    // If no data, still render the chart (it will be empty)
-    if (ohlcData.length === 0) {
-      logger.debug('No OHLC data to display in chart', {
-        ohlcDataLength: ohlcData.length,
-        receivedData: ohlcData,
-      })
-      // Don't return early - let the chart render empty so user can see it's waiting for data
-      // The chart library will handle empty data gracefully
-    }
 
     const container = chartContainerRef.current
     if (container && (container.clientWidth === 0 || container.clientHeight === 0)) {
@@ -510,50 +692,14 @@ export function LightweightChart({
 
     seriesRef.current = setupMainSeries(chart, ohlcData, config.chartType)
 
-    if (config.indicators.volume) {
-      volumeSeriesRef.current = setupVolumeSeries(chart, ohlcData)
-      indicatorSeriesRef.current.push(volumeSeriesRef.current)
-    }
-
-    if (config.indicators.sma.enabled) {
-      const smaSeries = setupMovingAverages(chart, ohlcData, {
-        periods: config.indicators.sma.periods,
-        values: indicators.sma,
-        type: 'sma',
-      })
-      indicatorSeriesRef.current.push(...smaSeries)
-    }
-
-    if (config.indicators.ema.enabled) {
-      const emaSeries = setupMovingAverages(chart, ohlcData, {
-        periods: config.indicators.ema.periods,
-        values: indicators.ema,
-        type: 'ema',
-      })
-      indicatorSeriesRef.current.push(...emaSeries)
-    }
-
-    if (config.indicators.rsi && indicators.rsi.length > 0) {
-      const rsiSeries = setupRSI(chart, ohlcData, indicators.rsi)
-      if (rsiSeries) {
-        indicatorSeriesRef.current.push(rsiSeries)
-      }
-    }
-
-    if (config.indicators.macd && indicators.macd.length > 0) {
-      const macdSeries = setupMACD(chart, indicators.macd)
-      indicatorSeriesRef.current.push(...macdSeries)
-    }
-
-    if (config.indicators.bollingerBands && indicators.bollingerBands.length > 0) {
-      const bbSeries = setupBollingerBands(chart, indicators.bollingerBands)
-      indicatorSeriesRef.current.push(...bbSeries)
-    }
+    setupAllIndicators(chart, ohlcData, { config, indicators, indicatorSeriesRef, volumeSeriesRef })
 
     if (ohlcData.length > 0 && seriesRef.current) {
       const currentPrice = ohlcData[ohlcData.length - 1].close
       priceLineRef.current = setupCurrentPriceLine(seriesRef.current, currentPrice, priceLineRef.current)
     }
+
+    applyPriceScaleConfiguration(seriesRef.current, ohlcData, config)
 
     try {
       chart.timeScale().fitContent()
