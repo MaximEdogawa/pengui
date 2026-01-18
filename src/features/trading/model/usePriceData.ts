@@ -38,26 +38,33 @@ function getCachedPriceData(
   queryKey: unknown[],
   options: { network: string; tickerId: string | null; timeframe: Timeframe; limit: number }
 ): unknown {
-  const { network, tickerId, timeframe, limit } = options
+  const { network, tickerId, timeframe } = options
   try {
-    // Try current query key format
+    // Try current query key format (without limit)
     let cached = queryClient.getQueryData(queryKey)
     
-    // If not found and we have tickerId, try old format with tickerId
+    // If not found and we have tickerId, try old format with tickerId (with or without limit)
     if (!cached && tickerId) {
-      const oldKey = ['priceData', network, tickerId, timeframe, limit]
+      // Try old format without limit
+      const oldKey = ['priceData', network, tickerId, timeframe]
       cached = queryClient.getQueryData(oldKey)
+      
+      // Also try old format with limit for backward compatibility
+      if (!cached) {
+        const oldKeyWithLimit = ['priceData', network, tickerId, timeframe, options.limit]
+        cached = queryClient.getQueryData(oldKeyWithLimit)
+      }
     }
     
-    // Also try to find any priceData query that might match
+    // Also try to find any priceData query that might match by network
     if (!cached) {
       const queryCache = queryClient.getQueryCache()
       const allPriceDataQueries = queryCache.findAll({ queryKey: ['priceData'] })
       
-      // Try to find a matching query by timeframe and network
+      // Try to find a matching query by network (timeframe is no longer in the key)
       const matchingQuery = allPriceDataQueries.find(q => {
         const key = q.queryKey
-        return key[1] === network && key[4] === timeframe && key[5] === limit
+        return key[1] === network
       })
       
       if (matchingQuery) {
@@ -155,6 +162,7 @@ export function usePriceData({ tickerId, timeframe, filters, enabled = true, isU
 
   // Create query key similar to order book queries, including ticker information
   // Uses buyKey/sellKey (human-readable) instead of tickerId for better DevTools visibility
+  // Limit and timeframe are not included in the query key - they're only used in the API call
   const queryKey = useMemo(() => {
     const buyAssets = filters?.buyAsset || []
     const sellAssets = filters?.sellAsset || []
@@ -162,9 +170,9 @@ export function usePriceData({ tickerId, timeframe, filters, enabled = true, isU
     const sellKey = [...sellAssets].sort().join(',')
     
     // Always use buyKey/sellKey structure (even if empty) for consistency with order book
-    // tickerId is still used in queryFn for the API call, but not in the cache key
-    return ['priceData', network, buyKey, sellKey, timeframe, limit]
-  }, [network, filters?.buyAsset, filters?.sellAsset, timeframe, limit])
+    // tickerId, limit, and timeframe are still used in queryFn for the API call, but not in the cache key
+    return ['priceData', network, buyKey, sellKey]
+  }, [network, filters?.buyAsset, filters?.sellAsset])
 
   // Try to get cached data directly from query client, even if query is disabled
   // Also check for data with old query key format (with tickerId) for backward compatibility
@@ -208,6 +216,8 @@ export function usePriceData({ tickerId, timeframe, filters, enabled = true, isU
     // Ensure we can use stale data
     gcTime: Infinity, // Keep data in cache indefinitely
     staleTime: timeframe === '1m' ? 10 * 1000 : 60 * 1000,
+    // Refetch when query key changes (e.g., when filters change)
+    refetchOnMount: true,
     // Only auto-refetch for short timeframes when enabled and user is not scrolling
     // Longer timeframes (1D, 1W, 1M) don't need frequent updates
     refetchInterval: enabled && !!tickerId && !isUserScrolling && (timeframe === '1m' || timeframe === '15m' || timeframe === '1h')
@@ -217,6 +227,11 @@ export function usePriceData({ tickerId, timeframe, filters, enabled = true, isU
     refetchOnWindowFocus: !isUserScrolling && (timeframe === '1m' || timeframe === '15m' || timeframe === '1h'),
     retry: 2,
   })
+
+  // Note: No need for useEffect to refetch on filter changes
+  // TanStack Query automatically refetches when the query key changes
+  // Since the query key includes filters (buyKey, sellKey), changing filters
+  // will automatically trigger a new query and fetch
 
   // Use query.data if available, otherwise fall back to cachedData
   // TanStack Query should return cached data in query.data even when disabled, but we have a fallback

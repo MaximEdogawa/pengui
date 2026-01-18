@@ -7,7 +7,7 @@ import { useOrderBookFilters } from './OrderBookFiltersProvider'
 import { useMemo } from 'react'
 import { usePriceData } from './usePriceData'
 import { resolveTickerId, getTickerById } from '../lib/tickerResolution'
-import { transformOrderBookForChart, generateSyntheticOHLCFromOrderBook } from '../lib/utils/chartUtils'
+import { transformOrderBookForChart, generateSyntheticOHLCFromOrderBook, invertOHLCData } from '../lib/utils/chartUtils'
 import { calculateIndicatorsFromOHLC } from '../lib/indicators'
 import type { ChartConfig } from '../lib/chartTypes'
 
@@ -26,7 +26,7 @@ const EMPTY_INDICATORS = {
 
 export function usePriceChart({ config, isUserScrolling = false }: UsePriceChartOptions) {
   const { network } = useNetwork()
-  const { filters } = useOrderBookFilters()
+  const { filters, assetsSwapped } = useOrderBookFilters()
   const { data: tickersData, isLoading: isLoadingTickers } = useTickers()
   const tickers = useMemo(() => tickersData?.data || [], [tickersData?.data])
 
@@ -98,7 +98,13 @@ export function usePriceChart({ config, isUserScrolling = false }: UsePriceChart
 
   // Prioritize real OHLC data over synthetic data
   // Only use synthetic if we have no real data and no cached/successful data is available
-  const chartOHLCData = ohlcData.length > 0 ? ohlcData : syntheticOHLC
+  let chartOHLCData = ohlcData.length > 0 ? ohlcData : syntheticOHLC
+  
+  // Invert prices when assets are swapped (show price from the other side's perspective)
+  if (assetsSwapped && chartOHLCData.length > 0) {
+    chartOHLCData = invertOHLCData(chartOHLCData)
+  }
+  
   const isUsingSyntheticData = ohlcData.length === 0 && !hasCachedData && !isPriceDataSuccess && syntheticOHLC.length > 0
 
   const indicators = useMemo(() => {

@@ -264,6 +264,28 @@ export function aggregateTradesToOHLC(
   return sortedCandles
 }
 
+/**
+ * Invert OHLC prices (1/price) for when buy/sell assets are swapped
+ * When inverting: high becomes low, low becomes high
+ */
+export function invertOHLCData(ohlcData: OHLCData[]): OHLCData[] {
+  return ohlcData.map((candle) => {
+    // Prevent division by zero
+    if (candle.open === 0 || candle.high === 0 || candle.low === 0 || candle.close === 0) {
+      return candle
+    }
+    
+    return {
+      time: candle.time,
+      open: 1 / candle.open,
+      high: 1 / candle.low, // High becomes low when inverted
+      low: 1 / candle.high,  // Low becomes high when inverted
+      close: 1 / candle.close,
+      volume: candle.volume, // Volume stays the same
+    }
+  })
+}
+
 export function ohlcToPricePoints(ohlcData: OHLCData[]): PriceDataPoint[] {
   return ohlcData.map((candle) => ({
     time: candle.time,
