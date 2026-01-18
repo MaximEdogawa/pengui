@@ -22,7 +22,6 @@ function getLimitForTimeframe(timeframe: Timeframe): number {
   // The API should handle these limits, but we request as much as possible
   const limits: Record<Timeframe, number> = {
     '1m': 10000,   // Increased significantly for detailed minute data
-    '5m': 10000,   // Increased for 5-minute candles
     '15m': 10000,  // Increased for 15-minute candles
     '1h': 10000,   // Increased for hourly candles
     '4h': 10000,   // Increased for 4-hour candles
@@ -208,14 +207,14 @@ export function usePriceData({ tickerId, timeframe, filters, enabled = true, isU
     placeholderData: (previousData) => (previousData ?? cachedData) as unknown[] | undefined,
     // Ensure we can use stale data
     gcTime: Infinity, // Keep data in cache indefinitely
-    staleTime: timeframe === '1m' ? 10 * 1000 : timeframe === '5m' ? 30 * 1000 : 60 * 1000,
+    staleTime: timeframe === '1m' ? 10 * 1000 : 60 * 1000,
     // Only auto-refetch for short timeframes when enabled and user is not scrolling
     // Longer timeframes (1D, 1W, 1M) don't need frequent updates
-    refetchInterval: enabled && !!tickerId && !isUserScrolling && (timeframe === '1m' || timeframe === '5m' || timeframe === '15m' || timeframe === '1h')
-      ? (timeframe === '1m' ? 10 * 1000 : timeframe === '5m' ? 30 * 1000 : 60 * 1000)
+    refetchInterval: enabled && !!tickerId && !isUserScrolling && (timeframe === '1m' || timeframe === '15m' || timeframe === '1h')
+      ? (timeframe === '1m' ? 10 * 1000 : 60 * 1000)
       : false,
     // Don't refetch on window focus for longer timeframes or when scrolling
-    refetchOnWindowFocus: !isUserScrolling && (timeframe === '1m' || timeframe === '5m' || timeframe === '15m' || timeframe === '1h'),
+    refetchOnWindowFocus: !isUserScrolling && (timeframe === '1m' || timeframe === '15m' || timeframe === '1h'),
     retry: 2,
   })
 

@@ -17,7 +17,6 @@ function getLimitForTimeframe(timeframe: Timeframe): number {
   // Match the limits in usePriceData to ensure consistent prefetching
   const limits: Record<Timeframe, number> = {
     '1m': 10000,
-    '5m': 10000,
     '15m': 10000,
     '1h': 10000,
     '4h': 10000,

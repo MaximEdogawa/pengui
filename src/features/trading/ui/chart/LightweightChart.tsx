@@ -39,6 +39,34 @@ const priceFormatter = (price: number): string => {
   return price.toFixed(6)
 }
 
+// Price scale margins for each timeframe (candlestick charts)
+// Shorter timeframes need more margin to show price line properly
+// Longer timeframes can use tighter margins for better candle visibility
+const TIMEFRAME_MARGINS: Record<string, number> = {
+  '1m': 0.15,  // More margin for short timeframes to show price line
+  '15m': 0.15, // More margin for short timeframes to show price line
+  '1h': 0.12,  // Slightly more margin for 1h to show price line properly
+  '4h': 0.08,  // Moderate margin for 4h
+  '1D': 0.05,  // Tighter margin for daily
+  '1W': 0.03,  // Very tight margin for weekly
+  '1M': 0.02,  // Very tight margin for monthly
+} as const
+
+// Default margin for line charts and unknown timeframes
+const DEFAULT_MARGIN = 0.1
+
+// Default zoom levels (hours back) for each timeframe
+// These determine how much historical data is shown when switching timeframes
+const TIMEFRAME_ZOOM_HOURS: Record<string, number> = {
+  '1m': 24,      // Last 24 hours
+  '15m': 48,     // Last 48 hours (2 day)
+  '1h': 72,      // Last 6 days (24 * 6)
+  '4h': 720,      // Last month (24 * 30)
+  '1D': 2160,     // Last 3 months (24 * 90)
+  '1W': 4310,    // Last 6 months (24 * 90)
+  '1M': 8760,    // Last year (24 * 365)
+} as const
+
 const CHART_OPTIONS = {
   layout: {
     background: { type: ColorType.Solid, color: '#131722' },
@@ -457,18 +485,14 @@ function applyPriceScaleConfiguration(
 
   try {
     const priceScale = series.priceScale()
-    const isMonthlyChart = config.timeframe === '1M'
     const isCandlestick = config.chartType === 'candlestick'
     
-    // Apply tight margins for better candle visibility
-    // Using standard autoScale with tight margins - this naturally de-emphasizes outliers
-    // while still showing all data points. The tight margins make candles appear longer.
-    const marginSize = isCandlestick 
-      ? 0.02 // Very tight margins for candlestick charts to make candles longer
-      : (isMonthlyChart ? 0.1 : 0.1) // Standard margins for line charts
+    // Get margin size from constant based on timeframe
+    const marginSize = isCandlestick
+      ? (TIMEFRAME_MARGINS[config.timeframe] ?? DEFAULT_MARGIN)
+      : DEFAULT_MARGIN
     
-    // Use standard autoScale - it will show all data but tight margins will
-    // make the main price range more prominent and candles appear longer
+    // Use standard autoScale with timeframe-appropriate margins
     priceScale.applyOptions({
       autoScale: true,
       scaleMargins: {
@@ -492,6 +516,71 @@ function applyPriceScaleConfiguration(
   }
 }
 
+function getHoursBackForTimeframe(timeframe: string): number {
+  return TIMEFRAME_ZOOM_HOURS[timeframe] ?? 24 // Default to 24 hours if timeframe not found
+}
+
+function applyDefaultZoomLevel(
+  timeScale: ReturnType<IChartApi['timeScale']>,
+  ohlcData: OHLCData[],
+  timeframe: string
+) {
+  try {
+    if (ohlcData.length > 0) {
+      const lastCandleTime = ohlcData[ohlcData.length - 1].time
+      const firstCandleTime = ohlcData[0].time
+      const hoursBack = getHoursBackForTimeframe(timeframe)
+      
+      // Calculate range from the last candle time (not current time)
+      // This ensures we show the last X hours of available data
+      const to = lastCandleTime
+      const from = Math.max(
+        lastCandleTime - (hoursBack * 60 * 60), // X hours back from last candle
+        firstCandleTime // Don't go before first available data
+      )
+      
+      // Only set range if it's valid
+      if (from < to) {
+        timeScale.setVisibleRange({
+          from: from as Time,
+          to: to as Time,
+        })
+      } else {
+        // Fallback to fitContent if range is invalid
+        timeScale.fitContent()
+      }
+    } else {
+      // Fallback to fitContent if no data
+      timeScale.fitContent()
+    }
+  } catch {
+    // Fallback to fitContent on error
+    try {
+      timeScale.fitContent()
+    } catch {
+      // Ignore
+    }
+  }
+}
+
+function applyBarSpacing(timeScale: ReturnType<IChartApi['timeScale']>, config: ChartConfig) {
+  if (config.timeframe === '1M' && config.chartType === 'candlestick') {
+    // For monthly candlestick charts, use larger default spacing and higher max
+    timeScale.applyOptions({
+      barSpacing: 12, // Double the default spacing for monthly charts
+      minBarSpacing: 2, // Allow more spacing when zoomed in
+      maxBarSpacing: 100, // Allow much more spacing when zoomed out
+    })
+  } else {
+    // Reset to default for other timeframes
+    timeScale.applyOptions({
+      barSpacing: 6,
+      minBarSpacing: 1,
+      maxBarSpacing: 50,
+    })
+  }
+}
+
 export function LightweightChart({
   ohlcData,
   config,
@@ -507,6 +596,7 @@ export function LightweightChart({
   const priceLineRef = useRef<ReturnType<ISeriesApi<'Candlestick' | 'Line'>['createPriceLine']> | null>(null)
   const isUserScrollingRef = useRef(false)
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const previousTimeframeRef = useRef<string | null>(null)
 
   useEffect(() => {
     if (!chartContainerRef.current || chartRef.current) return
@@ -557,7 +647,7 @@ export function LightweightChart({
       // Prevent default scrolling
       e.preventDefault()
       
-      const zoomMultiplier = 2.5 // Increase zoom speed by 2.5x
+      const zoomMultiplier = 2.5 // Zoom speed multiplier (reduced from 2.5 for less acceleration)
       const currentOptions = timeScale.options()
       const currentBarSpacing = currentOptions.barSpacing || 6
       const minBarSpacing = currentOptions.minBarSpacing || 1
@@ -646,26 +736,13 @@ export function LightweightChart({
 
     // Apply better bar spacing for monthly charts to make candles more visible
     const timeScale = chart.timeScale()
-    if (config.timeframe === '1M' && config.chartType === 'candlestick') {
-      // For monthly candlestick charts, use larger default spacing and higher max
-      timeScale.applyOptions({
-        barSpacing: 12, // Double the default spacing for monthly charts
-        minBarSpacing: 2, // Allow more spacing when zoomed in
-        maxBarSpacing: 100, // Allow much more spacing when zoomed out
-      })
-    } else {
-      // Reset to default for other timeframes
-      timeScale.applyOptions({
-        barSpacing: 6,
-        minBarSpacing: 1,
-        maxBarSpacing: 50,
-      })
-    }
+    applyBarSpacing(timeScale, config)
 
-    try {
-      chart.timeScale().fitContent()
-    } catch {
-      // Ignore
+    // Set default zoom level based on timeframe (only when timeframe changes)
+    const timeframeChanged = previousTimeframeRef.current !== config.timeframe
+    if (timeframeChanged) {
+      previousTimeframeRef.current = config.timeframe
+      applyDefaultZoomLevel(timeScale, ohlcData, config.timeframe)
     }
   }, [ohlcData, config, indicators, isUsingSyntheticData])
 

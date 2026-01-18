@@ -19,7 +19,7 @@ const DEFAULT_CONFIG: ChartConfig = {
   },
 }
 
-const TIMEFRAMES: Timeframe[] = ['1m', '5m', '15m', '1h', '4h', '1D', '1W', '1M']
+const TIMEFRAMES: Timeframe[] = ['1m', '15m', '1h', '4h', '1D', '1W', '1M']
 const CONTROL_CLASS = "px-3 py-1.5 text-xs font-medium rounded-md bg-[#1e222d] border border-[#2a2e39] text-[#d1d4dc] hover:bg-[#252936] focus:outline-none focus:ring-2 focus:ring-[#2962ff]/50 transition-colors"
 
 function LoadingState() {

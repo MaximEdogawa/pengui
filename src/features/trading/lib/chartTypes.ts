@@ -1,6 +1,6 @@
 export type ChartType = 'candlestick' | 'line'
 
-export type Timeframe = '1m' | '5m' | '15m' | '1h' | '4h' | '1D' | '1W' | '1M'
+export type Timeframe = '1m' | '15m' | '1h' | '4h' | '1D' | '1W' | '1M'
 
 export interface OHLCData {
   time: number
