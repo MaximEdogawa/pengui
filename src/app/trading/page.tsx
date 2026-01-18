@@ -4,8 +4,8 @@ import { getThemeClasses } from '@/shared/lib/theme'
 import { TrendingUp, BookOpen, BarChart3, Activity, type LucideIcon } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { useEffect, useState } from 'react'
-import TradingLayout from '@/features/trading/ui/layout/TradingLayout'
-import FilterPanel from '@/features/trading/ui/layout/FilterPanel'
+import { TradingLayout } from '@/widgets/trading-layout'
+import FilterPanel from '@/widgets/trading-layout/ui/FilterPanel'
 import {
   OrderBookFiltersProvider,
   useOrderBookFilters,

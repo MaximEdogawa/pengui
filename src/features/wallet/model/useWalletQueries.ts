@@ -1,8 +1,10 @@
 'use client'
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import type { AssetType, CoinSpend } from '@/shared/lib/walletConnect/types/command.types'
+import { useNetwork } from '@/shared/hooks/useNetwork'
 import type {
+  AssetType,
+  CoinSpend,
   CancelOfferRequest,
   OfferRequest,
   SignMessageRequest,
@@ -34,14 +36,17 @@ const ASSET_COINS_KEY = 'assetCoins'
 export function useWalletBalance(type?: AssetType | null, assetId?: string | null) {
   const { signClient } = useSignClient()
   const session = useWalletSession()
+  const { network } = useNetwork()
+
+  const queryFn = async () => {
+    const result = await getAssetBalance(signClient, session, type ?? null, assetId ?? null)
+    if (!result.success) throw new Error(result.error)
+    return result.data
+  }
 
   return useQuery({
-    queryKey: [WALLET_CONNECT_KEY, BALANCE_KEY, type, assetId],
-    queryFn: async () => {
-      const result = await getAssetBalance(signClient, session, type ?? null, assetId ?? null)
-      if (!result.success) throw new Error(result.error)
-      return result.data
-    },
+    queryKey: [WALLET_CONNECT_KEY, BALANCE_KEY, type, assetId, network],
+    queryFn,
     enabled: signClient != null && session.isConnected,
     retry: 3,
     staleTime: Infinity,
@@ -54,14 +59,17 @@ export function useWalletBalance(type?: AssetType | null, assetId?: string | nul
 export function useWalletAddress() {
   const { signClient } = useSignClient()
   const session = useWalletSession()
+  const { network } = useNetwork()
+
+  const queryFn = async () => {
+    const result = await getWalletAddress(signClient, session)
+    if (!result.success) throw new Error(result.error)
+    return result.data
+  }
 
   return useQuery({
-    queryKey: [WALLET_CONNECT_KEY, ADDRESS_KEY],
-    queryFn: async () => {
-      const result = await getWalletAddress(signClient, session)
-      if (!result.success) throw new Error(result.error)
-      return result.data
-    },
+    queryKey: [WALLET_CONNECT_KEY, ADDRESS_KEY, network],
+    queryFn,
     enabled: signClient != null && session.isConnected,
     retry: 3,
     staleTime: Infinity,
@@ -74,14 +82,17 @@ export function useWalletAddress() {
 export function useAssetCoins(type?: AssetType | null, assetId?: string | null) {
   const { signClient } = useSignClient()
   const session = useWalletSession()
+  const { network } = useNetwork()
+
+  const queryFn = async () => {
+    const result = await getAssetCoins(signClient, session, type ?? null, assetId ?? null)
+    if (!result.success) throw new Error(result.error)
+    return result.data
+  }
 
   return useQuery({
-    queryKey: [WALLET_CONNECT_KEY, ASSET_COINS_KEY, type, assetId],
-    queryFn: async () => {
-      const result = await getAssetCoins(signClient, session, type ?? null, assetId ?? null)
-      if (!result.success) throw new Error(result.error)
-      return result.data
-    },
+    queryKey: [WALLET_CONNECT_KEY, ASSET_COINS_KEY, type, assetId, network],
+    queryFn,
     enabled: signClient != null && session.isConnected,
     retry: 3,
     staleTime: Infinity,
@@ -96,12 +107,14 @@ export function useSignCoinSpends() {
   const session = useWalletSession()
   const queryClient = useQueryClient()
 
+  const mutationFn = async (params: { walletId: number; coinSpends: CoinSpend[] }) => {
+    const result = await signCoinSpends(params, signClient, session)
+    if (!result.success) throw new Error(result.error)
+    return result.data
+  }
+
   return useMutation({
-    mutationFn: async (params: { walletId: number; coinSpends: CoinSpend[] }) => {
-      const result = await signCoinSpends(params, signClient, session)
-      if (!result.success) throw new Error(result.error)
-      return result.data
-    },
+    mutationFn,
     onSuccess: () => {
       // Invalidate related queries if needed
       queryClient.invalidateQueries({ queryKey: [WALLET_CONNECT_KEY] })
@@ -117,12 +130,14 @@ export function useSignMessage() {
   const session = useWalletSession()
   const queryClient = useQueryClient()
 
+  const mutationFn = async (data: SignMessageRequest) => {
+    const result = await signMessage(data, signClient, session)
+    if (!result.success) throw new Error(result.error)
+    return result.data
+  }
+
   return useMutation({
-    mutationFn: async (data: SignMessageRequest) => {
-      const result = await signMessage(data, signClient, session)
-      if (!result.success) throw new Error(result.error)
-      return result.data
-    },
+    mutationFn,
     onSuccess: () => {
       // Invalidate related queries if needed
       queryClient.invalidateQueries({ queryKey: [WALLET_CONNECT_KEY] })
@@ -138,12 +153,14 @@ export function useSendTransaction() {
   const session = useWalletSession()
   const queryClient = useQueryClient()
 
+  const mutationFn = async (data: TransactionRequest) => {
+    const result = await sendTransaction(data, signClient, session)
+    if (!result.success) throw new Error(result.error)
+    return result.data
+  }
+
   return useMutation({
-    mutationFn: async (data: TransactionRequest) => {
-      const result = await sendTransaction(data, signClient, session)
-      if (!result.success) throw new Error(result.error)
-      return result.data
-    },
+    mutationFn,
     onSuccess: () => {
       // Invalidate balance and coins queries after transaction
       queryClient.invalidateQueries({ queryKey: [WALLET_CONNECT_KEY, BALANCE_KEY] })
@@ -160,14 +177,16 @@ export function useGetBalance() {
   const session = useWalletSession()
   const queryClient = useQueryClient()
 
+  const mutationFn = async (data?: { type?: AssetType | null; assetId?: string | null }) => {
+    const type = data?.type ?? null
+    const assetId = data?.assetId ?? null
+    const result = await getAssetBalance(signClient, session, type, assetId)
+    if (!result.success) throw new Error(result.error)
+    return result.data
+  }
+
   return useMutation({
-    mutationFn: async (data?: { type?: AssetType | null; assetId?: string | null }) => {
-      const type = data?.type ?? null
-      const assetId = data?.assetId ?? null
-      const result = await getAssetBalance(signClient, session, type, assetId)
-      if (!result.success) throw new Error(result.error)
-      return result.data
-    },
+    mutationFn,
     onSuccess: (_, variables) => {
       // Invalidate the balance query
       queryClient.invalidateQueries({
@@ -185,12 +204,14 @@ export function useCreateOffer() {
   const session = useWalletSession()
   const queryClient = useQueryClient()
 
+  const mutationFn = async (data: OfferRequest) => {
+    const result = await createOffer(data, signClient, session)
+    if (!result.success) throw new Error(result.error)
+    return result.data
+  }
+
   return useMutation({
-    mutationFn: async (data: OfferRequest) => {
-      const result = await createOffer(data, signClient, session)
-      if (!result.success) throw new Error(result.error)
-      return result.data
-    },
+    mutationFn,
     onSuccess: () => {
       // Invalidate balance and coins queries after creating offer
       queryClient.invalidateQueries({ queryKey: [WALLET_CONNECT_KEY, BALANCE_KEY] })
@@ -207,12 +228,14 @@ export function useCancelOffer() {
   const session = useWalletSession()
   const queryClient = useQueryClient()
 
+  const mutationFn = async (data: CancelOfferRequest) => {
+    const result = await cancelOffer(data, signClient, session)
+    if (!result.success) throw new Error(result.error)
+    return result.data
+  }
+
   return useMutation({
-    mutationFn: async (data: CancelOfferRequest) => {
-      const result = await cancelOffer(data, signClient, session)
-      if (!result.success) throw new Error(result.error)
-      return result.data
-    },
+    mutationFn,
     onSuccess: () => {
       // Invalidate balance and coins queries after canceling offer
       queryClient.invalidateQueries({ queryKey: [WALLET_CONNECT_KEY, BALANCE_KEY] })
@@ -229,12 +252,14 @@ export function useTakeOffer() {
   const session = useWalletSession()
   const queryClient = useQueryClient()
 
+  const mutationFn = async (data: TakeOfferRequest) => {
+    const result = await takeOffer(data, signClient, session)
+    if (!result.success) throw new Error(result.error)
+    return result.data
+  }
+
   return useMutation({
-    mutationFn: async (data: TakeOfferRequest) => {
-      const result = await takeOffer(data, signClient, session)
-      if (!result.success) throw new Error(result.error)
-      return result.data
-    },
+    mutationFn,
     onSuccess: () => {
       // Invalidate balance and coins queries after taking offer
       queryClient.invalidateQueries({ queryKey: [WALLET_CONNECT_KEY, BALANCE_KEY] })

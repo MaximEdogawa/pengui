@@ -1,7 +1,8 @@
 'use client'
 
-import { useCatTokens } from '@/shared/hooks/useTickers'
-import { getNativeTokenTicker } from '@/shared/lib/config/environment'
+import { useCatTokens } from '@/entities/asset'
+import { getNativeTokenTickerForNetwork } from '@/shared/lib/config/environment'
+import { useNetwork } from '@/shared/hooks/useNetwork'
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { useOrderBookFiltering } from '../../composables/useOrderBookFiltering'
 import { useOrderBookResize } from '../../composables/useOrderBookResize'
@@ -37,6 +38,7 @@ export default function OrderBookContainer({ filters, onOrderClick }: OrderBookC
     useOrderBook(contextFilters)
 
   const { getCatTokenInfo } = useCatTokens()
+  const { network } = useNetwork()
 
   // Use composables for filtering, resize, and tooltip
   // Use contextFilters for filtering to match what was fetched
@@ -54,11 +56,11 @@ export default function OrderBookContainer({ filters, onOrderClick }: OrderBookC
   const getTickerSymbol = useCallback(
     (assetId: string, code?: string): string => {
       if (code) return code
-      if (!assetId) return getNativeTokenTicker()
+      if (!assetId) return getNativeTokenTickerForNetwork(network)
       const tickerInfo = getCatTokenInfo(assetId)
       return tickerInfo?.ticker || assetId.slice(0, 8)
     },
-    [getCatTokenInfo]
+    [getCatTokenInfo, network]
   )
 
   // Calculate price deviation percentage for hovered order
@@ -195,9 +197,8 @@ export default function OrderBookContainer({ filters, onOrderClick }: OrderBookC
     <div className="h-full flex flex-col">
       {/* Order Book Display */}
       <div
-        className="order-book-container flex-1 flex flex-col overflow-hidden rounded-xl backdrop-blur-2xl bg-white/5 dark:bg-black/5"
+        className="order-book-container flex-1 flex flex-col overflow-hidden rounded-xl backdrop-blur-2xl bg-white/5 dark:bg-black/5 border border-white/15"
         style={{
-          border: '1px solid rgba(255, 255, 255, 0.15)',
           boxShadow:
             '0 0 0 1px rgba(255, 255, 255, 0.08), 0 0 30px rgba(255, 255, 255, 0.03), 0 2px 8px rgba(0, 0, 0, 0.03), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
         }}

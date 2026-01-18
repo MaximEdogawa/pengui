@@ -3,8 +3,9 @@
 import { cn } from '@/shared/lib/utils/index'
 import { suppressRelayErrors } from '@/shared/lib/walletConnect/utils/suppressRelayErrors'
 import ReactQueryProvider from '@/shared/providers/ReactQueryProvider'
-import DashboardLayout from '@/shared/ui/DashboardLayout'
-import WalletConnectionGuard from '@/shared/ui/WalletConnectionGuard'
+import { NetworkProvider } from '@/shared/providers/NetworkProvider'
+import { DashboardLayout } from '@/widgets/dashboard-layout'
+import { WalletConnectionGuard } from '@/shared/ui'
 import {
   WalletManager,
   persistor,
@@ -136,11 +137,13 @@ export default function UILayout({ children }: { children: React.ReactNode }) {
               }}
             >
               <div className="wallet-connect-scope">
-                <WalletConnectionGuard>
-                  <ReactQueryProvider>
-                    <DashboardLayoutWrapper>{children}</DashboardLayoutWrapper>
-                  </ReactQueryProvider>
-                </WalletConnectionGuard>
+                <ReactQueryProvider>
+                  <NetworkProvider>
+                    <WalletConnectionGuard>
+                      <DashboardLayoutWrapper>{children}</DashboardLayoutWrapper>
+                    </WalletConnectionGuard>
+                  </NetworkProvider>
+                </ReactQueryProvider>
               </div>
             </PersistGate>
           </Provider>

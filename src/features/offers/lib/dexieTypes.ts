@@ -2,6 +2,11 @@
  * Dexie API Types
  */
 
+import type { DexieOffer } from '@/entities/offer'
+
+// Re-export for backward compatibility
+export type { DexieOffer, DexieAsset } from '@/entities/offer'
+
 export interface DexieTicker {
   ticker_id: string
   base_currency: string
@@ -66,11 +71,15 @@ export interface DexieOrderBookResponse {
 
 export interface DexieHistoricalTrade {
   trade_id: string
-  ticker_id: string
+  ticker_id?: string // May be in response wrapper instead
   price: number
-  volume: number
-  timestamp: number
-  side: 'buy' | 'sell'
+  volume?: number // Legacy field, prefer base_volume/target_volume
+  base_volume?: number // Actual API field
+  target_volume?: number // Actual API field
+  timestamp?: number // Legacy field, prefer trade_timestamp
+  trade_timestamp?: number // Actual API field
+  side?: 'buy' | 'sell' // Legacy field, prefer type
+  type?: string // Actual API field
 }
 
 export interface DexieHistoricalTradesResponse {
@@ -95,29 +104,6 @@ export interface DexieOfferSearchParams {
   status?: number
 }
 
-export interface DexieAsset {
-  id: string
-  code: string
-  name: string
-  amount: number
-}
-
-export interface DexieOffer {
-  id: string
-  status: number // Legacy field - we'll calculate state from dates instead
-  offer?: string // Original offer string (available in POST responses)
-  date_found: string
-  date_completed?: string | null
-  date_pending?: string | null
-  date_expiry?: string | null
-  block_expiry?: number | null
-  spent_block_index?: number | null
-  price: number
-  offered: DexieAsset[]
-  requested: DexieAsset[]
-  fees: number
-  known_taker?: unknown | null // null = cancelled, not null = completed
-}
 
 export interface DexieOfferSearchResponse {
   success: boolean

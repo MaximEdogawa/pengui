@@ -1,4 +1,4 @@
-import Modal from '@/shared/ui/Modal'
+import { Modal } from '@/shared/ui'
 import { X } from 'lucide-react'
 import { useThemeClasses } from '@/shared/hooks'
 import type { OfferDetails } from '@/entities/offer'

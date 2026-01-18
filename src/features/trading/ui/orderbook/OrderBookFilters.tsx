@@ -1,8 +1,9 @@
 'use client'
 
 import { useThemeClasses } from '@/shared/hooks'
-import { useCatTokens } from '@/shared/hooks/useTickers'
-import { getNativeTokenTicker } from '@/shared/lib/config/environment'
+import { useCatTokens } from '@/entities/asset'
+import { getNativeTokenTickerForNetwork } from '@/shared/lib/config/environment'
+import { useNetwork } from '@/shared/hooks/useNetwork'
 import { X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { SuggestionItem } from '../../lib/orderBookTypes'
@@ -30,13 +31,14 @@ export default function OrderBookFilters({ onFiltersChange }: OrderBookFiltersPr
   } = useOrderBookFilters()
 
   const { availableCatTokens } = useCatTokens()
+  const { network } = useNetwork()
   const [showSuggestions, setShowSuggestions] = useState(false)
   const searchInputRef = useRef<HTMLInputElement>(null)
   const suggestionsRef = useRef<HTMLDivElement>(null)
 
   // Generate suggestions based on search value
   useEffect(() => {
-    if (!searchValue || searchValue.trim().length === 0) {
+    if (!searchValue?.trim()) {
       setFilteredSuggestions([])
       setShowSuggestions(false)
       return
@@ -44,99 +46,66 @@ export default function OrderBookFilters({ onFiltersChange }: OrderBookFiltersPr
 
     const lowerSearch = searchValue.toLowerCase()
     const suggestions: SuggestionItem[] = []
-
-    // Normalize XCH searches to native token ticker based on network
-    const nativeTicker = getNativeTokenTicker().toLowerCase()
-    const normalizedSearch =
-      lowerSearch === 'xch' || lowerSearch === 'txch' ? nativeTicker : lowerSearch
-
-    // Track added tickers to prevent duplicates
+    const nativeTicker = getNativeTokenTickerForNetwork(network).toLowerCase()
+    const normalizedSearch = lowerSearch === 'xch' || lowerSearch === 'txch' ? nativeTicker : lowerSearch
     const addedTickers = new Set<string>()
 
-    // Add all available CAT tokens to suggestions
     availableCatTokens.forEach((token) => {
       const tokenTicker = token.ticker.toLowerCase()
-
-      // Skip if already added or doesn't match search
       if (
         addedTickers.has(tokenTicker) ||
-        (!tokenTicker.includes(normalizedSearch) &&
-          !token.name.toLowerCase().includes(normalizedSearch))
+        (!tokenTicker.includes(normalizedSearch) && !token.name.toLowerCase().includes(normalizedSearch))
       ) {
         return
       }
-
-      // Mark as added
       addedTickers.add(tokenTicker)
-
-      // Add buy suggestion if not already filtered
-      if (
-        !filters.buyAsset?.some((filter) => filter.toLowerCase() === token.ticker.toLowerCase())
-      ) {
-        suggestions.push({
-          value: token.ticker,
-          column: 'buyAsset',
-          label: token.ticker,
-        })
+      const tickerLower = token.ticker.toLowerCase()
+      if (!filters.buyAsset?.some((f) => f.toLowerCase() === tickerLower)) {
+        suggestions.push({ value: token.ticker, column: 'buyAsset', label: token.ticker })
       }
-
-      // Add sell suggestion if not already filtered
-      if (
-        !filters.sellAsset?.some((filter) => filter.toLowerCase() === token.ticker.toLowerCase())
-      ) {
-        suggestions.push({
-          value: token.ticker,
-          column: 'sellAsset',
-          label: token.ticker,
-        })
+      if (!filters.sellAsset?.some((f) => f.toLowerCase() === tickerLower)) {
+        suggestions.push({ value: token.ticker, column: 'sellAsset', label: token.ticker })
       }
     })
 
     setFilteredSuggestions(suggestions)
     setShowSuggestions(suggestions.length > 0)
-  }, [searchValue, availableCatTokens, filters, setFilteredSuggestions])
+  }, [searchValue, availableCatTokens, filters, setFilteredSuggestions, network])
+
+  const triggerCallback = useCallback(() => setTimeout(() => onFiltersChange?.(), 0), [onFiltersChange])
 
   const handleSuggestionClick = useCallback(
     (suggestion: SuggestionItem) => {
       addFilter(suggestion.column as 'buyAsset' | 'sellAsset' | 'status', suggestion.value)
       setSearchValue('')
       setShowSuggestions(false)
-      // Trigger callback after state update
-      setTimeout(() => {
-        onFiltersChange?.()
-      }, 0)
+      triggerCallback()
     },
-    [addFilter, setSearchValue, filters, onFiltersChange]
+    [addFilter, setSearchValue, triggerCallback]
   )
 
   const handleRemoveFilter = useCallback(
     (column: 'buyAsset' | 'sellAsset' | 'status', value: string) => {
       removeFilter(column, value)
-      // Trigger callback after state update
-      setTimeout(() => {
-        onFiltersChange?.()
-      }, 0)
+      triggerCallback()
     },
-    [removeFilter, onFiltersChange]
+    [removeFilter, triggerCallback]
   )
 
   // Close suggestions when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node
       if (
-        suggestionsRef.current &&
-        !suggestionsRef.current.contains(event.target as Node) &&
-        searchInputRef.current &&
-        !searchInputRef.current.contains(event.target as Node)
+        suggestionsRef.current?.contains(target) ||
+        searchInputRef.current?.contains(target)
       ) {
-        setShowSuggestions(false)
+        return
       }
+      setShowSuggestions(false)
     }
-
     document.addEventListener('mousedown', handleClickOutside)
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
+    return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
   return (
@@ -156,12 +125,8 @@ export default function OrderBookFilters({ onFiltersChange }: OrderBookFiltersPr
             type="text"
             value={searchValue}
             onChange={(e) => setSearchValue(e.target.value)}
-            onFocus={() => {
-              if (filteredSuggestions.length > 0) {
-                setShowSuggestions(true)
-              }
-            }}
-            placeholder={`Search assets (e.g., ${getNativeTokenTicker()}, TBYC)...`}
+            onFocus={() => filteredSuggestions.length > 0 && setShowSuggestions(true)}
+            placeholder={`Search assets (e.g., ${getNativeTokenTickerForNetwork(network)}, TBYC)...`}
             className={`w-full px-2 py-1.5 text-xs rounded-lg border-2 ${t.border} ${t.bg} ${t.text} focus:outline-none focus:ring-2 focus:ring-blue-500/50 backdrop-blur-sm`}
           />
 
@@ -205,7 +170,6 @@ export default function OrderBookFilters({ onFiltersChange }: OrderBookFiltersPr
 
       {/* Filter Chips */}
       <div className="flex flex-wrap items-center gap-2">
-        {/* Buy Asset Filters */}
         {filters.buyAsset?.map((asset) => (
           <div
             key={`buy-${asset}`}
@@ -221,8 +185,6 @@ export default function OrderBookFilters({ onFiltersChange }: OrderBookFiltersPr
             </button>
           </div>
         ))}
-
-        {/* Sell Asset Filters */}
         {filters.sellAsset?.map((asset) => (
           <div
             key={`sell-${asset}`}

@@ -1,4 +1,4 @@
-import { getNativeTokenTicker } from '@/shared/lib/config/environment'
+import { getNativeTokenTickerForNetwork } from '@/shared/lib/config/environment'
 
 export interface Asset {
   id: string
@@ -11,10 +11,11 @@ export interface Asset {
 export function getTickerSymbol(
   assetId: string,
   code: string | undefined,
-  getCatTokenInfo: (assetId: string) => { ticker?: string } | undefined
+  getCatTokenInfo: (assetId: string) => { ticker?: string } | undefined,
+  network: 'mainnet' | 'testnet' = 'mainnet'
 ): string {
   if (code) return code
-  if (!assetId) return getNativeTokenTicker()
+  if (!assetId) return getNativeTokenTickerForNetwork(network)
   const tickerInfo = getCatTokenInfo(assetId)
   return tickerInfo?.ticker || assetId.slice(0, 8)
 }
@@ -24,10 +25,11 @@ export function getTickerSymbol(
  */
 export function isNativeToken(
   asset: Asset,
-  getTickerSymbolFn: (assetId: string, code?: string) => string
+  getTickerSymbolFn: (assetId: string, code?: string) => string,
+  network: 'mainnet' | 'testnet' = 'mainnet'
 ): boolean {
   const ticker = getTickerSymbolFn(asset.id, asset.code)
-  const nativeTicker = getNativeTokenTicker()
+  const nativeTicker = getNativeTokenTickerForNetwork(network)
   // Check if it's XCH, TXCH, or the native token for current network
   return (
     ticker.toUpperCase() === 'XCH' ||

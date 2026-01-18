@@ -1,7 +1,8 @@
 'use client'
 
 import { useThemeClasses } from '@/shared/hooks'
-import { useEffect, useId, useState } from 'react'
+import { useId, useState } from 'react'
+import { useShiftKeyHandler } from './SleekPriceSlider/useShiftKeyHandler'
 
 interface SleekPriceSliderProps {
   value: number // Current adjustment percentage (-100 to +100)
@@ -18,49 +19,8 @@ export default function SleekPriceSlider({
 }: SleekPriceSliderProps) {
   const { t } = useThemeClasses()
   const sliderId = useId()
-  const styleId = useId()
   const [isFineTune, setIsFineTune] = useState(false)
-  const [isShiftPressed, setIsShiftPressed] = useState(false)
-
-  // Escape ID for use in CSS selectors (useId can produce IDs with colons)
-  const escapeCSSId = (id: string): string => {
-    if (typeof CSS !== 'undefined' && CSS.escape) {
-      return CSS.escape(id)
-    }
-    // Fallback: escape special characters manually
-    return id.replace(/[^a-zA-Z0-9_-]/g, (char) => {
-      const code = char.charCodeAt(0)
-      if (code <= 0xff) {
-        return `\\${code.toString(16).padStart(2, '0')} `
-      }
-      return `\\${code.toString(16)} `
-    })
-  }
-
-  const cssEscapedSliderId = escapeCSSId(sliderId)
-
-  // Handle Shift key for fine-tuning
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Shift') {
-        setIsShiftPressed(true)
-      }
-    }
-
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.key === 'Shift') {
-        setIsShiftPressed(false)
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-    window.addEventListener('keyup', handleKeyUp)
-
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown)
-      window.removeEventListener('keyup', handleKeyUp)
-    }
-  }, [])
+  const isShiftPressed = useShiftKeyHandler()
 
   // Effective fine-tune mode: either toggle is on OR Shift is pressed
   const effectiveFineTune = isFineTune || isShiftPressed
@@ -100,59 +60,6 @@ export default function SleekPriceSlider({
     if (val > 0) return `+${cleaned}%`
     return `${cleaned}%`
   }
-
-  // Slider color based on value
-  const sliderColor = clampedValue === 0 ? '#9ca3af' : clampedValue > 0 ? '#22c55e' : '#ef4444'
-
-  // Inject slider styles
-  useEffect(() => {
-    let styleElement = document.getElementById(styleId) as HTMLStyleElement | null
-
-    if (!styleElement) {
-      styleElement = document.createElement('style')
-      styleElement.id = styleId
-      document.head.appendChild(styleElement)
-    }
-
-    styleElement.textContent = `
-      #${cssEscapedSliderId}::-webkit-slider-thumb {
-        appearance: none;
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        background: ${sliderColor};
-        border: 1.5px solid rgba(255, 255, 255, 0.9);
-        cursor: pointer;
-        box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.15);
-        transition: all 0.2s ease;
-      }
-      #${cssEscapedSliderId}::-webkit-slider-thumb:hover {
-        transform: scale(1.2);
-        box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.25);
-      }
-      #${cssEscapedSliderId}::-moz-range-thumb {
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        background: ${sliderColor};
-        border: 1.5px solid rgba(255, 255, 255, 0.9);
-        cursor: pointer;
-        box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.15);
-        transition: all 0.2s ease;
-      }
-      #${cssEscapedSliderId}::-moz-range-thumb:hover {
-        transform: scale(1.2);
-        box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.25);
-      }
-    `
-
-    return () => {
-      const element = document.getElementById(styleId)
-      if (element) {
-        element.remove()
-      }
-    }
-  }, [sliderColor])
 
   return (
     <div className="flex flex-col gap-1 py-0">

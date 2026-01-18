@@ -1,0 +1,25 @@
+# Bun configuration for testing
+[test]
+# Preload test setup file
+preload = ["./src/test-utils/setup.ts"]
+
+# Only search for tests in src directory to exclude E2E tests in tests/e2e
+# This ensures Bun only runs unit and integration tests, not Playwright E2E tests
+root = "./src"
+
+# Coverage configuration
+coverage = true
+coverageDir = "coverage"
+coverageExclude = [
+  "**/node_modules/**",
+  "**/.next/**",
+  "**/storybook/**",
+  "**/storybook-static/**",
+  "**/tests/**",
+  "**/test-utils/**",
+  "**/*.stories.tsx",
+  "**/*.config.*",
+]
+
+# Test timeout (30 seconds)
+timeout = 30000

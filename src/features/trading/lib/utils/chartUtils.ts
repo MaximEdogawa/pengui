@@ -7,6 +7,7 @@ import type {
   Timeframe,
   VolumeDataPoint,
 } from '../chartTypes'
+import { logger } from '@/shared/lib/logger'
 
 function toSeconds(timestamp: number): number {
   return Math.floor(timestamp / 1000)
@@ -32,19 +33,82 @@ function getCandleStartTime(timestamp: number, timeframe: Timeframe): number {
 }
 
 function isValidTrade(trade: unknown): trade is DexieHistoricalTrade {
-  return (
-    !!trade &&
-    typeof trade === 'object' &&
-    'timestamp' in trade &&
-    'price' in trade &&
-    'volume' in trade &&
-    typeof (trade as DexieHistoricalTrade).timestamp === 'number' &&
-    typeof (trade as DexieHistoricalTrade).price === 'number' &&
-    typeof (trade as DexieHistoricalTrade).volume === 'number' &&
-    !isNaN((trade as DexieHistoricalTrade).timestamp) &&
-    !isNaN((trade as DexieHistoricalTrade).price) &&
-    !isNaN((trade as DexieHistoricalTrade).volume)
-  )
+  if (!trade || typeof trade !== 'object') return false
+  
+  const t = trade as Record<string, unknown>
+  
+  // Check for price (required) - can be number or string that can be parsed to number
+  const price = t.price
+  const priceNum = typeof price === 'number' ? price : typeof price === 'string' ? parseFloat(price) : NaN
+  if (!('price' in t) || isNaN(priceNum)) {
+    return false
+  }
+  
+  // Check for timestamp (either timestamp or trade_timestamp) - can be number or string
+  const timestamp = t.timestamp
+  const tradeTimestamp = t.trade_timestamp
+  const timestampNum = typeof timestamp === 'number' ? timestamp : typeof timestamp === 'string' ? parseFloat(timestamp) : NaN
+  const tradeTimestampNum = typeof tradeTimestamp === 'number' ? tradeTimestamp : typeof tradeTimestamp === 'string' ? parseFloat(tradeTimestamp as string) : NaN
+  
+  const hasTimestamp = (!isNaN(timestampNum) && timestampNum > 0) || (!isNaN(tradeTimestampNum) && tradeTimestampNum > 0)
+  
+  if (!hasTimestamp) {
+    return false
+  }
+  
+  // Check for volume (either volume, base_volume, or target_volume) - can be number or string
+  const volume = t.volume
+  const baseVolume = t.base_volume
+  const targetVolume = t.target_volume
+  
+  const volumeNum = typeof volume === 'number' ? volume : typeof volume === 'string' ? parseFloat(volume) : NaN
+  const baseVolumeNum = typeof baseVolume === 'number' ? baseVolume : typeof baseVolume === 'string' ? parseFloat(baseVolume as string) : NaN
+  const targetVolumeNum = typeof targetVolume === 'number' ? targetVolume : typeof targetVolume === 'string' ? parseFloat(targetVolume as string) : NaN
+  
+  const hasVolume = (!isNaN(volumeNum) && volumeNum > 0) || (!isNaN(baseVolumeNum) && baseVolumeNum > 0) || (!isNaN(targetVolumeNum) && targetVolumeNum > 0)
+  
+  return hasVolume
+}
+
+/**
+ * Validates and normalizes OHLC data to ensure it matches the expected structure
+ */
+export function normalizeOHLCData(data: unknown[]): OHLCData[] {
+  if (!Array.isArray(data) || data.length === 0) {
+    return []
+  }
+
+  return data
+    .map((item) => {
+      // If it's already in the correct format, return as-is
+      if (
+        item &&
+        typeof item === 'object' &&
+        'time' in item &&
+        'open' in item &&
+        'high' in item &&
+        'low' in item &&
+        'close' in item &&
+        'volume' in item
+      ) {
+        const candle = item as OHLCData
+        // Ensure time is in seconds (Unix timestamp)
+        const time = typeof candle.time === 'number' 
+          ? (candle.time < 10000000000 ? candle.time : Math.floor(candle.time / 1000))
+          : 0
+        
+        return {
+          time,
+          open: Number(candle.open) || 0,
+          high: Number(candle.high) || 0,
+          low: Number(candle.low) || 0,
+          close: Number(candle.close) || 0,
+          volume: Number(candle.volume) || 0,
+        }
+      }
+      return null
+    })
+    .filter((candle): candle is OHLCData => candle !== null && candle.time > 0)
 }
 
 export function aggregateTradesToOHLC(
@@ -56,10 +120,91 @@ export function aggregateTradesToOHLC(
   }
 
   const validTrades = trades.filter(isValidTrade)
-  if (validTrades.length === 0) return []
+  if (validTrades.length === 0) {
+    // Log sample of invalid trades for debugging
+    if (trades.length > 0) {
+      const sample = trades[0] as unknown as Record<string, unknown>
+      logger.error('No valid trades found after filtering', {
+        totalTrades: trades.length,
+        sampleTrade: {
+          keys: Object.keys(sample),
+          trade_id: sample.trade_id,
+          price: sample.price,
+          trade_timestamp: sample.trade_timestamp,
+          timestamp: sample.timestamp,
+          base_volume: sample.base_volume,
+          volume: sample.volume,
+          target_volume: sample.target_volume,
+          type: sample.type,
+        },
+        validationChecks: {
+          hasPrice: 'price' in sample && (typeof sample.price === 'number' || (typeof sample.price === 'string' && !isNaN(parseFloat(sample.price)))),
+          hasTimestamp: ('timestamp' in sample && (typeof sample.timestamp === 'number' || (typeof sample.timestamp === 'string' && !isNaN(parseFloat(sample.timestamp as string))))) ||
+                        ('trade_timestamp' in sample && (typeof sample.trade_timestamp === 'number' || (typeof sample.trade_timestamp === 'string' && !isNaN(parseFloat(sample.trade_timestamp as string))))),
+          hasVolume: ('volume' in sample && (typeof sample.volume === 'number' || (typeof sample.volume === 'string' && !isNaN(parseFloat(sample.volume as string))))) ||
+                     ('base_volume' in sample && (typeof sample.base_volume === 'number' || (typeof sample.base_volume === 'string' && !isNaN(parseFloat(sample.base_volume as string))))) ||
+                     ('target_volume' in sample && (typeof sample.target_volume === 'number' || (typeof sample.target_volume === 'string' && !isNaN(parseFloat(sample.target_volume as string))))),
+        },
+      })
+    }
+    return []
+  }
 
-  const sortedTrades = [...validTrades].sort((a, b) => a.timestamp - b.timestamp)
-  const candlesMap = sortedTrades.reduce((map, trade) => {
+  // Normalize trades to have consistent field names and convert strings to numbers
+  const normalizedTrades = validTrades.map((trade, index) => {
+    // Helper to convert value to number (handles both string and number)
+    const toNumber = (val: unknown): number => {
+      if (typeof val === 'number') return val
+      if (typeof val === 'string') {
+        const parsed = parseFloat(val)
+        return isNaN(parsed) ? 0 : parsed
+      }
+      return 0
+    }
+    
+    // Get timestamp (prefer trade_timestamp, fallback to timestamp)
+    const timestamp = trade.trade_timestamp ?? trade.timestamp ?? 0
+    const timestampNum = toNumber(timestamp)
+    
+    // Get volume (prefer base_volume, then volume, fallback to target_volume)
+    const volume = trade.base_volume ?? trade.volume ?? trade.target_volume ?? 0
+    const volumeNum = toNumber(volume)
+    
+    // Get price (ensure it's a number)
+    const priceNum = toNumber(trade.price)
+    
+    const normalized = {
+      ...trade,
+      timestamp: timestampNum,
+      volume: volumeNum,
+      price: priceNum,
+    }
+    
+    // Log first trade structure for debugging
+    if (index === 0) {
+      logger.debug('Normalized trade structure', {
+        original: {
+          trade_timestamp: trade.trade_timestamp,
+          timestamp: trade.timestamp,
+          base_volume: trade.base_volume,
+          volume: trade.volume,
+          target_volume: trade.target_volume,
+          price: trade.price,
+        },
+        normalized: {
+          timestamp: normalized.timestamp,
+          volume: normalized.volume,
+          price: normalized.price,
+        },
+      })
+    }
+    
+    return normalized
+  })
+
+  const sortedNormalizedTrades = [...normalizedTrades].sort((a, b) => a.timestamp - b.timestamp)
+  const candlesMap = sortedNormalizedTrades.reduce((map, trade) => {
+    // Handle timestamp: if < 10000000000, it's in seconds, otherwise milliseconds
     const tradeTime = trade.timestamp < 10000000000 ? trade.timestamp * 1000 : trade.timestamp
     const candleStart = getCandleStartTime(tradeTime, timeframe)
     
@@ -68,7 +213,7 @@ export function aggregateTradesToOHLC(
     }
     map.get(candleStart)!.push(trade)
     return map
-  }, new Map<number, DexieHistoricalTrade[]>())
+  }, new Map<number, typeof normalizedTrades[0][]>())
 
   const candles = Array.from(candlesMap.entries())
     .filter(([, trades]) => trades.length > 0)
@@ -78,7 +223,7 @@ export function aggregateTradesToOHLC(
       high: Math.max(...candleTrades.map((t) => t.price)),
       low: Math.min(...candleTrades.map((t) => t.price)),
       close: candleTrades[candleTrades.length - 1].price,
-      volume: candleTrades.reduce((sum, t) => sum + t.volume, 0),
+      volume: candleTrades.reduce((sum, t) => sum + (t.volume || 0), 0),
     }))
 
   return candles.sort((a, b) => a.time - b.time)

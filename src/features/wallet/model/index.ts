@@ -1,5 +1,5 @@
 // Public API for wallet model
-export { useWalletConnection } from './useWalletConnection'
+// Note: useWalletConnection moved to @/shared/hooks/useWalletConnection
 export {
   useWalletBalance,
   useWalletAddress,

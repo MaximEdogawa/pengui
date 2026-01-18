@@ -6,6 +6,37 @@
 import type { AssetAmount, AssetType } from '../offer/types'
 
 /**
+ * Dexie API Types
+ * Raw ticker format from Dexie API
+ */
+export interface DexieTicker {
+  ticker_id: string
+  base_currency: string
+  target_currency: string
+  base_code: string
+  target_code: string
+  base_name: string
+  target_name: string
+  last_price: number
+  current_avg_price: number
+  base_volume: number
+  target_volume: number
+  base_volume_7d: number
+  target_volume_7d: number
+  base_volume_30d: number
+  target_volume_30d: number
+  pool_id: string
+  bid: number | null
+  ask: number | null
+  high: number | null
+  low: number | null
+  high_7d: number | null
+  low_7d: number | null
+  high_30d: number | null
+  low_30d: number | null
+}
+
+/**
  * Ticker information from Dexie API
  * Represents a trading pair with base and target currencies
  */

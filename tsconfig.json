@@ -13,22 +13,42 @@
     "isolatedModules": true,
     "jsx": "react-jsx",
     "incremental": true,
+    "tsBuildInfoFile": ".next/cache/.tsbuildinfo",
+    "assumeChangesOnlyAffectDirectDependencies": true,
     "plugins": [
       {
         "name": "next"
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@/widgets/*": ["./src/widgets/*"],
+      "@/features/*": ["./src/features/*"],
+      "@/entities/*": ["./src/entities/*"],
+      "@/shared/*": ["./src/shared/*"]
     },
     "typeRoots": ["./node_modules/@types", "./types"]
   },
   "include": [
     "next-env.d.ts",
-    "**/*.ts",
-    "**/*.tsx",
+    "types/**/*.d.ts",
+    "src/**/*.ts",
+    "src/**/*.tsx",
     ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts"
+    ".next/dev/types/**/*.ts",
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "tests/**/*.ts",
+    "tests/**/*.tsx"
   ],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules",
+    ".next",
+    "storybook-static",
+    "storybook",
+    "storybook-stories",
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "src/test-utils/**/*"
+  ]
 }

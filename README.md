@@ -174,10 +174,12 @@ npm start
 
 ## 📁 Project Structure
 
+This project follows **Feature-Sliced Design (FSD)** methodology for scalable and maintainable code organization.
+
 ```text
 pengui/
 ├── src/
-│   ├── app/                    # Next.js App Router pages
+│   ├── app/                    # Next.js App Router (Application Layer)
 │   │   ├── dashboard/         # Dashboard page
 │   │   ├── trading/           # Trading interface
 │   │   ├── offers/            # Offers management
@@ -186,52 +188,90 @@ pengui/
 │   │   ├── piggy-bank/        # Savings features
 │   │   ├── option-contracts/  # Options trading
 │   │   ├── profile/           # User profile
-│   │   ├── login/             # Authentication
-│   │   └── layout.tsx         # Root layout
+│   │   ├── login/             # Authentication page
+│   │   ├── layout.tsx         # Root layout
+│   │   └── globals.css        # Global styles
 │   │
-│   ├── features/              # Feature modules
+│   ├── widgets/                # Widgets Layer (Large composite UI blocks)
+│   │   ├── dashboard-layout/  # Main dashboard layout with sidebar
+│   │   │   ├── ui/            # Layout components
+│   │   │   └── model/         # Layout hooks & logic
+│   │   └── trading-layout/    # Trading interface layout
+│   │       └── ui/            # Trading layout components
+│   │
+│   ├── features/               # Features Layer (User interactions)
+│   │   ├── auth/              # Authentication features
+│   │   │   └── login/         # Login functionality
 │   │   ├── trading/           # Trading feature
 │   │   │   ├── model/         # Business logic & hooks
 │   │   │   ├── ui/            # UI components
-│   │   │   └── lib/           # Utilities
+│   │   │   ├── api/           # API calls
+│   │   │   └── lib/           # Trading utilities
 │   │   ├── offers/            # Offers feature
 │   │   ├── loans/             # Loans feature
 │   │   └── wallet/            # Wallet feature
 │   │
-│   ├── shared/                # Shared code
-│   │   ├── ui/                # Reusable UI components
-│   │   │   ├── Button.tsx
-│   │   │   ├── Modal.tsx
-│   │   │   ├── AssetSelector/
-│   │   │   └── ...
-│   │   ├── hooks/             # Custom React hooks
-│   │   ├── lib/               # Utilities & services
-│   │   │   ├── walletConnect/ # WalletConnect integration
-│   │   │   ├── database/      # IndexedDB setup
-│   │   │   ├── utils/         # Helper functions
-│   │   │   └── config/        # Configuration
-│   │   └── providers/         # React context providers
+│   ├── entities/               # Entities Layer (Business domain entities)
+│   │   ├── asset/             # Asset types & definitions
+│   │   ├── offer/             # Offer types & structures
+│   │   ├── loan/              # Loan types & structures
+│   │   └── transaction/       # Transaction types & utilities
 │   │
-│   └── entities/              # Domain entities
-│       ├── asset/             # Asset types
-│       ├── offer/             # Offer types
-│       └── loan/              # Loan types
+│   └── shared/                 # Shared Layer (Reusable infrastructure)
+│       ├── ui/                # Design system components
+│       │   ├── button/        # Button component
+│       │   ├── modal/         # Modal component
+│       │   ├── asset-selector/# Asset selector & sub-components
+│       │   └── ...            # Other UI components
+│       ├── hooks/             # Shared React hooks
+│       ├── lib/               # Utilities organized by domain
+│       │   ├── formatting/    # Date, currency, number formatting
+│       │   ├── web3/          # Web3/wallet utilities
+│       │   ├── validation/   # Validation schemas
+│       │   ├── utils/         # Generic utilities
+│       │   ├── walletConnect/ # WalletConnect integration
+│       │   ├── database/      # IndexedDB setup
+│       │   └── config/        # Configuration
+│       └── providers/         # React context providers
+│
+├── docs/                       # Documentation
+│   └── architecture/          # Architecture documentation
+│       └── fsd-structure.md   # FSD structure guide
 │
 ├── public/                     # Static assets
 │   ├── icons/                 # App icons
 │   └── assets/                # Images & assets
 │
+├── .storybook/                 # Storybook configuration
 ├── .husky/                     # Git hooks
-├── .vscode/                    # VS Code settings
 ├── eslint.config.mjs          # ESLint configuration
 ├── tailwind.config.ts          # Tailwind configuration
 ├── tsconfig.json               # TypeScript configuration
 └── package.json                # Dependencies & scripts
 ```
 
+### Architecture Principles
+
+- **Layer Separation**: Clear boundaries between app, widgets, features, entities, and shared
+- **Colocation**: Related files (component, styles, tests, types) stay together
+- **Public API**: Barrel exports (`index.ts`) control module boundaries
+- **Vertical Slicing**: Organized by feature/domain, not by technical role
+
+See [Architecture Documentation](./docs/architecture/fsd-structure.md) for detailed guidelines.
+
 ## 🎨 UI Components
 
-Pengui includes a comprehensive, custom-built component library. See the [UI Component Documentation](./src/shared/ui/README.md) for details.
+Pengui includes a comprehensive, custom-built component library with Storybook documentation.
+
+### View Components in Storybook
+
+```bash
+bun run storybook
+```
+
+Then open [http://localhost:6006](http://localhost:6006) to browse all components interactively.
+
+See the [UI Component Documentation](./src/shared/ui/README.md) and [Component Catalog](./src/shared/ui/COMPONENT_CATALOG.md) for details.
 
 ### Quick Component Examples
 
@@ -290,13 +330,16 @@ See [WalletConnect Documentation](./src/shared/lib/walletConnect/README.md) for 
 ```bash
 # Development
 bun dev              # Start development server
+bun storybook        # Start Storybook component library
 
 # Building
 bun build            # Build for production
+bun build-storybook  # Build Storybook for production
 bun start            # Start production server
 
 # Code Quality
 bun lint             # Run ESLint
+bun type-check       # Run TypeScript type checking
 ```
 
 ### Code Style
@@ -307,11 +350,13 @@ bun lint             # Run ESLint
 
 ### Git Hooks
 
-Pre-commit hooks are configured via Husky to ensure code quality:
+Pre-commit hooks are configured via Husky and lint-staged to ensure code quality:
 
-- ESLint checks
-- Prettier formatting
-- Type checking (if configured)
+- **Lint & Type Check**: ESLint and TypeScript checks on staged files (with auto-fix)
+- **Build**: Ensures the project builds successfully
+- **Test**: Runs the test suite
+
+See [Git Hooks Documentation](./docs/development/git-hooks.md) for details.
 
 ## 🔒 Security
 
@@ -342,12 +387,22 @@ Contributions are welcome! Please ensure:
 
 ## 📚 Additional Resources
 
-- [UI Component Library](./src/shared/ui/README.md)
-- [WalletConnect Integration](./src/shared/lib/walletConnect/README.md)
-- [Component Catalog](./src/shared/ui/COMPONENT_CATALOG.md)
-- [Quick Start Guide](./src/shared/ui/QUICK_START.md)
+- [Architecture Documentation](./docs/architecture/fsd-structure.md) - Feature-Sliced Design structure and guidelines
+- [UI Component Library](./src/shared/ui/README.md) - Detailed component documentation
+- [Component Catalog](./src/shared/ui/COMPONENT_CATALOG.md) - Quick component reference
+- [WalletConnect Integration](./src/shared/lib/walletConnect/README.md) - Wallet integration details
+- [Infinite Loop Guardrails](./docs/development/infinite-loop-guardrails.md) - Preventing infinite loops in useEffect hooks
 
 ## 🐛 Troubleshooting
+
+### Infinite Loop / Continuous Compilation
+
+If Turbopack shows "compiling..." indefinitely or pages won't switch:
+
+- Check browser console for infinite loop warnings
+- Review `useEffect` dependency arrays (see [Infinite Loop Guardrails](./docs/development/infinite-loop-guardrails.md))
+- Run `bun run lint` to check for React Hooks issues
+- Look for `useEffect` hooks that update state included in their dependency array
 
 ### Wallet Connection Issues
 
