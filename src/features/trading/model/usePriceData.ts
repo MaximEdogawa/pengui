@@ -8,6 +8,7 @@ import { useMemo } from 'react'
 import { aggregateTradesToOHLC, normalizeOHLCData } from '../lib/utils/chartUtils'
 import type { OHLCData, Timeframe } from '../lib/chartTypes'
 import type { OrderBookFilters } from '../lib/orderBookTypes'
+import type { DexieHistoricalTrade } from '@/features/offers/lib/dexieTypes'
 
 interface UsePriceDataOptions {
   tickerId: string | null
@@ -97,7 +98,8 @@ function processOHLCData(
     return []
   }
   
-  const tradesArray = Array.isArray(dataToUse) ? dataToUse : []
+  // Use parseTradesData to handle legacy cache shapes like { trades: [...] } or { data: [...] }
+  const tradesArray = parseTradesData(dataToUse)
   if (tradesArray.length === 0) {
     return []
   }
@@ -122,7 +124,8 @@ function processOHLCData(
       aggregated = normalizeOHLCData(tradesArray)
     } else {
       // Data is in trade format, aggregate it
-      aggregated = aggregateTradesToOHLC(tradesArray, timeframe)
+      // Cast to DexieHistoricalTrade[] since parseTradesData extracts trade arrays
+      aggregated = aggregateTradesToOHLC(tradesArray as unknown as DexieHistoricalTrade[], timeframe)
     }
 
     
@@ -232,7 +235,9 @@ export function usePriceData({ tickerId, timeframe, filters, enabled = true, isU
 
   // Check if we have cached data available (even if query is disabled)
   // This helps prevent falling back to synthetic data when real data exists in cache
-  const hasCachedData = !!(dataToUse && Array.isArray(dataToUse) && dataToUse.length > 0)
+  // Use parseTradesData to handle legacy cache shapes
+  const parsedData = dataToUse ? parseTradesData(dataToUse) : []
+  const hasCachedData = parsedData.length > 0
   const isSuccess = query.isSuccess || (!!dataToUse && !query.isError)
 
   return {

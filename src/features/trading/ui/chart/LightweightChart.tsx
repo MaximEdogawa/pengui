@@ -150,11 +150,20 @@ const MOVING_AVERAGE_COLORS = {
 } as const
 
 function isValidCandle(c: OHLCData): boolean {
-  return !!(c.time && !isNaN(c.time) && !isNaN(c.open) && !isNaN(c.high) && !isNaN(c.low) && !isNaN(c.close))
+  return (
+    Number.isFinite(c.time) && c.time > 0 &&
+    Number.isFinite(c.open) &&
+    Number.isFinite(c.high) &&
+    Number.isFinite(c.low) &&
+    Number.isFinite(c.close)
+  )
 }
 
 function isValidPoint(p: { time: number; value: number }): boolean {
-  return !!(p.time && !isNaN(p.time) && !isNaN(p.value))
+  return (
+    Number.isFinite(p.time) && p.time > 0 &&
+    Number.isFinite(p.value)
+  )
 }
 
 /**
@@ -843,6 +852,11 @@ export function LightweightChart({
     if (currentIndex <= 0) return null
     
     const previousCandle = ohlcData[currentIndex - 1]
+    if (!previousCandle || previousCandle.close === 0) {
+      // Guard against division by zero
+      return null
+    }
+    
     const changeValue = hoveredData.close - previousCandle.close
     const percent = (changeValue / previousCandle.close) * 100
     
