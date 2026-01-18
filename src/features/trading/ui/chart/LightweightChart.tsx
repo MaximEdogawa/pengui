@@ -15,7 +15,7 @@ import {
   type HistogramData,
   type Time,
 } from 'lightweight-charts'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ohlcToPricePoints, ohlcToVolumePoints } from '../../lib/utils/chartUtils'
 import { logger } from '@/shared/lib/logger'
 import type { ChartConfig, OHLCData } from '../../lib/chartTypes'
@@ -563,6 +563,62 @@ function applyDefaultZoomLevel(
   }
 }
 
+function OHLCDataPanel({ 
+  data, 
+  change 
+}: { 
+  data: OHLCData | null
+  change: { value: number; percent: number } | null 
+}) {
+  if (!data) return null
+
+  return (
+    <div className="absolute top-2 left-2 z-10 px-2 py-1.5 bg-[#1e222d]/70 backdrop-blur-sm rounded-md border border-[#2a2e39]/50 shadow-md max-w-[calc(50%-1rem)]">
+      <div className="flex flex-col gap-1 text-[10px]">
+        {/* Line 1: O, H */}
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-[#868993] whitespace-nowrap">O:</span>
+            <span className="text-[#d1d4dc] font-medium truncate">{data.open.toFixed(6)}</span>
+          </div>
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-[#868993] whitespace-nowrap">H:</span>
+            <span className="text-[#d1d4dc] font-medium truncate">{data.high.toFixed(6)}</span>
+          </div>
+        </div>
+        {/* Line 2: L, C */}
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-[#868993] whitespace-nowrap">L:</span>
+            <span className="text-[#d1d4dc] font-medium truncate">{data.low.toFixed(6)}</span>
+          </div>
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-[#868993] whitespace-nowrap">C:</span>
+            <span className="text-[#d1d4dc] font-medium truncate">{data.close.toFixed(6)}</span>
+          </div>
+        </div>
+        {/* Line 3: Volume, Chg */}
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-[#868993] whitespace-nowrap">Volume:</span>
+            <span className="text-[#d1d4dc] font-medium truncate">{data.volume.toLocaleString()}</span>
+          </div>
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-[#868993] whitespace-nowrap">Chg:</span>
+            {change ? (
+              <span className={`font-medium truncate ${change.value >= 0 ? 'text-[#26a69a]' : 'text-[#ef5350]'}`}>
+                {change.value >= 0 ? '+' : ''}{change.value.toFixed(6)} ({change.percent >= 0 ? '+' : ''}{change.percent.toFixed(2)}%)
+              </span>
+            ) : (
+              <span className="text-[#868993]">—</span>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function applyBarSpacing(timeScale: ReturnType<IChartApi['timeScale']>, config: ChartConfig) {
   if (config.timeframe === '1M' && config.chartType === 'candlestick') {
     // For monthly candlestick charts, use larger default spacing and higher max
@@ -597,6 +653,7 @@ export function LightweightChart({
   const isUserScrollingRef = useRef(false)
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const previousTimeframeRef = useRef<string | null>(null)
+  const [hoveredData, setHoveredData] = useState<OHLCData | null>(null)
 
   useEffect(() => {
     if (!chartContainerRef.current || chartRef.current) return
@@ -629,6 +686,34 @@ export function LightweightChart({
     }
     
     timeScale.subscribeVisibleTimeRangeChange(handleVisibleRangeChange)
+
+    // Subscribe to crosshair move to update hovered data
+    const handleCrosshairMove = (param: Parameters<Parameters<IChartApi['subscribeCrosshairMove']>[0]>[0]) => {
+      if (param.time && param.seriesData) {
+        // Use current ohlcData from closure
+        const currentData = ohlcData
+        if (currentData.length > 0) {
+          // Find the candle data for the hovered time
+          const hoveredTime = param.time as number
+          const candle = currentData.find(c => c.time === hoveredTime)
+          if (candle) {
+            setHoveredData(candle)
+          } else {
+            // If exact match not found, find closest candle
+            const closestCandle = currentData.reduce((prev, curr) => {
+              const prevDiff = Math.abs(prev.time - hoveredTime)
+              const currDiff = Math.abs(curr.time - hoveredTime)
+              return currDiff < prevDiff ? curr : prev
+            })
+            setHoveredData(closestCandle)
+          }
+        }
+      } else {
+        setHoveredData(null)
+      }
+    }
+    
+    chart.subscribeCrosshairMove(handleCrosshairMove)
 
     // Custom mouse wheel handler for faster zoom
     const handleWheel = (e: WheelEvent) => {
@@ -695,7 +780,7 @@ export function LightweightChart({
       chartRef.current?.remove()
       chartRef.current = null
     }
-  }, [onScrollingChange])
+  }, [onScrollingChange, ohlcData])
 
   useEffect(() => {
     if (!chartRef.current) return
@@ -746,6 +831,21 @@ export function LightweightChart({
     }
   }, [ohlcData, config, indicators, isUsingSyntheticData])
 
+  // Calculate change percentage from previous candle
+  const change = (() => {
+    if (!hoveredData || ohlcData.length < 2) return null
+    
+    const currentIndex = ohlcData.findIndex(c => c.time === hoveredData.time)
+    if (currentIndex <= 0) return null
+    
+    const previousCandle = ohlcData[currentIndex - 1]
+    const changeValue = hoveredData.close - previousCandle.close
+    const percent = (changeValue / previousCandle.close) * 100
+    
+    return { value: changeValue, percent }
+  })()
+  const displayData = hoveredData || (ohlcData.length > 0 ? ohlcData[ohlcData.length - 1] : null)
+
   return (
     <div className="h-full flex flex-col relative bg-[#131722]">
       {isUsingSyntheticData && (
@@ -753,6 +853,9 @@ export function LightweightChart({
           Using order book data
         </div>
       )}
+
+      {/* OHLC Data Panel */}
+      <OHLCDataPanel data={displayData} change={change} />
 
       <div className="flex-1 relative min-h-[400px]">
         <div ref={chartContainerRef} className="w-full h-full min-h-[400px]" />
