@@ -134,67 +134,6 @@ function isValidPoint(p: { time: number; value: number }): boolean {
  * This improves chart readability by excluding extreme price movements
  * Uses 1st and 99th percentiles to filter out outliers more aggressively
  */
-function calculatePriceBounds(ohlcData: OHLCData[]): { min: number; max: number; hasOutliers: boolean } | null {
-  if (ohlcData.length === 0) return null
-
-  // Extract all price values (high and low from each candle)
-  const prices: number[] = []
-  ohlcData.forEach(candle => {
-    if (isValidCandle(candle)) {
-      prices.push(candle.high, candle.low)
-    }
-  })
-
-  if (prices.length === 0) return null
-
-  // Sort prices
-  const sortedPrices = [...prices].sort((a, b) => a - b)
-
-  // Use very aggressive percentiles to filter outliers (0.5th and 99.5th percentile)
-  // This excludes the top 0.5% and bottom 0.5% of extreme values
-  const p05Index = Math.floor(sortedPrices.length * 0.005)
-  const p995Index = Math.floor(sortedPrices.length * 0.995)
-  const p05 = sortedPrices[Math.max(0, p05Index)]
-  const p995 = sortedPrices[Math.min(sortedPrices.length - 1, p995Index)]
-
-  // Also use 1st and 99th percentiles as a less aggressive fallback
-  const p1Index = Math.floor(sortedPrices.length * 0.01)
-  const p99Index = Math.floor(sortedPrices.length * 0.99)
-  const p1 = sortedPrices[Math.max(0, p1Index)]
-  const p99 = sortedPrices[Math.min(sortedPrices.length - 1, p99Index)]
-
-  // Calculate IQR for additional filtering
-  const q1Index = Math.floor(sortedPrices.length * 0.25)
-  const q3Index = Math.floor(sortedPrices.length * 0.75)
-  const q1 = sortedPrices[q1Index]
-  const q3 = sortedPrices[q3Index]
-  const iqr = q3 - q1
-
-  // Use very tight IQR bounds (0.5 * IQR) for extremely aggressive filtering
-  const lowerBound = q1 - 0.5 * iqr
-  const upperBound = q3 + 0.5 * iqr
-
-  // Use the most conservative bounds (tightest range) - prefer 99.5th percentile for max
-  // This ensures we exclude the most extreme outliers
-  const min = Math.max(lowerBound, p05, p1, 0) // Don't go below 0
-  const max = Math.min(upperBound, p995, p99)
-
-  // Check if there are significant outliers
-  const absoluteMin = sortedPrices[0]
-  const absoluteMax = sortedPrices[sortedPrices.length - 1]
-  const hasOutliers = (absoluteMin < min) || (absoluteMax > max)
-
-  // Add small padding (3%) for better visualization
-  const range = max - min
-  const padding = range * 0.03
-
-  return {
-    min: Math.max(0, min - padding),
-    max: max + padding,
-    hasOutliers,
-  }
-}
-
 function removeSeries(chart: IChartApi, series: ISeriesApi<'Candlestick' | 'Line' | 'Histogram'> | null) {
   if (series) {
     try {
@@ -518,34 +457,38 @@ function applyPriceScaleConfiguration(
 
   try {
     const priceScale = series.priceScale()
-    const priceBounds = calculatePriceBounds(ohlcData)
+    const isMonthlyChart = config.timeframe === '1M'
+    const isCandlestick = config.chartType === 'candlestick'
     
-    if (priceBounds && priceBounds.hasOutliers) {
-      // Use extremely large margins to push outliers completely out of the main view
-      const isMonthlyChart = config.timeframe === '1M'
-      const marginSize = isMonthlyChart ? 0.45 : 0.35
-      
-      priceScale.applyOptions({
-        autoScale: true,
-        scaleMargins: {
-          top: marginSize,
-          bottom: marginSize,
-        },
-        entireTextOnly: false,
-      })
-      
-    } else {
-      priceScale.applyOptions({
-        autoScale: true,
-        scaleMargins: {
-          top: 0.1,
-          bottom: 0.1,
-        },
-        entireTextOnly: false,
-      })
-    }
+    // Apply tight margins for better candle visibility
+    // Using standard autoScale with tight margins - this naturally de-emphasizes outliers
+    // while still showing all data points. The tight margins make candles appear longer.
+    const marginSize = isCandlestick 
+      ? 0.02 // Very tight margins for candlestick charts to make candles longer
+      : (isMonthlyChart ? 0.1 : 0.1) // Standard margins for line charts
+    
+    // Use standard autoScale - it will show all data but tight margins will
+    // make the main price range more prominent and candles appear longer
+    priceScale.applyOptions({
+      autoScale: true,
+      scaleMargins: {
+        top: marginSize,
+        bottom: marginSize,
+      },
+      entireTextOnly: false,
+    })
   } catch (error) {
     logger.warn('Failed to apply price scale configuration', { error })
+    // Fallback: ensure autoScale is enabled even if configuration fails
+    try {
+      const priceScale = series.priceScale()
+      priceScale.applyOptions({
+        autoScale: true,
+        scaleMargins: { top: 0.1, bottom: 0.1 },
+      })
+    } catch {
+      // Ignore fallback errors
+    }
   }
 }
 
@@ -700,6 +643,24 @@ export function LightweightChart({
     }
 
     applyPriceScaleConfiguration(seriesRef.current, ohlcData, config)
+
+    // Apply better bar spacing for monthly charts to make candles more visible
+    const timeScale = chart.timeScale()
+    if (config.timeframe === '1M' && config.chartType === 'candlestick') {
+      // For monthly candlestick charts, use larger default spacing and higher max
+      timeScale.applyOptions({
+        barSpacing: 12, // Double the default spacing for monthly charts
+        minBarSpacing: 2, // Allow more spacing when zoomed in
+        maxBarSpacing: 100, // Allow much more spacing when zoomed out
+      })
+    } else {
+      // Reset to default for other timeframes
+      timeScale.applyOptions({
+        barSpacing: 6,
+        minBarSpacing: 1,
+        maxBarSpacing: 50,
+      })
+    }
 
     try {
       chart.timeScale().fitContent()
