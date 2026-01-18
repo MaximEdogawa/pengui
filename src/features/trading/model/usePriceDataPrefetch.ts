@@ -54,58 +54,58 @@ export function usePriceDataPrefetch(filters?: OrderBookFilters) {
     const buyKey = [...buyAssets].sort().join(',')
     const sellKey = [...sellAssets].sort().join(',')
 
-    // Prefetch for multiple common timeframes
-    PREFETCH_TIMEFRAMES.forEach((timeframe) => {
-      const limit = getLimitForTimeframe(timeframe)
-      // Limit is not included in query key - it's only used in the API call
-      // Timeframe is included so different timeframes have separate cache entries
-      const queryKey = ['priceData', network, buyKey, sellKey, timeframe]
+    // Prefetch once with max limit to warm cache for all timeframes
+    // Use the same query key structure as usePriceData (without timeframe) so prefetched data is reused
+    const maxLimit = Math.max(...PREFETCH_TIMEFRAMES.map(tf => getLimitForTimeframe(tf)))
+    const tickerIdFallback = tickerId || ''
+    // Limit is not included in query key - it's only used in the API call
+    // Query key matches usePriceData structure: ['priceData', network, buyKey, sellKey, tickerIdFallback]
+    const queryKey = ['priceData', network, buyKey, sellKey, tickerIdFallback]
 
-      // Check if data is already cached
-      const cachedData = queryClient.getQueryData(queryKey)
-      if (cachedData) {
-        return
-      }
-      
-      queryClient.prefetchQuery({
-        queryKey,
-        queryFn: async () => {
-          const response = await dexieDataService.getHistoricalTrades({
-            tickerId,
-            limit,
-          })
+    // Check if data is already cached
+    const cachedData = queryClient.getQueryData(queryKey)
+    if (cachedData) {
+      return
+    }
+    
+    queryClient.prefetchQuery({
+      queryKey,
+      queryFn: async () => {
+        const response = await dexieDataService.getHistoricalTrades({
+          tickerId,
+          limit: maxLimit,
+        })
 
-          if (!response.success) {
-            throw new Error('Failed to fetch historical trades')
+        if (!response.success) {
+          throw new Error('Failed to fetch historical trades')
+        }
+
+        const tradesData = response.data
+        if (!tradesData) return []
+
+        if (Array.isArray(tradesData)) {
+          return tradesData
+        }
+
+        if (typeof tradesData === 'object' && tradesData !== null && 'trades' in tradesData) {
+          const nestedTrades = (tradesData as { trades: unknown }).trades
+          if (Array.isArray(nestedTrades)) {
+            return nestedTrades
           }
+        }
 
-          const tradesData = response.data
-          if (!tradesData) return []
-
-          if (Array.isArray(tradesData)) {
-            return tradesData
+        if (typeof tradesData === 'object' && tradesData !== null && 'data' in tradesData) {
+          const nestedData = (tradesData as { data: unknown }).data
+          if (Array.isArray(nestedData)) {
+            return nestedData
           }
+        }
 
-          if (typeof tradesData === 'object' && tradesData !== null && 'trades' in tradesData) {
-            const nestedTrades = (tradesData as { trades: unknown }).trades
-            if (Array.isArray(nestedTrades)) {
-              return nestedTrades
-            }
-          }
-
-          if (typeof tradesData === 'object' && tradesData !== null && 'data' in tradesData) {
-            const nestedData = (tradesData as { data: unknown }).data
-            if (Array.isArray(nestedData)) {
-              return nestedData
-            }
-          }
-
-          return []
-        },
-        staleTime: 60 * 1000, // 1 minute
-      }).catch((error) => {
-        logger.error('Failed to prefetch price data', { error, queryKey, tickerId, timeframe })
-      })
+        return []
+      },
+      staleTime: 60 * 1000, // 1 minute
+    }).catch((error) => {
+      logger.error('Failed to prefetch price data', { error, queryKey, tickerId })
     })
   }, [tickerId, filters, network, queryClient, dexieDataService])
 }

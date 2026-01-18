@@ -63,7 +63,7 @@ const TIMEFRAME_ZOOM_HOURS: Record<string, number> = {
   '1h': 72,      // Last 6 days (24 * 6)
   '4h': 720,      // Last month (24 * 30)
   '1D': 2160,     // Last 3 months (24 * 90)
-  '1W': 4310,    // Last 6 months (24 * 90)
+  '1W': 4320,    // Last 6 months (24 * 30 * 6 = 4320)
   '1M': 8760,    // Last year (24 * 365)
 } as const
 

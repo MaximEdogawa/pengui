@@ -147,16 +147,19 @@ export function usePriceData({ tickerId, timeframe, filters, enabled = true, isU
   // Create query key similar to order book queries, including ticker information
   // Uses buyKey/sellKey (human-readable) instead of tickerId for better DevTools visibility
   // Limit and timeframe are not included in the query key - they're only used in the API call
+  // Includes tickerId fallback to prevent cache collisions when filters are missing
   const queryKey = useMemo(() => {
     const buyAssets = filters?.buyAsset || []
     const sellAssets = filters?.sellAsset || []
     const buyKey = [...buyAssets].sort().join(',')
     const sellKey = [...sellAssets].sort().join(',')
+    const tickerIdFallback = tickerId || ''
     
     // Always use buyKey/sellKey structure (even if empty) for consistency with order book
+    // tickerId fallback prevents cache collisions when filters are missing
     // tickerId, limit, and timeframe are still used in queryFn for the API call, but not in the cache key
-    return ['priceData', network, buyKey, sellKey]
-  }, [network, filters?.buyAsset, filters?.sellAsset])
+    return ['priceData', network, buyKey, sellKey, tickerIdFallback]
+  }, [network, filters?.buyAsset, filters?.sellAsset, tickerId])
 
   // Try to get cached data directly from query client, even if query is disabled
   // Also check for data with old query key format (with tickerId) for backward compatibility
