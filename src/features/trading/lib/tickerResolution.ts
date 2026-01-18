@@ -44,7 +44,7 @@ function assetMatchesTickerField(
 }
 
 function constructTickerId(baseCurrency: string, targetCurrency: string = 'xch'): string {
-  return `${baseCurrency}_${normalizeAssetForMatching(targetCurrency)}`
+  return `${normalizeAssetForMatching(baseCurrency)}_${normalizeAssetForMatching(targetCurrency)}`
 }
 export function resolveTickerId(
   filters: OrderBookFilters | undefined,

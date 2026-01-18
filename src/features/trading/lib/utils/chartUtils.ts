@@ -391,13 +391,24 @@ export function generateSyntheticOHLCFromOrderBook(
   const timeframeMs = getTimeframeDurationMs(timeframe)
   const numCandles = Math.min(10, Math.max(5, Math.floor((24 * 60 * 60 * 1000) / timeframeMs)))
   
+  // Deterministic PRNG using seed based on timeframe and midPrice
+  const seed = Math.floor(now / timeframeMs) + Math.floor(midPrice * 1000)
+  let prngState = seed
+  const deterministicRandom = () => {
+    // Simple LCG (Linear Congruential Generator) for deterministic randomness
+    prngState = (prngState * 1664525 + 1013904223) % 2 ** 32
+    return (prngState % 10000) / 10000 // Normalize to 0-1
+  }
+  
   const candles = Array.from({ length: numCandles }, (_, index) => {
     const i = numCandles - 1 - index
     const candleTime = now - (i * timeframeMs)
     const candleStart = getCandleStartTime(candleTime, timeframe)
     const priceVariation = (numCandles - i) * 0.001
-    const candlePrice = midPrice * (1 + (Math.random() - 0.5) * priceVariation)
-    const randomVariation = Math.abs(Math.random() * 0.002)
+    // Use deterministic PRNG instead of Math.random()
+    const randomValue = deterministicRandom()
+    const candlePrice = midPrice * (1 + (randomValue - 0.5) * priceVariation)
+    const randomVariation = Math.abs(deterministicRandom() * 0.002)
     
     return {
       time: toSeconds(candleStart),

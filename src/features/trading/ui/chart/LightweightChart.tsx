@@ -158,9 +158,7 @@ function isValidPoint(p: { time: number; value: number }): boolean {
 }
 
 /**
- * Calculate price bounds ignoring outliers using aggressive percentile filtering
- * This improves chart readability by excluding extreme price movements
- * Uses 1st and 99th percentiles to filter out outliers more aggressively
+ * Remove a series from the chart if it exists, swallowing errors
  */
 function removeSeries(chart: IChartApi, series: ISeriesApi<'Candlestick' | 'Line' | 'Histogram'> | null) {
   if (series) {
@@ -653,7 +651,13 @@ export function LightweightChart({
   const isUserScrollingRef = useRef(false)
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const previousTimeframeRef = useRef<string | null>(null)
+  const ohlcDataRef = useRef<OHLCData[]>(ohlcData)
   const [hoveredData, setHoveredData] = useState<OHLCData | null>(null)
+
+  // Update ref when ohlcData changes to avoid stale closure
+  useEffect(() => {
+    ohlcDataRef.current = ohlcData
+  }, [ohlcData])
 
   useEffect(() => {
     if (!chartContainerRef.current || chartRef.current) return
@@ -690,8 +694,8 @@ export function LightweightChart({
     // Subscribe to crosshair move to update hovered data
     const handleCrosshairMove = (param: Parameters<Parameters<IChartApi['subscribeCrosshairMove']>[0]>[0]) => {
       if (param.time && param.seriesData) {
-        // Use current ohlcData from closure
-        const currentData = ohlcData
+        // Use current ohlcData from ref to avoid stale closure
+        const currentData = ohlcDataRef.current
         if (currentData.length > 0) {
           // Find the candle data for the hovered time
           const hoveredTime = param.time as number
@@ -780,7 +784,7 @@ export function LightweightChart({
       chartRef.current?.remove()
       chartRef.current = null
     }
-  }, [onScrollingChange, ohlcData])
+  }, [onScrollingChange])
 
   useEffect(() => {
     if (!chartRef.current) return

@@ -40,6 +40,9 @@ export function calculateRSI(data: number[], period: number = 14): number[] {
   let avgLoss = losses.slice(0, period).reduce((a, b) => a + b, 0) / period
 
   const calculateRSIValue = (gain: number, loss: number) => {
+    // Handle neutral case: both gain and loss are zero
+    if (gain === 0 && loss === 0) return 50
+    // If loss is zero but gain is not, RSI is 100
     if (loss === 0) return 100
     const rs = gain / loss
     return 100 - (100 / (1 + rs))

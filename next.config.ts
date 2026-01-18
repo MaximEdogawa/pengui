@@ -3,7 +3,7 @@ import type { NextConfig } from 'next'
 const nextConfig: NextConfig = {
   /* config options here */
   // Transpile the package - this tells Next.js to compile it
-  transpilePackages: ['@maximedogawa/chia-wallet-connect-react'],
+  transpilePackages: ['@maximedogawa/chia-wallet-connect-react', 'lightweight-charts'],
   // Configure Turbopack (default in Next.js 16)
   turbopack: {
     // Set root to silence warning about multiple lockfiles

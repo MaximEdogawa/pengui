@@ -57,8 +57,9 @@ export function usePriceDataPrefetch(filters?: OrderBookFilters) {
     // Prefetch for multiple common timeframes
     PREFETCH_TIMEFRAMES.forEach((timeframe) => {
       const limit = getLimitForTimeframe(timeframe)
-      // Limit and timeframe are not included in query key - they're only used in the API call
-      const queryKey = ['priceData', network, buyKey, sellKey]
+      // Limit is not included in query key - it's only used in the API call
+      // Timeframe is included so different timeframes have separate cache entries
+      const queryKey = ['priceData', network, buyKey, sellKey, timeframe]
 
       // Check if data is already cached
       const cachedData = queryClient.getQueryData(queryKey)

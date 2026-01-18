@@ -56,22 +56,6 @@ function getCachedPriceData(
       }
     }
     
-    // Also try to find any priceData query that might match by network
-    if (!cached) {
-      const queryCache = queryClient.getQueryCache()
-      const allPriceDataQueries = queryCache.findAll({ queryKey: ['priceData'] })
-      
-      // Try to find a matching query by network (timeframe is no longer in the key)
-      const matchingQuery = allPriceDataQueries.find(q => {
-        const key = q.queryKey
-        return key[1] === network
-      })
-      
-      if (matchingQuery) {
-        cached = matchingQuery.state.data
-      }
-    }
-    
     return cached
   } catch (error) {
     logger.error('Error accessing cached data', { error, queryKey })
