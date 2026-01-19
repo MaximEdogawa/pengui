@@ -644,6 +644,102 @@ function applyBarSpacing(timeScale: ReturnType<IChartApi['timeScale']>, config: 
   }
 }
 
+function createCrosshairMoveHandler(
+  ohlcDataRef: React.MutableRefObject<OHLCData[]>,
+  setHoveredData: React.Dispatch<React.SetStateAction<OHLCData | null>>
+) {
+  return (param: Parameters<Parameters<IChartApi['subscribeCrosshairMove']>[0]>[0]) => {
+    if (param.time && param.seriesData) {
+      const currentData = ohlcDataRef.current
+      if (currentData.length > 0) {
+        const hoveredTime = param.time as number
+        const candle = currentData.find(c => c.time === hoveredTime)
+        if (candle) {
+          setHoveredData(candle)
+        } else {
+          const closestCandle = currentData.reduce((prev, curr) => {
+            const prevDiff = Math.abs(prev.time - hoveredTime)
+            const currDiff = Math.abs(curr.time - hoveredTime)
+            return currDiff < prevDiff ? curr : prev
+          })
+          setHoveredData(closestCandle)
+        }
+      }
+    } else {
+      setHoveredData(null)
+    }
+  }
+}
+
+function createWheelHandler(
+  chartContainerRef: React.RefObject<HTMLDivElement | null>,
+  chartRef: React.RefObject<IChartApi | null>,
+  timeScale: ReturnType<IChartApi['timeScale']>,
+  handleVisibleRangeChange: () => void
+) {
+  return (e: WheelEvent) => {
+    if (!chartContainerRef.current || !chartRef.current) return
+    
+    const rect = chartContainerRef.current.getBoundingClientRect()
+    const isOverChart = 
+      e.clientX >= rect.left && 
+      e.clientX <= rect.right && 
+      e.clientY >= rect.top && 
+      e.clientY <= rect.bottom
+    
+    if (!isOverChart) return
+    
+    e.preventDefault()
+    
+    const zoomMultiplier = 2.5
+    const currentOptions = timeScale.options()
+    const currentBarSpacing = currentOptions.barSpacing || 6
+    const minBarSpacing = currentOptions.minBarSpacing || 1
+    const maxBarSpacing = currentOptions.maxBarSpacing || 50
+    
+    const delta = e.deltaY * -0.01 * zoomMultiplier
+    let newBarSpacing = currentBarSpacing + delta
+    newBarSpacing = Math.max(minBarSpacing, Math.min(maxBarSpacing, newBarSpacing))
+    
+    timeScale.applyOptions({ barSpacing: newBarSpacing })
+    handleVisibleRangeChange()
+  }
+}
+
+function setupResizeObserver(
+  chartContainerRef: React.RefObject<HTMLDivElement | null>,
+  chartRef: React.RefObject<IChartApi | null>
+) {
+  const handleResize = () => {
+    if (chartRef.current && chartContainerRef.current) {
+      const width = chartContainerRef.current.clientWidth
+      const height = chartContainerRef.current.clientHeight
+      if (width > 0 && height > 0) {
+        chartRef.current.applyOptions({ width, height })
+      }
+    }
+  }
+
+  const resizeObserver = new ResizeObserver((entries) => {
+    for (const entry of entries) {
+      if (entry.target === chartContainerRef.current) {
+        handleResize()
+        break
+      }
+    }
+  })
+
+  const container = chartContainerRef.current
+  if (container) {
+    resizeObserver.observe(container)
+  }
+
+  window.addEventListener('resize', handleResize)
+  handleResize()
+
+  return { resizeObserver, handleResize }
+}
+
 export function LightweightChart({
   ohlcData,
   config,
@@ -701,113 +797,18 @@ export function LightweightChart({
     timeScale.subscribeVisibleTimeRangeChange(handleVisibleRangeChange)
 
     // Subscribe to crosshair move to update hovered data
-    const handleCrosshairMove = (param: Parameters<Parameters<IChartApi['subscribeCrosshairMove']>[0]>[0]) => {
-      if (param.time && param.seriesData) {
-        // Use current ohlcData from ref to avoid stale closure
-        const currentData = ohlcDataRef.current
-        if (currentData.length > 0) {
-          // Find the candle data for the hovered time
-          const hoveredTime = param.time as number
-          const candle = currentData.find(c => c.time === hoveredTime)
-          if (candle) {
-            setHoveredData(candle)
-          } else {
-            // If exact match not found, find closest candle
-            const closestCandle = currentData.reduce((prev, curr) => {
-              const prevDiff = Math.abs(prev.time - hoveredTime)
-              const currDiff = Math.abs(curr.time - hoveredTime)
-              return currDiff < prevDiff ? curr : prev
-            })
-            setHoveredData(closestCandle)
-          }
-        }
-      } else {
-        setHoveredData(null)
-      }
-    }
-    
+    const handleCrosshairMove = createCrosshairMoveHandler(ohlcDataRef, setHoveredData)
     chart.subscribeCrosshairMove(handleCrosshairMove)
 
     // Custom mouse wheel handler for faster zoom
-    const handleWheel = (e: WheelEvent) => {
-      if (!chartContainerRef.current || !chartRef.current) return
-      
-      // Only handle wheel events when over the chart
-      const rect = chartContainerRef.current.getBoundingClientRect()
-      const isOverChart = 
-        e.clientX >= rect.left && 
-        e.clientX <= rect.right && 
-        e.clientY >= rect.top && 
-        e.clientY <= rect.bottom
-      
-      if (!isOverChart) return
-      
-      // Prevent default scrolling
-      e.preventDefault()
-      
-      const zoomMultiplier = 2.5 // Zoom speed multiplier (reduced from 2.5 for less acceleration)
-      const currentOptions = timeScale.options()
-      const currentBarSpacing = currentOptions.barSpacing || 6
-      const minBarSpacing = currentOptions.minBarSpacing || 1
-      const maxBarSpacing = currentOptions.maxBarSpacing || 50
-      
-      // Calculate new bar spacing based on wheel delta
-      // Negative deltaY means zoom in (decrease spacing), positive means zoom out (increase spacing)
-      const delta = e.deltaY * -0.01 * zoomMultiplier // Negative to invert direction, multiply for speed
-      let newBarSpacing = currentBarSpacing + delta
-      
-      // Clamp to min/max bounds
-      newBarSpacing = Math.max(minBarSpacing, Math.min(maxBarSpacing, newBarSpacing))
-      
-      // Apply the new bar spacing for faster zoom
-      timeScale.applyOptions({
-        barSpacing: newBarSpacing,
-      })
-      
-      // Mark as scrolling
-      handleVisibleRangeChange()
-    }
-    
-    // Add wheel event listener to container
+    const handleWheel = createWheelHandler(chartContainerRef, chartRef, timeScale, handleVisibleRangeChange)
     const container = chartContainerRef.current
     if (container) {
       container.addEventListener('wheel', handleWheel, { passive: false })
     }
 
-    const handleResize = () => {
-      if (chartRef.current && chartContainerRef.current) {
-        const width = chartContainerRef.current.clientWidth
-        const height = chartContainerRef.current.clientHeight
-        // Only resize if dimensions are valid
-        if (width > 0 && height > 0) {
-          chartRef.current.applyOptions({
-            width,
-            height,
-          })
-        }
-      }
-    }
-
-    // Use ResizeObserver to watch the container element for size changes
-    // This handles cases where the container resizes without window resize (e.g., layout changes)
-    const resizeObserver = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        if (entry.target === chartContainerRef.current) {
-          handleResize()
-          break
-        }
-      }
-    })
-
-    if (container) {
-      resizeObserver.observe(container)
-    }
-
-    // Also listen to window resize as fallback
-    window.addEventListener('resize', handleResize)
-    
-    // Initial resize to ensure chart is properly sized
-    handleResize()
+    // Setup ResizeObserver for container resizing
+    const { resizeObserver, handleResize } = setupResizeObserver(chartContainerRef, chartRef)
     
     return () => {
       resizeObserver.disconnect()
