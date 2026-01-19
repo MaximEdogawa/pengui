@@ -770,19 +770,47 @@ export function LightweightChart({
     
     // Add wheel event listener to container
     const container = chartContainerRef.current
-    container.addEventListener('wheel', handleWheel, { passive: false })
+    if (container) {
+      container.addEventListener('wheel', handleWheel, { passive: false })
+    }
 
     const handleResize = () => {
       if (chartRef.current && chartContainerRef.current) {
-        chartRef.current.applyOptions({
-          width: chartContainerRef.current.clientWidth,
-          height: chartContainerRef.current.clientHeight,
-        })
+        const width = chartContainerRef.current.clientWidth
+        const height = chartContainerRef.current.clientHeight
+        // Only resize if dimensions are valid
+        if (width > 0 && height > 0) {
+          chartRef.current.applyOptions({
+            width,
+            height,
+          })
+        }
       }
     }
 
+    // Use ResizeObserver to watch the container element for size changes
+    // This handles cases where the container resizes without window resize (e.g., layout changes)
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.target === chartContainerRef.current) {
+          handleResize()
+          break
+        }
+      }
+    })
+
+    if (container) {
+      resizeObserver.observe(container)
+    }
+
+    // Also listen to window resize as fallback
     window.addEventListener('resize', handleResize)
+    
+    // Initial resize to ensure chart is properly sized
+    handleResize()
+    
     return () => {
+      resizeObserver.disconnect()
       window.removeEventListener('resize', handleResize)
       if (container) {
         container.removeEventListener('wheel', handleWheel)
