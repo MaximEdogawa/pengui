@@ -52,37 +52,71 @@ export function useDexieSearch() {
 
   const searchOffersMutation = useMutation({
     mutationFn: async (params: DexieOfferSearchParams = {}): Promise<DexieOfferSearchResponse> => {
+      const queryParams = buildOfferSearchParams(params)
+      const url = `${dexieApiBaseUrl}/v1/offers?${queryParams.toString()}`
+      
+      // Add timeout to prevent hanging requests
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout
+      
+      let response: Response
       try {
-        const queryParams = buildOfferSearchParams(params)
-        const url = `${dexieApiBaseUrl}/v1/offers?${queryParams.toString()}`
-        const response = await fetch(url)
+        response = await fetch(url, { signal: controller.signal })
+      } catch (fetchError) {
+        clearTimeout(timeoutId)
+        if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+          throw new Error('Request timeout: The request took too long to complete')
+        }
+        // Handle network errors (connection issues, CORS, etc.)
+        if (fetchError instanceof TypeError) {
+          throw new Error(`Network error: ${fetchError.message}`)
+        }
+        throw fetchError
+      } finally {
+        clearTimeout(timeoutId)
+      }
 
-        if (!response.ok) {
-          const errorMessage = await extractErrorMessage(response)
+      if (!response.ok) {
+        // Handle rate limiting specifically
+        if (response.status === 429) {
+          const errorMessage = 'Rate limit exceeded. Please try again later.'
           logApiError('searchOffers', url, response.status, errorMessage)
           throw new Error(errorMessage)
         }
+        
+        const errorMessage = await extractErrorMessage(response)
+        logApiError('searchOffers', url, response.status, errorMessage)
+        throw new Error(errorMessage)
+      }
 
-        const data = await response.json()
-        const parsed = parseOffersData(data)
+      const data = await response.json()
+      const parsed = parseOffersData(data)
 
-        return {
-          success: true,
-          data: parsed.offers,
-          total: parsed.total,
-          page: parsed.page,
-          page_size: parsed.page_size,
-        }
-      } catch (error) {
-        logger.error('Failed to search offers:', error)
-        throw error
+      return {
+        success: true,
+        data: parsed.offers,
+        total: parsed.total,
+        page: parsed.page,
+        page_size: parsed.page_size,
       }
     },
+    retry: (failureCount, error) => {
+      // Don't retry on rate limit errors (429) - wait for user action
+      if (error instanceof Error && error.message.includes('Rate limit')) {
+        return false
+      }
+      // Retry up to 2 times for other errors with exponential backoff
+      return failureCount < 2
+    },
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000), // Exponential backoff, max 5s
     onSuccess: () => {
       logger.info('Offers searched successfully')
     },
     onError: (error) => {
-      logger.error('Failed to search offers:', error)
+      // Only log if it's not a rate limit error (to avoid spam)
+      if (!(error instanceof Error && error.message.includes('Rate limit'))) {
+        logger.error('Failed to search offers:', error)
+      }
     },
   })
 

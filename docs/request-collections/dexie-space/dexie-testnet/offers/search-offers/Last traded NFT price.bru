@@ -1,0 +1,19 @@
+meta {
+  name: Last traded NFT price
+  type: http
+  seq: 5
+}
+
+get {
+  url: https://api-testnet.dexie.space/v1/offers?offered_or_requested=nft18qvwxv5gxs3wdw84x2x7887yclddvnu3sux8ynkwn8lm3zx8kmss2m77sd&status=4&sort=date_completed&compact=true&page_size=1
+  body: none
+  auth: inherit
+}
+
+params:query {
+  offered_or_requested: nft18qvwxv5gxs3wdw84x2x7887yclddvnu3sux8ynkwn8lm3zx8kmss2m77sd
+  status: 4
+  sort: date_completed
+  compact: true
+  page_size: 1
+}

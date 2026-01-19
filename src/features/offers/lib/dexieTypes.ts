@@ -71,16 +71,28 @@ export interface DexieOrderBookResponse {
 
 export interface DexieHistoricalTrade {
   trade_id: string
-  ticker_id: string
+  ticker_id?: string // May be in response wrapper instead
   price: number
-  volume: number
-  timestamp: number
-  side: 'buy' | 'sell'
+  volume?: number // Legacy field, prefer base_volume/target_volume
+  base_volume?: number // Actual API field
+  target_volume?: number // Actual API field
+  timestamp?: number // Legacy field, prefer trade_timestamp
+  trade_timestamp?: number // Actual API field
+  side?: 'buy' | 'sell' // Legacy field, prefer type
+  type?: string // Actual API field
 }
 
 export interface DexieHistoricalTradesResponse {
   success: boolean
   data: DexieHistoricalTrade[]
+}
+
+export interface DexieHistoricalTradesApiResponse {
+  success: boolean
+  ticker_id: string
+  pool_id?: string
+  timestamp?: number
+  trades: DexieHistoricalTrade[]
 }
 
 export interface DexieOfferSearchParams {

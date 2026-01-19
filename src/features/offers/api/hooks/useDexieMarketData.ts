@@ -25,12 +25,33 @@ export function useDexieMarketData() {
       depth?: number
     }): Promise<DexieOrderBookResponse> => {
       try {
-        const response = await fetch(
-          `${dexieApiBaseUrl}/v3/prices/orderbook?ticker_id=${tickerId}&depth=${depth}`
-        )
+        const url = `${dexieApiBaseUrl}/v3/prices/orderbook?ticker_id=${tickerId}&depth=${depth}`
+        const response = await fetch(url)
 
         if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`)
+          const errorText = await response.text()
+          let errorMessage = `HTTP error! status: ${response.status}`
+          
+          try {
+            const errorData = JSON.parse(errorText)
+            if (errorData.message || errorData.error) {
+              errorMessage = `${errorMessage}: ${errorData.message || errorData.error}`
+            } else {
+              errorMessage = `${errorMessage}: ${errorText}`
+            }
+          } catch {
+            errorMessage = `${errorMessage}: ${errorText}`
+          }
+
+          logger.error('Order book API error', {
+            status: response.status,
+            statusText: response.statusText,
+            errorText,
+            tickerId,
+            network,
+            url,
+          })
+          throw new Error(errorMessage)
         }
 
         const data = await response.json()
@@ -60,18 +81,74 @@ export function useDexieMarketData() {
       limit?: number
     }): Promise<DexieHistoricalTradesResponse> => {
       try {
-        const response = await fetch(
-          `${dexieApiBaseUrl}/v3/prices/trades?ticker_id=${tickerId}&limit=${limit}`
-        )
+        const url = `${dexieApiBaseUrl}/v3/prices/historical_trades?ticker_id=${tickerId}&limit=${limit}`
+        logger.info('Fetching historical trades', { url, tickerId, limit, network })
+        
+        const response = await fetch(url)
 
         if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`)
+          const errorText = await response.text()
+          let errorMessage = `HTTP error! status: ${response.status}`
+          
+          try {
+            const errorData = JSON.parse(errorText)
+            if (errorData.message || errorData.error) {
+              errorMessage = `${errorMessage}: ${errorData.message || errorData.error}`
+            } else {
+              errorMessage = `${errorMessage}: ${errorText}`
+            }
+          } catch {
+            errorMessage = `${errorMessage}: ${errorText}`
+          }
+
+          logger.error('Historical trades API error', {
+            status: response.status,
+            statusText: response.statusText,
+            errorText,
+            tickerId,
+            network,
+            url,
+          })
+          throw new Error(errorMessage)
         }
 
         const data = await response.json()
+        
+        logger.info('Historical trades API response', {
+          tickerId,
+          network,
+          hasData: !!data,
+          dataType: typeof data,
+          isArray: Array.isArray(data),
+          hasTrades: !!(data && typeof data === 'object' && 'trades' in data),
+          hasDataField: !!(data && typeof data === 'object' && 'data' in data),
+          dataKeys: data && typeof data === 'object' ? Object.keys(data) : [],
+          sampleData: Array.isArray(data) && data.length > 0 ? data[0] : (data && typeof data === 'object' ? data : null),
+        })
+        
+        // Handle different response structures
+        let tradesData: unknown = data
+        
+        // If response has a 'data' field, use it
+        if (data && typeof data === 'object' && 'data' in data) {
+          tradesData = (data as { data: unknown }).data
+        }
+        // If response has a 'trades' field, use it
+        else if (data && typeof data === 'object' && 'trades' in data) {
+          tradesData = (data as { trades: unknown }).trades
+        }
+        // Otherwise use the data as-is
+        
+        // Ensure tradesData is an array for type safety
+        const tradesArray = Array.isArray(tradesData) 
+          ? tradesData 
+          : (tradesData && typeof tradesData === 'object' && 'trades' in tradesData && Array.isArray((tradesData as { trades: unknown }).trades))
+            ? (tradesData as { trades: unknown[] }).trades
+            : []
+        
         return {
           success: true,
-          data: data.data || data,
+          data: tradesArray,
         }
       } catch (error) {
         logger.error('Failed to fetch historical trades:', error)

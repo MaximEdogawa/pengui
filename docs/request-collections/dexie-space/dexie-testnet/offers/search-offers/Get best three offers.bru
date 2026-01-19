@@ -1,0 +1,17 @@
+meta {
+  name: Get best three offers
+  type: http
+  seq: 1
+}
+
+get {
+  url: https://api-testnet.dexie.space/v1/offers?requested=TDBX&offered=TXCH&page_size=3
+  body: none
+  auth: none
+}
+
+params:query {
+  requested: TDBX
+  offered: TXCH
+  page_size: 3
+}

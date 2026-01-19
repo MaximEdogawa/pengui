@@ -1,0 +1,11 @@
+meta {
+  name: Get all tickers
+  type: http
+  seq: 1
+}
+
+get {
+  url: https://api-testnet.dexie.space/v3/prices/tickers
+  body: none
+  auth: inherit
+}

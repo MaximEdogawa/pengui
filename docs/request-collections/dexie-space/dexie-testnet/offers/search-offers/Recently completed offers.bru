@@ -1,0 +1,18 @@
+meta {
+  name: Recently completed offers
+  type: http
+  seq: 3
+}
+
+get {
+  url: https://api-testnet.dexie.space/v1/offers?offered_or_requested=col1z0ef7w5n4vq9qkue67y8jnwumd9799sm50t8fyle73c70ly4z0ws0p2rhl&status=4&sort=date_completed&compact=true
+  body: none
+  auth: inherit
+}
+
+params:query {
+  offered_or_requested: col1z0ef7w5n4vq9qkue67y8jnwumd9799sm50t8fyle73c70ly4z0ws0p2rhl
+  status: 4
+  sort: date_completed
+  compact: true
+}

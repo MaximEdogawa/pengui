@@ -1,0 +1,16 @@
+meta {
+  name: Historical Trades Data
+  type: http
+  seq: 1
+}
+
+get {
+  url: https://api-testnet.dexie.space/v3/prices/historical_trades?ticker_id=db1a9020d48d9d4ad22631b66ab4b9ebd3637ef7758ad38881348c5d24c38f20_xch&limit=3
+  body: none
+  auth: inherit
+}
+
+params:query {
+  ticker_id: db1a9020d48d9d4ad22631b66ab4b9ebd3637ef7758ad38881348c5d24c38f20_xch
+  limit: 3
+}

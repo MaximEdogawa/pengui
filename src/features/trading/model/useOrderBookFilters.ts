@@ -12,6 +12,7 @@ import {
   clearFilterStateFromStorage,
 } from '../lib/orderBookFilterStorage'
 import { useOrderBookFilterActions } from './hooks/useOrderBookFilterActions'
+import { usePriceDataPrefetch } from './usePriceDataPrefetch'
 
 interface FilterState {
   filters: OrderBookFilters
@@ -144,6 +145,9 @@ export function useOrderBookFilters() {
     state.filters.status,
     state.filters.pagination,
   ])
+
+  // Prefetch price data when filters change (so it's ready when switching to chart tab)
+  usePriceDataPrefetch(filters)
 
   // Extract filter action handlers
   const filterActions = useOrderBookFilterActions({
