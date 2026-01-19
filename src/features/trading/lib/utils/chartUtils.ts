@@ -301,10 +301,18 @@ export function ohlcToVolumePoints(ohlcData: OHLCData[]): VolumeDataPoint[] {
   }))
 }
 
+interface TransformOrderBookOptions {
+  filters?: { buyAsset?: string[]; sellAsset?: string[] }
+  buyOrders?: OrderBookOrder[]
+  sellOrders?: OrderBookOrder[]
+  calculatePriceFn?: (order: OrderBookOrder) => number
+}
+
 export function transformOrderBookForChart(
   orders: OrderBookOrder[],
-  filters?: { buyAsset?: string[]; sellAsset?: string[] }
+  options?: TransformOrderBookOptions
 ): OrderBookChartData {
+  const { filters, buyOrders, sellOrders, calculatePriceFn } = options || {}
   if (orders.length === 0) {
     return {
       bids: [],
@@ -315,49 +323,86 @@ export function transformOrderBookForChart(
     }
   }
 
-  const nativeTicker = filters?.buyAsset?.find(a => a === 'XCH' || a === 'TXCH') ||
-    filters?.sellAsset?.find(a => a === 'XCH' || a === 'TXCH') ||
-    'XCH'
+  // If filtered orders are provided, use them directly
+  // Otherwise, fall back to the old logic for backward compatibility
+  const bids: Array<{ price: number; volume: number }> = []
+  const asks: Array<{ price: number; volume: number }> = []
 
-  const isNativeAsset = (code: string | undefined) => 
-    !code || code === nativeTicker || code === 'TXCH' || code === 'XCH'
+  if (buyOrders && sellOrders && calculatePriceFn) {
+    // Use the filtered buy/sell orders directly with the correct price calculation
+    buyOrders.forEach((order) => {
+      if (order.offering.length === 0 || order.requesting.length === 0) return
 
-  const { bids, asks } = orders.reduce((acc, order) => {
-    if (order.offering.length === 0 || order.requesting.length === 0) return acc
+      // For buy orders (bids): volume is the amount of buyAsset they're requesting (what they want to buy)
+      const requestingAmount = order.requesting[0]?.amount || 0
+      if (requestingAmount === 0) return
 
-    const requestingAmount = order.requesting[0]?.amount || 0
-    const offeringAmount = order.offering[0]?.amount || 0
-    if (offeringAmount === 0) return acc
+      // Use the same price calculation function as the order book table
+      const price = calculatePriceFn(order)
+      if (price <= 0 || !isFinite(price)) return
 
-    const price = requestingAmount / offeringAmount
-    const volume = offeringAmount
-    const entry = { price, volume }
+      const volume = requestingAmount
+      bids.push({ price, volume })
+    })
 
-    const isSellOrder = order.offering.some(a => isNativeAsset(a.code))
-    const isBuyOrder = order.requesting.some(a => isNativeAsset(a.code))
+    sellOrders.forEach((order) => {
+      if (order.offering.length === 0 || order.requesting.length === 0) return
 
-    if (isSellOrder) {
-      acc.asks.push(entry)
-    } else if (isBuyOrder) {
-      acc.bids.push(entry)
-    } else if (filters?.buyAsset && filters?.sellAsset) {
-      const avgPrice = orders.reduce((sum, o) => {
-        const req = o.requesting[0]?.amount || 0
-        const off = o.offering[0]?.amount || 0
-        return sum + (off > 0 ? req / off : 0)
-      }, 0) / orders.length
+      // For sell orders (asks): volume is the amount of sellAsset they're offering (what they want to sell)
+      const offeringAmount = order.offering[0]?.amount || 0
+      if (offeringAmount === 0) return
 
-      if (price < avgPrice) {
-        acc.asks.push(entry)
-      } else {
-        acc.bids.push(entry)
+      // Use the same price calculation function as the order book table
+      const price = calculatePriceFn(order)
+      if (price <= 0 || !isFinite(price)) return
+
+      const volume = offeringAmount
+      asks.push({ price, volume })
+    })
+  } else {
+    // Fallback to old logic (for backward compatibility)
+    const nativeTicker = filters?.buyAsset?.find(a => a === 'XCH' || a === 'TXCH') ||
+      filters?.sellAsset?.find(a => a === 'XCH' || a === 'TXCH') ||
+      'XCH'
+
+    const isNativeAsset = (code: string | undefined) => 
+      !code || code === nativeTicker || code === 'TXCH' || code === 'XCH'
+
+    orders.forEach((order) => {
+      if (order.offering.length === 0 || order.requesting.length === 0) return
+
+      const requestingAmount = order.requesting[0]?.amount || 0
+      const offeringAmount = order.offering[0]?.amount || 0
+      if (offeringAmount === 0) return
+
+      const price = requestingAmount / offeringAmount
+      const volume = offeringAmount
+      const entry = { price, volume }
+
+      const isSellOrder = order.offering.some(a => isNativeAsset(a.code))
+      const isBuyOrder = order.requesting.some(a => isNativeAsset(a.code))
+
+      if (isSellOrder) {
+        asks.push(entry)
+      } else if (isBuyOrder) {
+        bids.push(entry)
+      } else if (filters?.buyAsset && filters?.sellAsset) {
+        const avgPrice = orders.reduce((sum, o) => {
+          const req = o.requesting[0]?.amount || 0
+          const off = o.offering[0]?.amount || 0
+          return sum + (off > 0 ? req / off : 0)
+        }, 0) / orders.length
+
+        if (price < avgPrice) {
+          asks.push(entry)
+        } else {
+          bids.push(entry)
+        }
+      } else if (order.pricePerUnit > 0) {
+        bids.push({ price: order.pricePerUnit, volume })
       }
-    } else if (order.pricePerUnit > 0) {
-      acc.bids.push({ price: order.pricePerUnit, volume })
-    }
-
-    return acc
-  }, { bids: [] as Array<{ price: number; volume: number }>, asks: [] as Array<{ price: number; volume: number }> })
+    })
+  }
 
   bids.sort((a, b) => b.price - a.price)
   asks.sort((a, b) => a.price - b.price)

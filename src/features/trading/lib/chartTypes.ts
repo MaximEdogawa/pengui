@@ -42,3 +42,19 @@ export interface ChartConfig {
     bollingerBands: boolean
   }
 }
+
+export interface MarketDepthLevel {
+  price: number
+  quantity: number
+  cumulativeVolume: number
+  orderCount: number
+}
+
+export interface MarketDepthData {
+  bids: MarketDepthLevel[]
+  asks: MarketDepthLevel[]
+  bestBid: number | null
+  bestAsk: number | null
+  spread: number
+  spreadPercent: number
+}

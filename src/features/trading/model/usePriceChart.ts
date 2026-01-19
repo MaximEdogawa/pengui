@@ -71,7 +71,7 @@ export function usePriceChart({ config, isUserScrolling = false }: UsePriceChart
   const { orderBookData } = useOrderBook(filters)
 
   const orderBookChartData = useMemo(
-    () => transformOrderBookForChart(orderBookData, filters),
+    () => transformOrderBookForChart(orderBookData, { filters }),
     [orderBookData, filters]
   )
 
