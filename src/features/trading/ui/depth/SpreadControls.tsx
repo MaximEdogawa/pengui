@@ -1,3 +1,4 @@
+import { useRef, useCallback, useEffect } from 'react'
 import type { MarketDepthData } from '../../lib/chartTypes'
 import { formatPriceForDisplay } from '../../lib/formatAmount'
 
@@ -14,6 +15,65 @@ export default function SpreadControls({
   onMaxSpreadChange,
   priceRange,
 }: SpreadControlsProps) {
+  const intervalRef = useRef<NodeJS.Timeout | null>(null)
+  const maxSpreadPercentRef = useRef(maxSpreadPercent)
+  const depthDataRef = useRef(depthData)
+
+  // Keep refs updated with current values
+  useEffect(() => {
+    maxSpreadPercentRef.current = maxSpreadPercent
+    depthDataRef.current = depthData
+  }, [maxSpreadPercent, depthData])
+
+  const handleDecrease = useCallback(() => {
+    const minAllowed = depthDataRef.current.spreadPercent + 0.1
+    const currentValue = maxSpreadPercentRef.current
+    onMaxSpreadChange(Math.max(minAllowed, currentValue - 0.5))
+  }, [onMaxSpreadChange])
+
+  const handleIncrease = useCallback(() => {
+    const currentValue = maxSpreadPercentRef.current
+    onMaxSpreadChange(Math.min(50, currentValue + 0.5))
+  }, [onMaxSpreadChange])
+
+  const startDecrease = useCallback(() => {
+    // Stop any existing interval
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current)
+    }
+    // Execute immediately
+    handleDecrease()
+    // Start interval for continuous adjustment
+    intervalRef.current = setInterval(handleDecrease, 100)
+  }, [handleDecrease])
+
+  const startIncrease = useCallback(() => {
+    // Stop any existing interval
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current)
+    }
+    // Execute immediately
+    handleIncrease()
+    // Start interval for continuous adjustment
+    intervalRef.current = setInterval(handleIncrease, 100)
+  }, [handleIncrease])
+
+  const stopInterval = useCallback(() => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current)
+      intervalRef.current = null
+    }
+  }, [])
+
+  // Cleanup interval on unmount
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+      }
+    }
+  }, [])
+
   if (!depthData.bestBid || !depthData.bestAsk) return null
 
   return (
@@ -58,12 +118,13 @@ export default function SpreadControls({
               <span className="text-[#868993] dark:text-[#868993] text-[10px] font-medium uppercase tracking-wider text-center">Max</span>
               <div className="flex items-center gap-1.5">
                 <button
-                  onClick={() => {
-                    const minAllowed = depthData.spreadPercent + 0.1
-                    onMaxSpreadChange(Math.max(minAllowed, maxSpreadPercent - 0.5))
-                  }}
-                  className="w-6 h-6 flex items-center justify-center bg-white/5 dark:bg-white/5 hover:bg-white/10 dark:hover:bg-white/10 active:bg-white/15 dark:active:bg-white/15 text-[#d1d4dc] dark:text-[#d1d4dc] rounded-lg transition-all duration-150 disabled:opacity-30 disabled:cursor-not-allowed text-sm font-medium"
-                  title="Decrease max spread"
+                  onMouseDown={startDecrease}
+                  onMouseUp={stopInterval}
+                  onMouseLeave={stopInterval}
+                  onTouchStart={startDecrease}
+                  onTouchEnd={stopInterval}
+                  className="w-6 h-6 flex items-center justify-center bg-white/5 dark:bg-white/5 hover:bg-white/10 dark:hover:bg-white/10 active:bg-white/15 dark:active:bg-white/15 text-[#d1d4dc] dark:text-[#d1d4dc] rounded-lg transition-all duration-150 disabled:opacity-30 disabled:cursor-not-allowed text-sm font-medium select-none"
+                  title="Decrease max spread (hold to repeat)"
                   disabled={maxSpreadPercent <= depthData.spreadPercent + 0.1}
                 >
                   −
@@ -72,9 +133,13 @@ export default function SpreadControls({
                   {maxSpreadPercent.toFixed(1)}%
                 </span>
                 <button
-                  onClick={() => onMaxSpreadChange(Math.min(50, maxSpreadPercent + 0.5))}
-                  className="w-6 h-6 flex items-center justify-center bg-white/5 dark:bg-white/5 hover:bg-white/10 dark:hover:bg-white/10 active:bg-white/15 dark:active:bg-white/15 text-[#d1d4dc] dark:text-[#d1d4dc] rounded-lg transition-all duration-150 text-sm font-medium"
-                  title="Increase max spread"
+                  onMouseDown={startIncrease}
+                  onMouseUp={stopInterval}
+                  onMouseLeave={stopInterval}
+                  onTouchStart={startIncrease}
+                  onTouchEnd={stopInterval}
+                  className="w-6 h-6 flex items-center justify-center bg-white/5 dark:bg-white/5 hover:bg-white/10 dark:hover:bg-white/10 active:bg-white/15 dark:active:bg-white/15 text-[#d1d4dc] dark:text-[#d1d4dc] rounded-lg transition-all duration-150 text-sm font-medium select-none"
+                  title="Increase max spread (hold to repeat)"
                 >
                   +
                 </button>

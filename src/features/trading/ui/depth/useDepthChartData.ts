@@ -12,8 +12,6 @@ interface ProcessedDepthData {
   visibleAsks: Array<MarketDepthLevel & { cumulativeVolume: number }>
   maxVolume: number
   midPrice: number
-  highestVisibleBid: (MarketDepthLevel & { cumulativeVolume: number }) | null
-  highestVisibleAsk: (MarketDepthLevel & { cumulativeVolume: number }) | null
 }
 
 export function useDepthChartData({
@@ -123,17 +121,6 @@ export function useDepthChartData({
     return isFinite(max) && max > 0 ? max : 1
   }, [visibleBids, visibleAsks])
 
-  // Find highest visible bid and ask
-  const highestVisibleBid = useMemo(() => {
-    if (visibleBids.length === 0) return null
-    return visibleBids[0]
-  }, [visibleBids])
-
-  const highestVisibleAsk = useMemo(() => {
-    if (visibleAsks.length === 0) return null
-    return visibleAsks[0]
-  }, [visibleAsks])
-
   // Calculate mid-price and center X position
   const midPrice = useMemo(() => {
     if (depthData.bestBid && depthData.bestAsk) {
@@ -148,8 +135,6 @@ export function useDepthChartData({
     visibleAsks,
     maxVolume,
     midPrice,
-    highestVisibleBid,
-    highestVisibleAsk,
   }
 }
 
