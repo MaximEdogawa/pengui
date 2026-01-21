@@ -84,13 +84,33 @@ export function aggregateDepthByPriceLevel(
   })
 
   // Convert to arrays and sort
-  const bidLevels = Array.from(bidMap.values())
+  const allBidLevels = Array.from(bidMap.values())
     .sort((a, b) => b.price - a.price) // Descending (best bid first)
-    .slice(0, maxLevels)
 
-  const askLevels = Array.from(askMap.values())
+  const allAskLevels = Array.from(askMap.values())
     .sort((a, b) => a.price - b.price) // Ascending (best ask first)
-    .slice(0, maxLevels)
+
+  // Track excluded orders - only exclude when spread is negative (bestBid > bestAsk)
+  let excludedBids: Array<{ price: number; volume: number; count: number }> = []
+  let excludedAsks: Array<{ price: number; volume: number; count: number }> = []
+
+  let bidLevels = allBidLevels
+  let askLevels = allAskLevels
+
+  // Only exclude when spread is negative (bestBid > bestAsk)
+  // This is an invalid market state where bids overlap with asks
+  if (bestBid && bestAsk && bestBid > bestAsk) {
+    // Exclude asks that are <= bestBid (invalid overlapping asks)
+    excludedAsks = askLevels.filter((ask) => ask.price <= bestBid)
+    askLevels = askLevels.filter((ask) => ask.price > bestBid)
+
+    // Exclude bids that are >= bestAsk (invalid overlapping bids)
+    excludedBids = bidLevels.filter((bid) => bid.price >= bestAsk)
+    bidLevels = bidLevels.filter((bid) => bid.price < bestAsk)
+  }
+
+  bidLevels = bidLevels.slice(0, maxLevels)
+  askLevels = askLevels.slice(0, maxLevels)
 
   // Calculate cumulative volume
   // For bids: accumulate from best bid downward
@@ -117,16 +137,46 @@ export function aggregateDepthByPriceLevel(
     }
   })
 
+  // Update valid best bid/ask when spread is negative (bestBid > bestAsk)
+  let validBestAsk = bestAsk
+  let validBestBid = bestBid
+  if (bestBid && bestAsk && bestBid > bestAsk) {
+    // Find the first ask that is higher than best bid (after filtering)
+    const firstValidAsk = askDepthLevels.find((ask) => ask.price > bestBid)
+    validBestAsk = firstValidAsk ? firstValidAsk.price : null
+
+    // Find the first bid that is lower than best ask (after filtering)
+    const firstValidBid = bidDepthLevels.find((bid) => bid.price < bestAsk)
+    validBestBid = firstValidBid ? firstValidBid.price : null
+  }
+
   // Calculate spread (always positive)
-  const spread = bestBid && bestAsk ? Math.abs(bestAsk - bestBid) : 0
-  const spreadPercent = calculateSpreadPercent(bestBid, bestAsk)
+  const spread = validBestBid && validBestAsk ? Math.abs(validBestAsk - validBestBid) : 0
+  const spreadPercent = calculateSpreadPercent(validBestBid, validBestAsk)
+
+  // Convert excluded orders to MarketDepthLevel format
+  const excludedBidLevels: MarketDepthLevel[] = excludedBids.map((level) => ({
+    price: level.price,
+    quantity: level.volume,
+    cumulativeVolume: 0, // Not calculated for excluded orders
+    orderCount: level.count,
+  }))
+
+  const excludedAskLevels: MarketDepthLevel[] = excludedAsks.map((level) => ({
+    price: level.price,
+    quantity: level.volume,
+    cumulativeVolume: 0, // Not calculated for excluded orders
+    orderCount: level.count,
+  }))
 
   return {
     bids: bidDepthLevels,
     asks: askDepthLevels,
-    bestBid,
-    bestAsk,
+    bestBid: validBestBid,
+    bestAsk: validBestAsk,
     spread,
     spreadPercent,
+    excludedBids: excludedBidLevels.length > 0 ? excludedBidLevels : undefined,
+    excludedAsks: excludedAskLevels.length > 0 ? excludedAskLevels : undefined,
   }
 }

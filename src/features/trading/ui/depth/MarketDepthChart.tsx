@@ -7,6 +7,7 @@ import { useDepthChartData, useMaxSpreadPercent } from './useDepthChartData'
 import SpreadControls from './SpreadControls'
 import DepthChartSVG from './DepthChartSVG'
 import DepthChartTooltip from './DepthChartTooltip'
+import ExcludedOffersIndicator from './ExcludedOffersIndicator'
 
 interface MarketDepthChartProps {
   depthData: MarketDepthData
@@ -123,6 +124,11 @@ export default function MarketDepthChart({
         maxSpreadPercent={maxSpreadPercent}
         onMaxSpreadChange={setMaxSpreadPercent}
         onReset={resetMaxSpreadPercent}
+      />
+
+      <ExcludedOffersIndicator
+        excludedBids={depthData.excludedBids}
+        excludedAsks={depthData.excludedAsks}
       />
 
       <DepthChartSVG

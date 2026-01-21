@@ -57,4 +57,6 @@ export interface MarketDepthData {
   bestAsk: number | null
   spread: number
   spreadPercent: number
+  excludedBids?: MarketDepthLevel[]
+  excludedAsks?: MarketDepthLevel[]
 }
