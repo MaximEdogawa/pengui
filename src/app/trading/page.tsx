@@ -10,6 +10,7 @@ import {
   OrderBookFiltersProvider,
   useOrderBookFilters,
 } from '@/features/trading/model/OrderBookFiltersProvider'
+import { SelectedOrderProvider } from '@/features/trading/model/SelectedOrderProvider'
 
 export default function TradingPage() {
   const [mounted, setMounted] = useState(false)
@@ -38,13 +39,15 @@ export default function TradingPage() {
 
   return (
     <OrderBookFiltersProvider>
-      <TradingPageContent
-        activeView={activeView}
-        setActiveView={setActiveView}
-        views={views}
-        isDark={isDark}
-        t={t}
-      />
+      <SelectedOrderProvider>
+        <TradingPageContent
+          activeView={activeView}
+          setActiveView={setActiveView}
+          views={views}
+          isDark={isDark}
+          t={t}
+        />
+      </SelectedOrderProvider>
     </OrderBookFiltersProvider>
   )
 }

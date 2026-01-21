@@ -3,7 +3,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import type { MarketDepthLevel } from '../../lib/chartTypes'
 import type { OrderBookOrder } from '../../lib/orderBookTypes'
-import { normalizePriceLevel } from '../../lib/utils/depthUtils'
+import { findOrderByPrice } from '../../lib/utils/orderPriceMatching'
 import { logger } from '@/shared/lib/logger'
 import { AlertTriangle, ChevronDown } from 'lucide-react'
 import { formatPriceForDisplay } from '../../lib/formatAmount'
@@ -30,38 +30,11 @@ export default function ExcludedOffersIndicator({
   const buttonRef = useRef<HTMLButtonElement>(null)
   const hasExcluded = (excludedBids && excludedBids.length > 0) || (excludedAsks && excludedAsks.length > 0)
 
-  // Find order matching a price level
-  const findOrderByPrice = useCallback(
+  // Find order matching a price level using shared utility
+  const findOrder = useCallback(
     (price: number, isBid: boolean): OrderBookOrder | null => {
-      if (!calculatePriceFn) {
-        logger.warn('ExcludedOffersIndicator: calculatePriceFn not available')
-        return null
-      }
-
       const orders = isBid ? filteredBuyOrders : filteredSellOrders
-      const normalizedTargetPrice = normalizePriceLevel(price, 8)
-      const matchingOrders: OrderBookOrder[] = []
-
-      for (const order of orders) {
-        try {
-          const orderPrice = calculatePriceFn(order)
-          const normalizedOrderPrice = normalizePriceLevel(orderPrice, 8)
-          const diff = Math.abs(normalizedOrderPrice - normalizedTargetPrice)
-          
-          if (diff < 0.00000001) {
-            matchingOrders.push(order)
-          }
-        } catch (error) {
-          logger.warn('ExcludedOffersIndicator: Error calculating price', error)
-        }
-      }
-
-      if (matchingOrders.length > 0) {
-        return matchingOrders[0]
-      }
-
-      logger.warn(`ExcludedOffersIndicator: No order found at price ${price}`)
-      return null
+      return findOrderByPrice(price, isBid, orders, calculatePriceFn)
     },
     [filteredBuyOrders, filteredSellOrders, calculatePriceFn]
   )
@@ -79,7 +52,7 @@ export default function ExcludedOffersIndicator({
         return
       }
       
-      const order = findOrderByPrice(price, isBid)
+      const order = findOrder(price, isBid)
       if (order && order.id) {
         onOrderClick(order)
         setIsOpen(false)
@@ -92,7 +65,7 @@ export default function ExcludedOffersIndicator({
         })
       }
     },
-    [onOrderClick, calculatePriceFn, findOrderByPrice]
+    [onOrderClick, calculatePriceFn, findOrder]
   )
 
   // Close dropdown when clicking outside

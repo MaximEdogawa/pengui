@@ -4,6 +4,7 @@ import { useMemo, useState, useCallback } from 'react'
 import type { MarketDepthData } from '../../lib/chartTypes'
 import type { OrderBookFilters, OrderBookOrder } from '../../lib/orderBookTypes'
 import { useDepthChartData, useMaxSpreadPercent } from './useDepthChartData'
+import { findOrderByPrice } from '../../lib/utils/orderPriceMatching'
 import SpreadControls from './SpreadControls'
 import DepthChartSVG from './DepthChartSVG'
 import DepthChartTooltip from './DepthChartTooltip'
@@ -120,10 +121,28 @@ export default function MarketDepthChart({
   }, [])
 
   const handleClick = useCallback(() => {
-    if (hoveredPrice) {
-      onPriceClick?.(hoveredPrice)
+    if (!hoveredPrice) return
+    
+    // Try to find the order by price and call onOrderClick
+    if (onOrderClick && calculatePriceFn && (filteredBuyOrders.length > 0 || filteredSellOrders.length > 0)) {
+      // Determine if we're clicking on a bid or ask based on price comparison
+      const price = hoveredPrice
+      const isBid = depthData.bestBid && depthData.bestAsk 
+        ? price <= depthData.bestBid || (price < depthData.bestAsk && price <= depthData.bestBid)
+        : depthData.bestBid ? price <= depthData.bestBid : false
+      
+      const orders = isBid ? filteredBuyOrders : filteredSellOrders
+      const order = findOrderByPrice(price, isBid, orders, calculatePriceFn)
+      
+      if (order && order.id) {
+        onOrderClick(order)
+        return
+      }
     }
-  }, [hoveredPrice, onPriceClick])
+    
+    // Fallback to onPriceClick if order not found
+    onPriceClick?.(hoveredPrice)
+  }, [hoveredPrice, onPriceClick, onOrderClick, calculatePriceFn, filteredBuyOrders, filteredSellOrders, depthData])
 
   return (
     <div className="relative w-full h-full bg-[#131722] rounded-lg overflow-hidden">

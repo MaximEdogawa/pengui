@@ -5,7 +5,6 @@ import { PriceChart } from '@/features/trading/ui/chart'
 import MarketDepthView from '@/features/trading/ui/depth/MarketDepthView'
 import { useThemeClasses } from '@/shared/hooks'
 import type { OrderBookOrder } from '@/features/trading/lib/orderBookTypes'
-import { logger } from '@/shared/lib/logger'
 
 interface TradingContentProps {
   activeView: 'orderbook' | 'chart' | 'depth' | 'trades'
@@ -28,9 +27,7 @@ export default function TradingContent({ activeView, filters, onOrderClick }: Tr
   }
 
   if (activeView === 'depth') {
-    return <MarketDepthView filters={filters} onOrderClick={onOrderClick} onPriceClick={(price) => {
-      logger.info('Price clicked:', price)
-    }} />
+    return <MarketDepthView filters={filters} onOrderClick={onOrderClick} />
   }
 
   // Placeholder for trades view
