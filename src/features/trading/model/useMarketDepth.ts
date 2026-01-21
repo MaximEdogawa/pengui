@@ -55,5 +55,8 @@ export function useMarketDepth({
     isError: !!orderBookError,
     error: orderBookError,
     refetch: refreshOrderBook,
+    filteredBuyOrders,
+    filteredSellOrders,
+    calculatePriceFn,
   }
 }

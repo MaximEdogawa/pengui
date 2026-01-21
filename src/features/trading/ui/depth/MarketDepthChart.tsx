@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useCallback } from 'react'
 import type { MarketDepthData } from '../../lib/chartTypes'
-import type { OrderBookFilters } from '../../lib/orderBookTypes'
+import type { OrderBookFilters, OrderBookOrder } from '../../lib/orderBookTypes'
 import { useDepthChartData, useMaxSpreadPercent } from './useDepthChartData'
 import SpreadControls from './SpreadControls'
 import DepthChartSVG from './DepthChartSVG'
@@ -15,6 +15,10 @@ interface MarketDepthChartProps {
   width?: number
   height?: number
   onPriceClick?: (price: number) => void
+  onOrderClick?: (order: OrderBookOrder) => void
+  filteredBuyOrders?: OrderBookOrder[]
+  filteredSellOrders?: OrderBookOrder[]
+  calculatePriceFn?: (order: OrderBookOrder) => number
 }
 
 interface TooltipData {
@@ -35,6 +39,10 @@ export default function MarketDepthChart({
   width = 800,
   height = 500,
   onPriceClick,
+  onOrderClick,
+  filteredBuyOrders = [],
+  filteredSellOrders = [],
+  calculatePriceFn,
 }: MarketDepthChartProps) {
   const [tooltip, setTooltip] = useState<TooltipData | null>(null)
   const [hoveredPrice, setHoveredPrice] = useState<number | null>(null)
@@ -129,6 +137,10 @@ export default function MarketDepthChart({
       <ExcludedOffersIndicator
         excludedBids={depthData.excludedBids}
         excludedAsks={depthData.excludedAsks}
+        onOrderClick={onOrderClick}
+        filteredBuyOrders={filteredBuyOrders}
+        filteredSellOrders={filteredSellOrders}
+        calculatePriceFn={calculatePriceFn}
       />
 
       <DepthChartSVG

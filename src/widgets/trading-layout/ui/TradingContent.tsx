@@ -28,7 +28,7 @@ export default function TradingContent({ activeView, filters, onOrderClick }: Tr
   }
 
   if (activeView === 'depth') {
-    return <MarketDepthView filters={filters} onPriceClick={(price) => {
+    return <MarketDepthView filters={filters} onOrderClick={onOrderClick} onPriceClick={(price) => {
       logger.info('Price clicked:', price)
     }} />
   }

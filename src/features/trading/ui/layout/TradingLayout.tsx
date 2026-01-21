@@ -35,6 +35,11 @@ export default function TradingLayout({
 
   const handleOrderClick = useCallback(
     (order: OrderBookOrder) => {
+      if (!order || !order.id) {
+        console.error('TradingLayout: Invalid order passed to handleOrderClick', order)
+        return
+      }
+
       setSelectedOrderForTaking(order)
       setSelectedOrderForMaking(order)
 

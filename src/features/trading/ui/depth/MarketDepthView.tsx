@@ -4,12 +4,13 @@ import { useCallback, useRef, useEffect, useState } from 'react'
 import { Loader2, AlertCircle, RefreshCw } from 'lucide-react'
 import { useMarketDepth } from '../../model/useMarketDepth'
 import MarketDepthChart from './MarketDepthChart'
-import type { OrderBookFilters } from '../../lib/orderBookTypes'
+import type { OrderBookFilters, OrderBookOrder } from '../../lib/orderBookTypes'
 import { useThemeClasses } from '@/shared/hooks'
 
 interface MarketDepthViewProps {
   filters?: OrderBookFilters
   onPriceClick?: (price: number) => void
+  onOrderClick?: (order: OrderBookOrder) => void
 }
 
 function LoadingState() {
@@ -59,14 +60,23 @@ function EmptyState() {
   )
 }
 
-export default function MarketDepthView({ filters, onPriceClick }: MarketDepthViewProps) {
+export default function MarketDepthView({ filters, onPriceClick, onOrderClick }: MarketDepthViewProps) {
   const { t } = useThemeClasses()
   const [chartSize, setChartSize] = useState({ width: 0, height: 0 })
   const chartContainerRef = useRef<HTMLDivElement>(null)
 
   // Fetch depth data with a higher default maxLevels to ensure we have enough data
   // The aggregation will still limit, but we'll have more raw data to work with
-  const { depthData, isLoading, isError, error, refetch } = useMarketDepth({ 
+  const { 
+    depthData, 
+    isLoading, 
+    isError, 
+    error, 
+    refetch,
+    filteredBuyOrders,
+    filteredSellOrders,
+    calculatePriceFn,
+  } = useMarketDepth({ 
     filters,
     maxLevels: 200 // Increased from 30 to 200 to support wider spreads
   })
@@ -135,6 +145,10 @@ export default function MarketDepthView({ filters, onPriceClick }: MarketDepthVi
             width={chartSize.width}
             height={chartSize.height}
             onPriceClick={handlePriceClick}
+            onOrderClick={onOrderClick}
+            filteredBuyOrders={filteredBuyOrders}
+            filteredSellOrders={filteredSellOrders}
+            calculatePriceFn={calculatePriceFn}
           />
         )}
       </div>
