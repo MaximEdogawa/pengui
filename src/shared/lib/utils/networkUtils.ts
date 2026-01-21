@@ -27,7 +27,7 @@ export function chainIdToNetwork(chainId: string): 'mainnet' | 'testnet' {
  * @returns The chain ID (e.g., 'chia:mainnet' or 'chia:testnet')
  */
 export function networkToChainId(network: 'mainnet' | 'testnet'): string {
-  return network === 'mainnet' ? CHIA_MAINNET_CHAIN_ID : CHIA_TESTNET_CHAIN_ID
+  return network === 'mainnet' ? CHIA_MAINNET_CHAIN_ID : CHIA_TESTNET_CHAIN_ID;
 }
 
 /**

@@ -9,13 +9,16 @@ const NETWORK_STORAGE_KEY = 'pengui-network'
  * Get current network from localStorage
  * @param defaultValue - Default network if none is stored (defaults to 'mainnet')
  * @returns The stored network or default
+ * 
+ * IMPORTANT: Always defaults to 'mainnet' - testnet should only be used when explicitly set by user
  */
 export function getStoredNetwork(defaultValue: 'mainnet' | 'testnet' = 'mainnet'): 'mainnet' | 'testnet' {
   if (typeof window === 'undefined') {
-    return defaultValue
+    return 'mainnet' // Always default to mainnet on server
   }
   const stored = localStorage.getItem(NETWORK_STORAGE_KEY)
-  return (stored === 'mainnet' || stored === 'testnet' ? stored : defaultValue) as 'mainnet' | 'testnet'
+  if(stored==='testnet') return 'testnet';
+  return 'mainnet'
 }
 
 /**
