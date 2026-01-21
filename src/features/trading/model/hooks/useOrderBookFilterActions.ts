@@ -1,6 +1,7 @@
 import { useCallback } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import type { OrderBookFilters, SuggestionItem } from '../../lib/orderBookTypes'
+import { clearFilterStateFromStorage } from '../../lib/orderBookFilterStorage'
 
 interface UseOrderBookFilterActionsProps {
   setState: React.Dispatch<React.SetStateAction<{
@@ -62,14 +63,29 @@ export function useOrderBookFilterActions({
         newFilters[column] = filterArray.filter((_, i) => i !== index) as string[]
       }
 
+      // Check if all filters are now empty
+      const allFiltersEmpty =
+        (!newFilters.buyAsset || newFilters.buyAsset.length === 0) &&
+        (!newFilters.sellAsset || newFilters.sellAsset.length === 0) &&
+        (!newFilters.status || newFilters.status.length === 0)
+
+      // Clear localStorage if all filters are removed
+      if (allFiltersEmpty) {
+        clearFilterStateFromStorage()
+      }
+
       return {
         ...prev,
         filters: newFilters,
+        userClearedFilters: allFiltersEmpty ? true : prev.userClearedFilters,
       }
     })
   }, [setState])
 
   const clearAllFilters = useCallback(() => {
+    // Clear localStorage when all filters are cleared
+    clearFilterStateFromStorage()
+    
     setState((prev) => ({
       ...prev,
       filters: defaultFilters,
