@@ -131,11 +131,12 @@ export function useMyOffersData() {
   }, [state.filters.status, setCurrentPage])
 
   // Refresh offers when page, pageSize, or filters change
-  // Use primitive values directly instead of the callback to avoid recreation loops
+  // refreshOffers is a stable callback (useCallback) that includes loadOffersFromStorage and setIsLoading
+  // in its dependency array. These are guaranteed stable references from hooks, so refreshOffers will
+  // always capture the latest values. We depend on primitive state values to trigger refreshes.
   useEffect(() => {
     trackEffectRun('useMyOffersData: refresh-offers')
     refreshOffers()
-    // Depend on primitive values, not the callback or object references
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.currentPage, state.pageSize, state.filters.status])
 

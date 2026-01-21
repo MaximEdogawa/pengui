@@ -32,6 +32,7 @@ export function ChartGridLines({ chartWidth, chartHeight, priceLabels }: ChartGr
           <line
             x1={label.x}
             y1={0}
+            x2={label.x}
             y2={chartHeight}
             stroke="#1a1d29"
             strokeWidth={0.5}

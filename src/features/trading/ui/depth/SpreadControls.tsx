@@ -122,6 +122,7 @@ export default function SpreadControls({
                 onMouseLeave={stopInterval}
                 onTouchStart={startDecrease}
                 onTouchEnd={stopInterval}
+                onTouchCancel={stopInterval}
                 className="w-5 h-5 flex items-center justify-center bg-white/5 dark:bg-white/5 hover:bg-white/10 dark:hover:bg-white/10 active:bg-white/15 dark:active:bg-white/15 text-[#d1d4dc] dark:text-[#d1d4dc] rounded-md transition-all duration-150 disabled:opacity-30 disabled:cursor-not-allowed text-xs font-semibold select-none"
                 title="Decrease max spread (hold to repeat)"
                 disabled={maxSpreadPercent <= depthData.spreadPercent + 0.1}
@@ -137,6 +138,7 @@ export default function SpreadControls({
                 onMouseLeave={stopInterval}
                 onTouchStart={startIncrease}
                 onTouchEnd={stopInterval}
+                onTouchCancel={stopInterval}
                 className="w-5 h-5 flex items-center justify-center bg-white/5 dark:bg-white/5 hover:bg-white/10 dark:hover:bg-white/10 active:bg-white/15 dark:active:bg-white/15 text-[#d1d4dc] dark:text-[#d1d4dc] rounded-md transition-all duration-150 text-xs font-semibold select-none"
                 title="Increase max spread (hold to repeat)"
               >

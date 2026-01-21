@@ -58,7 +58,11 @@ export default function MarketDepthChart({
   const chartHeight = height - CHART_PADDING.top - CHART_PADDING.bottom - SPREAD_INDICATOR_HEIGHT
 
   const centerX = useMemo(() => {
-    return ((midPrice - priceRange.min) / (priceRange.max - priceRange.min)) * chartWidth
+    const range = priceRange.max - priceRange.min
+    if (range === 0 || !isFinite(range) || chartWidth === 0) {
+      return chartWidth / 2
+    }
+    return ((midPrice - priceRange.min) / range) * chartWidth
   }, [midPrice, priceRange, chartWidth])
 
   const handleMouseMove = useCallback(
@@ -73,7 +77,15 @@ export default function MarketDepthChart({
         return
       }
 
-      const price = priceRange.min + ((x / chartWidth) * (priceRange.max - priceRange.min))
+      // Guard against division by zero
+      const range = priceRange.max - priceRange.min
+      if (range === 0 || !isFinite(range) || chartWidth === 0) {
+        setTooltip(null)
+        setHoveredPrice(null)
+        return
+      }
+
+      const price = priceRange.min + ((x / chartWidth) * range)
       const isLeft = x < centerX
 
       let closestLevel: { price: number; quantity: number; cumulativeVolume: number } | null = null
@@ -112,7 +124,7 @@ export default function MarketDepthChart({
         setHoveredPrice(null)
       }
     },
-    [chartWidth, chartHeight, priceRange, visibleBids, visibleAsks, centerX]
+    [chartWidth, chartHeight, priceRange.min, priceRange.max, visibleBids, visibleAsks, centerX]
   )
 
   const handleMouseLeave = useCallback(() => {
@@ -132,7 +144,7 @@ export default function MarketDepthChart({
         : depthData.bestBid ? price <= depthData.bestBid : false
       
       const orders = isBid ? filteredBuyOrders : filteredSellOrders
-      const order = findOrderByPrice(price, isBid, orders, calculatePriceFn)
+      const order = findOrderByPrice(price, orders, calculatePriceFn)
       
       if (order && order.id) {
         onOrderClick(order)

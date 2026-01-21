@@ -48,6 +48,10 @@ export function aggregateDepthByPriceLevel(
   
   bids.forEach((bid) => {
     const normalizedPrice = normalizePriceLevel(bid.price, pricePrecision)
+    // Skip invalid prices (normalizePriceLevel returns 0 for bad inputs)
+    if (normalizedPrice === 0 || !isFinite(normalizedPrice)) {
+      return
+    }
     const priceKey = normalizedPrice.toFixed(pricePrecision)
     
     if (bidMap.has(priceKey)) {
@@ -68,6 +72,10 @@ export function aggregateDepthByPriceLevel(
   
   asks.forEach((ask) => {
     const normalizedPrice = normalizePriceLevel(ask.price, pricePrecision)
+    // Skip invalid prices (normalizePriceLevel returns 0 for bad inputs)
+    if (normalizedPrice === 0 || !isFinite(normalizedPrice)) {
+      return
+    }
     const priceKey = normalizedPrice.toFixed(pricePrecision)
     
     if (askMap.has(priceKey)) {

@@ -5,14 +5,12 @@ import { logger } from '@/shared/lib/logger'
 /**
  * Find an order matching a specific price level
  * @param price - The target price to match
- * @param isBid - Whether to search in bids (true) or asks (false)
- * @param orders - Array of orders to search
+ * @param orders - Array of orders to search (pre-filtered by caller)
  * @param calculatePriceFn - Function to calculate price from an order
  * @returns The first matching order, or null if not found
  */
 export function findOrderByPrice(
   price: number,
-  isBid: boolean,
   orders: OrderBookOrder[],
   calculatePriceFn?: (order: OrderBookOrder) => number
 ): OrderBookOrder | null {

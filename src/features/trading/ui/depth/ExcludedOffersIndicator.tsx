@@ -34,7 +34,7 @@ export default function ExcludedOffersIndicator({
   const findOrder = useCallback(
     (price: number, isBid: boolean): OrderBookOrder | null => {
       const orders = isBid ? filteredBuyOrders : filteredSellOrders
-      return findOrderByPrice(price, isBid, orders, calculatePriceFn)
+      return findOrderByPrice(price, orders, calculatePriceFn)
     },
     [filteredBuyOrders, filteredSellOrders, calculatePriceFn]
   )

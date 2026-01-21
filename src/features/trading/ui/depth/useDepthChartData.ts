@@ -88,9 +88,11 @@ export function useDepthChartData({
     
     let cumulativeVolume = 0
     return sortedBids.map((bid) => {
-      cumulativeVolume += bid.quantity
+      const quantity = bid.quantity || 0
+      cumulativeVolume += quantity
       return {
         ...bid,
+        quantity,
         cumulativeVolume,
       }
     })
@@ -146,8 +148,9 @@ const maxSpreadCache = new Map<string, number>()
  * Generate a unique key for filter combination
  */
 function getFilterKey(filters?: { buyAsset?: string[]; sellAsset?: string[] }): string {
-  const buyKey = filters?.buyAsset?.sort().join(',') || ''
-  const sellKey = filters?.sellAsset?.sort().join(',') || ''
+  // Copy arrays before sorting to avoid mutating the input
+  const buyKey = filters?.buyAsset ? [...filters.buyAsset].sort().join(',') : ''
+  const sellKey = filters?.sellAsset ? [...filters.sellAsset].sort().join(',') : ''
   return `${buyKey}|${sellKey}`
 }
 

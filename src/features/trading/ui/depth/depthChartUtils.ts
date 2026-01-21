@@ -25,19 +25,25 @@ export function generateDepthPath({
 }: PathGenerationParams): string {
   if (levels.length === 0) return ''
 
+  // Guard against division by zero
+  const range = priceRange.max - priceRange.min
+  if (range === 0 || !isFinite(range) || maxVolume <= 0 || !isFinite(maxVolume)) {
+    return ''
+  }
+
   const points: string[] = []
 
   if (isBid) {
     // Start from bottom-left (lowest visible bid price, bottom)
     const lowestBid = levels[levels.length - 1]
-    const lowestX = ((lowestBid.price - priceRange.min) / (priceRange.max - priceRange.min)) * chartWidth
+    const lowestX = ((lowestBid.price - priceRange.min) / range) * chartWidth
     points.push(`M ${lowestX} ${chartHeight}`)
 
     // Draw bid depth from low price (left) to high price (right), from bottom to top
     // Bids are sorted descending (highest first), so we iterate in reverse
     // Use smooth curves with quadratic bezier
     const bidPoints = [...levels].reverse().map((bid) => {
-      const x = ((bid.price - priceRange.min) / (priceRange.max - priceRange.min)) * chartWidth
+      const x = ((bid.price - priceRange.min) / range) * chartWidth
       const y = chartHeight - (bid.cumulativeVolume / maxVolume) * chartHeight
       return { x, y }
     })
@@ -57,7 +63,7 @@ export function generateDepthPath({
 
     // End at best bid position with vertical line down to bottom, then horizontal to current price
     if (bestBid) {
-      const bestBidX = ((bestBid - priceRange.min) / (priceRange.max - priceRange.min)) * chartWidth
+      const bestBidX = ((bestBid - priceRange.min) / range) * chartWidth
       const highestBid = levels[0]
       const highestBidY = chartHeight - (highestBid.cumulativeVolume / maxVolume) * chartHeight
       
@@ -74,7 +80,7 @@ export function generateDepthPath({
   } else {
     // Start from best ask position at the bottom with vertical line up
     if (bestAsk) {
-      const bestAskX = ((bestAsk - priceRange.min) / (priceRange.max - priceRange.min)) * chartWidth
+      const bestAskX = ((bestAsk - priceRange.min) / range) * chartWidth
       // Start at bottom (x-axis)
       points.push(`M ${bestAskX} ${chartHeight}`)
       
@@ -90,7 +96,7 @@ export function generateDepthPath({
     // Draw ask depth from best ask (or mid-price) to high price (right), from bottom to top
     // Use smooth curves with quadratic bezier
     const askPoints = levels.map((ask) => {
-      const x = ((ask.price - priceRange.min) / (priceRange.max - priceRange.min)) * chartWidth
+      const x = ((ask.price - priceRange.min) / range) * chartWidth
       const y = chartHeight - (ask.cumulativeVolume / maxVolume) * chartHeight
       return { x, y }
     })
@@ -114,13 +120,13 @@ export function generateDepthPath({
 
     // End at bottom-right (highest visible ask price, bottom)
     const lastAsk = levels[levels.length - 1]
-    const lastX = ((lastAsk.price - priceRange.min) / (priceRange.max - priceRange.min)) * chartWidth
+    const lastX = ((lastAsk.price - priceRange.min) / range) * chartWidth
     points.push(`L ${lastX} ${chartHeight}`)
     
     // Draw horizontal line from best ask to current price (mid-price) at the bottom - red
     if (bestAsk) {
       // Go back to best ask position at bottom, then horizontal to centerX
-      const bestAskX = ((bestAsk - priceRange.min) / (priceRange.max - priceRange.min)) * chartWidth
+      const bestAskX = ((bestAsk - priceRange.min) / range) * chartWidth
       points.push(`L ${bestAskX} ${chartHeight}`)
       // Horizontal line from best ask to current price (mid-price) at the bottom
       points.push(`L ${centerX} ${chartHeight}`)

@@ -135,7 +135,7 @@ export default function UILayout({ children }: { children: React.ReactNode }) {
                 }
                 
                 // Get the app's network preference from localStorage (should be mainnet by default)
-                const appNetwork = getStoredNetwork('mainnet')
+                const appNetwork = getStoredNetwork()
                 const appChainId = networkToChainId(appNetwork)
                 
                 // CRITICAL: Clear any WalletConnect sessions stored in localStorage that use testnet
