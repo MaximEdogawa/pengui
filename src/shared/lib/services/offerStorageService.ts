@@ -35,7 +35,7 @@ export class OfferStorageService {
    * @returns The network to use
    */
   private getCurrentNetwork(network?: 'mainnet' | 'testnet'): 'mainnet' | 'testnet' {
-    return network || getStoredNetwork('mainnet')
+    return network || getStoredNetwork()
   }
 
   /**

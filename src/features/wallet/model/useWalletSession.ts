@@ -36,39 +36,45 @@ export function useWalletSession(): WalletConnectSession {
     const chains = sessionData.namespaces.chia?.chains
     const accounts = sessionData.namespaces.chia?.accounts
     
-    // Use the wallet's actual chainId from the session to ensure requests work
-    // Priority: 1) chains array, 2) extract from accounts, 3) fallback to app network
+    // Get the chainId that the wallet session actually supports
+    // This is critical: we must use a chainId that the wallet supports, otherwise WalletConnect will reject the request
+    const sessionChains = chains || []
     let walletChainId: string
-    if (chains && chains.length > 0) {
-      // Use the chainId from the session's chains array (most reliable)
-      walletChainId = chains[0]
+    
+    // Priority 1: If session has chains defined, use the first one (most reliable)
+    // This ensures we always use a chainId the wallet actually supports
+    if (sessionChains.length > 0) {
+      walletChainId = sessionChains[0]
+      
+      // If app network matches session chain, use it; otherwise use session's chainId
+      // Note: We don't log here to avoid potential render loops - the mismatch is handled by validateChainId
+      if (sessionChains.includes(defaultChainId)) {
+        walletChainId = defaultChainId
+      }
+      // Otherwise use sessionChains[0] which is already set above
     } else if (accounts && accounts.length > 0) {
-      // Try to extract chainId from accounts if chains array is empty
+      // Priority 2: Extract chainId from accounts if chains array is empty
       // Account format can be: "chia:chainId:fingerprint" or "chia:mainnet:fingerprint"
-      // Example: "chia:chia:mainnet:12345" or "chia:mainnet:12345"
       const accountParts = accounts[0].split(':')
       if (accountParts.length >= 4 && accountParts[1] === 'chia') {
-        // Format: chia:chia:mainnet:fingerprint
-        const networkPart = accountParts[2] // "mainnet" or "testnet"
+        const networkPart = accountParts[2]
         walletChainId = `chia:${networkPart}`
       } else if (accountParts.length >= 3) {
-        // Format: chia:mainnet:fingerprint (3-part format)
-        // If parts[1] is "chia", use parts[2] as network; otherwise use parts[1] as network
         if (accountParts[1] === 'chia') {
           walletChainId = `chia:${accountParts[2]}`
         } else {
           walletChainId = `chia:${accountParts[1]}`
         }
       } else if (accountParts.length >= 2) {
-        // Fallback: try to construct from what we have
         walletChainId = `chia:${accountParts[1]}`
       } else {
         walletChainId = defaultChainId
       }
     } else {
-      // Last resort: use app's network chainId
+      // Priority 3: Fallback to app's network chainId
       walletChainId = defaultChainId
     }
+    
     const chainId = walletChainId
     const fingerprint =
       accounts && accounts.length > 0

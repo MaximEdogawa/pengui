@@ -27,11 +27,27 @@ export function NetworkProvider({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient()
   const { isConnected, walletConnectSession } = useWalletConnectionState()
   const selectedSession = useAppSelector((state) => state.walletConnect?.selectedSession)
-  const [network, setNetworkState] = useState<Network>(() => getStoredNetwork('mainnet'))
+  // CRITICAL: Always default to 'mainnet' - ensure network preference is set to mainnet if not already set
+  const [network, setNetworkState] = useState<Network>(() => {
+    const stored = getStoredNetwork()
+    // If no preference exists, explicitly set it to mainnet
+    if (!hasNetworkPreference()) {
+      setStoredNetwork('mainnet')
+    }
+    return stored
+  })
   const [isSwitching, setIsSwitching] = useState(false)
   const hasAutoSyncedRef = useRef(false)
   const lastWalletChainIdRef = useRef<string | null>(null)
   const testRequestTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  
+  // Ensure network is initialized to mainnet on mount if no preference exists
+  useEffect(() => {
+    if (!hasNetworkPreference()) {
+      setStoredNetwork('mainnet')
+      setNetworkState('mainnet')
+    }
+  }, [])
 
   // Helper function to perform core network switch operations
   // This ensures both manual network switches and auto-sync perform the same cache invalidation
@@ -90,7 +106,7 @@ export function NetworkProvider({ children }: { children: React.ReactNode }) {
     const walletNetwork = chainIdToNetwork(walletChainId)
 
     // Get current network from state (don't use dependency to avoid re-renders)
-    const currentNetwork = getStoredNetwork('mainnet')
+    const currentNetwork = getStoredNetwork()
 
     // Auto-sync if no user preference exists and networks differ
     if (!hasNetworkPreference() && walletNetwork !== currentNetwork) {

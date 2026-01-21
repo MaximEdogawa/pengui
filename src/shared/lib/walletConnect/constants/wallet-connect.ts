@@ -1,10 +1,10 @@
 import { environment } from '@/shared/lib/config/environment'
 import { SageMethods } from './sage-methods'
-import { networkToChainId } from '@/shared/lib/utils/networkUtils'
+import { networkToChainId, CHIA_MAINNET_CHAIN_ID, CHIA_TESTNET_CHAIN_ID } from '@/shared/lib/utils/networkUtils'
 
 export const WALLET_CONNECT_STORAGE_KEY = 'walletconnect'
-export const CHIA_MAINNET_CHAIN_ID = 'chia:mainnet'
-export const CHIA_TESTNET_CHAIN_ID = 'chia:testnet'
+// Re-export chain IDs for backward compatibility
+export { CHIA_MAINNET_CHAIN_ID, CHIA_TESTNET_CHAIN_ID }
 
 
 export const CHIA_METADATA = {

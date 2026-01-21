@@ -17,6 +17,8 @@
  * @see docs/development/infinite-loop-guardrails.md
  */
 
+import { logger } from "../logger"
+
 const MAX_RUNS_PER_SECOND = 10
 const WARNING_THRESHOLD = 5
 
@@ -63,7 +65,7 @@ export function trackEffectRun(effectName: string): void {
 
     // Check thresholds using the actual runs-per-second (newCount)
     if (timeSinceLastRun < 1000 && newCount >= WARNING_THRESHOLD) {
-      console.warn(
+      logger.warn(
         `⚠️ [trackEffectRun] Potential infinite loop detected in "${effectName}"\n` +
           `  - Runs in last second: ${newCount}\n` +
           `  - Time since last run: ${timeSinceLastRun}ms\n` +
@@ -72,7 +74,7 @@ export function trackEffectRun(effectName: string): void {
       )
 
       if (newCount >= MAX_RUNS_PER_SECOND) {
-        console.error(
+        logger.error(
           `🚨 [trackEffectRun] CRITICAL: Effect "${effectName}" is running too frequently!\n` +
             `  This will cause performance issues and may prevent page navigation.\n` +
             `  Please review the dependency array and ensure state updates are guarded.`

@@ -188,14 +188,6 @@ export function usePriceData({ tickerId, timeframe, filters, enabled = true, isU
       }
 
       const parsedData = parseTradesData(response.data)
-      
-      logger.info('Historical trades fetched', {
-        tickerId,
-        requestedLimit: limit,
-        receivedTrades: parsedData.length,
-        timeframe,
-      })
-      
       return parsedData
     },
     enabled: enabled && !!tickerId,
@@ -207,7 +199,8 @@ export function usePriceData({ tickerId, timeframe, filters, enabled = true, isU
     gcTime: Infinity, // Keep data in cache indefinitely
     staleTime: timeframe === '1m' ? 10 * 1000 : 60 * 1000,
     // Refetch when query key changes (e.g., when filters change)
-    refetchOnMount: true,
+    refetchOnMount: 'always', // Always refetch when component mounts, even if data is fresh
+    refetchOnReconnect: true, // Refetch when network reconnects
     // Only auto-refetch for short timeframes when enabled and user is not scrolling
     // Longer timeframes (1D, 1W, 1M) don't need frequent updates
     refetchInterval: enabled && !!tickerId && !isUserScrolling && (timeframe === '1m' || timeframe === '15m' || timeframe === '1h')

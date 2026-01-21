@@ -37,6 +37,11 @@ export function useMyOffersData() {
     })
   }, [pagination])
   const prevPaginationKeyRef = useRef<string | null>(null)
+  // Store latest pagination in ref to access it in effect without dependency
+  const paginationRef = useRef<typeof pagination>(pagination)
+  useEffect(() => {
+    paginationRef.current = pagination
+  }, [pagination])
 
   // Create stable offers reference using length and IDs
   const offersKey = useMemo(
@@ -44,6 +49,11 @@ export function useMyOffersData() {
     [storageOffers]
   )
   const prevOffersKeyRef = useRef<string>('')
+  // Store latest storageOffers in ref to access it in effect without dependency
+  const storageOffersRef = useRef<typeof storageOffers>(storageOffers)
+  useEffect(() => {
+    storageOffersRef.current = storageOffers
+  }, [storageOffers])
 
   // Refresh offers function
   const refreshOffers = useCallback(async () => {
@@ -67,12 +77,16 @@ export function useMyOffersData() {
     // Only update if pagination actually changed
     if (paginationKey && paginationKey !== prevPaginationKeyRef.current) {
       prevPaginationKeyRef.current = paginationKey
-      if (pagination) {
-        setTotalOffers(pagination.total)
-        setTotalPages(pagination.totalPages)
+      // Use ref to access latest pagination without adding it to dependencies
+      const currentPagination = paginationRef.current
+      if (currentPagination) {
+        setTotalOffers(currentPagination.total)
+        setTotalPages(currentPagination.totalPages)
       }
     }
-  }, [paginationKey, pagination, setTotalOffers, setTotalPages])
+    // Only depend on paginationKey - pagination object reference changes on every render
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paginationKey])
 
   // Sync offers from storage to local state
   useEffect(() => {
@@ -80,7 +94,8 @@ export function useMyOffersData() {
     // Only update if offers actually changed
     if (offersKey !== prevOffersKeyRef.current) {
       prevOffersKeyRef.current = offersKey
-      const loadedOffers = storageOffers.map((storedOffer) => ({
+      // Use ref to access latest storageOffers without adding it to dependencies
+      const loadedOffers = storageOffersRef.current.map((storedOffer) => ({
         id: storedOffer.id,
         tradeId: storedOffer.tradeId,
         offerString: storedOffer.offerString,
@@ -105,7 +120,9 @@ export function useMyOffersData() {
       }))
       setStateOffers(loadedOffers)
     }
-  }, [offersKey, storageOffers, setStateOffers])
+    // Only depend on offersKey - storageOffers array reference changes on every render
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [offersKey])
 
   // Update page when filters change
   useEffect(() => {
@@ -114,10 +131,14 @@ export function useMyOffersData() {
   }, [state.filters.status, setCurrentPage])
 
   // Refresh offers when page, pageSize, or filters change
+  // refreshOffers is a stable callback (useCallback) that includes loadOffersFromStorage and setIsLoading
+  // in its dependency array. These are guaranteed stable references from hooks, so refreshOffers will
+  // always capture the latest values. We depend on primitive state values to trigger refreshes.
   useEffect(() => {
     trackEffectRun('useMyOffersData: refresh-offers')
     refreshOffers()
-  }, [state.currentPage, state.pageSize, state.filters.status, refreshOffers])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.currentPage, state.pageSize, state.filters.status])
 
   // Computed - offers are already filtered by status in the query
   const filteredOffers = useMemo(() => state.offers, [state.offers])

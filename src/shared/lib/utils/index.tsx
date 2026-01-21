@@ -12,8 +12,9 @@ export * from '../formatting/amount'
 
 // Re-export web3 utilities for backward compatibility
 export * from '../web3/address'
-export * from '../web3/network'
-export * from '../web3/network-storage'
+// Re-export network utilities (consolidated from web3 folder)
+export * from './networkUtils'
+export * from './networkStorage'
 
 // Keep offer-specific utilities here for now
 export * from './offerNetworkFilter'

@@ -37,7 +37,7 @@ export default [{
   rules: {
     // App Style Guide Rules - matches style-guide-rules configuration
     'max-lines': ['error', { max: 1000, skipBlankLines: true, skipComments: true }],
-    'no-console': ['error', { allow: ['warn', 'error'] }], // Allow console.warn and console.error for logger utilities
+    'no-console': 'error', // Disallow all console usage - use logger instead
     'no-debugger': 'error',
     'no-var': 'error',
     'prefer-const': 'error',

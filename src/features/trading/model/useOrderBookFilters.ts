@@ -116,6 +116,8 @@ export function useOrderBookFilters() {
     const timeoutId = setTimeout(() => {
       queryClient.invalidateQueries({ queryKey: ['orderBook'] })
       queryClient.refetchQueries({ queryKey: ['orderBook'] })
+      // Also invalidate price data queries when filters change
+      queryClient.invalidateQueries({ queryKey: ['priceData'] })
     }, 50)
 
     return () => clearTimeout(timeoutId)
