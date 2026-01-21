@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useCallback } from 'react'
 import type { MarketDepthData } from '../../lib/chartTypes'
+import type { OrderBookFilters } from '../../lib/orderBookTypes'
 import { useDepthChartData, useMaxSpreadPercent } from './useDepthChartData'
 import SpreadControls from './SpreadControls'
 import DepthChartSVG from './DepthChartSVG'
@@ -9,6 +10,7 @@ import DepthChartTooltip from './DepthChartTooltip'
 
 interface MarketDepthChartProps {
   depthData: MarketDepthData
+  filters?: OrderBookFilters
   width?: number
   height?: number
   onPriceClick?: (price: number) => void
@@ -28,6 +30,7 @@ const SPREAD_INDICATOR_HEIGHT = 30
 
 export default function MarketDepthChart({
   depthData,
+  filters,
   width = 800,
   height = 500,
   onPriceClick,
@@ -35,7 +38,7 @@ export default function MarketDepthChart({
   const [tooltip, setTooltip] = useState<TooltipData | null>(null)
   const [hoveredPrice, setHoveredPrice] = useState<number | null>(null)
   
-  const [maxSpreadPercent, setMaxSpreadPercent] = useMaxSpreadPercent(depthData)
+  const [maxSpreadPercent, setMaxSpreadPercent, resetMaxSpreadPercent] = useMaxSpreadPercent(depthData, filters)
   
   const chartData = useDepthChartData({ depthData, maxSpreadPercent })
   const { priceRange, visibleBids, visibleAsks, maxVolume, midPrice } = chartData
@@ -119,7 +122,7 @@ export default function MarketDepthChart({
         depthData={depthData}
         maxSpreadPercent={maxSpreadPercent}
         onMaxSpreadChange={setMaxSpreadPercent}
-        priceRange={priceRange}
+        onReset={resetMaxSpreadPercent}
       />
 
       <DepthChartSVG

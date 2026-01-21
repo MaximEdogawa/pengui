@@ -6,14 +6,14 @@ interface SpreadControlsProps {
   depthData: MarketDepthData
   maxSpreadPercent: number
   onMaxSpreadChange: (value: number) => void
-  priceRange: { min: number; max: number }
+  onReset: () => void
 }
 
 export default function SpreadControls({
   depthData,
   maxSpreadPercent,
   onMaxSpreadChange,
-  priceRange,
+  onReset,
 }: SpreadControlsProps) {
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
   const maxSpreadPercentRef = useRef(maxSpreadPercent)
@@ -28,12 +28,12 @@ export default function SpreadControls({
   const handleDecrease = useCallback(() => {
     const minAllowed = depthDataRef.current.spreadPercent + 0.1
     const currentValue = maxSpreadPercentRef.current
-    onMaxSpreadChange(Math.max(minAllowed, currentValue - 0.5))
+    onMaxSpreadChange(Math.max(minAllowed, currentValue - 1))
   }, [onMaxSpreadChange])
 
   const handleIncrease = useCallback(() => {
     const currentValue = maxSpreadPercentRef.current
-    onMaxSpreadChange(Math.min(50, currentValue + 0.5))
+    onMaxSpreadChange(Math.min(200, currentValue + 1))
   }, [onMaxSpreadChange])
 
   const startDecrease = useCallback(() => {
@@ -77,87 +77,80 @@ export default function SpreadControls({
   if (!depthData.bestBid || !depthData.bestAsk) return null
 
   return (
-    <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10">
-      <div className="px-4 py-2.5 bg-white/5 dark:bg-black/20 backdrop-blur-xl rounded-2xl border border-white/10 dark:border-white/5 shadow-2xl">
-        <div className="flex items-center gap-6 text-[11px]">
-          {/* Best Bid */}
-          <div className="flex flex-col gap-0.5 items-center">
-            <span className="text-[#868993] dark:text-[#868993] text-[10px] font-medium uppercase tracking-wider text-center">Bid</span>
-            <span className="text-[#26a69a] dark:text-[#26a69a] font-mono font-semibold text-sm leading-tight">
-              {formatPriceForDisplay(depthData.bestBid)}
-            </span>
-          </div>
-
-          {/* Spread */}
-          <div className="flex flex-col gap-0.5 items-center">
-            <span className="text-[#868993] dark:text-[#868993] text-[10px] font-medium uppercase tracking-wider text-center">Spread</span>
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-[#d1d4dc] dark:text-[#d1d4dc] font-mono font-semibold text-sm leading-tight">
-                {formatPriceForDisplay(depthData.spread)}
-              </span>
-              <span className="text-[#868993] dark:text-[#868993] font-mono text-xs">
-                ({depthData.spreadPercent.toFixed(2)}%)
+    <div className="absolute top-2 left-1/2 -translate-x-1/2 z-10">
+      <div className="px-3 py-2 bg-white/[0.03] dark:bg-black/30 backdrop-blur-2xl rounded-2xl border border-white/20 dark:border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.37)]">
+        <div className="flex flex-col gap-2.5">
+          {/* Top Row: Bid | Spread (Center) | Ask */}
+          <div className="flex items-center justify-center gap-6">
+            {/* Best Bid */}
+            <div className="flex flex-col gap-0.5 items-center min-w-[75px]">
+              <span className="text-[#868993] dark:text-[#868993] text-[8px] font-medium uppercase tracking-wider">Bid</span>
+              <span className="text-[#26a69a] dark:text-[#26a69a] font-mono font-semibold text-xs leading-tight break-all text-center">
+                {formatPriceForDisplay(depthData.bestBid)}
               </span>
             </div>
-          </div>
 
-          {/* Best Ask */}
-          <div className="flex flex-col gap-0.5 items-center">
-            <span className="text-[#868993] dark:text-[#868993] text-[10px] font-medium uppercase tracking-wider text-center">Ask</span>
-            <span className="text-[#ef5350] dark:text-[#ef5350] font-mono font-semibold text-sm leading-tight">
-              {formatPriceForDisplay(depthData.bestAsk)}
-            </span>
-          </div>
-
-          {/* Divider */}
-          <div className="h-8 w-px bg-white/10 dark:bg-white/5" />
-
-          {/* Max Spread Controls */}
-          <div className="flex items-center gap-2">
-            <div className="flex flex-col gap-0.5 items-center">
-              <span className="text-[#868993] dark:text-[#868993] text-[10px] font-medium uppercase tracking-wider text-center">Max</span>
-              <div className="flex items-center gap-1.5">
-                <button
-                  onMouseDown={startDecrease}
-                  onMouseUp={stopInterval}
-                  onMouseLeave={stopInterval}
-                  onTouchStart={startDecrease}
-                  onTouchEnd={stopInterval}
-                  className="w-6 h-6 flex items-center justify-center bg-white/5 dark:bg-white/5 hover:bg-white/10 dark:hover:bg-white/10 active:bg-white/15 dark:active:bg-white/15 text-[#d1d4dc] dark:text-[#d1d4dc] rounded-lg transition-all duration-150 disabled:opacity-30 disabled:cursor-not-allowed text-sm font-medium select-none"
-                  title="Decrease max spread (hold to repeat)"
-                  disabled={maxSpreadPercent <= depthData.spreadPercent + 0.1}
-                >
-                  −
-                </button>
-                <span className="text-[#d1d4dc] dark:text-[#d1d4dc] font-mono font-semibold text-sm min-w-[2.5rem] text-center">
-                  {maxSpreadPercent.toFixed(1)}%
+            {/* Spread - Centered */}
+            <div className="flex flex-col gap-0.5 items-center min-w-[100px]">
+              <span className="text-[#868993] dark:text-[#868993] text-[8px] font-medium uppercase tracking-wider">Spread</span>
+              <div className="flex items-baseline gap-1">
+                <span className="text-[#d1d4dc] dark:text-[#d1d4dc] font-mono font-semibold text-xs">
+                  {formatPriceForDisplay(depthData.spread)}
                 </span>
-                <button
-                  onMouseDown={startIncrease}
-                  onMouseUp={stopInterval}
-                  onMouseLeave={stopInterval}
-                  onTouchStart={startIncrease}
-                  onTouchEnd={stopInterval}
-                  className="w-6 h-6 flex items-center justify-center bg-white/5 dark:bg-white/5 hover:bg-white/10 dark:hover:bg-white/10 active:bg-white/15 dark:active:bg-white/15 text-[#d1d4dc] dark:text-[#d1d4dc] rounded-lg transition-all duration-150 text-sm font-medium select-none"
-                  title="Increase max spread (hold to repeat)"
-                >
-                  +
-                </button>
+                <span className="text-[#868993] dark:text-[#868993] font-mono text-[9px]">
+                  ({depthData.spreadPercent.toFixed(2)}%)
+                </span>
               </div>
             </div>
+
+            {/* Best Ask */}
+            <div className="flex flex-col gap-0.5 items-center min-w-[75px]">
+              <span className="text-[#868993] dark:text-[#868993] text-[8px] font-medium uppercase tracking-wider">Ask</span>
+              <span className="text-[#ef5350] dark:text-[#ef5350] font-mono font-semibold text-xs leading-tight break-all text-center">
+                {formatPriceForDisplay(depthData.bestAsk)}
+              </span>
+            </div>
           </div>
 
-          {/* Price Range */}
-          <div className="flex flex-col gap-0.5 items-center">
-            <span className="text-[#868993] dark:text-[#868993] text-[10px] font-medium uppercase tracking-wider text-center">Range</span>
-            <div className="flex items-baseline gap-1.5">
-              <span className="text-[#868993] dark:text-[#868993] font-mono text-xs">
-                {formatPriceForDisplay(priceRange.min)}
+          {/* Bottom Row: Max Spread Controls */}
+          <div className="flex flex-col gap-0.5 items-center pt-1 border-t border-white/10 dark:border-white/5">
+            <div className="flex items-center w-full relative">
+              <span className="text-[#868993] dark:text-[#868993] text-[8px] font-medium uppercase tracking-wider flex-1 text-center">Max Spread</span>
+              <button
+                onClick={onReset}
+                className="w-4 h-4 flex items-center justify-center bg-white/5 dark:bg-white/5 hover:bg-white/10 dark:hover:bg-white/10 active:bg-white/15 dark:active:bg-white/15 text-[#868993] dark:text-[#868993] rounded transition-all duration-150 text-[9px] font-medium select-none absolute right-0"
+                title="Reset to default max spread"
+              >
+                ↺
+              </button>
+            </div>
+            <div className="flex items-center gap-1 justify-center">
+              <button
+                onMouseDown={startDecrease}
+                onMouseUp={stopInterval}
+                onMouseLeave={stopInterval}
+                onTouchStart={startDecrease}
+                onTouchEnd={stopInterval}
+                className="w-5 h-5 flex items-center justify-center bg-white/5 dark:bg-white/5 hover:bg-white/10 dark:hover:bg-white/10 active:bg-white/15 dark:active:bg-white/15 text-[#d1d4dc] dark:text-[#d1d4dc] rounded-md transition-all duration-150 disabled:opacity-30 disabled:cursor-not-allowed text-xs font-semibold select-none"
+                title="Decrease max spread (hold to repeat)"
+                disabled={maxSpreadPercent <= depthData.spreadPercent + 0.1}
+              >
+                −
+              </button>
+              <span className="text-[#d1d4dc] dark:text-[#d1d4dc] font-mono font-semibold text-xs min-w-[2.5rem] text-center">
+                {maxSpreadPercent.toFixed(1)}%
               </span>
-              <span className="text-[#868993] dark:text-[#868993] text-[10px]">-</span>
-              <span className="text-[#868993] dark:text-[#868993] font-mono text-xs">
-                {formatPriceForDisplay(priceRange.max)}
-              </span>
+              <button
+                onMouseDown={startIncrease}
+                onMouseUp={stopInterval}
+                onMouseLeave={stopInterval}
+                onTouchStart={startIncrease}
+                onTouchEnd={stopInterval}
+                className="w-5 h-5 flex items-center justify-center bg-white/5 dark:bg-white/5 hover:bg-white/10 dark:hover:bg-white/10 active:bg-white/15 dark:active:bg-white/15 text-[#d1d4dc] dark:text-[#d1d4dc] rounded-md transition-all duration-150 text-xs font-semibold select-none"
+                title="Increase max spread (hold to repeat)"
+              >
+                +
+              </button>
             </div>
           </div>
         </div>

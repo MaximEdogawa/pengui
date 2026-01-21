@@ -138,7 +138,23 @@ export function useDepthChartData({
   }
 }
 
-export function useMaxSpreadPercent(depthData: MarketDepthData) {
+// In-memory storage for max spread per filter combination
+// Key: filter key (buyAsset + sellAsset), Value: max spread percent
+const maxSpreadCache = new Map<string, number>()
+
+/**
+ * Generate a unique key for filter combination
+ */
+function getFilterKey(filters?: { buyAsset?: string[]; sellAsset?: string[] }): string {
+  const buyKey = filters?.buyAsset?.sort().join(',') || ''
+  const sellKey = filters?.sellAsset?.sort().join(',') || ''
+  return `${buyKey}|${sellKey}`
+}
+
+export function useMaxSpreadPercent(
+  depthData: MarketDepthData,
+  filters?: { buyAsset?: string[]; sellAsset?: string[] }
+) {
   const defaultMaxSpread = useMemo(() => {
     if (depthData.bestBid && depthData.bestAsk) {
       const currentSpreadPercent = depthData.spreadPercent
@@ -148,7 +164,33 @@ export function useMaxSpreadPercent(depthData: MarketDepthData) {
     return 1
   }, [depthData.bestBid, depthData.bestAsk, depthData.spreadPercent])
   
-  const [maxSpreadPercent, setMaxSpreadPercent] = useState(defaultMaxSpread)
+  const filterKey = useMemo(() => getFilterKey(filters), [filters])
+  
+  // Load from cache for this filter combination, or use default
+  const [maxSpreadPercent, setMaxSpreadPercentState] = useState(() => {
+    const cached = maxSpreadCache.get(filterKey)
+    if (cached !== undefined && cached > 0) {
+      return cached
+    }
+    return defaultMaxSpread
+  })
+  
+  // Update cache when maxSpreadPercent changes (but only for current filter key)
+  useEffect(() => {
+    maxSpreadCache.set(filterKey, maxSpreadPercent)
+  }, [filterKey, maxSpreadPercent])
+  
+  // Restore cached value or use default when filter key changes (filters changed)
+  useEffect(() => {
+    const cached = maxSpreadCache.get(filterKey)
+    if (cached !== undefined && cached > 0) {
+      // Existing filter combination, restore cached value
+      setMaxSpreadPercentState(cached)
+    } else {
+      // New filter combination, use default
+      setMaxSpreadPercentState(defaultMaxSpread)
+    }
+  }, [filterKey, defaultMaxSpread])
   
   useEffect(() => {
     // Only reset to default if current spread changed significantly
@@ -158,7 +200,8 @@ export function useMaxSpreadPercent(depthData: MarketDepthData) {
     
     // Only adjust if maxSpreadPercent is below minimum or if spread changed significantly
     if (maxSpreadPercent < minAllowed) {
-      setMaxSpreadPercent(Math.max(defaultMaxSpread, minAllowed))
+      const newValue = Math.max(defaultMaxSpread, minAllowed)
+      setMaxSpreadPercentState(newValue)
     }
     // Don't reset to default if user has manually set a value - only enforce minimum
   }, [defaultMaxSpread, depthData.spreadPercent, maxSpreadPercent])
@@ -169,8 +212,15 @@ export function useMaxSpreadPercent(depthData: MarketDepthData) {
     const minAllowed = currentSpreadPercent + 0.1
     // Only enforce minimum, don't override user's choice if it's valid
     const newValue = Math.max(value, minAllowed)
-    setMaxSpreadPercent(newValue)
+    setMaxSpreadPercentState(newValue)
   }, [depthData.spreadPercent])
 
-  return [maxSpreadPercent, setMaxSpreadPercentSafe] as const
+  // Reset function to restore default
+  const resetMaxSpreadPercent = useCallback(() => {
+    // Clear cache entry for this filter combination and reset to default
+    maxSpreadCache.delete(filterKey)
+    setMaxSpreadPercentState(defaultMaxSpread)
+  }, [filterKey, defaultMaxSpread])
+
+  return [maxSpreadPercent, setMaxSpreadPercentSafe, resetMaxSpreadPercent] as const
 }

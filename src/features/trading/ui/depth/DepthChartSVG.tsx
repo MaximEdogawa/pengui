@@ -136,7 +136,7 @@ export default function DepthChartSVG({
           />
         )}
 
-        <ChartPriceLabels priceLabels={priceLabels} chartHeight={chartHeight} chartWidth={chartWidth} />
+        <ChartPriceLabels priceLabels={priceLabels} chartHeight={chartHeight} chartWidth={chartWidth} priceRange={priceRange} />
       </g>
     </svg>
   )

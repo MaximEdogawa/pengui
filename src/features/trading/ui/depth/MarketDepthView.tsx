@@ -64,7 +64,12 @@ export default function MarketDepthView({ filters, onPriceClick }: MarketDepthVi
   const [chartSize, setChartSize] = useState({ width: 0, height: 0 })
   const chartContainerRef = useRef<HTMLDivElement>(null)
 
-  const { depthData, isLoading, isError, error, refetch } = useMarketDepth({ filters })
+  // Fetch depth data with a higher default maxLevels to ensure we have enough data
+  // The aggregation will still limit, but we'll have more raw data to work with
+  const { depthData, isLoading, isError, error, refetch } = useMarketDepth({ 
+    filters,
+    maxLevels: 200 // Increased from 30 to 200 to support wider spreads
+  })
 
   // Calculate chart size based on container
   useEffect(() => {
@@ -126,6 +131,7 @@ export default function MarketDepthView({ filters, onPriceClick }: MarketDepthVi
         {chartSize.width > 0 && chartSize.height > 0 && (
           <MarketDepthChart
             depthData={depthData}
+            filters={filters}
             width={chartSize.width}
             height={chartSize.height}
             onPriceClick={handlePriceClick}
