@@ -1,5 +1,8 @@
-export const CHIA_MAINNET_CHAIN_ID = 'chia:mainnet'
-export const CHIA_TESTNET_CHAIN_ID = 'chia:testnet'
+// Import chain IDs from networkUtils to avoid duplication
+import { CHIA_MAINNET_CHAIN_ID, CHIA_TESTNET_CHAIN_ID } from '../utils/networkUtils'
+
+// Re-export for backward compatibility
+export { CHIA_MAINNET_CHAIN_ID, CHIA_TESTNET_CHAIN_ID }
 
 const getCurrentUrl = (): string => {
   if (typeof window !== 'undefined') {
