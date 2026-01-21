@@ -113,18 +113,9 @@ export default function SpreadControls({
           </div>
 
           {/* Bottom Row: Max Spread Controls */}
-          <div className="flex flex-col gap-0.5 items-center pt-1 border-t border-white/10 dark:border-white/5">
-            <div className="flex items-center w-full relative">
-              <span className="text-[#868993] dark:text-[#868993] text-[8px] font-medium uppercase tracking-wider flex-1 text-center">Max Spread</span>
-              <button
-                onClick={onReset}
-                className="w-4 h-4 flex items-center justify-center bg-white/5 dark:bg-white/5 hover:bg-white/10 dark:hover:bg-white/10 active:bg-white/15 dark:active:bg-white/15 text-[#868993] dark:text-[#868993] rounded transition-all duration-150 text-[9px] font-medium select-none absolute right-0"
-                title="Reset to default max spread"
-              >
-                ↺
-              </button>
-            </div>
-            <div className="flex items-center gap-1 justify-center">
+          <div className="flex flex-col gap-1 items-center pt-1.5 border-t border-white/10 dark:border-white/5">
+            <span className="text-[#868993] dark:text-[#868993] text-[8px] font-medium uppercase tracking-wider">Max Spread</span>
+            <div className="flex items-center gap-1">
               <button
                 onMouseDown={startDecrease}
                 onMouseUp={stopInterval}
@@ -150,6 +141,13 @@ export default function SpreadControls({
                 title="Increase max spread (hold to repeat)"
               >
                 +
+              </button>
+              <button
+                onClick={onReset}
+                className="w-5 h-5 flex items-center justify-center bg-white/5 dark:bg-white/5 hover:bg-white/10 dark:hover:bg-white/10 active:bg-white/15 dark:active:bg-white/15 text-[#868993] dark:text-[#868993] rounded-md transition-all duration-150 text-[10px] font-medium select-none ml-0.5"
+                title="Reset to default max spread"
+              >
+                ↺
               </button>
             </div>
           </div>

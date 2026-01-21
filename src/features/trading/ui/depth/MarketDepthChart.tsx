@@ -136,6 +136,8 @@ export default function MarketDepthChart({
         maxVolume={maxVolume}
         centerX={centerX}
         hoveredPrice={hoveredPrice}
+        bestBid={depthData.bestBid}
+        bestAsk={depthData.bestAsk}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
         onClick={handleClick}

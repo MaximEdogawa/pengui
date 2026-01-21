@@ -17,6 +17,8 @@ interface DepthChartSVGProps {
   maxVolume: number
   centerX: number
   hoveredPrice: number | null
+  bestBid: number | null
+  bestAsk: number | null
   onMouseMove: (e: React.MouseEvent<SVGSVGElement>) => void
   onMouseLeave: () => void
   onClick: () => void
@@ -36,6 +38,8 @@ export default function DepthChartSVG({
   maxVolume,
   centerX,
   hoveredPrice,
+  bestBid,
+  bestAsk,
   onMouseMove,
   onMouseLeave,
   onClick,
@@ -50,8 +54,10 @@ export default function DepthChartSVG({
         maxVolume,
         centerX,
         isBid: true,
+        bestBid,
+        bestAsk,
       }),
-    [visibleBids, priceRange, chartWidth, chartHeight, maxVolume, centerX]
+    [visibleBids, priceRange, chartWidth, chartHeight, maxVolume, centerX, bestBid, bestAsk]
   )
 
   const askPath = useMemo(
@@ -64,8 +70,10 @@ export default function DepthChartSVG({
         maxVolume,
         centerX,
         isBid: false,
+        bestBid,
+        bestAsk,
       }),
-    [visibleAsks, priceRange, chartWidth, chartHeight, maxVolume, centerX]
+    [visibleAsks, priceRange, chartWidth, chartHeight, maxVolume, centerX, bestBid, bestAsk]
   )
 
   const priceLabels = useMemo(

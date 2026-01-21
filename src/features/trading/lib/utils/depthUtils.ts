@@ -18,13 +18,13 @@ export function normalizePriceLevel(price: number, precision: number = 8): numbe
  * Calculate spread percentage between best bid and best ask
  * @param bestBid - Best bid price
  * @param bestAsk - Best ask price
- * @returns Spread percentage, or 0 if either price is invalid
+ * @returns Spread percentage (always positive), or 0 if either price is invalid
  */
 export function calculateSpreadPercent(bestBid: number | null, bestAsk: number | null): number {
   if (!bestBid || !bestAsk || bestBid <= 0 || bestAsk <= 0) {
     return 0
   }
-  const spread = bestAsk - bestBid
+  const spread = Math.abs(bestAsk - bestBid)
   const midPrice = (bestBid + bestAsk) / 2
   return midPrice > 0 ? (spread / midPrice) * 100 : 0
 }
@@ -117,8 +117,8 @@ export function aggregateDepthByPriceLevel(
     }
   })
 
-  // Calculate spread
-  const spread = bestBid && bestAsk ? bestAsk - bestBid : 0
+  // Calculate spread (always positive)
+  const spread = bestBid && bestAsk ? Math.abs(bestAsk - bestBid) : 0
   const spreadPercent = calculateSpreadPercent(bestBid, bestAsk)
 
   return {
