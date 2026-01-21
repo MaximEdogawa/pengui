@@ -2,6 +2,7 @@
 
 import { useThemeClasses } from '@/shared/hooks'
 import { useResponsive } from '@/shared/hooks/useResponsive'
+import { logger } from '@/shared/lib/logger'
 import { useCallback, useState } from 'react'
 import type { OrderBookOrder } from '../../lib/orderBookTypes'
 import { useOrderBookFilters } from '../../model/OrderBookFiltersProvider'
@@ -36,7 +37,7 @@ export default function TradingLayout({
   const handleOrderClick = useCallback(
     (order: OrderBookOrder) => {
       if (!order || !order.id) {
-        console.error('TradingLayout: Invalid order passed to handleOrderClick', order)
+        logger.error('TradingLayout: Invalid order passed to handleOrderClick', order)
         return
       }
 

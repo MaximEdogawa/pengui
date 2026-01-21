@@ -159,12 +159,12 @@ export function suppressRelayErrors() {
     return
   }
 
-  originalConsoleError = console.error
+  originalConsoleError = logger.error
   isSuppressing = true
 
   // Also intercept console.warn to suppress WalletConnect warnings
-  const originalConsoleWarn = console.warn
-  console.warn = (...args: unknown[]) => {
+  const originalConsoleWarn = logger.warn
+  logger.warn = (...args: unknown[]) => {
     // Check all arguments for WalletConnect warning patterns
     const hasWalletConnectWarning = args.some((arg) => {
       const argStr = typeof arg === 'string' ? arg : String(arg)
@@ -208,10 +208,14 @@ export function suppressRelayErrors() {
     }
 
     // Call original console.warn for all other warnings
-    originalConsoleWarn.apply(console, args)
+    if (args.length > 0 && typeof args[0] === 'string') {
+      originalConsoleWarn(args[0], ...args.slice(1))
+    } else {
+      originalConsoleWarn(String(args[0] ?? 'Unknown warning'), ...args.slice(1))
+    }
   }
 
-  console.error = (...args: unknown[]) => {
+  logger.error = (...args: unknown[]) => {
     // Check for React infinite loop errors and suppress if rate limited
     const hasReactInfiniteLoopError = args.some((arg) => {
       const argStr = typeof arg === 'string' ? arg : String(arg)

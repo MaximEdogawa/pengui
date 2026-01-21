@@ -1,11 +1,12 @@
 'use client'
 
 import { useState, useCallback, useRef, useEffect } from 'react'
-import { ChevronDown, AlertTriangle } from 'lucide-react'
 import type { MarketDepthLevel } from '../../lib/chartTypes'
 import type { OrderBookOrder } from '../../lib/orderBookTypes'
-import { formatPriceForDisplay } from '../../lib/formatAmount'
 import { normalizePriceLevel } from '../../lib/utils/depthUtils'
+import { logger } from '@/shared/lib/logger'
+import { AlertTriangle, ChevronDown } from 'lucide-react'
+import { formatPriceForDisplay } from '../../lib/formatAmount'
 
 interface ExcludedOffersIndicatorProps {
   excludedBids?: MarketDepthLevel[]
@@ -33,7 +34,7 @@ export default function ExcludedOffersIndicator({
   const findOrderByPrice = useCallback(
     (price: number, isBid: boolean): OrderBookOrder | null => {
       if (!calculatePriceFn) {
-        console.warn('ExcludedOffersIndicator: calculatePriceFn not available')
+        logger.warn('ExcludedOffersIndicator: calculatePriceFn not available')
         return null
       }
 
@@ -51,7 +52,7 @@ export default function ExcludedOffersIndicator({
             matchingOrders.push(order)
           }
         } catch (error) {
-          console.warn('ExcludedOffersIndicator: Error calculating price', error)
+          logger.warn('ExcludedOffersIndicator: Error calculating price', error)
         }
       }
 
@@ -59,7 +60,7 @@ export default function ExcludedOffersIndicator({
         return matchingOrders[0]
       }
 
-      console.warn(`ExcludedOffersIndicator: No order found at price ${price}`)
+      logger.warn(`ExcludedOffersIndicator: No order found at price ${price}`)
       return null
     },
     [filteredBuyOrders, filteredSellOrders, calculatePriceFn]
@@ -69,12 +70,12 @@ export default function ExcludedOffersIndicator({
   const handleOfferClick = useCallback(
     (price: number, isBid: boolean) => {
       if (!onOrderClick) {
-        console.error('ExcludedOffersIndicator: onOrderClick is not available')
+        logger.error('ExcludedOffersIndicator: onOrderClick is not available')
         return
       }
       
       if (!calculatePriceFn) {
-        console.error('ExcludedOffersIndicator: calculatePriceFn is not available')
+        logger.error('ExcludedOffersIndicator: calculatePriceFn is not available')
         return
       }
       
@@ -83,7 +84,7 @@ export default function ExcludedOffersIndicator({
         onOrderClick(order)
         setIsOpen(false)
       } else {
-        console.error('ExcludedOffersIndicator: No valid order found', {
+        logger.error('ExcludedOffersIndicator: No valid order found', {
           price,
           isBid,
           orderFound: !!order,
