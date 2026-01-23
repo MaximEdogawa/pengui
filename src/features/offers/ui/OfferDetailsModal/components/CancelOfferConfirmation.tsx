@@ -33,7 +33,9 @@ export function CancelOfferConfirmation({
           Offer ID:{' '}
           {offer.tradeId
             ? `${offer.tradeId.slice(0, 12)}...${offer.tradeId.slice(-8)}`
-            : 'Unknown'}
+            : offer.pendingConfirmation
+              ? 'Pending confirmation...'
+              : 'Unknown'}
         </p>
         {cancelError && (
           <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">

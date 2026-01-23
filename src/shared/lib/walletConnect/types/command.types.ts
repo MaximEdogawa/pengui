@@ -345,7 +345,8 @@ export interface OfferResponse {
 
 export interface TakeOfferRequest {
   offer: string
-  fee?: number
+  feeInXch?: number
+  feeInMojos?: number
   [key: string]: unknown
 }
 
@@ -356,7 +357,8 @@ export interface TakeOfferResponse {
 
 export interface CancelOfferRequest {
   id: string
-  fee?: number
+  feeInXch?: number
+  feeInMojos?: number
   [key: string]: unknown
 }
 

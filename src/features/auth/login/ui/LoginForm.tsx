@@ -1,7 +1,6 @@
 'use client'
 
-import { PenguinLogo, NetworkPicker } from '@/shared/ui'
-import { ConnectButton } from '@maximedogawa/chia-wallet-connect-react'
+import { PenguinLogo, NetworkPicker, SafeConnectButton } from '@/shared/ui'
 
 export default function LoginForm() {
   return (
@@ -74,7 +73,7 @@ export default function LoginForm() {
                   className="relative z-10 flex items-center justify-center w-full h-full"
                   style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
                 >
-                  <ConnectButton />
+                  <SafeConnectButton />
                 </div>
               </div>
             </div>

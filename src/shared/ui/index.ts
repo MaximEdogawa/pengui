@@ -58,6 +58,18 @@ export { NetworkPicker } from './layout/network-picker'
 export { SectionHeader, type SectionHeaderProps } from './layout/section-header'
 
 // ============================================================================
+// ERROR BOUNDARY
+// ============================================================================
+
+export { ErrorBoundary } from './error-boundary'
+
+// ============================================================================
+// WALLET CONNECT WRAPPER
+// ============================================================================
+
+export { SafeConnectButton } from './wallet-connect-wrapper'
+
+// ============================================================================
 // BRANDING COMPONENTS
 // ============================================================================
 

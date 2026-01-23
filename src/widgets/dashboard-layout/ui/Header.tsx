@@ -1,6 +1,5 @@
 import { Menu, Search, Bell } from 'lucide-react'
-import { ConnectButton } from '@maximedogawa/chia-wallet-connect-react'
-import { NetworkPicker } from '@/shared/ui'
+import { NetworkPicker, SafeConnectButton } from '@/shared/ui'
 import type { ThemeClasses } from '@/shared/lib/theme'
 
 interface HeaderProps {
@@ -50,7 +49,7 @@ export function Header({ t, onMenuClick }: HeaderProps) {
         </div>
         {/* Wallet Connection Status */}
         <div className="relative flex items-center flex-shrink-0">
-          <ConnectButton />
+          <SafeConnectButton />
         </div>
       </div>
     </header>

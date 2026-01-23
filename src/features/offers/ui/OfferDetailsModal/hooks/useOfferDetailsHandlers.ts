@@ -31,7 +31,7 @@ export function useOfferDetailsHandlers({
   // Extract copy handlers
   const { copyOfferString, copyOfferId } = useOfferDetailsCopyHandlers({
     offerString: offer.offerString,
-    offerId: offer.tradeId,
+    offerId: offer.tradeId || offer.id,
     state,
   })
 
@@ -57,11 +57,18 @@ export function useOfferDetailsHandlers({
     state.setCancelError('')
 
     try {
+      // Check if offer can be cancelled (has tradeId and is not pending confirmation)
+      if (!offer.tradeId || offer.pendingConfirmation) {
+        state.setCancelError('Cannot cancel offer: trade ID not available yet')
+        state.setIsCancelling(false)
+        return
+      }
+
       const fee = offer.fee ?? getMinimumFeeInXch()
 
       await cancelOfferMutation.mutateAsync({
         id: offer.tradeId,
-        fee: fee,
+        feeInXch: fee,
       })
 
       await offerStorage.updateOffer(offer.id, { status: 'cancelled' })

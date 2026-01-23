@@ -3,17 +3,16 @@
 import { useCatTokens } from '@/entities/asset'
 import { getNativeTokenTickerForNetwork } from '@/shared/lib/config/environment'
 import { useNetwork } from '@/shared/hooks/useNetwork'
-import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useCallback, useMemo, useRef } from 'react'
 import { useOrderBookFiltering } from '../../composables/useOrderBookFiltering'
+import { useOrderBookPriceDeviation } from '../../composables/useOrderBookPriceDeviation'
 import { useOrderBookResize } from '../../composables/useOrderBookResize'
+import { useOrderBookScroll } from '../../composables/useOrderBookScroll'
 import { useOrderBookTooltip } from '../../composables/useOrderBookTooltip'
 import { useOrderBookViewport } from '../../composables/useOrderBookViewport'
 import { formatPriceForDisplay } from '../../lib/formatAmount'
 import type { OrderBookOrder } from '../../lib/orderBookTypes'
-import {
-  calculateAveragePrice,
-  calculateOrderPrice as calculateOrderPriceNumeric,
-} from '../../lib/services/priceCalculation'
+import { calculateAveragePrice } from '../../lib/services/priceCalculation'
 import { useOrderBookFilters } from '../../model/OrderBookFiltersProvider'
 import { useOrderBook } from '../../model/useOrderBook'
 import { useOrderBookDetails } from '../../model/useOrderBookDetails'
@@ -32,16 +31,12 @@ interface OrderBookContainerProps {
 export default function OrderBookContainer({ filters, onOrderClick }: OrderBookContainerProps) {
   const { filters: contextFilters } = useOrderBookFilters()
   
-  // Always use contextFilters for data fetching (they come from the filter provider and have defaults)
-  // The filters prop is for display/UI purposes only
   const { orderBookData, orderBookLoading, orderBookHasMore, orderBookError } =
     useOrderBook(contextFilters)
 
   const { getCatTokenInfo } = useCatTokens()
   const { network } = useNetwork()
 
-  // Use composables for filtering, resize, and tooltip
-  // Use contextFilters for filtering to match what was fetched
   const { filteredBuyOrders, filteredSellOrders, calculatePriceFn } = useOrderBookFiltering(
     orderBookData,
     contextFilters
@@ -64,66 +59,17 @@ export default function OrderBookContainer({ filters, onOrderClick }: OrderBookC
   )
 
   // Calculate price deviation percentage for hovered order
-  const priceDeviationPercent = useMemo(() => {
-    if (!hoveredOrder) return null
-
-    // Determine which order list the hovered order belongs to
-    const isBuyOrder = filteredBuyOrders.includes(hoveredOrder)
-    const orderList = isBuyOrder ? filteredBuyOrders : filteredSellOrders
-    const orderType = isBuyOrder ? 'buy' : 'sell'
-
-    if (orderList.length === 0) return null
-
-    // Calculate numeric price for all orders
-    const getNumericPrice = (order: OrderBookOrder) => {
-      return calculateOrderPriceNumeric(order, contextFilters, { getTickerSymbol })
-    }
-
-    // Calculate best price (lowest for sell, highest for buy)
-    const prices = orderList.map(getNumericPrice).filter((p) => p > 0 && isFinite(p))
-    if (prices.length === 0) return null
-
-    const bestPrice =
-      orderType === 'sell'
-        ? Math.min(...prices) // Lowest price is best for sell
-        : Math.max(...prices) // Highest price is best for buy
-
-    if (!bestPrice || bestPrice <= 0 || !isFinite(bestPrice)) return null
-
-    // Calculate current price of hovered order
-    const currentPrice = getNumericPrice(hoveredOrder)
-    if (!currentPrice || currentPrice <= 0 || !isFinite(currentPrice)) return null
-
-    // If prices are exactly equal, return 0% deviation
-    if (currentPrice === bestPrice) return 0
-
-    // Calculate deviation percentage
-    let deviation: number
-    if (orderType === 'sell') {
-      // For sell orders: ((currentPrice - bestPrice) / bestPrice) * 100
-      deviation = ((currentPrice - bestPrice) / bestPrice) * 100
-    } else {
-      // For buy orders: ((bestPrice - currentPrice) / bestPrice) * 100
-      deviation = ((bestPrice - currentPrice) / bestPrice) * 100
-    }
-
-    // Handle NaN or Infinity results
-    if (!isFinite(deviation) || isNaN(deviation)) return null
-
-    // Cap at 100% and ensure non-negative
-    return Math.max(0, Math.min(100, deviation))
-  }, [hoveredOrder, filteredBuyOrders, filteredSellOrders, contextFilters, getTickerSymbol])
+  const priceDeviationPercent = useOrderBookPriceDeviation({
+    hoveredOrder,
+    filteredBuyOrders,
+    filteredSellOrders,
+    contextFilters,
+    getTickerSymbol,
+  })
 
   // Refs for scrolling
   const sellScrollRef = useRef<HTMLDivElement>(null)
   const buyScrollRef = useRef<HTMLDivElement>(null)
-  
-  // Track if user has manually scrolled away from bottom
-  const hasUserScrolledRef = useRef(false)
-  // Store scroll position to restore after updates
-  const savedScrollPositionRef = useRef<number | null>(null)
-  // Track if this is the initial load
-  const isInitialLoadRef = useRef(true)
 
   // Viewport detection for lazy loading detailed data
   const { visibleOrderIds, registerOrderElement } = useOrderBookViewport(
@@ -135,6 +81,15 @@ export default function OrderBookContainer({ filters, onOrderClick }: OrderBookC
 
   // Fetch detailed data for visible orders only
   const { detailsMap, isLoading: isLoadingDetails } = useOrderBookDetails(visibleOrderIds)
+
+  // Handle scroll behavior (auto-scroll, position restoration, infinite scroll)
+  useOrderBookScroll({
+    sellScrollRef,
+    buyScrollRef,
+    filteredSellOrders,
+    orderBookLoading,
+    orderBookHasMore,
+  })
 
   // Calculate average price
   const averagePrice = useMemo(() => {
@@ -152,81 +107,6 @@ export default function OrderBookContainer({ filters, onOrderClick }: OrderBookC
       formatPriceForDisplay
     )
   }, [contextFilters, filteredSellOrders, filteredBuyOrders, calculatePriceFn])
-
-  // Track user scroll to detect manual scrolling
-  useEffect(() => {
-    const sellScrollElement = sellScrollRef.current
-    if (!sellScrollElement) return
-
-    const handleScroll = () => {
-      if (!sellScrollElement) return
-      
-      const { scrollTop, scrollHeight, clientHeight } = sellScrollElement
-      const isAtBottom = scrollTop + clientHeight >= scrollHeight - 5 // 5px threshold for rounding
-      
-      // If user scrolls away from bottom, mark as manually scrolled
-      if (!isAtBottom) {
-        hasUserScrolledRef.current = true
-        savedScrollPositionRef.current = scrollTop
-      } else {
-        // If user scrolls back to bottom, allow auto-scroll again
-        hasUserScrolledRef.current = false
-        savedScrollPositionRef.current = null
-      }
-    }
-
-    sellScrollElement.addEventListener('scroll', handleScroll, { passive: true })
-    
-    return () => {
-      sellScrollElement.removeEventListener('scroll', handleScroll)
-    }
-  }, [])
-
-  // Scroll sell side to bottom by default when orders load or change
-  // Only auto-scroll if user hasn't manually scrolled away from bottom
-  useEffect(() => {
-    if (sellScrollRef.current && filteredSellOrders.length > 0 && !orderBookLoading) {
-      // Use requestAnimationFrame to ensure DOM is fully updated
-      requestAnimationFrame(() => {
-        if (!sellScrollRef.current) return
-        
-        // On initial load, always scroll to bottom
-        if (isInitialLoadRef.current) {
-          sellScrollRef.current.scrollTop = sellScrollRef.current.scrollHeight
-          isInitialLoadRef.current = false
-          return
-        }
-        
-        // If user has manually scrolled, restore their position
-        if (hasUserScrolledRef.current && savedScrollPositionRef.current !== null) {
-          sellScrollRef.current.scrollTop = savedScrollPositionRef.current
-        } else {
-          // Otherwise, scroll to bottom (user is at bottom or hasn't scrolled)
-          sellScrollRef.current.scrollTop = sellScrollRef.current.scrollHeight
-        }
-      })
-    }
-  }, [filteredSellOrders, orderBookLoading])
-
-  // Intersection Observer for infinite scrolling
-  useEffect(() => {
-    if (!buyScrollRef.current) return
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && orderBookHasMore && !orderBookLoading) {
-          // Load more would be handled by parent component
-        }
-      },
-      { threshold: 0.1 }
-    )
-
-    observer.observe(buyScrollRef.current)
-
-    return () => {
-      observer.disconnect()
-    }
-  }, [orderBookHasMore, orderBookLoading])
 
   const emptyMessage = useMemo(() => {
     if (
