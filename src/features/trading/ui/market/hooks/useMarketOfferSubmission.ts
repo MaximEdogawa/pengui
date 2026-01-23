@@ -3,6 +3,8 @@
 import { type OfferAsset, type OfferDetails } from '@/entities/offer'
 import { useTakeOffer } from '@/features/wallet'
 import { useCallback } from 'react'
+import { offerStorageService } from '@/shared/lib/services/offerStorageService'
+import { useWalletAddress } from '@/features/wallet/model/useWalletQueries'
 
 interface UseMarketOfferSubmissionProps {
   formState: {
@@ -25,6 +27,33 @@ interface UseMarketOfferSubmissionProps {
   mode?: 'modal' | 'inline'
 }
 
+// Helper function to create taken offer
+function createTakenOffer(
+  tradeId: string | undefined,
+  offerString: string,
+  fee: number,
+  offerPreview: UseMarketOfferSubmissionProps['offerPreview']
+): OfferDetails {
+  return {
+    id: Date.now().toString(),
+    tradeId,
+    pendingConfirmation: !tradeId,
+    offerString: offerString.trim(),
+    status: 'pending',
+    createdAt: new Date(),
+    assetsOffered: offerPreview?.assetsOffered || [],
+    assetsRequested: offerPreview?.assetsRequested || [],
+    fee: offerPreview?.fee || fee,
+    creatorAddress: offerPreview?.creatorAddress || 'unknown',
+  }
+}
+
+// Helper function to save taken offer
+async function saveTakenOffer(offer: OfferDetails, walletAddress: string): Promise<void> {
+  await offerStorageService.saveOffer(offer, true, walletAddress)
+  await offerStorageService.markOfferAsTaken(offer.id, walletAddress)
+}
+
 export function useMarketOfferSubmission({
   formState,
   isFormValid,
@@ -34,6 +63,8 @@ export function useMarketOfferSubmission({
   mode,
 }: UseMarketOfferSubmissionProps) {
   const takeOfferMutation = useTakeOffer()
+  const { data: walletData } = useWalletAddress()
+  const walletAddress = walletData?.address
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -55,24 +86,20 @@ export function useMarketOfferSubmission({
         })
 
         // Handle different response structures from the wallet
-        // The wallet might return: { tradeId: string, success: boolean }
-        // or just: { tradeId: string }
         const resultData = result as { tradeId?: string; data?: { tradeId?: string }; success?: boolean }
         const tradeId = resultData?.tradeId || resultData?.data?.tradeId
-        const isSuccess = result?.success !== false // Treat undefined/null as success if tradeId exists
+        const isSuccess = result?.success !== false
 
         if (tradeId) {
-          const takenOffer: OfferDetails = {
-            id: Date.now().toString(),
-            tradeId: tradeId,
-            pendingConfirmation: false,
-            offerString: formState.offerString.trim(),
-            status: 'pending',
-            createdAt: new Date(),
-            assetsOffered: offerPreview?.assetsOffered || [],
-            assetsRequested: offerPreview?.assetsRequested || [],
-            fee: offerPreview?.fee || formState.fee,
-            creatorAddress: offerPreview?.creatorAddress || 'unknown',
+          const takenOffer = createTakenOffer(tradeId, formState.offerString, formState.fee, offerPreview)
+
+          // Save offer to IndexedDB with takenBy field
+          if (walletAddress) {
+            try {
+              await saveTakenOffer(takenOffer, walletAddress)
+            } catch {
+              // Error is silently handled to not interrupt user flow
+            }
           }
 
           formState.setSuccessMessage('Offer taken successfully!')
@@ -85,19 +112,7 @@ export function useMarketOfferSubmission({
             }
           }, 1500)
         } else if (isSuccess && result) {
-          // If wallet returned success but no tradeId, mark as pending confirmation
-          const takenOffer: OfferDetails = {
-            id: Date.now().toString(),
-            tradeId: undefined,
-            pendingConfirmation: true,
-            offerString: formState.offerString.trim(),
-            status: 'pending',
-            createdAt: new Date(),
-            assetsOffered: offerPreview?.assetsOffered || [],
-            assetsRequested: offerPreview?.assetsRequested || [],
-            fee: offerPreview?.fee || formState.fee,
-            creatorAddress: offerPreview?.creatorAddress || 'unknown',
-          }
+          const takenOffer = createTakenOffer(undefined, formState.offerString, formState.fee, offerPreview)
 
           formState.setSuccessMessage('Offer accepted! Processing...')
           onOfferTaken?.(takenOffer)
@@ -118,7 +133,7 @@ export function useMarketOfferSubmission({
         formState.setIsSubmitting(false)
       }
     },
-    [formState, isFormValid, takeOfferMutation, offerPreview, onOfferTaken, onClose, mode]
+    [formState, isFormValid, takeOfferMutation, offerPreview, onOfferTaken, onClose, mode, walletAddress]
   )
 
   return { handleSubmit }

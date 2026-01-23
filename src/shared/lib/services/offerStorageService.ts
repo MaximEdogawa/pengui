@@ -518,6 +518,40 @@ export class OfferStorageService {
     // when calling saveOffer from React components
     return undefined
   }
+
+  /**
+   * Mark an offer as taken by a user
+   */
+  async markOfferAsTaken(offerId: string, walletAddress: string): Promise<void> {
+    try {
+      await ensureDatabaseReady()
+
+      if (!isDatabaseReady()) {
+        throw new Error('Database is not ready')
+      }
+
+      const updateData: Partial<StoredOffer> = {
+        takenBy: walletAddress,
+        lastModified: new Date(),
+      }
+
+      const updatedCount = await withTimeout(
+        db.offers.where('id').equals(offerId).modify(updateData),
+        5000,
+        'markOfferAsTaken'
+      )
+
+      if (updatedCount === 0) {
+        logger.warn('⚠️ No offer found to mark as taken:', { offerId })
+        return
+      }
+
+      logger.info('✅ Offer marked as taken in IndexedDB:', { offerId, walletAddress, updatedCount })
+    } catch (error) {
+      logger.error('❌ Failed to mark offer as taken in IndexedDB:', error)
+      throw error
+    }
+  }
 }
 
 // Create singleton instance

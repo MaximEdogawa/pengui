@@ -4,6 +4,9 @@ import { useCatTokens } from '@/entities/asset'
 import { getNativeTokenTickerForNetwork } from '@/shared/lib/config/environment'
 import { useNetwork } from '@/shared/hooks/useNetwork'
 import { useCallback, useMemo, useRef } from 'react'
+import { useMyTrades } from '../../model/useMyTrades'
+import { resolveTickerId } from '../../lib/tickerResolution'
+import { useTickers } from '@/entities/asset/model/useTickers'
 import { useOrderBookFiltering } from '../../composables/useOrderBookFiltering'
 import { useOrderBookPriceDeviation } from '../../composables/useOrderBookPriceDeviation'
 import { useOrderBookResize } from '../../composables/useOrderBookResize'
@@ -19,6 +22,8 @@ import { useOrderBookDetails } from '../../model/useOrderBookDetails'
 import OrderBookResizeHandle from './OrderBookResizeHandle'
 import OrderBookTable, { OrderBookTableHeader } from './OrderBookTable'
 import OrderTooltip from './OrderTooltip'
+import { User } from 'lucide-react'
+import { useThemeClasses } from '@/shared/hooks'
 
 interface OrderBookContainerProps {
   filters?: {
@@ -30,12 +35,31 @@ interface OrderBookContainerProps {
 
 export default function OrderBookContainer({ filters, onOrderClick }: OrderBookContainerProps) {
   const { filters: contextFilters } = useOrderBookFilters()
+  const { t, isDark } = useThemeClasses()
   
   const { orderBookData, orderBookLoading, orderBookHasMore, orderBookError } =
     useOrderBook(contextFilters)
 
   const { getCatTokenInfo } = useCatTokens()
   const { network } = useNetwork()
+  const { data: tickersData } = useTickers()
+  const tickers = useMemo(() => tickersData?.data || [], [tickersData?.data])
+
+  // Get ticker ID for my trades
+  const tickerId = useMemo(() => {
+    if (!contextFilters) return null
+    return resolveTickerId(contextFilters, tickers)
+  }, [contextFilters, tickers])
+
+  // Get my trades for current asset pair
+  const { myTrades } = useMyTrades({
+    tickerId: tickerId || undefined,
+  })
+
+  // Check if user has trades for this asset pair
+  const hasMyTrades = useMemo(() => {
+    return myTrades.length > 0
+  }, [myTrades])
 
   const { filteredBuyOrders, filteredSellOrders, calculatePriceFn } = useOrderBookFiltering(
     orderBookData,
@@ -125,6 +149,16 @@ export default function OrderBookContainer({ filters, onOrderClick }: OrderBookC
 
   return (
     <div className="h-full flex flex-col">
+      {/* My Trades Indicator */}
+      {hasMyTrades && (
+        <div className={`mb-2 flex items-center gap-1.5 px-2 py-1 backdrop-blur-xl bg-blue-500/20 border border-blue-400/30 rounded-lg ${t.card}`}>
+          <User className={`w-3 h-3 ${isDark ? 'text-blue-400' : 'text-blue-600'}`} />
+          <span className={`text-xs font-medium ${isDark ? 'text-blue-400' : 'text-blue-600'}`}>
+            {myTrades.length} {myTrades.length === 1 ? 'Trade' : 'Trades'} for this pair
+          </span>
+        </div>
+      )}
+
       {/* Order Book Display */}
       <div
         className="order-book-container flex-1 flex flex-col overflow-hidden rounded-xl backdrop-blur-2xl bg-white/5 dark:bg-black/5 border border-white/15"
