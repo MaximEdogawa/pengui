@@ -4,7 +4,7 @@ import { cn } from '@/shared/lib/utils/index'
 import ReactQueryProvider from '@/shared/providers/ReactQueryProvider'
 import { NetworkProvider } from '@/shared/providers/NetworkProvider'
 import { DashboardLayout } from '@/widgets/dashboard-layout'
-import { WalletConnectionGuard } from '@/shared/ui'
+import { WalletConnectionGuard, ErrorBoundary } from '@/shared/ui'
 import {
   WalletManager,
   persistor,
@@ -57,28 +57,39 @@ const getWalletConnectConfig = () => {
 }
 
 export default function UILayout({ children }: { children: React.ReactNode }) {
-  // CRITICAL: Initialize network preference to mainnet on mount (before any WalletConnect operations)
-  // This ensures WalletConnect always uses mainnet unless user explicitly changes to testnet
+  // Initialize network preference to mainnet on mount (before any WalletConnect operations)
   useEffect(() => {
     if (typeof window !== 'undefined' && !hasNetworkPreference()) {
       setStoredNetwork('mainnet')
-      logger.info('🔧 Network preference initialized to mainnet (default)')
     }
   }, [])
 
   // Initialize WalletManager and database on mount
+  // CRITICAL: Ensure network is set before WalletManager initialization
   useEffect(() => {
-    const { penguiIcon, metadata } = getWalletConnectConfig()
-    const walletManager = new WalletManager(penguiIcon, metadata)
-    walletManager.detectEvents()
+    if (typeof window === 'undefined') {
+      return
+    }
 
-    // Initialize IndexedDB
-    if (typeof window !== 'undefined') {
+    // Ensure network preference is set before WalletManager initialization
+    if (!hasNetworkPreference()) {
+      setStoredNetwork('mainnet')
+    }
+
+    try {
+      const { penguiIcon, metadata } = getWalletConnectConfig()
+      const walletManager = new WalletManager(penguiIcon, metadata)
+      walletManager.detectEvents()
+
+      // Initialize IndexedDB
       import('@/shared/lib/database/indexedDB').then(({ initializeDatabase }) => {
         initializeDatabase().catch(() => {
           logger.error('IndexedDB initialization failed. Offers may not persist.')
         })
       })
+    } catch (error) {
+      logger.error('❌ Failed to initialize WalletManager:', error)
+      // Don't throw - let ErrorBoundary handle render errors
     }
   }, [])
 
@@ -128,64 +139,45 @@ export default function UILayout({ children }: { children: React.ReactNode }) {
               loading={null}
               persistor={persistor}
               onBeforeLift={async () => {
-                // CRITICAL: Ensure network preference is set to mainnet by default before any WalletConnect operations
-                // This ensures WalletConnect always uses mainnet unless user explicitly changes to testnet
+                // Ensure network preference is set to mainnet by default
                 if (!hasNetworkPreference()) {
                   setStoredNetwork('mainnet')
                 }
                 
-                // Get the app's network preference from localStorage (should be mainnet by default)
                 const appNetwork = getStoredNetwork()
                 const appChainId = networkToChainId(appNetwork)
                 
-                // CRITICAL: Clear any WalletConnect sessions stored in localStorage that use testnet
-                // This prevents the WalletConnect package from using old testnet sessions
-                // We need to be aggressive here because the package might default to testnet
+                // Clear WalletConnect storage if it contains testnet references when app is on mainnet
                 if (typeof window !== 'undefined' && appNetwork === 'mainnet') {
                   try {
-                    const wcStorageKey = 'walletconnect'
-                    const wcStorage = localStorage.getItem(wcStorageKey)
-                    if (wcStorage) {
-                      // Check if storage contains "testnet" string anywhere (most reliable check)
-                      if (wcStorage.includes('testnet') || wcStorage.includes('chia:testnet')) {
-                        logger.info('🧹 Clearing WalletConnect storage: found testnet references but app is on mainnet')
-                        localStorage.removeItem(wcStorageKey)
-                      }
+                    const wcStorage = localStorage.getItem('walletconnect')
+                    if (wcStorage && (wcStorage.includes('testnet') || wcStorage.includes('chia:testnet'))) {
+                      localStorage.removeItem('walletconnect')
                     }
-                  } catch (e) {
-                    logger.warn('⚠️ Error checking WalletConnect storage:', e)
+                  } catch {
+                    // Silently handle storage errors
                   }
                 }
                 
                 // Restore connection state after Redux Persist has rehydrated
-                // This ensures the connection is re-established after page refresh
                 const { penguiIcon, metadata } = getWalletConnectConfig()
-                
-                // Check if there's a stored session and if its chainId matches the app's network
-                // This prevents restoration errors when the stored session is for a different network
                 const state = store.getState()
                 const storedSession = state.walletConnect?.selectedSession
                 
+                // Check if stored session's chainId matches app's network
                 if (storedSession?.namespaces?.chia) {
-                  // Try to get chainId from chains array first (most reliable)
                   let storedChainId: string | null = storedSession.namespaces.chia.chains?.[0] || null
                   
-                  // If chains array is empty, try to extract from accounts
                   if (!storedChainId && storedSession.namespaces.chia.accounts?.[0]) {
                     const accountParts = storedSession.namespaces.chia.accounts[0].split(':')
                     if (accountParts.length >= 3) {
-                      // Account format: "chia:chainId:fingerprint" or "chia:mainnet:fingerprint"
                       storedChainId = `chia:${accountParts[1] === 'chia' ? accountParts[2] : accountParts[1]}`
                     }
                   }
                   
-                  // If we found a stored chainId and it doesn't match app's network, skip restoration
+                  // Skip restoration if chainId doesn't match
                   if (storedChainId && storedChainId !== appChainId) {
-                    logger.info(
-                      `⏭️ Skipping connection restoration: stored session is ${storedChainId} but app is configured for ${appChainId}. ` +
-                      `User will need to reconnect with the correct network.`
-                    )
-                    return // Skip restoration to avoid chainId mismatch errors
+                    return
                   }
                 }
                 
@@ -195,33 +187,28 @@ export default function UILayout({ children }: { children: React.ReactNode }) {
                     walletConnectMetadata: metadata,
                   })
                   
-                  // Ensure events are detected after restoration
                   const walletManager = new WalletManager(penguiIcon, metadata)
                   await walletManager.detectEvents()
                 } catch (error) {
-                  // If restoration fails, log it but don't break the app
+                  // Only re-throw non-chainId errors
                   const errorMessage = error instanceof Error ? error.message : String(error)
-                  if (errorMessage.includes('chainId') || errorMessage.includes('isValidRequest')) {
-                    logger.warn(
-                      `⚠️ Connection restoration failed. App network: ${appNetwork} (${appChainId}). ` +
-                      `This will be resolved when NetworkProvider initializes. Error: ${errorMessage}`
-                    )
-                  } else {
-                    // Re-throw non-chainId errors
+                  if (!errorMessage.includes('chainId') && !errorMessage.includes('isValidRequest')) {
                     throw error
                   }
                 }
               }}
             >
-              <div className="wallet-connect-scope">
-                <ReactQueryProvider>
-                  <NetworkProvider>
-                    <WalletConnectionGuard>
-                      <DashboardLayoutWrapper>{children}</DashboardLayoutWrapper>
-                    </WalletConnectionGuard>
-                  </NetworkProvider>
-                </ReactQueryProvider>
-              </div>
+              <ErrorBoundary>
+                <div className="wallet-connect-scope">
+                  <ReactQueryProvider>
+                    <NetworkProvider>
+                      <WalletConnectionGuard>
+                        <DashboardLayoutWrapper>{children}</DashboardLayoutWrapper>
+                      </WalletConnectionGuard>
+                    </NetworkProvider>
+                  </ReactQueryProvider>
+                </div>
+              </ErrorBoundary>
             </PersistGate>
           </Provider>
         </ThemeProvider>

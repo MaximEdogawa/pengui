@@ -24,10 +24,8 @@ export function useSignClient() {
       try {
         const config = getSignClientConfig()
         const signClient = await SignClient.init(config)
-        logger.info(`🔄 WalletConnect SignClient initialized for ${network}`)
         
-        // Register listeners IMMEDIATELY after initialization to prevent race conditions
-        // This ensures listeners are ready before WalletConnect starts emitting events
+        // Register listeners immediately after initialization to prevent race conditions
         registerWalletConnectListeners(signClient)
         
         return { signClient }

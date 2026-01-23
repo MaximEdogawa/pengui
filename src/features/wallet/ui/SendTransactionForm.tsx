@@ -8,7 +8,8 @@ import {
   getMinimumFeeInXch,
 } from '@/shared/lib/utils/chia-units'
 import { extractTransactionId } from '@/shared/lib/walletConnect/utils/transactionUtils'
-import { ConnectButton, useWalletConnectionState } from '@maximedogawa/chia-wallet-connect-react'
+import { useWalletConnectionState } from '@maximedogawa/chia-wallet-connect-react'
+import { SafeConnectButton } from '@/shared/ui'
 import { useSendTransaction, useRefreshBalance, useTransactionForm } from '../model'
 import { useThemeClasses } from '@/shared/hooks'
 import { Send, RefreshCw } from 'lucide-react'
@@ -104,7 +105,7 @@ export default function SendTransactionForm({ availableBalance }: SendTransactio
     return (
       <div className="flex flex-col items-center justify-center py-6">
         <p className={`${t.textSecondary} text-sm mb-4 text-center`}>Connect your wallet to send transactions</p>
-        <ConnectButton />
+        <SafeConnectButton />
       </div>
     )
   }

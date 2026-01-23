@@ -68,7 +68,6 @@ export function NetworkProvider({ children }: { children: React.ReactNode }) {
       queryClient.invalidateQueries({ queryKey: ['orderBookDetails'] })
       // Invalidate Dexie API data (pairs, tickers, offers)
       queryClient.invalidateQueries({ queryKey: ['dexie'] })
-      logger.info(`🔄 Network switched to: ${newNetwork}`)
     },
     [queryClient]
   )
@@ -110,8 +109,6 @@ export function NetworkProvider({ children }: { children: React.ReactNode }) {
 
     // Auto-sync if no user preference exists and networks differ
     if (!hasNetworkPreference() && walletNetwork !== currentNetwork) {
-      logger.info(`🔄 Auto-syncing network to wallet: ${walletNetwork}`)
-      // Use the shared helper to ensure cache invalidation and SignClient refresh
       applyNetworkChange(walletNetwork)
       hasAutoSyncedRef.current = true
     }
@@ -175,15 +172,12 @@ export function NetworkProvider({ children }: { children: React.ReactNode }) {
               }
               const signClient = instanceData?.signClient
 
-              if (!signClient) {
-                logger.warn('⚠️ SignClient not available for network test')
+              if (!signClient || !walletConnectSession && !selectedSession) {
                 return
               }
 
-              // Get session data
               const sessionData = walletConnectSession || selectedSession
               if (!sessionData) {
-                logger.warn('⚠️ Session not available for network test')
                 return
               }
 
@@ -222,17 +216,10 @@ export function NetworkProvider({ children }: { children: React.ReactNode }) {
                 isConnected: true,
               }
 
-              // Try to get wallet balance as a test request
-              const result = await getAssetBalance(signClient, testSession, null, null)
-
-              // Log request result
-              if (!result.success) {
-                logger.warn(`⚠️ Wallet request failed after network switch: ${result.error}`)
-              } else {
-                logger.info('✅ Wallet request succeeded after network switch')
-              }
-            } catch (error) {
-              logger.error('❌ Error testing wallet connection after network switch:', error)
+              // Test wallet connection with a balance request
+              await getAssetBalance(signClient, testSession, null, null)
+            } catch {
+              // Silently handle test errors
             }
           }, 500) // Wait 500ms for network switch to complete
         }

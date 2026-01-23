@@ -54,10 +54,17 @@ export function useMarketOfferSubmission({
           fee: formState.fee,
         })
 
-        if (result && result.success && result.tradeId) {
+        // Handle different response structures from the wallet
+        // The wallet might return: { tradeId: string, success: boolean }
+        // or just: { tradeId: string }
+        const resultData = result as { tradeId?: string; data?: { tradeId?: string }; success?: boolean }
+        const tradeId = resultData?.tradeId || resultData?.data?.tradeId
+        const isSuccess = result?.success !== false // Treat undefined/null as success if tradeId exists
+
+        if (tradeId) {
           const takenOffer: OfferDetails = {
             id: Date.now().toString(),
-            tradeId: result.tradeId,
+            tradeId: tradeId,
             offerString: formState.offerString.trim(),
             status: 'pending',
             createdAt: new Date(),
@@ -76,8 +83,32 @@ export function useMarketOfferSubmission({
               onClose()
             }
           }, 1500)
+        } else if (isSuccess && result) {
+          // If wallet returned success but no tradeId, still treat as success
+          // (some wallets might not return tradeId immediately)
+          const takenOffer: OfferDetails = {
+            id: Date.now().toString(),
+            tradeId: `pending-${Date.now()}`,
+            offerString: formState.offerString.trim(),
+            status: 'pending',
+            createdAt: new Date(),
+            assetsOffered: offerPreview?.assetsOffered || [],
+            assetsRequested: offerPreview?.assetsRequested || [],
+            fee: offerPreview?.fee || formState.fee,
+            creatorAddress: offerPreview?.creatorAddress || 'unknown',
+          }
+
+          formState.setSuccessMessage('Offer accepted! Processing...')
+          onOfferTaken?.(takenOffer)
+
+          setTimeout(() => {
+            formState.resetForm()
+            if (mode === 'modal' && onClose) {
+              onClose()
+            }
+          }, 1500)
         } else {
-          throw new Error('Failed to take market offer')
+          throw new Error('Failed to take market offer - no tradeId returned')
         }
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : 'Unknown error occurred'

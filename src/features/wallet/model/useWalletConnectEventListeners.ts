@@ -27,7 +27,6 @@ export function registerWalletConnectListeners(signClient: SignClient | undefine
     return
   }
 
-  const clientId = signClient.core.crypto.keychain.keychain.get('clientId') || 'unknown'
   const registeredEvents = listenerRegistry.get(signClient) || new Set()
 
   const eventNames: Array<keyof EventHandlers> = [
@@ -44,17 +43,16 @@ export function registerWalletConnectListeners(signClient: SignClient | undefine
     !eventNames.every(eventName => registeredEvents.has(eventName))
 
   if (!needsRegistration) {
-    logger.debug(`♻️ Event listeners already registered for client ${clientId}, skipping...`)
     return
   }
 
   // Create event handlers
   const eventHandlers: EventHandlers = {
     session_delete: () => {
-      logger.info('🗑️ WalletConnect session deleted')
+      // Session deleted
     },
     session_expire: () => {
-      logger.info('⏰ WalletConnect session expired')
+      // Session expired
     },
     session_request: (args: unknown) => {
       try {
@@ -67,24 +65,19 @@ export function registerWalletConnectListeners(signClient: SignClient | undefine
             result: { acknowledged: true },
           },
         })
-        logger.info(`✅ Responded to session request ${event.id} for topic ${event.topic}`)
-      } catch (error) {
-        logger.warn(
-          '⚠️ Failed to respond to session request:',
-          error instanceof Error ? error : undefined
-        )
+      } catch {
+        // Silently handle response errors
       }
     },
-    session_proposal: (args: unknown) => {
-      logger.info('📋 WalletConnect session proposal received:', args)
+    session_proposal: () => {
+      // Session proposal received
     },
-    session_update: (args: unknown) => {
-      logger.info('🔄 WalletConnect session updated:', args)
+    session_update: () => {
+      // Session updated
     },
     session_ping: (args: unknown) => {
       try {
         const event = args as { topic: string; id?: number }
-        // Respond to ping to acknowledge it
         if (event.id !== undefined) {
           signClient.respond({
             topic: event.topic,
@@ -95,14 +88,14 @@ export function registerWalletConnectListeners(signClient: SignClient | undefine
             },
           })
         }
-        logger.debug('🏓 WalletConnect session ping received and acknowledged')
       } catch (error) {
-        // Suppress "No matching key" errors - these are non-critical and happen during session cleanup
+        // Suppress "No matching key" errors - these are non-critical
         const errorMessage = error instanceof Error ? error.message : String(error)
-        if (errorMessage.includes('No matching key')) {
-          logger.debug('🏓 WalletConnect session ping received (session already cleaned up)')
-        } else {
-          logger.debug('🏓 WalletConnect session ping received (no response needed)', error)
+        if (!errorMessage.includes('No matching key')) {
+          // Only log non-expected errors in development
+          if (process.env.NODE_ENV === 'development') {
+            logger.debug('Session ping error:', error)
+          }
         }
       }
     },
@@ -115,7 +108,6 @@ export function registerWalletConnectListeners(signClient: SignClient | undefine
   })
 
   listenerRegistry.set(signClient, registeredEvents)
-  logger.info(`✅ WalletConnect event listeners registered immediately for client ${clientId}`)
 }
 
 /**
@@ -136,37 +128,23 @@ export function useWalletConnectEventListeners(signClient: SignClient | undefine
     // This ensures listeners are registered even if they weren't registered during initialization
     registerWalletConnectListeners(signClient)
 
-    const clientId = signClient.core.crypto.keychain.keychain.get('clientId') || 'unknown'
-
     // Handle pending session requests
     const handlePendingSessionRequests = async () => {
       try {
         const sessions = signClient.session.getAll()
-        logger.info(`🔍 Found ${sessions.length} active sessions`)
-
         for (const session of sessions) {
           try {
             await signClient.ping({ topic: session.topic })
-            logger.info(`✅ Session ${session.topic} is active`)
           } catch (error) {
             // Suppress "No matching key" errors - these are non-critical
             const errorMessage = error instanceof Error ? error.message : String(error)
-            if (errorMessage.includes('No matching key')) {
-              logger.debug(`🔍 Session ${session.topic} record not found (likely cleaned up)`)
-            } else {
-              logger.info(`❌ Session ${session.topic} is not responding`)
+            if (!errorMessage.includes('No matching key') && process.env.NODE_ENV === 'development') {
+              logger.debug(`Session ${session.topic} ping failed:`, error)
             }
           }
         }
-      } catch (error) {
-        // Suppress "No matching key" errors in the outer catch as well
-        const errorMessage = error instanceof Error ? error.message : String(error)
-        if (!errorMessage.includes('No matching key')) {
-          logger.warn(
-            '⚠️ Error handling pending session requests:',
-            error instanceof Error ? error : undefined
-          )
-        }
+      } catch {
+        // Silently handle errors
       }
     }
 
@@ -180,7 +158,7 @@ export function useWalletConnectEventListeners(signClient: SignClient | undefine
     // 3. Listeners should persist for the lifetime of the SignClient instance
     // The listeners will be cleaned up when the SignClient is destroyed/recreated
     return () => {
-      logger.debug(`Component using WalletConnect listeners unmounted for client ${clientId}, but keeping listeners active`)
+      // Keep listeners active - they're shared across components
     }
   }, [signClient])
 }
