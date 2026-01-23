@@ -24,8 +24,13 @@ export function useOrderBookPriceDeviation({
   return useMemo(() => {
     if (!hoveredOrder) return null
 
-    // Determine which order list the hovered order belongs to
+    // Check if hoveredOrder exists in either list before determining order type
     const isBuyOrder = filteredBuyOrders.includes(hoveredOrder)
+    const isSellOrder = filteredSellOrders.includes(hoveredOrder)
+    
+    // If order is not in either list, return null
+    if (!isBuyOrder && !isSellOrder) return null
+
     const orderList = isBuyOrder ? filteredBuyOrders : filteredSellOrders
     const orderType = isBuyOrder ? 'buy' : 'sell'
 

@@ -49,7 +49,7 @@ export function useMyOffersSingleActions({
     try {
       await cancelOfferMutation.mutateAsync({
         id: state.offerToCancel.tradeId,
-        fee: state.offerToCancel.fee,
+        feeInXch: state.offerToCancel.fee,
       })
       await offerStorage.updateOffer(state.offerToCancel.id, { status: 'cancelled' })
       state.setShowCancelConfirmation(false)

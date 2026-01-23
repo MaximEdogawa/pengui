@@ -61,7 +61,7 @@ export function useOfferDetailsHandlers({
 
       await cancelOfferMutation.mutateAsync({
         id: offer.tradeId,
-        fee: fee,
+        feeInXch: fee,
       })
 
       await offerStorage.updateOffer(offer.id, { status: 'cancelled' })

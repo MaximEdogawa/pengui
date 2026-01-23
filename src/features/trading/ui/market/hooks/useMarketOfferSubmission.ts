@@ -51,7 +51,7 @@ export function useMarketOfferSubmission({
       try {
         const result = await takeOfferMutation.mutateAsync({
           offer: formState.offerString.trim(),
-          fee: formState.fee,
+          feeInXch: formState.fee,
         })
 
         // Handle different response structures from the wallet

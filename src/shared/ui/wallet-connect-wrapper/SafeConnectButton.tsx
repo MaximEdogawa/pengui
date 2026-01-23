@@ -17,7 +17,7 @@ import { getRequiredNamespaces } from '@/shared/lib/walletConnect/constants/wall
  * 4. Provides error handling for connection issues
  */
 export function SafeConnectButton() {
-  const { network } = useNetwork()
+  const { network, setNetwork } = useNetwork()
   const [isReady, setIsReady] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -61,12 +61,14 @@ export function SafeConnectButton() {
           onClick={() => {
             setError(null)
             setIsReady(false)
-            // Force re-initialization
-            if (typeof window !== 'undefined') {
-              const currentNetwork = getStoredNetwork()
-              setStoredNetwork(currentNetwork === 'mainnet' ? 'testnet' : 'mainnet')
-              setStoredNetwork(currentNetwork) // Reset to trigger useEffect
-            }
+            // Force re-initialization by updating React state
+            // This will trigger the useEffect which depends on network
+            const currentNetwork = getStoredNetwork()
+            setNetwork(currentNetwork === 'mainnet' ? 'testnet' : 'mainnet')
+            // Immediately set back to trigger validation
+            setTimeout(() => {
+              setNetwork(currentNetwork)
+            }, 0)
           }}
           className="text-xs text-red-400 hover:text-red-300 underline"
         >

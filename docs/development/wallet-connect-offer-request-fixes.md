@@ -398,7 +398,7 @@ const handleSubmit = useCallback(
 
 ## Request Flow
 
-```
+```text
 User submits offer
     ↓
 useMarketOfferSubmission.handleSubmit()

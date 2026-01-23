@@ -6,6 +6,7 @@ interface UseOrderBookScrollOptions {
   filteredSellOrders: unknown[]
   orderBookLoading: boolean
   orderBookHasMore: boolean
+  onLoadMore?: () => void
 }
 
 /**
@@ -20,6 +21,7 @@ export function useOrderBookScroll({
   filteredSellOrders,
   orderBookLoading,
   orderBookHasMore,
+  onLoadMore,
 }: UseOrderBookScrollOptions) {
   // Track if user has manually scrolled away from bottom
   const hasUserScrolledRef = useRef(false)
@@ -85,21 +87,42 @@ export function useOrderBookScroll({
 
   // Intersection Observer for infinite scrolling
   useEffect(() => {
-    if (!buyScrollRef.current) return
+    if (!buyScrollRef.current || !onLoadMore) return
+
+    // Create sentinel element at the end of buy orders list
+    const sentinel = document.createElement('div')
+    sentinel.style.height = '1px'
+    sentinel.style.width = '100%'
+    sentinel.setAttribute('data-sentinel', 'true')
+    
+    // Insert sentinel at the end of the buy scroll container
+    buyScrollRef.current.appendChild(sentinel)
+
+    let isLoadingMore = false
 
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && orderBookHasMore && !orderBookLoading) {
-          // Load more would be handled by parent component
+        const entry = entries[0]
+        if (entry.isIntersecting && orderBookHasMore && !orderBookLoading && !isLoadingMore) {
+          isLoadingMore = true
+          onLoadMore()
+          // Reset loading flag after a short delay to allow for debouncing
+          setTimeout(() => {
+            isLoadingMore = false
+          }, 1000)
         }
       },
-      { threshold: 0.1 }
+      { threshold: 0.1, root: buyScrollRef.current }
     )
 
-    observer.observe(buyScrollRef.current)
+    observer.observe(sentinel)
 
     return () => {
       observer.disconnect()
+      // Remove sentinel on cleanup
+      if (sentinel.parentNode) {
+        sentinel.parentNode.removeChild(sentinel)
+      }
     }
-  }, [orderBookHasMore, orderBookLoading, buyScrollRef])
+  }, [orderBookHasMore, orderBookLoading, buyScrollRef, onLoadMore])
 }

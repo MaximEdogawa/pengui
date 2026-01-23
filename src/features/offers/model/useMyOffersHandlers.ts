@@ -53,13 +53,13 @@ export function updateOfferInState(
 export async function cancelSingleOffer(
   offer: OfferDetails,
   cancelOfferMutation: {
-    mutateAsync: (params: { id: string; fee: number }) => Promise<unknown>
+    mutateAsync: (params: { id: string; feeInXch?: number; feeInMojos?: number }) => Promise<unknown>
   },
   updateOffer: (id: string, updates: { status: 'cancelled' }) => Promise<void>
 ): Promise<void> {
   await cancelOfferMutation.mutateAsync({
     id: offer.tradeId,
-    fee: offer.fee,
+    feeInXch: offer.fee,
   })
   await updateOffer(offer.id, { status: 'cancelled' })
 }
@@ -70,7 +70,7 @@ export async function cancelSingleOffer(
 export async function cancelAllActiveOffers(
   activeOffers: OfferDetails[],
   cancelOfferMutation: {
-    mutateAsync: (params: { id: string; fee: number }) => Promise<unknown>
+    mutateAsync: (params: { id: string; feeInXch?: number; feeInMojos?: number }) => Promise<unknown>
   },
   updateOffer: (id: string, updates: { status: 'cancelled' }) => Promise<void>
 ): Promise<void> {

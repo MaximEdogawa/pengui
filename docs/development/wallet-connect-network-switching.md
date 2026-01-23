@@ -234,7 +234,7 @@ Handle cases where:
 
 ## Current Flow Diagram
 
-```
+```text
 User switches network in app
     ↓
 NetworkProvider.setNetwork()
@@ -257,7 +257,7 @@ Test connection with balance request
 
 ## Missing Flow (Wallet → App)
 
-```
+```text
 User switches network in wallet
     ↓
 Wallet emits chainChanged event

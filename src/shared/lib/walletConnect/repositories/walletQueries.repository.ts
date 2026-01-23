@@ -331,16 +331,17 @@ export async function createOffer(
 }
 
 /**
- * Convert fee from XCH to mojos if needed
+ * Convert fee to mojos based on explicit unit
  * The wallet expects fee in mojos (smallest unit)
  */
-function convertFeeToMojos(fee: number | undefined | null): number | undefined {
-  if (fee === undefined || fee === null) {
-    return undefined
+function convertFeeToMojos(feeInXch?: number, feeInMojos?: number): number | undefined {
+  if (feeInMojos !== undefined && feeInMojos !== null) {
+    return feeInMojos
   }
-  // If fee is less than 1 trillion, assume it's in XCH and convert to mojos
-  // If fee is very large (> 1 trillion), assume it's already in mojos
-  return fee < 1_000_000_000_000 && fee > 0 ? xchToMojos(fee) : fee
+  if (feeInXch !== undefined && feeInXch !== null && feeInXch > 0) {
+    return xchToMojos(feeInXch)
+  }
+  return undefined
 }
 
 export async function takeOffer(
@@ -352,13 +353,15 @@ export async function takeOffer(
   data?: TakeOfferResponse
   error?: string
 }> {
-  if (!params.offer || typeof params.offer !== 'string') {
+  // Validate offer parameter - reject if not a string or if whitespace-only
+  const trimmedOffer = typeof params.offer === 'string' ? params.offer.trim() : ''
+  if (!trimmedOffer) {
     return { success: false, error: 'Invalid offer parameter: offer must be a non-empty string' }
   }
 
-  const feeInMojos = convertFeeToMojos(params.fee)
+  const feeInMojos = convertFeeToMojos(params.feeInXch, params.feeInMojos)
   const walletParams = {
-    offer: params.offer.trim(),
+    offer: trimmedOffer,
     ...(feeInMojos !== undefined && { fee: feeInMojos }),
   }
   
@@ -383,7 +386,7 @@ export async function cancelOffer(
     return { success: false, error: 'Invalid id parameter: id must be a non-empty string' }
   }
 
-  const feeInMojos = convertFeeToMojos(params.fee)
+  const feeInMojos = convertFeeToMojos(params.feeInXch, params.feeInMojos)
   const walletParams = {
     tradeId: params.id, // Map id to tradeId for wallet compatibility
     ...(feeInMojos !== undefined && { fee: feeInMojos }),
