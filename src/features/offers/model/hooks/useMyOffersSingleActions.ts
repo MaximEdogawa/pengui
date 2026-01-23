@@ -47,6 +47,13 @@ export function useMyOffersSingleActions({
     state.setCancelError('')
 
     try {
+      // Check if offer can be cancelled (has tradeId and is not pending confirmation)
+      if (!state.offerToCancel.tradeId || state.offerToCancel.pendingConfirmation) {
+        state.setCancelError('Cannot cancel offer: trade ID not available yet')
+        state.setIsCancelling(false)
+        return
+      }
+
       await cancelOfferMutation.mutateAsync({
         id: state.offerToCancel.tradeId,
         feeInXch: state.offerToCancel.fee,

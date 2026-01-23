@@ -65,6 +65,7 @@ export function useMarketOfferSubmission({
           const takenOffer: OfferDetails = {
             id: Date.now().toString(),
             tradeId: tradeId,
+            pendingConfirmation: false,
             offerString: formState.offerString.trim(),
             status: 'pending',
             createdAt: new Date(),
@@ -84,11 +85,11 @@ export function useMarketOfferSubmission({
             }
           }, 1500)
         } else if (isSuccess && result) {
-          // If wallet returned success but no tradeId, still treat as success
-          // (some wallets might not return tradeId immediately)
+          // If wallet returned success but no tradeId, mark as pending confirmation
           const takenOffer: OfferDetails = {
             id: Date.now().toString(),
-            tradeId: `pending-${Date.now()}`,
+            tradeId: undefined,
+            pendingConfirmation: true,
             offerString: formState.offerString.trim(),
             status: 'pending',
             createdAt: new Date(),

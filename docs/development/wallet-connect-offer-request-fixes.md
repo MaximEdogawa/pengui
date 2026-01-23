@@ -70,16 +70,17 @@ export async function cancelOffer(
 **Fix**:
 ```typescript
 /**
- * Convert fee from XCH to mojos if needed
+ * Convert fee to mojos based on explicit unit
  * The wallet expects fee in mojos (smallest unit)
  */
-function convertFeeToMojos(fee: number | undefined | null): number | undefined {
-  if (fee === undefined || fee === null) {
-    return undefined
+function convertFeeToMojos(feeInXch?: number, feeInMojos?: number): number | undefined {
+  if (feeInMojos !== undefined && feeInMojos !== null) {
+    return feeInMojos
   }
-  // If fee is less than 1 trillion, assume it's in XCH and convert to mojos
-  // If fee is very large (> 1 trillion), assume it's already in mojos
-  return fee < 1_000_000_000_000 && fee > 0 ? xchToMojos(fee) : fee
+  if (feeInXch !== undefined && feeInXch !== null && feeInXch > 0) {
+    return xchToMojos(feeInXch)
+  }
+  return undefined
 }
 
 export async function takeOffer(
@@ -87,9 +88,15 @@ export async function takeOffer(
   signClient: SignClient | undefined,
   session: WalletConnectSession
 ): Promise<{ success: boolean; data?: TakeOfferResponse; error?: string }> {
-  const feeInMojos = convertFeeToMojos(params.fee)
+  // Validate offer parameter - reject if not a string or if whitespace-only
+  const trimmedOffer = typeof params.offer === 'string' ? params.offer.trim() : ''
+  if (!trimmedOffer) {
+    return { success: false, error: 'Invalid offer parameter: offer must be a non-empty string' }
+  }
+
+  const feeInMojos = convertFeeToMojos(params.feeInXch, params.feeInMojos)
   const walletParams = {
-    offer: params.offer.trim(),
+    offer: trimmedOffer,
     ...(feeInMojos !== undefined && { fee: feeInMojos }),
   }
   
@@ -103,9 +110,9 @@ export async function takeOffer(
 ```
 
 **Key Changes**:
-- Created `convertFeeToMojos` helper function
-- Automatically converts XCH to mojos if fee < 1 trillion
-- Assumes fees >= 1 trillion are already in mojos
+- Created `convertFeeToMojos` helper function with explicit unit parameters
+- Prefers `feeInMojos` when provided, otherwise converts `feeInXch` to mojos
+- Validates and trims offer parameter before processing
 - Applied to both `takeOffer` and `cancelOffer`
 
 **Conversion Logic**:

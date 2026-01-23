@@ -131,6 +131,11 @@ export class OfferStorageService {
     offerId: string,
     duplicate: StoredOffer
   ): Promise<void> {
+    // Skip duplicate check if no tradeId (pending confirmation offers)
+    if (!duplicate.tradeId) {
+      return
+    }
+
     const storedOffer = await withTimeout(
       db.offers.where('tradeId').equals(duplicate.tradeId).first(),
       5000,

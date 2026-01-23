@@ -88,7 +88,8 @@ export interface CancelOfferResponse {
 
 export interface OfferDetails {
   id: string
-  tradeId: string
+  tradeId?: string
+  pendingConfirmation?: boolean
   offerString: string
   status: OfferStatus // Legacy status for backward compatibility
   state?: OfferState // New state field for UI indicators

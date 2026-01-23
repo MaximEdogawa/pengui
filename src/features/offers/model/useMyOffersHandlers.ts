@@ -57,6 +57,11 @@ export async function cancelSingleOffer(
   },
   updateOffer: (id: string, updates: { status: 'cancelled' }) => Promise<void>
 ): Promise<void> {
+  // Check if offer can be cancelled (has tradeId and is not pending confirmation)
+  if (!offer.tradeId || offer.pendingConfirmation) {
+    throw new Error('Cannot cancel offer: trade ID not available yet')
+  }
+
   await cancelOfferMutation.mutateAsync({
     id: offer.tradeId,
     feeInXch: offer.fee,
