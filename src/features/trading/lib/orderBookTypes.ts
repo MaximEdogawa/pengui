@@ -1,3 +1,5 @@
+import type { OfferState } from '@/entities/offer'
+
 /**
  * Order Book Types
  * Type definitions for the order book trading view
@@ -29,6 +31,7 @@ export interface OrderBookOrder {
   known_taker?: unknown | null
   offerString?: string
   creatorAddress?: string
+  offerState?: OfferState
 }
 
 export type OrderBookPagination = 10 | 15 | 50 | 100 | 'all'

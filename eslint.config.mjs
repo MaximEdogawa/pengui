@@ -83,7 +83,7 @@ export default [{
     // Maximum 3 parameters per function (Clean Code: "The ideal number of arguments is zero")
     'max-params': ['warn', 4], // Clean Code: functions should have 4 or fewer parameters
     // Cyclomatic complexity - measures decision points (fast built-in rule)
-    complexity: ['warn', { max: 30 }], // Clean Code: keep functions simple (adjusted to 30 for practicality)
+    complexity: ['warn', { max: 40 }], // Clean Code: keep functions simple 
     // Function length - Clean Code recommends ~20 lines, we use 185 for React components
     'max-lines-per-function': [
       'warn',

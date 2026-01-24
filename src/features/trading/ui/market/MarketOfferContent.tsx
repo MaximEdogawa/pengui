@@ -114,6 +114,7 @@ export default function MarketOfferTab({
           isFormValid={isFormValid}
           isSubmitting={formState.isSubmitting}
           orderType={orderType}
+          order={order}
         />
 
         <MarketOfferStatusMessages

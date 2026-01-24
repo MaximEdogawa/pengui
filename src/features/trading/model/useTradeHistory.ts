@@ -1,222 +1,230 @@
 'use client'
 
-import { useMemo } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useCallback, useMemo } from 'react'
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { useMyTrades } from './useMyTrades'
 import { useTradeHistoryFilters } from './useTradeHistoryFilters'
-import { resolveTickerId } from '../lib/tickerResolution'
-import { useTickers } from '@/entities/asset/model/useTickers'
+import { normalizeTickerForApi } from '../lib/orderBookParams'
 import { useNetwork } from '@/shared/hooks/useNetwork'
+import { useWalletAddress } from '@/features/wallet/model/useWalletQueries'
 import { getDexieApiUrl } from '@/shared/lib/utils/networkUtils'
+import { offerStorageService } from '@/shared/lib/services/offerStorageService'
+import type { DexieOffer, OfferState } from '@/entities/offer'
 import type { OrderBookFilters } from '../lib/orderBookTypes'
-import type { DexieHistoricalTrade } from '@/features/offers/lib/dexieTypes'
-import type { DexieOffer } from '@/entities/offer'
+
+/** Fetch one page of offers for a given Dexie status (2=Pending, 3=Cancelled, 4=Completed). */
+async function fetchOffersForStatus(
+  dexieBaseUrl: string,
+  opts: {
+    targetRequested?: string
+    targetOffered?: string
+    myTradesOnly: boolean
+    walletAddress: string | undefined
+    status: number
+    sort: string
+    pageParam: number
+  }
+): Promise<DexieOffer[]> {
+  const { targetRequested, targetOffered, myTradesOnly, walletAddress, status, sort, pageParam } =
+    opts
+  if (!targetRequested && !targetOffered) return []
+
+  const q = new URLSearchParams()
+  if (targetRequested) q.append('requested', targetRequested)
+  if (targetOffered) q.append('offered', targetOffered)
+  q.append('sort', sort)
+  q.append('page_size', String(PAGE_SIZE))
+  q.append('page', String(pageParam))
+  q.append('status', String(status))
+  if (myTradesOnly && walletAddress) q.append('maker', walletAddress)
+
+  const res = await fetch(`${dexieBaseUrl}/v1/offers?${q.toString()}`)
+  if (!res.ok) throw new Error(`Failed to fetch offers: ${res.status}`)
+
+  const data = await res.json()
+  let list: DexieOffer[] = []
+  if (Array.isArray(data)) list = data as DexieOffer[]
+  else if (data && typeof data === 'object') {
+    if (Array.isArray((data as { data?: unknown[] }).data)) list = (data as { data: DexieOffer[] }).data
+    else if (Array.isArray((data as { offers?: unknown[] }).offers)) list = (data as { offers: DexieOffer[] }).offers
+  }
+
+  const match = (a: { code?: string; id?: string } | undefined, t: string) =>
+    !!a && [a.code, a.id].some((v) => v && String(v).toLowerCase() === t.toLowerCase())
+  return list.filter((o) => {
+    if (!o?.id || (o.offered?.length ?? 0) === 0 || (o.requested?.length ?? 0) === 0) return false
+    if (targetRequested && !o.requested?.some((a) => match(a, targetRequested))) return false
+    if (targetOffered && !o.offered?.some((a) => match(a, targetOffered))) return false
+    return true
+  })
+}
+
+function mergeStatusOffers(
+  sources: { show: boolean; pages: DexieOffer[][] | undefined; offerState: OfferState }[],
+  getIsMyOffer: (o: DexieOffer) => boolean
+): TradeHistoryOfferItem[] {
+  const out: TradeHistoryOfferItem[] = []
+  for (const { show, pages, offerState } of sources) {
+    if (!show || !pages) continue
+    const raw = pages.flat()
+    out.push(...raw.map((o) => ({ offer: o, offerState, isMyOffer: getIsMyOffer(o) })))
+  }
+  return out
+}
+
+export interface TradeHistoryOfferItem {
+  offer: DexieOffer
+  offerState: OfferState
+  isMyOffer: boolean
+}
 
 export interface TradeHistoryOptions {
   filters?: OrderBookFilters
   enabled?: boolean
 }
 
+const PAGE_SIZE = 50
+
 export function useTradeHistory(options: TradeHistoryOptions = {}) {
   const { filters: orderBookFilters, enabled = true } = options
-  const { filters, dateRange } = useTradeHistoryFilters()
+  const { filters } = useTradeHistoryFilters()
   const { network } = useNetwork()
-  const { data: tickersData } = useTickers()
-  const tickers = useMemo(() => tickersData?.data || [], [tickersData?.data])
-  const { myTrades, identifyMyTradesInList } = useMyTrades({
-    dateFrom: dateRange?.from,
-    dateTo: dateRange?.to,
-    type: filters.tradeType === 'all' ? undefined : filters.tradeType,
+  const { data: walletData } = useWalletAddress()
+  const walletAddress = walletData?.address
+  const { myTrades } = useMyTrades({})
+
+  const { targetRequested, targetOffered, hasPairFilter } = useMemo(() => {
+    const buy = orderBookFilters?.buyAsset?.[0]
+    const sell = orderBookFilters?.sellAsset?.[0]
+    const req = buy ? normalizeTickerForApi(buy, network) : undefined
+    const off = sell ? normalizeTickerForApi(sell, network) : undefined
+    return {
+      targetRequested: req,
+      targetOffered: off,
+      hasPairFilter: !!(req || off),
+    }
+  }, [orderBookFilters?.buyAsset, orderBookFilters?.sellAsset, network])
+
+  const ourIdsQuery = useQuery({
+    queryKey: ['our-dexie-offer-ids', walletAddress ?? '', network],
+    queryFn: () => offerStorageService.getOurDexieOfferIds(walletAddress!, network),
+    enabled: !!walletAddress && !filters.myTradesOnly,
+    staleTime: 60 * 1000,
   })
 
-  const tickerId = useMemo(() => {
-    if (!orderBookFilters) {
-      return null
-    }
-    return resolveTickerId(orderBookFilters, tickers)
-  }, [orderBookFilters, tickers])
+  const ourOfferIds = useMemo(() => {
+    const fromDb = ourIdsQuery.data ?? new Set<string>()
+    const fromMy = myTrades.map((t) => t.trade_id).filter(Boolean)
+    return new Set([...fromDb, ...fromMy])
+  }, [ourIdsQuery.data, myTrades])
 
-  const tickerString = useMemo(() => {
-    if (!tickerId) {
-      return null
-    }
-    const ticker = tickers.find((t: { ticker_id: string }) => t.ticker_id === tickerId)
-    if (!ticker) {
-      return null
-    }
-    return `${ticker.base_code}_${ticker.target_code}`
-  }, [tickerId, tickers])
-
-  const queryKey = useMemo(() => {
-    const buyAssets = orderBookFilters?.buyAsset || []
-    const sellAssets = orderBookFilters?.sellAsset || []
-    const buyKey = [...buyAssets].sort().join(',')
-    const sellKey = [...sellAssets].sort().join(',')
-    const tickerIdFallback = tickerId || ''
-    
-    return ['trade-history', network, buyKey, sellKey, tickerIdFallback]
-  }, [network, orderBookFilters?.buyAsset, orderBookFilters?.sellAsset, tickerId])
-
-  // Helper function to convert completed offers to trade format
-  const convertOfferToTrade = (offer: DexieOffer): DexieHistoricalTrade | null => {
-    if (!offer.date_completed) {
-      return null
-    }
-
-    const offeredAsset = offer.offered?.[0]
-    const requestedAsset = offer.requested?.[0]
-
-    if (!offeredAsset || !requestedAsset) {
-      return null
-    }
-
-    const price = offeredAsset.amount > 0 && requestedAsset.amount > 0
-      ? requestedAsset.amount / offeredAsset.amount
-      : offer.price || 0
-
-    if (price <= 0) {
-      return null
-    }
-
-    const volume = offeredAsset.amount || 0
-    const timestamp = new Date(offer.date_completed).getTime()
-
-    return {
-      trade_id: offer.id,
-      ticker_id: tickerId || undefined,
-      price,
-      base_volume: volume,
-      trade_timestamp: Math.floor(timestamp / 1000),
-      type: 'buy',
-    }
+  const baseEnabled = enabled && hasPairFilter && (!filters.myTradesOnly || !!walletAddress)
+  const dexieUrl = getDexieApiUrl(network)
+  const fetchOpts = {
+    targetRequested,
+    targetOffered,
+    myTradesOnly: filters.myTradesOnly,
+    walletAddress,
   }
 
-  // Fetch completed offers from API (recent trades)
-  // Endpoint: /v1/offers?offered_or_requested={tickerString}&status=4&sort=date_completed&compact=true
-  // status=4 means completed offers
-  const apiTradesQuery = useQuery({
-    queryKey,
-    queryFn: async () => {
-      if (!tickerString) {
-        return []
-      }
-
-      const dexieApiBaseUrl = getDexieApiUrl(network)
-      const queryParams = new URLSearchParams()
-      queryParams.append('offered_or_requested', tickerString)
-      queryParams.append('status', '4')
-      queryParams.append('sort', 'date_completed')
-      queryParams.append('compact', 'true')
-      queryParams.append('page_size', '1000')
-      
-      const response = await fetch(`${dexieApiBaseUrl}/v1/offers?${queryParams.toString()}`)
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch completed offers: ${response.status}`)
-      }
-
-      const data = await response.json()
-      
-      let offersData: DexieOffer[] = []
-      if (Array.isArray(data)) {
-        offersData = data as DexieOffer[]
-      } else if (data && typeof data === 'object') {
-        if (Array.isArray((data as { data?: unknown[] }).data)) {
-          offersData = (data as { data: DexieOffer[] }).data
-        } else if (Array.isArray((data as { offers?: unknown[] }).offers)) {
-          offersData = (data as { offers: DexieOffer[] }).offers
-        }
-      }
-
-      return offersData
-        .map(convertOfferToTrade)
-        .filter((trade): trade is DexieHistoricalTrade => trade !== null)
-    },
-    enabled: enabled && !!tickerString && !filters.myTradesOnly,
+  const completedQuery = useInfiniteQuery({
+    queryKey: ['trade-history', 'completed', network, targetRequested ?? '', targetOffered ?? '', filters.myTradesOnly, walletAddress ?? ''],
+    queryFn: ({ pageParam }) =>
+      fetchOffersForStatus(dexieUrl, { ...fetchOpts, status: 4, sort: 'date_completed', pageParam: pageParam as number }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, _all, lastParam) =>
+      lastPage.length >= PAGE_SIZE ? (lastParam as number) + 1 : undefined,
+    enabled: baseEnabled && filters.showCompleted,
     staleTime: 30 * 1000,
     gcTime: 5 * 60 * 1000,
     retry: 2,
   })
 
-  const trades = useMemo(() => {
-    if (filters.myTradesOnly) {
-      return myTrades.filter((trade) => {
-        if (tickerId && trade.ticker_id !== tickerId) {
-          return false
-        }
-        if (dateRange) {
-          if (trade.timestamp < dateRange.from.getTime()) {
-            return false
-          }
-          if (trade.timestamp > dateRange.to.getTime()) {
-            return false
-          }
-        }
-        if (filters.tradeType !== 'all' && trade.type !== filters.tradeType) {
-          return false
-        }
-        return true
-      })
-    }
+  const cancelledQuery = useInfiniteQuery({
+    queryKey: ['trade-history', 'cancelled', network, targetRequested ?? '', targetOffered ?? '', filters.myTradesOnly, walletAddress ?? ''],
+    queryFn: ({ pageParam }) =>
+      fetchOffersForStatus(dexieUrl, { ...fetchOpts, status: 3, sort: 'date_found', pageParam: pageParam as number }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, _all, lastParam) =>
+      lastPage.length >= PAGE_SIZE ? (lastParam as number) + 1 : undefined,
+    enabled: baseEnabled && filters.showCancelled,
+    staleTime: 30 * 1000,
+    gcTime: 5 * 60 * 1000,
+    retry: 2,
+  })
 
-    const apiTrades = Array.isArray(apiTradesQuery.data) 
-      ? (apiTradesQuery.data as DexieHistoricalTrade[])
-      : []
-    
-    if (apiTrades.length === 0) {
-      return []
-    }
-    
-    const myTradesMap = identifyMyTradesInList(apiTrades)
+  const pendingQuery = useInfiniteQuery({
+    queryKey: ['trade-history', 'pending', network, targetRequested ?? '', targetOffered ?? '', filters.myTradesOnly, walletAddress ?? ''],
+    queryFn: ({ pageParam }) =>
+      fetchOffersForStatus(dexieUrl, { ...fetchOpts, status: 2, sort: 'date_found', pageParam: pageParam as number }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, _all, lastParam) =>
+      lastPage.length >= PAGE_SIZE ? (lastParam as number) + 1 : undefined,
+    enabled: baseEnabled && filters.showPending,
+    staleTime: 30 * 1000,
+    gcTime: 5 * 60 * 1000,
+    retry: 2,
+  })
 
-    const combinedTrades: Array<DexieHistoricalTrade & { isMyTrade?: boolean; profitLoss?: number; profitLossPercent?: number }> = apiTrades.map((trade) => {
-      const myTrade = myTradesMap.get(trade.trade_id || '')
-      return {
-        ...trade,
-        isMyTrade: !!myTrade,
-        profitLoss: myTrade?.profitLoss,
-        profitLossPercent: myTrade?.profitLossPercent,
-      }
-    })
+  const offers = useMemo(
+    () =>
+      mergeStatusOffers(
+        [
+          { show: filters.showCompleted, pages: completedQuery.data?.pages, offerState: 'Completed' },
+          { show: filters.showCancelled, pages: cancelledQuery.data?.pages, offerState: 'Cancelled' },
+          { show: filters.showPending, pages: pendingQuery.data?.pages, offerState: 'Pending' },
+        ],
+        (o) => (filters.myTradesOnly ? true : ourOfferIds.has(o.id))
+      ),
+    [
+      filters.showCompleted,
+      filters.showCancelled,
+      filters.showPending,
+      filters.myTradesOnly,
+      completedQuery.data?.pages,
+      cancelledQuery.data?.pages,
+      pendingQuery.data?.pages,
+      ourOfferIds,
+    ]
+  )
 
-    let filtered = combinedTrades
-
-    if (dateRange) {
-      filtered = filtered.filter((trade) => {
-        const timestamp = trade.trade_timestamp 
-          ? trade.trade_timestamp * 1000
-          : (trade.timestamp || 0)
-        
-        if (timestamp === 0) {
-          return true
-        }
-        
-        return timestamp >= dateRange.from.getTime() && timestamp <= dateRange.to.getTime()
-      })
-    }
-
-    if (filters.tradeType !== 'all') {
-      filtered = filtered.filter((trade) => {
-        const tradeType = trade.type || trade.side || 'buy'
-        return tradeType === filters.tradeType
-      })
-    }
-
-    return filtered
+  const fetchNextPage = useCallback(() => {
+    if (filters.showCompleted) completedQuery.fetchNextPage()
+    if (filters.showCancelled) cancelledQuery.fetchNextPage()
+    if (filters.showPending) pendingQuery.fetchNextPage()
   }, [
-    filters.myTradesOnly,
-    filters.tradeType,
-    myTrades,
-    apiTradesQuery.data,
-    identifyMyTradesInList,
-    tickerId,
-    dateRange,
+    filters.showCompleted,
+    filters.showCancelled,
+    filters.showPending,
+    completedQuery,
+    cancelledQuery,
+    pendingQuery,
   ])
 
+  const hasNextPage =
+    (filters.showCompleted && !!completedQuery.hasNextPage) ||
+    (filters.showCancelled && !!cancelledQuery.hasNextPage) ||
+    (filters.showPending && !!pendingQuery.hasNextPage)
+
+  const isFetchingNextPage =
+    completedQuery.isFetchingNextPage ||
+    cancelledQuery.isFetchingNextPage ||
+    pendingQuery.isFetchingNextPage
+
+  const isLoading =
+    (filters.showCompleted && completedQuery.isLoading) ||
+    (filters.showCancelled && cancelledQuery.isLoading) ||
+    (filters.showPending && pendingQuery.isLoading)
+
+  const error = completedQuery.error ?? cancelledQuery.error ?? pendingQuery.error
+
   return {
-    trades,
-    isLoading: filters.myTradesOnly ? false : apiTradesQuery.isLoading,
-    error: apiTradesQuery.error,
-    tickerId,
+    offers,
+    isLoading,
+    error,
+    hasPairFilter,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
   }
 }

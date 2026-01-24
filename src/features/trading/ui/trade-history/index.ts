@@ -1,5 +1,3 @@
 export { default as TradeHistoryContainer } from './TradeHistoryContainer'
 export { default as TradeHistoryTable } from './TradeHistoryTable'
 export { default as TradeHistoryRow } from './TradeHistoryRow'
-export { default as TradeHistoryFilters } from './TradeHistoryFilters'
-export { default as TradeHistoryPagination } from './TradeHistoryPagination'

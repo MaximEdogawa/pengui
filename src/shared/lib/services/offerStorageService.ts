@@ -326,6 +326,38 @@ export class OfferStorageService {
   }
 
   /**
+   * Get Dexie offer IDs where the user is creator or taker (for isMyOffer in trade history).
+   */
+  async getOurDexieOfferIds(
+    walletAddress: string,
+    network?: 'mainnet' | 'testnet'
+  ): Promise<Set<string>> {
+    try {
+      await ensureDatabaseReady()
+      if (!isDatabaseReady()) return new Set()
+
+      const currentNetwork = this.getCurrentNetwork(network)
+      const all = await withTimeout(
+        db.offers.where('network').equals(currentNetwork).toArray(),
+        5000,
+        'getOurDexieOfferIds'
+      )
+      const ids = new Set<string>()
+      for (const o of all) {
+        const isOurs =
+          o.walletAddress === walletAddress ||
+          o.creatorAddress === walletAddress ||
+          o.takenBy === walletAddress
+        if (isOurs && o.dexieOfferId) ids.add(o.dexieOfferId)
+      }
+      return ids
+    } catch (error) {
+      logger.error('❌ Failed to get our Dexie offer IDs:', error)
+      return new Set()
+    }
+  }
+
+  /**
    * Get a specific offer by trade ID
    */
   async getOfferByTradeId(tradeId: string): Promise<StoredOffer | undefined> {

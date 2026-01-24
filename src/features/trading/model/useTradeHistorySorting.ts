@@ -1,10 +1,9 @@
 'use client'
 
 import { useCallback, useState } from 'react'
-import type { TradeHistoryItem } from '@/shared/lib/services/myTradesService'
-import type { DexieHistoricalTrade } from '@/features/offers/lib/dexieTypes'
+import type { TradeHistoryOfferItem } from './useTradeHistory'
 
-export type SortColumn = 'date' | 'price' | 'volume' | 'totalValue' | 'profitLoss'
+export type SortColumn = 'date' | 'price' | 'requested' | 'offered' | 'status'
 export type SortDirection = 'asc' | 'desc'
 
 export interface SortConfig {
@@ -17,46 +16,39 @@ const defaultSort: SortConfig = {
   direction: 'desc',
 }
 
-export type TradeItem = TradeHistoryItem | (DexieHistoricalTrade & { isMyTrade?: boolean })
-
-// Helper functions to extract values (outside component to avoid dependency issues)
-function getTimestamp(trade: TradeItem): number {
-  if ('timestamp' in trade) return trade.timestamp ?? 0
-  if ('trade_timestamp' in trade) return (trade.trade_timestamp || 0) * 1000
-  return 0
+function getOfferMainDate(item: TradeHistoryOfferItem): number {
+  const o = item.offer
+  if (o.date_completed) return new Date(o.date_completed).getTime()
+  if (o.date_pending) return new Date(o.date_pending).getTime()
+  return new Date(o.date_found).getTime()
 }
 
-function getPrice(trade: TradeItem): number {
-  return 'price' in trade ? (trade.price ?? 0) : 0
+function getPrice(item: TradeHistoryOfferItem): number {
+  return item.offer.price ?? 0
 }
 
-function getVolume(trade: TradeItem): number {
-  if ('volume' in trade) return trade.volume ?? 0
-  if ('base_volume' in trade) return trade.base_volume ?? 0
-  return 0
+function getRequestedAmount(item: TradeHistoryOfferItem): number {
+  const r = item.offer.requested?.[0]
+  return r?.amount ?? 0
 }
 
-function getTotalValue(trade: TradeItem): number {
-  if ('totalValue' in trade) return trade.totalValue ?? 0
-  return getPrice(trade) * getVolume(trade)
+function getOfferedAmount(item: TradeHistoryOfferItem): number {
+  const o = item.offer.offered?.[0]
+  return o?.amount ?? 0
 }
 
-function getProfitLoss(trade: TradeItem): number {
-  return 'profitLoss' in trade ? (trade.profitLoss ?? 0) : 0
-}
-
-function getSortValue(trade: TradeItem, column: SortColumn): number | string {
+function getSortValue(item: TradeHistoryOfferItem, column: SortColumn): number | string {
   switch (column) {
     case 'date':
-      return getTimestamp(trade)
+      return getOfferMainDate(item)
     case 'price':
-      return getPrice(trade)
-    case 'volume':
-      return getVolume(trade)
-    case 'totalValue':
-      return getTotalValue(trade)
-    case 'profitLoss':
-      return getProfitLoss(trade)
+      return getPrice(item)
+    case 'requested':
+      return getRequestedAmount(item)
+    case 'offered':
+      return getOfferedAmount(item)
+    case 'status':
+      return item.offerState
     default:
       return 0
   }
@@ -80,37 +72,24 @@ export function useTradeHistorySorting() {
 
   const setSort = useCallback((column: SortColumn) => {
     setSortConfig((prev) => {
-      // If clicking the same column, toggle direction
       if (prev.column === column) {
-        return {
-          column,
-          direction: prev.direction === 'asc' ? 'desc' : 'asc',
-        }
+        return { column, direction: prev.direction === 'asc' ? 'desc' : 'asc' }
       }
-      // Otherwise, set new column with default direction
-      return {
-        column,
-        direction: 'desc',
-      }
+      return { column, direction: 'desc' }
     })
   }, [])
 
   const sortTrades = useCallback(
-    (trades: TradeItem[]): TradeItem[] => {
-      if (!sortConfig.column) {
-        return trades
-      }
-
-      const column = sortConfig.column
-      const direction = sortConfig.direction
-
-      return [...trades].sort((a, b) => {
-        const aValue = getSortValue(a, column)
-        const bValue = getSortValue(b, column)
-        return compareValues(aValue, bValue, direction)
+    (items: TradeHistoryOfferItem[]): TradeHistoryOfferItem[] => {
+      if (!sortConfig.column) return items
+      const { column, direction } = sortConfig
+      return [...items].sort((a, b) => {
+        const aVal = getSortValue(a, column)
+        const bVal = getSortValue(b, column)
+        return compareValues(aVal, bVal, direction)
       })
     },
-    [sortConfig.column, sortConfig.direction]
+    [sortConfig]
   )
 
   return {

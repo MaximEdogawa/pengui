@@ -15,10 +15,11 @@ function addThousandSeparators(intStr: string): string {
  * CSS truncate class handles responsive visual truncation based on available space
  */
 export function formatAmountForDisplay(amount: number): string {
-  if (amount === 0) return '0'
-  if (amount < 0.000001) return amount.toExponential(2)
+  const n = amount == null || typeof amount !== 'number' || Number.isNaN(amount) ? 0 : Number(amount)
+  if (n === 0) return '0'
+  if (n < 0.000001) return n.toExponential(2)
 
-  const str = amount.toString()
+  const str = n.toString()
   const [int, dec] = str.split('.')
 
   // Only programmatically truncate if decimals are excessive (>12)
@@ -50,14 +51,15 @@ export function formatAmountForDisplay(amount: number): string {
  * For prices >= 1: 2 decimals
  */
 export function formatPriceForDisplay(price: number): string {
-  if (price === 0) return '0'
-  if (price < 0.000001) return price.toExponential(2)
+  const p = price == null || typeof price !== 'number' || Number.isNaN(price) ? 0 : Number(price)
+  if (p === 0) return '0'
+  if (p < 0.000001) return p.toExponential(2)
 
-  const str = price.toString()
+  const str = p.toString()
   const [int, dec] = str.split('.')
   const formattedInt = addThousandSeparators(int)
 
-  if (price < 1) {
+  if (p < 1) {
     // For prices < 1: cut to 7 decimals (no rounding, no truncation indicator)
     if (!dec) return formattedInt
     const cutDecimals = dec.slice(0, 7)
