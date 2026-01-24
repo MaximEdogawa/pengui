@@ -3,7 +3,8 @@
 import { useCallback, useMemo } from 'react'
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { useMyTrades } from './useMyTrades'
-import { useTradeHistoryFilters } from './useTradeHistoryFilters'
+import { useTradeHistoryFilters, type TradeHistoryFilters } from './useTradeHistoryFilters'
+import { useOrderBook } from './useOrderBook'
 import { normalizeTickerForApi } from '../lib/orderBookParams'
 import { useNetwork } from '@/shared/hooks/useNetwork'
 import { useWalletAddress } from '@/features/wallet/model/useWalletQueries'
@@ -79,19 +80,24 @@ export interface TradeHistoryOfferItem {
 }
 
 export interface TradeHistoryOptions {
-  filters?: OrderBookFilters
+  orderBookFilters?: OrderBookFilters
+  tradeHistoryFilters?: TradeHistoryFilters
   enabled?: boolean
 }
 
 const PAGE_SIZE = 50
 
 export function useTradeHistory(options: TradeHistoryOptions = {}) {
-  const { filters: orderBookFilters, enabled = true } = options
-  const { filters } = useTradeHistoryFilters()
+  const { orderBookFilters: passedOrderBookFilters, tradeHistoryFilters: passedThFilters, enabled = true } = options
+  const { filters: internalThFilters } = useTradeHistoryFilters()
   const { network } = useNetwork()
   const { data: walletData } = useWalletAddress()
   const walletAddress = walletData?.address
   const { myTrades } = useMyTrades({})
+
+  // Use passed filters if available, otherwise use internal filters
+  const orderBookFilters = passedOrderBookFilters
+  const thFilters = passedThFilters ?? internalThFilters
 
   const { targetRequested, targetOffered, hasPairFilter } = useMemo(() => {
     const buy = orderBookFilters?.buyAsset?.[0]
@@ -108,7 +114,7 @@ export function useTradeHistory(options: TradeHistoryOptions = {}) {
   const ourIdsQuery = useQuery({
     queryKey: ['our-dexie-offer-ids', walletAddress ?? '', network],
     queryFn: () => offerStorageService.getOurDexieOfferIds(walletAddress!, network),
-    enabled: !!walletAddress && !filters.myTradesOnly,
+    enabled: !!walletAddress,
     staleTime: 60 * 1000,
   })
 
@@ -118,69 +124,101 @@ export function useTradeHistory(options: TradeHistoryOptions = {}) {
     return new Set([...fromDb, ...fromMy])
   }, [ourIdsQuery.data, myTrades])
 
-  const baseEnabled = enabled && hasPairFilter && (!filters.myTradesOnly || !!walletAddress)
+  const baseEnabled = enabled && hasPairFilter && (!thFilters.myTradesOnly || !!walletAddress)
   const dexieUrl = getDexieApiUrl(network)
   const fetchOpts = {
     targetRequested,
     targetOffered,
-    myTradesOnly: filters.myTradesOnly,
+    myTradesOnly: thFilters.myTradesOnly,
     walletAddress,
   }
 
   const completedQuery = useInfiniteQuery({
-    queryKey: ['trade-history', 'completed', network, targetRequested ?? '', targetOffered ?? '', filters.myTradesOnly, walletAddress ?? ''],
+    queryKey: ['trade-history', 'completed', network, targetRequested ?? '', targetOffered ?? '', thFilters.myTradesOnly, walletAddress ?? ''],
     queryFn: ({ pageParam }) =>
       fetchOffersForStatus(dexieUrl, { ...fetchOpts, status: 4, sort: 'date_completed', pageParam: pageParam as number }),
     initialPageParam: 1,
     getNextPageParam: (lastPage, _all, lastParam) =>
       lastPage.length >= PAGE_SIZE ? (lastParam as number) + 1 : undefined,
-    enabled: baseEnabled && filters.showCompleted,
+    enabled: baseEnabled && thFilters.showCompleted,
     staleTime: 30 * 1000,
     gcTime: 5 * 60 * 1000,
     retry: 2,
   })
 
   const cancelledQuery = useInfiniteQuery({
-    queryKey: ['trade-history', 'cancelled', network, targetRequested ?? '', targetOffered ?? '', filters.myTradesOnly, walletAddress ?? ''],
+    queryKey: ['trade-history', 'cancelled', network, targetRequested ?? '', targetOffered ?? '', thFilters.myTradesOnly, walletAddress ?? ''],
     queryFn: ({ pageParam }) =>
       fetchOffersForStatus(dexieUrl, { ...fetchOpts, status: 3, sort: 'date_found', pageParam: pageParam as number }),
     initialPageParam: 1,
     getNextPageParam: (lastPage, _all, lastParam) =>
       lastPage.length >= PAGE_SIZE ? (lastParam as number) + 1 : undefined,
-    enabled: baseEnabled && filters.showCancelled,
+    enabled: baseEnabled && thFilters.showCancelled,
     staleTime: 30 * 1000,
     gcTime: 5 * 60 * 1000,
     retry: 2,
   })
 
   const pendingQuery = useInfiniteQuery({
-    queryKey: ['trade-history', 'pending', network, targetRequested ?? '', targetOffered ?? '', filters.myTradesOnly, walletAddress ?? ''],
+    queryKey: ['trade-history', 'pending', network, targetRequested ?? '', targetOffered ?? '', thFilters.myTradesOnly, walletAddress ?? ''],
     queryFn: ({ pageParam }) =>
       fetchOffersForStatus(dexieUrl, { ...fetchOpts, status: 2, sort: 'date_found', pageParam: pageParam as number }),
     initialPageParam: 1,
     getNextPageParam: (lastPage, _all, lastParam) =>
       lastPage.length >= PAGE_SIZE ? (lastParam as number) + 1 : undefined,
-    enabled: baseEnabled && filters.showPending,
+    enabled: baseEnabled && thFilters.showPending,
     staleTime: 30 * 1000,
     gcTime: 5 * 60 * 1000,
     retry: 2,
   })
 
+  // Use orderBook data for open offers
+  const { orderBookData, orderBookLoading, orderBookError } = useOrderBook(thFilters.showOpen ? orderBookFilters : undefined)
+  const openOffers = useMemo(() => {
+    if (!orderBookData || !Array.isArray(orderBookData)) return []
+    // Convert OrderBookOrder[] back to DexieOffer format for consistency
+    return orderBookData.map((order) => ({
+      id: order.id,
+      requested: order.requesting,
+      offered: order.offering,
+      maker: order.maker,
+      date_found: order.date_found,
+    } as unknown as DexieOffer))
+  }, [orderBookData])
+
   const offers = useMemo(
-    () =>
-      mergeStatusOffers(
+    () => {
+      // Build array from pages for history offers
+      const historyOffers = mergeStatusOffers(
         [
-          { show: filters.showCompleted, pages: completedQuery.data?.pages, offerState: 'Completed' },
-          { show: filters.showCancelled, pages: cancelledQuery.data?.pages, offerState: 'Cancelled' },
-          { show: filters.showPending, pages: pendingQuery.data?.pages, offerState: 'Pending' },
+          { show: thFilters.showCompleted, pages: completedQuery.data?.pages, offerState: 'Completed' },
+          { show: thFilters.showCancelled, pages: cancelledQuery.data?.pages, offerState: 'Cancelled' },
+          { show: thFilters.showPending, pages: pendingQuery.data?.pages, offerState: 'Pending' },
         ],
-        (o) => (filters.myTradesOnly ? true : ourOfferIds.has(o.id))
-      ),
+        (o) => ourOfferIds.has(o.id)
+      )
+      
+      // Add open offers from orderbook
+      const openItems: TradeHistoryOfferItem[] = thFilters.showOpen ? 
+        openOffers.map(o => ({ offer: o, offerState: 'Open' as OfferState, isMyOffer: ourOfferIds.has(o.id) })) 
+        : []
+      
+      const allOffers = [...openItems, ...historyOffers]
+      
+      // If myTradesOnly is enabled, filter to only show offers marked as mine
+      if (thFilters.myTradesOnly) {
+        return allOffers.filter(item => item.isMyOffer)
+      }
+      
+      return allOffers
+    },
     [
-      filters.showCompleted,
-      filters.showCancelled,
-      filters.showPending,
-      filters.myTradesOnly,
+      thFilters.myTradesOnly,
+      thFilters.showOpen,
+      thFilters.showCompleted,
+      thFilters.showCancelled,
+      thFilters.showPending,
+      openOffers,
       completedQuery.data?.pages,
       cancelledQuery.data?.pages,
       pendingQuery.data?.pages,
@@ -189,22 +227,22 @@ export function useTradeHistory(options: TradeHistoryOptions = {}) {
   )
 
   const fetchNextPage = useCallback(() => {
-    if (filters.showCompleted) completedQuery.fetchNextPage()
-    if (filters.showCancelled) cancelledQuery.fetchNextPage()
-    if (filters.showPending) pendingQuery.fetchNextPage()
+    if (thFilters.showCompleted) completedQuery.fetchNextPage()
+    if (thFilters.showCancelled) cancelledQuery.fetchNextPage()
+    if (thFilters.showPending) pendingQuery.fetchNextPage()
   }, [
-    filters.showCompleted,
-    filters.showCancelled,
-    filters.showPending,
+    thFilters.showCompleted,
+    thFilters.showCancelled,
+    thFilters.showPending,
     completedQuery,
     cancelledQuery,
     pendingQuery,
   ])
 
   const hasNextPage =
-    (filters.showCompleted && !!completedQuery.hasNextPage) ||
-    (filters.showCancelled && !!cancelledQuery.hasNextPage) ||
-    (filters.showPending && !!pendingQuery.hasNextPage)
+    (thFilters.showCompleted && !!completedQuery.hasNextPage) ||
+    (thFilters.showCancelled && !!cancelledQuery.hasNextPage) ||
+    (thFilters.showPending && !!pendingQuery.hasNextPage)
 
   const isFetchingNextPage =
     completedQuery.isFetchingNextPage ||
@@ -212,11 +250,12 @@ export function useTradeHistory(options: TradeHistoryOptions = {}) {
     pendingQuery.isFetchingNextPage
 
   const isLoading =
-    (filters.showCompleted && completedQuery.isLoading) ||
-    (filters.showCancelled && cancelledQuery.isLoading) ||
-    (filters.showPending && pendingQuery.isLoading)
+    (thFilters.showOpen && orderBookLoading) ||
+    (thFilters.showCompleted && completedQuery.isLoading) ||
+    (thFilters.showCancelled && cancelledQuery.isLoading) ||
+    (thFilters.showPending && pendingQuery.isLoading)
 
-  const error = completedQuery.error ?? cancelledQuery.error ?? pendingQuery.error
+  const error = completedQuery.error ?? cancelledQuery.error ?? pendingQuery.error ?? orderBookError
 
   return {
     offers,

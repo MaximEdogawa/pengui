@@ -15,6 +15,7 @@ export default function TradeHistoryContainer() {
   const {
     filters: thFilters,
     setMyTradesOnly,
+    setShowOpen,
     setShowCompleted,
     setShowCancelled,
     setShowPending,
@@ -27,7 +28,7 @@ export default function TradeHistoryContainer() {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-  } = useTradeHistory({ filters: orderBookFilters })
+} = useTradeHistory({ orderBookFilters, tradeHistoryFilters: thFilters })
   const { sortTrades, sortConfig, setSort } = useTradeHistorySorting()
   const sentinelRef = useRef<HTMLDivElement>(null)
 
@@ -97,6 +98,15 @@ export default function TradeHistoryContainer() {
 
         {/* Status checkboxes - glass */}
         <div className={`flex items-center gap-3 px-2 py-1 rounded-lg backdrop-blur-xl bg-white/5 dark:bg-black/5 border border-white/10 dark:border-white/5 ${t.text}`}>
+          <label className="flex items-center gap-1.5 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={thFilters.showOpen}
+              onChange={(e) => setShowOpen(e.target.checked)}
+              className="w-3.5 h-3.5 rounded border-gray-400 dark:border-gray-500"
+            />
+            <span className="text-[11px]">Open</span>
+          </label>
           <label className="flex items-center gap-1.5 cursor-pointer">
             <input
               type="checkbox"

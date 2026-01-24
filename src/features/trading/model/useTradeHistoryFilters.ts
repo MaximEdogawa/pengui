@@ -5,6 +5,7 @@ import { logger } from '@/shared/lib/logger'
 
 export interface TradeHistoryFilters {
   myTradesOnly: boolean
+  showOpen: boolean
   showCompleted: boolean
   showCancelled: boolean
   showPending: boolean
@@ -14,8 +15,9 @@ const STORAGE_KEY = 'trade-history-filters'
 
 const defaultFilters: TradeHistoryFilters = {
   myTradesOnly: false,
+  showOpen: false,
   showCompleted: true,
-  showCancelled: true,
+  showCancelled: false,
   showPending: true,
 }
 
@@ -78,9 +80,14 @@ export function useTradeHistoryFilters() {
     setFilters((prev) => ({ ...prev, showPending: v }))
   }, [])
 
+  const setShowOpen = useCallback((v: boolean) => {
+    setFilters((prev) => ({ ...prev, showOpen: v }))
+  }, [])
+
   return {
     filters,
     setMyTradesOnly,
+    setShowOpen,
     setShowCompleted,
     setShowCancelled,
     setShowPending,
