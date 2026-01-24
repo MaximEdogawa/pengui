@@ -79,6 +79,7 @@ export default function MarketOfferTab({
     onOfferTaken,
     onClose,
     mode,
+    order,
   })
 
   const containerClass = mode === 'modal' ? 'space-y-4' : 'space-y-3'

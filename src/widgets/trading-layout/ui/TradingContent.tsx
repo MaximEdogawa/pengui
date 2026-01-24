@@ -30,7 +30,7 @@ export default function TradingContent({ activeView, filters, onOrderClick }: Tr
   }
 
   if (activeView === 'trades') {
-    return <TradeHistoryContainer />
+    return <TradeHistoryContainer onOfferClick={onOrderClick} />
   }
 
   return null

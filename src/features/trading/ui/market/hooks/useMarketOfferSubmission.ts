@@ -5,6 +5,7 @@ import { useTakeOffer } from '@/features/wallet'
 import { useCallback } from 'react'
 import { offerStorageService } from '@/shared/lib/services/offerStorageService'
 import { useWalletAddress } from '@/features/wallet/model/useWalletQueries'
+import { type OrderBookOrder } from '@/features/trading/lib/orderBookTypes'
 
 interface UseMarketOfferSubmissionProps {
   formState: {
@@ -25,6 +26,7 @@ interface UseMarketOfferSubmissionProps {
   onOfferTaken?: (offer: OfferDetails) => void
   onClose?: () => void
   mode?: 'modal' | 'inline'
+  order?: OrderBookOrder
 }
 
 // Helper function to create taken offer
@@ -32,11 +34,13 @@ function createTakenOffer(
   tradeId: string | undefined,
   offerString: string,
   fee: number,
-  offerPreview: UseMarketOfferSubmissionProps['offerPreview']
+  offerPreview: UseMarketOfferSubmissionProps['offerPreview'],
+  dexieOfferId?: string
 ): OfferDetails {
   return {
     id: Date.now().toString(),
     tradeId,
+    dexieOfferId,
     pendingConfirmation: !tradeId,
     offerString: offerString.trim(),
     status: 'pending',
@@ -61,6 +65,7 @@ export function useMarketOfferSubmission({
   onOfferTaken,
   onClose,
   mode,
+  order,
 }: UseMarketOfferSubmissionProps) {
   const takeOfferMutation = useTakeOffer()
   const { data: walletData } = useWalletAddress()
@@ -91,7 +96,7 @@ export function useMarketOfferSubmission({
         const isSuccess = result?.success !== false
 
         if (tradeId) {
-          const takenOffer = createTakenOffer(tradeId, formState.offerString, formState.fee, offerPreview)
+          const takenOffer = createTakenOffer(tradeId, formState.offerString, formState.fee, offerPreview, order?.id)
 
           // Save offer to IndexedDB with takenBy field
           if (walletAddress) {
@@ -112,7 +117,7 @@ export function useMarketOfferSubmission({
             }
           }, 1500)
         } else if (isSuccess && result) {
-          const takenOffer = createTakenOffer(undefined, formState.offerString, formState.fee, offerPreview)
+          const takenOffer = createTakenOffer(undefined, formState.offerString, formState.fee, offerPreview, order?.id)
 
           formState.setSuccessMessage('Offer accepted! Processing...')
           onOfferTaken?.(takenOffer)
@@ -133,7 +138,7 @@ export function useMarketOfferSubmission({
         formState.setIsSubmitting(false)
       }
     },
-    [formState, isFormValid, takeOfferMutation, offerPreview, onOfferTaken, onClose, mode, walletAddress]
+    [formState, isFormValid, takeOfferMutation, offerPreview, onOfferTaken, onClose, mode, walletAddress, order?.id]
   )
 
   return { handleSubmit }

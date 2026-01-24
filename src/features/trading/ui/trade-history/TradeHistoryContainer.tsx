@@ -6,10 +6,15 @@ import { useOrderBookFilters } from '../../model/OrderBookFiltersProvider'
 import { useTradeHistory } from '../../model/useTradeHistory'
 import { useTradeHistoryFilters } from '../../model/useTradeHistoryFilters'
 import { useTradeHistorySorting } from '../../model/useTradeHistorySorting'
+import type { OrderBookOrder } from '../../lib/orderBookTypes'
 import TradeHistoryTable from './TradeHistoryTable'
 import { Loader2 } from 'lucide-react'
 
-export default function TradeHistoryContainer() {
+interface TradeHistoryContainerProps {
+  onOfferClick?: (order: OrderBookOrder) => void
+}
+
+export default function TradeHistoryContainer({ onOfferClick }: TradeHistoryContainerProps) {
   const { t } = useThemeClasses()
   const { filters: orderBookFilters } = useOrderBookFilters()
   const {
@@ -107,6 +112,15 @@ export default function TradeHistoryContainer() {
             />
             <span className="text-[11px]">Open</span>
           </label>
+           <label className="flex items-center gap-1.5 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={thFilters.showPending}
+              onChange={(e) => setShowPending(e.target.checked)}
+              className="w-3.5 h-3.5 rounded border-gray-400 dark:border-gray-500"
+            />
+            <span className="text-[11px]">Pending</span>
+          </label>
           <label className="flex items-center gap-1.5 cursor-pointer">
             <input
               type="checkbox"
@@ -125,15 +139,7 @@ export default function TradeHistoryContainer() {
             />
             <span className="text-[11px]">Cancelled</span>
           </label>
-          <label className="flex items-center gap-1.5 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={thFilters.showPending}
-              onChange={(e) => setShowPending(e.target.checked)}
-              className="w-3.5 h-3.5 rounded border-gray-400 dark:border-gray-500"
-            />
-            <span className="text-[11px]">Pending</span>
-          </label>
+         
         </div>
       </div>
 
@@ -150,6 +156,7 @@ export default function TradeHistoryContainer() {
               offers={sortedOffers}
               sortConfig={sortConfig}
               onSort={setSort}
+              onOfferClick={onOfferClick}
             />
             <div ref={sentinelRef} className="h-4 flex-shrink-0" aria-hidden />
             {isFetchingNextPage && (

@@ -343,12 +343,15 @@ export class OfferStorageService {
         'getOurDexieOfferIds'
       )
       const ids = new Set<string>()
+      const walletLower = walletAddress.toLowerCase()
       for (const o of all) {
         const isOurs =
-          o.walletAddress === walletAddress ||
-          o.creatorAddress === walletAddress ||
-          o.takenBy === walletAddress
-        if (isOurs && o.dexieOfferId) ids.add(o.dexieOfferId)
+          (o.walletAddress && o.walletAddress.toLowerCase() === walletLower) ||
+          (o.creatorAddress && o.creatorAddress.toLowerCase() === walletLower) ||
+          (o.takenBy && o.takenBy.toLowerCase() === walletLower)
+        if (isOurs && o.dexieOfferId) {
+          ids.add(o.dexieOfferId)
+        }
       }
       return ids
     } catch (error) {
@@ -582,6 +585,103 @@ export class OfferStorageService {
     } catch (error) {
       logger.error('❌ Failed to mark offer as taken in IndexedDB:', error)
       throw error
+    }
+  }
+
+  /**
+   * Get offers that belong to the user (created by or taken by the user)
+   */
+  async getMyOffers(
+    walletAddress: string,
+    network?: 'mainnet' | 'testnet'
+  ): Promise<StoredOffer[]> {
+    try {
+      await ensureDatabaseReady()
+
+      if (!isDatabaseReady()) {
+        return []
+      }
+
+      const currentNetwork = this.getCurrentNetwork(network)
+      const allOffers = await withTimeout(
+        db.offers.where('network').equals(currentNetwork).toArray(),
+        5000,
+        'getMyOffers'
+      )
+
+      // Filter for offers where user is the creator or taker
+      const myOffers = allOffers.filter((offer) => {
+        return (
+          offer.walletAddress === walletAddress ||
+          offer.creatorAddress === walletAddress ||
+          offer.takenBy === walletAddress
+        )
+      })
+
+      logger.info('✅ Retrieved my offers from IndexedDB:', {
+        walletAddress,
+        count: myOffers.length,
+        network: currentNetwork,
+      })
+
+      return myOffers
+    } catch (error) {
+      logger.error('❌ Failed to get my offers from IndexedDB:', error)
+      return []
+    }
+  }
+
+  /**
+   * Get mine offers IDs (offers created by the user) for trade history filtering
+   */
+  async getMyOfferIds(
+    walletAddress: string,
+    network?: 'mainnet' | 'testnet'
+  ): Promise<Set<string>> {
+    try {
+      await ensureDatabaseReady()
+
+      if (!isDatabaseReady()) {
+        return new Set()
+      }
+
+      const currentNetwork = this.getCurrentNetwork(network)
+      const allOffers = await withTimeout(
+        db.offers.where('network').equals(currentNetwork).toArray(),
+        5000,
+        'getMyOfferIds'
+      )
+
+      const ids = new Set<string>()
+      for (const offer of allOffers) {
+        // Consider an offer "mine" if:
+        // 1. It was created by the user (creatorAddress matches) - for created offers
+        // 2. Or the user's wallet stored it (walletAddress matches)
+        // 3. Or the user accepted/took it (takenBy matches)
+        const isMyOffer = 
+          (offer.creatorAddress && offer.creatorAddress.toLowerCase() === walletAddress.toLowerCase()) ||
+          (offer.walletAddress && offer.walletAddress.toLowerCase() === walletAddress.toLowerCase()) ||
+          (offer.takenBy && offer.takenBy.toLowerCase() === walletAddress.toLowerCase())
+
+        if (isMyOffer) {
+          if (offer.dexieOfferId) {
+            ids.add(offer.dexieOfferId)
+          }
+          // Also add the local offer ID for matching
+          ids.add(offer.id)
+        }
+      }
+
+      logger.info('✅ Retrieved my offer IDs from IndexedDB:', {
+        walletAddress,
+        count: ids.size,
+        network: currentNetwork,
+      })
+
+      return ids
+    } catch (error) {
+      logger.error('❌ Failed to get my offer IDs from IndexedDB:', error)
+      return new Set()
     }
   }
 }

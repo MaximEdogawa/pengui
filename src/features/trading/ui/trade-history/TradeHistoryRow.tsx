@@ -7,6 +7,7 @@ import type { DexieOffer } from '@/entities/offer'
 
 interface TradeHistoryRowProps {
   item: TradeHistoryOfferItem
+  onClick?: () => void
 }
 
 function formatOfferDate(offer: DexieOffer): string {
@@ -29,7 +30,7 @@ function formatAssetAmount(amount: number | undefined | null, code: string): str
   return `${formatAmountForDisplay(amount)} ${code || ''}`.trim()
 }
 
-export default function TradeHistoryRow({ item }: TradeHistoryRowProps) {
+export default function TradeHistoryRow({ item, onClick }: TradeHistoryRowProps) {
   const { t, isDark } = useThemeClasses()
   const { offer, offerState, isMyOffer } = item
 
@@ -47,9 +48,10 @@ export default function TradeHistoryRow({ item }: TradeHistoryRowProps) {
 
   return (
     <div
+      onClick={onClick}
       className={`grid grid-cols-8 gap-2 px-3 py-2 border-b ${t.border} ${rowBgClass} transition-colors ${
         isMyOffer ? 'border-l-2 border-l-blue-500/30' : ''
-      }`}
+      } ${onClick ? 'cursor-pointer' : ''}`}
     >
       <div className={`text-xs font-mono ${t.text} col-span-2`}>
         {requested ? formatAssetAmount(requested.amount, requested.code ?? '') : '—'}

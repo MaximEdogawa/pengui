@@ -61,6 +61,7 @@ export interface DexieAsset {
 }
 
 export interface DexieOffer {
+  maker: string
   id: string
   status: number // Legacy field - we'll calculate state from dates instead
   offer?: string // Original offer string (available in POST responses)

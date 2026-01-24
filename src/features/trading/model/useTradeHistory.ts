@@ -73,6 +73,18 @@ function mergeStatusOffers(
   return out
 }
 
+function buildNextPageState(filters: TradeHistoryFilters, completedHasNext: boolean, cancelledHasNext: boolean, pendingHasNext: boolean) {
+  return filters.showCompleted && completedHasNext || filters.showCancelled && cancelledHasNext || filters.showPending && pendingHasNext
+}
+
+function buildIsFetching(completedFetching: boolean, cancelledFetching: boolean, pendingFetching: boolean) {
+  return completedFetching || cancelledFetching || pendingFetching
+}
+
+function buildLoadingState(filters: TradeHistoryFilters, completedLoading: boolean, cancelledLoading: boolean, pendingLoading: boolean, orderBookLoading: boolean) {
+  return (filters.showOpen && orderBookLoading) || (filters.showCompleted && completedLoading) || (filters.showCancelled && cancelledLoading) || (filters.showPending && pendingLoading)
+}
+
 export interface TradeHistoryOfferItem {
   offer: DexieOffer
   offerState: OfferState
@@ -95,7 +107,6 @@ export function useTradeHistory(options: TradeHistoryOptions = {}) {
   const walletAddress = walletData?.address
   const { myTrades } = useMyTrades({})
 
-  // Use passed filters if available, otherwise use internal filters
   const orderBookFilters = passedOrderBookFilters
   const thFilters = passedThFilters ?? internalThFilters
 
@@ -104,11 +115,7 @@ export function useTradeHistory(options: TradeHistoryOptions = {}) {
     const sell = orderBookFilters?.sellAsset?.[0]
     const req = buy ? normalizeTickerForApi(buy, network) : undefined
     const off = sell ? normalizeTickerForApi(sell, network) : undefined
-    return {
-      targetRequested: req,
-      targetOffered: off,
-      hasPairFilter: !!(req || off),
-    }
+    return { targetRequested: req, targetOffered: off, hasPairFilter: !!(req || off) }
   }, [orderBookFilters?.buyAsset, orderBookFilters?.sellAsset, network])
 
   const ourIdsQuery = useQuery({
@@ -118,20 +125,23 @@ export function useTradeHistory(options: TradeHistoryOptions = {}) {
     staleTime: 60 * 1000,
   })
 
+  const myOfferIdsQuery = useQuery({
+    queryKey: ['my-offer-ids', walletAddress ?? '', network],
+    queryFn: () => offerStorageService.getMyOfferIds(walletAddress!, network),
+    enabled: !!walletAddress,
+    staleTime: 60 * 1000,
+  })
+
   const ourOfferIds = useMemo(() => {
-    const fromDb = ourIdsQuery.data ?? new Set<string>()
+    const fromDexieOurIds = ourIdsQuery.data ?? new Set<string>()
+    const fromMyOfferIds = myOfferIdsQuery.data ?? new Set<string>()
     const fromMy = myTrades.map((t) => t.trade_id).filter(Boolean)
-    return new Set([...fromDb, ...fromMy])
-  }, [ourIdsQuery.data, myTrades])
+    return new Set([...fromDexieOurIds, ...fromMyOfferIds, ...fromMy])
+  }, [ourIdsQuery.data, myOfferIdsQuery.data, myTrades])
 
   const baseEnabled = enabled && hasPairFilter && (!thFilters.myTradesOnly || !!walletAddress)
   const dexieUrl = getDexieApiUrl(network)
-  const fetchOpts = {
-    targetRequested,
-    targetOffered,
-    myTradesOnly: thFilters.myTradesOnly,
-    walletAddress,
-  }
+  const fetchOpts = { targetRequested, targetOffered, myTradesOnly: thFilters.myTradesOnly, walletAddress }
 
   const completedQuery = useInfiniteQuery({
     queryKey: ['trade-history', 'completed', network, targetRequested ?? '', targetOffered ?? '', thFilters.myTradesOnly, walletAddress ?? ''],
@@ -172,11 +182,10 @@ export function useTradeHistory(options: TradeHistoryOptions = {}) {
     retry: 2,
   })
 
-  // Use orderBook data for open offers
   const { orderBookData, orderBookLoading, orderBookError } = useOrderBook(thFilters.showOpen ? orderBookFilters : undefined)
+
   const openOffers = useMemo(() => {
-    if (!orderBookData || !Array.isArray(orderBookData)) return []
-    // Convert OrderBookOrder[] back to DexieOffer format for consistency
+    if (!orderBookData?.length) return []
     return orderBookData.map((order) => ({
       id: order.id,
       requested: order.requesting,
@@ -186,84 +195,41 @@ export function useTradeHistory(options: TradeHistoryOptions = {}) {
     } as unknown as DexieOffer))
   }, [orderBookData])
 
-  const offers = useMemo(
-    () => {
-      // Build array from pages for history offers
-      const historyOffers = mergeStatusOffers(
-        [
-          { show: thFilters.showCompleted, pages: completedQuery.data?.pages, offerState: 'Completed' },
-          { show: thFilters.showCancelled, pages: cancelledQuery.data?.pages, offerState: 'Cancelled' },
-          { show: thFilters.showPending, pages: pendingQuery.data?.pages, offerState: 'Pending' },
-        ],
-        (o) => ourOfferIds.has(o.id)
-      )
-      
-      // Add open offers from orderbook
-      const openItems: TradeHistoryOfferItem[] = thFilters.showOpen ? 
-        openOffers.map(o => ({ offer: o, offerState: 'Open' as OfferState, isMyOffer: ourOfferIds.has(o.id) })) 
-        : []
-      
-      const allOffers = [...openItems, ...historyOffers]
-      
-      // If myTradesOnly is enabled, filter to only show offers marked as mine
-      if (thFilters.myTradesOnly) {
-        return allOffers.filter(item => item.isMyOffer)
-      }
-      
-      return allOffers
-    },
-    [
-      thFilters.myTradesOnly,
-      thFilters.showOpen,
-      thFilters.showCompleted,
-      thFilters.showCancelled,
-      thFilters.showPending,
-      openOffers,
-      completedQuery.data?.pages,
-      cancelledQuery.data?.pages,
-      pendingQuery.data?.pages,
-      ourOfferIds,
-    ]
+  const isOfferMine = useCallback((offer: DexieOffer) => {
+    return ourOfferIds.has(offer.id) || !!(offer.maker && walletAddress && offer.maker.toLowerCase() === walletAddress.toLowerCase())
+  }, [ourOfferIds, walletAddress])
+
+  const historyOffers = useMemo(() => 
+    mergeStatusOffers(
+      [
+        { show: thFilters.showCompleted, pages: completedQuery.data?.pages, offerState: 'Completed' },
+        { show: thFilters.showCancelled, pages: cancelledQuery.data?.pages, offerState: 'Cancelled' },
+        { show: thFilters.showPending, pages: pendingQuery.data?.pages, offerState: 'Pending' },
+      ],
+      isOfferMine
+    ),
+    [thFilters.showCompleted, thFilters.showCancelled, thFilters.showPending, completedQuery.data?.pages, cancelledQuery.data?.pages, pendingQuery.data?.pages, isOfferMine]
   )
+
+  const openItems = useMemo(() => {
+    return thFilters.showOpen ? openOffers.map(o => ({ offer: o, offerState: 'Open' as OfferState, isMyOffer: isOfferMine(o) })) : []
+  }, [thFilters.showOpen, openOffers, isOfferMine])
+
+  const offers = useMemo(() => {
+    const allOffers = [...openItems, ...historyOffers]
+    return thFilters.myTradesOnly ? allOffers.filter(item => item.isMyOffer) : allOffers
+  }, [openItems, historyOffers, thFilters.myTradesOnly])
 
   const fetchNextPage = useCallback(() => {
     if (thFilters.showCompleted) completedQuery.fetchNextPage()
     if (thFilters.showCancelled) cancelledQuery.fetchNextPage()
     if (thFilters.showPending) pendingQuery.fetchNextPage()
-  }, [
-    thFilters.showCompleted,
-    thFilters.showCancelled,
-    thFilters.showPending,
-    completedQuery,
-    cancelledQuery,
-    pendingQuery,
-  ])
+  }, [thFilters.showCompleted, thFilters.showCancelled, thFilters.showPending, completedQuery, cancelledQuery, pendingQuery])
 
-  const hasNextPage =
-    (thFilters.showCompleted && !!completedQuery.hasNextPage) ||
-    (thFilters.showCancelled && !!cancelledQuery.hasNextPage) ||
-    (thFilters.showPending && !!pendingQuery.hasNextPage)
-
-  const isFetchingNextPage =
-    completedQuery.isFetchingNextPage ||
-    cancelledQuery.isFetchingNextPage ||
-    pendingQuery.isFetchingNextPage
-
-  const isLoading =
-    (thFilters.showOpen && orderBookLoading) ||
-    (thFilters.showCompleted && completedQuery.isLoading) ||
-    (thFilters.showCancelled && cancelledQuery.isLoading) ||
-    (thFilters.showPending && pendingQuery.isLoading)
-
+  const hasNextPage = buildNextPageState(thFilters, !!completedQuery.hasNextPage, !!cancelledQuery.hasNextPage, !!pendingQuery.hasNextPage)
+  const isFetchingNextPage = buildIsFetching(completedQuery.isFetchingNextPage, cancelledQuery.isFetchingNextPage, pendingQuery.isFetchingNextPage)
+  const isLoading = buildLoadingState(thFilters, completedQuery.isLoading, cancelledQuery.isLoading, pendingQuery.isLoading, orderBookLoading)
   const error = completedQuery.error ?? cancelledQuery.error ?? pendingQuery.error ?? orderBookError
 
-  return {
-    offers,
-    isLoading,
-    error,
-    hasPairFilter,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-  }
+  return { offers, isLoading, error, hasPairFilter, fetchNextPage, hasNextPage, isFetchingNextPage }
 }

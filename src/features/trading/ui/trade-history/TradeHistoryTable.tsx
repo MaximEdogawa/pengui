@@ -4,18 +4,22 @@ import { useThemeClasses } from '@/shared/hooks'
 import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
 import type { SortColumn, SortConfig } from '../../model/useTradeHistorySorting'
 import type { TradeHistoryOfferItem } from '../../model/useTradeHistory'
+import type { OrderBookOrder } from '../../lib/orderBookTypes'
+import type { DexieOffer } from '@/entities/offer'
 import TradeHistoryRow from './TradeHistoryRow'
 
 interface TradeHistoryTableProps {
   offers: TradeHistoryOfferItem[]
   sortConfig: SortConfig
   onSort: (column: SortColumn) => void
+  onOfferClick?: (order: OrderBookOrder) => void
 }
 
 export default function TradeHistoryTable({
   offers,
   sortConfig,
   onSort,
+  onOfferClick,
 }: TradeHistoryTableProps) {
   const { t } = useThemeClasses()
 
@@ -38,6 +42,34 @@ export default function TradeHistoryTable({
         <p className="text-sm">No offers found</p>
       </div>
     )
+  }
+
+  const handleOfferClick = (item: TradeHistoryOfferItem) => {
+    if (!onOfferClick) return
+
+    // Convert DexieOffer to OrderBookOrder format
+    const { offer, offerState } = item
+    const dexieOffer = offer as DexieOffer
+    const orderBookOrder: OrderBookOrder = {
+      id: dexieOffer.id || '',
+      offering: dexieOffer.offered || [],
+      requesting: dexieOffer.requested || [],
+      maker: dexieOffer.maker || '',
+      timestamp: dexieOffer.date_found || new Date().toISOString(),
+      offeringUsdValue: 0,
+      requestingUsdValue: 0,
+      offeringXchValue: 0,
+      requestingXchValue: 0,
+      pricePerUnit: dexieOffer.price ?? 0,
+      status: 2,
+      date_found: dexieOffer.date_found || '',
+      date_completed: dexieOffer.date_completed,
+      date_pending: dexieOffer.date_pending,
+      date_expiry: dexieOffer.date_expiry,
+      offerState: offerState,
+    }
+
+    onOfferClick(orderBookOrder)
   }
 
   return (
@@ -72,7 +104,11 @@ export default function TradeHistoryTable({
 
       <div>
         {offers.map((item, index) => (
-          <TradeHistoryRow key={`${item.offer.id}-${index}`} item={item} />
+          <TradeHistoryRow 
+            key={`${item.offer.id}-${index}`} 
+            item={item} 
+            onClick={() => handleOfferClick(item)}
+          />
         ))}
       </div>
     </div>
