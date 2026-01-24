@@ -89,16 +89,6 @@ export default function TradeHistoryContainer({ onOfferClick }: TradeHistoryCont
           >
             All
           </button>
-          <button
-            onClick={() => setMyTradesOnly(true)}
-            className={`px-2 py-1 text-[11px] font-medium rounded-md transition-all duration-200 ${
-              thFilters.myTradesOnly
-                ? 'bg-white/20 dark:bg-white/10 text-slate-800 dark:text-slate-100'
-                : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
-            }`}
-          >
-            Mine
-          </button>
         </div>
 
         {/* Status checkboxes - glass */}
