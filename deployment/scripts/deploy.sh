@@ -10,7 +10,7 @@ NC='\033[0m' # No Color
 echo -e "${GREEN}Starting deployment...${NC}"
 
 # Navigate to deployment directory
-cd ~/pengui
+cd ~/pengui/deployment
 
 # Create .env file with production variables
 echo -e "${YELLOW}Creating .env file...${NC}"

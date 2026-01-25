@@ -94,5 +94,5 @@ jobs:
           command_timeout: 5m
           envs: DOCKER_IMAGE,GITHUB_TOKEN,GITHUB_ACTOR,PRODUCTION_ENV
           script: |
-            chmod 775 ~/pengui/scripts/deploy.sh
-            ~/pengui/scripts/deploy.sh
+            chmod 775 ~/pengui/deployment/scripts/deploy.sh
+            ~/pengui/deployment/scripts/deploy.sh
