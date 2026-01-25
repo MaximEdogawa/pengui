@@ -44,6 +44,15 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Extract metadata
+        id: meta
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          fi
+
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
@@ -51,17 +60,30 @@ jobs:
           file: ./deployment/Dockerfile
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.tag }}
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
-            NEXT_PUBLIC_APP_VERSION=${{ github.ref_name }}
+            NEXT_PUBLIC_APP_VERSION=${{ steps.meta.outputs.tag }}
+
+      - name: Copy deployment files to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ secrets.DEPLOY_PORT || 22 }}
+          source: "deployment/docker-compose.yml,deployment/scripts/deploy.sh"
+          target: "~/pengui/"
+          strip_components: 0
 
       - name: Deploy to production server
         uses: appleboy/ssh-action@v1.0.3
         env:
-          DOCKER_IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}
+          DOCKER_IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.tag }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
           PRODUCTION_ENV: ${{ secrets.PRODUCTION_ENV }}
         with:
           host: ${{ secrets.DEPLOY_HOST }}
@@ -70,13 +92,7 @@ jobs:
           port: ${{ secrets.DEPLOY_PORT || 22 }}
           timeout: 30m
           command_timeout: 15m
-          envs: DOCKER_IMAGE,PRODUCTION_ENV
+          envs: DOCKER_IMAGE,GITHUB_TOKEN,GITHUB_ACTOR,PRODUCTION_ENV
           script: |
-            cd /pengui
-            cat > .env << 'EOF'
-              ${{ secrets.PRODUCTION_ENV }}
-              EOF
-            docker-compose pull
-            docker-compose up -d
-            sleep 5
-            curl -f http://localhost:3000 || exit 1
+            chmod 775 ~/pengui/scripts/deploy.sh
+            ~/pengui/scripts/deploy.sh
