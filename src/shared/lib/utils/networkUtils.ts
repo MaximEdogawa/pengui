@@ -37,6 +37,6 @@ export function networkToChainId(network: 'mainnet' | 'testnet'): string {
  */
 export function getDexieApiUrl(network: 'mainnet' | 'testnet'): string {
   return network === 'mainnet'
-    ? 'https://api.dexie.space'
-    : 'https://api-testnet.dexie.space'
+    ? process.env.NEXT_PUBLIC_DEXIE_MAINNET_API_URL||'https://api.dexie.space'
+    : process.env.NEXT_PUBLIC_DEXIE_TESTNET_API_URL||'https://api-testnet.dexie.space';
 }
