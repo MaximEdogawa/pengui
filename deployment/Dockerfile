@@ -4,7 +4,7 @@ FROM oven/bun:1.2.23 AS builder
 WORKDIR /app
 
 # Copy dependency files
-COPY package.json bun.lockb ./
+COPY package.json bun.lock ./
 
 # Install dependencies
 RUN bun install --frozen-lockfile --production=false
@@ -24,7 +24,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y dumb-init && rm -rf /var/lib/apt/lists/*
 
 # Copy dependencies from builder
-COPY package.json bun.lockb ./
+COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile --production=true
 
 # Copy built application from builder
