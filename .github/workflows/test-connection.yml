@@ -2,6 +2,13 @@ name: Test SSH Connection
 
 on:
     workflow_dispatch:
+        inputs:
+            environment:
+                description: "Connection Test"
+                required: true
+                type: choice
+                options:
+                    - production
 
 jobs:
     test-connection:
