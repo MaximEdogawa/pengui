@@ -25,10 +25,9 @@ async function fetchOffersForStatus(
     sort: string
     pageParam: number
   }
-): Promise<DexieOffer[]> {
-  const { targetRequested, targetOffered, status, sort, pageParam } =
-    opts
-  if (!targetRequested && !targetOffered) return []
+): Promise<{ items: DexieOffer[]; rawCount: number }> {
+  const { targetRequested, targetOffered, status, sort, pageParam } = opts
+  if (!targetRequested && !targetOffered) return { items: [], rawCount: 0 }
 
   const q = new URLSearchParams()
   if (targetRequested) q.append('requested', targetRequested)
@@ -49,24 +48,28 @@ async function fetchOffersForStatus(
     else if (Array.isArray((data as { offers?: unknown[] }).offers)) list = (data as { offers: DexieOffer[] }).offers
   }
 
+  const rawCount = list.length
+
   const match = (a: { code?: string; id?: string } | undefined, t: string) =>
     !!a && [a.code, a.id].some((v) => v && String(v).toLowerCase() === t.toLowerCase())
-  return list.filter((o) => {
+  const items = list.filter((o) => {
     if (!o?.id || (o.offered?.length ?? 0) === 0 || (o.requested?.length ?? 0) === 0) return false
     if (targetRequested && !o.requested?.some((a) => match(a, targetRequested))) return false
     if (targetOffered && !o.offered?.some((a) => match(a, targetOffered))) return false
     return true
   })
+
+  return { items, rawCount }
 }
 
 function mergeStatusOffers(
-  sources: { show: boolean; pages: DexieOffer[][] | undefined; offerState: OfferState }[],
+  sources: { show: boolean; pages: Array<{ items: DexieOffer[]; rawCount: number }> | undefined; offerState: OfferState }[],
   getIsMyOffer: (o: DexieOffer) => boolean
 ): TradeHistoryOfferItem[] {
   const out: TradeHistoryOfferItem[] = []
   for (const { show, pages, offerState } of sources) {
     if (!show || !pages) continue
-    const raw = pages.flat()
+    const raw = pages.flatMap((p) => p.items)
     out.push(...raw.map((o) => ({ offer: o, offerState, isMyOffer: getIsMyOffer(o) })))
   }
   return out
@@ -120,14 +123,14 @@ export function useTradeHistory(options: TradeHistoryOptions = {}) {
   const ourIdsQuery = useQuery({
     queryKey: ['our-dexie-offer-ids', walletAddress ?? '', network],
     queryFn: () => offerStorageService.getOurDexieOfferIds(walletAddress!, network),
-    enabled: !!walletAddress,
+    enabled: enabled && !!walletAddress,
     staleTime: 60 * 1000,
   })
 
   const myOfferIdsQuery = useQuery({
     queryKey: ['my-offer-ids', walletAddress ?? '', network],
     queryFn: () => offerStorageService.getMyOfferIds(walletAddress!, network),
-    enabled: !!walletAddress,
+    enabled: enabled && !!walletAddress,
     staleTime: 60 * 1000,
   })
 
@@ -148,7 +151,7 @@ export function useTradeHistory(options: TradeHistoryOptions = {}) {
       fetchOffersForStatus(dexieUrl, { ...fetchOpts, status: 4, sort: 'date_completed', pageParam: pageParam as number }),
     initialPageParam: 1,
     getNextPageParam: (lastPage, _all, lastParam) =>
-      lastPage.length >= PAGE_SIZE ? (lastParam as number) + 1 : undefined,
+      lastPage.rawCount >= PAGE_SIZE ? (lastParam as number) + 1 : undefined,
     enabled: baseEnabled && thFilters.showCompleted,
     staleTime: 30 * 1000,
     gcTime: 5 * 60 * 1000,
@@ -161,7 +164,7 @@ export function useTradeHistory(options: TradeHistoryOptions = {}) {
       fetchOffersForStatus(dexieUrl, { ...fetchOpts, status: 3, sort: 'date_found', pageParam: pageParam as number }),
     initialPageParam: 1,
     getNextPageParam: (lastPage, _all, lastParam) =>
-      lastPage.length >= PAGE_SIZE ? (lastParam as number) + 1 : undefined,
+      lastPage.rawCount >= PAGE_SIZE ? (lastParam as number) + 1 : undefined,
     enabled: baseEnabled && thFilters.showCancelled,
     staleTime: 30 * 1000,
     gcTime: 5 * 60 * 1000,
@@ -174,14 +177,14 @@ export function useTradeHistory(options: TradeHistoryOptions = {}) {
       fetchOffersForStatus(dexieUrl, { ...fetchOpts, status: 2, sort: 'date_found', pageParam: pageParam as number }),
     initialPageParam: 1,
     getNextPageParam: (lastPage, _all, lastParam) =>
-      lastPage.length >= PAGE_SIZE ? (lastParam as number) + 1 : undefined,
+      lastPage.rawCount >= PAGE_SIZE ? (lastParam as number) + 1 : undefined,
     enabled: baseEnabled && thFilters.showPending,
     staleTime: 30 * 1000,
     gcTime: 5 * 60 * 1000,
     retry: 2,
   })
 
-  const { orderBookData, orderBookLoading, orderBookError } = useOrderBook(thFilters.showOpen ? orderBookFilters : undefined)
+  const { orderBookData, orderBookLoading, orderBookError } = useOrderBook(enabled && thFilters.showOpen && hasPairFilter ? orderBookFilters : undefined)
 
   const openOffers = useMemo(() => {
     if (!orderBookData?.length) return []

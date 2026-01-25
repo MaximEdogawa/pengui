@@ -250,7 +250,9 @@ export class MyTradesService {
     const normalize = (asset: { assetId?: string; symbol?: string }): string => {
       const identifier = asset.symbol || asset.assetId || ''
       const lower = identifier.toLowerCase()
-      if (lower.includes('xch') || lower === 'xch' || lower === 'txch') {
+      // Use same strict matching as isNativeAsset to avoid false positives
+      const isExactXch = lower === 'xch' || /^xch($|[:_-])/i.test(lower)
+      if (isExactXch || lower === 'txch') {
         return network === 'mainnet' ? 'xch' : 'txch'
       }
       return lower
