@@ -1,8 +1,6 @@
 name: Test SSH Connection
 
 on:
-    push:
-        branches: [31-feature-automatic-deployment]
     workflow_dispatch:
         inputs:
             environment:
@@ -16,7 +14,6 @@ jobs:
     test-connection:
         name: Test SSH Connection
         runs-on: ubuntu-latest
-
         steps:
             - name: Test SSH Connection
               uses: appleboy/ssh-action@v1.0.3
@@ -36,9 +33,7 @@ jobs:
                       echo "Docker Compose installed: $(docker compose version || echo 'Docker Compose not found')"
 
                       # Create pengui directory if it doesn't exist
-                      mkdir -p ~/pengui/scripts
-                      echo "✓ Created ~/pengui directory"
-
+                      mkdir -p ~/pengui
                       # Test write permissions
                       touch ~/pengui/test.txt
                       rm ~/pengui/test.txt
