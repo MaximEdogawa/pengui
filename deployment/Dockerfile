@@ -25,7 +25,8 @@ RUN apt-get update && apt-get install -y dumb-init && rm -rf /var/lib/apt/lists/
 
 # Copy dependencies from builder
 COPY package.json bun.lock ./
-RUN bun install --frozen-lockfile --production=true
+RUN bun install
+RUN bun run build
 
 # Copy built application from builder
 COPY --from=builder /app/.next ./.next
