@@ -1,6 +1,8 @@
 name: Test SSH Connection
 
 on:
+    push:
+        branches: [31-feature-automatic-deployment]
     workflow_dispatch:
         inputs:
             environment:
