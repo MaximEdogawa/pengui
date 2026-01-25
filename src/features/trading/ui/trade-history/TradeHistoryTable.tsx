@@ -1,11 +1,13 @@
 'use client'
 
 import { useThemeClasses } from '@/shared/hooks'
+import { useNetwork } from '@/shared/hooks/useNetwork'
 import { ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react'
 import type { SortColumn, SortConfig } from '../../model/useTradeHistorySorting'
 import type { TradeHistoryOfferItem } from '../../model/useTradeHistory'
 import type { OrderBookOrder } from '../../lib/orderBookTypes'
 import type { DexieOffer } from '@/entities/offer'
+import { convertDexieOfferToOrderBookOrder } from '../../lib/orderBookConverters'
 import TradeHistoryRow from './TradeHistoryRow'
 
 interface TradeHistoryTableProps {
@@ -22,6 +24,7 @@ export default function TradeHistoryTable({
   onOfferClick,
 }: TradeHistoryTableProps) {
   const { t } = useThemeClasses()
+  const { network } = useNetwork()
 
   const getSortIcon = (column: SortColumn) => {
     if (sortConfig.column !== column) {
@@ -34,7 +37,8 @@ export default function TradeHistoryTable({
     )
   }
 
-  const headerCellClass = `px-3 py-2 text-xs font-medium ${t.textSecondary} cursor-pointer hover:${t.text} transition-colors flex items-center gap-1`
+  const hoverClass = t.text === 'text-slate-700' ? 'hover:text-slate-800' : 'hover:text-slate-200'
+  const headerCellClass = `px-3 py-2 text-xs font-medium ${t.textSecondary} cursor-pointer ${hoverClass} transition-colors flex items-center gap-1`
 
   if (offers.length === 0) {
     return (
@@ -47,28 +51,8 @@ export default function TradeHistoryTable({
   const handleOfferClick = (item: TradeHistoryOfferItem) => {
     if (!onOfferClick) return
 
-    // Convert DexieOffer to OrderBookOrder format
-    const { offer, offerState } = item
-    const dexieOffer = offer as DexieOffer
-    const orderBookOrder: OrderBookOrder = {
-      id: dexieOffer.id || '',
-      offering: dexieOffer.offered || [],
-      requesting: dexieOffer.requested || [],
-      maker: dexieOffer.maker || '',
-      timestamp: dexieOffer.date_found || new Date().toISOString(),
-      offeringUsdValue: 0,
-      requestingUsdValue: 0,
-      offeringXchValue: 0,
-      requestingXchValue: 0,
-      pricePerUnit: dexieOffer.price ?? 0,
-      status: 2,
-      date_found: dexieOffer.date_found || '',
-      date_completed: dexieOffer.date_completed,
-      date_pending: dexieOffer.date_pending,
-      date_expiry: dexieOffer.date_expiry,
-      offerState: offerState,
-    }
-
+    const { offer } = item
+    const orderBookOrder = convertDexieOfferToOrderBookOrder(offer as DexieOffer, network)
     onOfferClick(orderBookOrder)
   }
 

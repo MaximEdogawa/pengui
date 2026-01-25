@@ -13,11 +13,13 @@ export function useMyTrades(filters?: MyTradesFilters) {
   const { network } = useNetwork()
   const [myTrades, setMyTrades] = useState<TradeHistoryItem[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<Error | null>(null)
 
   // Fetch my trades directly from service (no TanStack query)
   useEffect(() => {
     if (!walletAddress) {
       setMyTrades([])
+      setError(null)
       return
     }
 
@@ -26,10 +28,12 @@ export function useMyTrades(filters?: MyTradesFilters) {
       .getMyTrades(walletAddress, network, filters)
       .then((trades) => {
         setMyTrades(trades)
+        setError(null)
         setIsLoading(false)
       })
-      .catch(() => {
+      .catch((err) => {
         setMyTrades([])
+        setError(err instanceof Error ? err : new Error(String(err)))
         setIsLoading(false)
       })
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -97,7 +101,7 @@ export function useMyTrades(filters?: MyTradesFilters) {
   return {
     myTrades,
     isLoading,
-    error: null,
+    error,
     getTradesForTicker,
     isMyTrade,
     convertOffersToTrades,
@@ -109,8 +113,9 @@ export function useMyTrades(filters?: MyTradesFilters) {
       try {
         const trades = await myTradesService.getMyTrades(walletAddress, network, filters)
         setMyTrades(trades)
-      } catch {
-        // Error handled silently
+        setError(null)
+      } catch (err) {
+        setError(err instanceof Error ? err : new Error(String(err)))
       } finally {
         setIsLoading(false)
       }

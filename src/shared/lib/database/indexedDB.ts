@@ -62,8 +62,8 @@ export class PenguiDB extends Dexie {
           offers.map(async (offer) => {
             if (!('takenBy' in offer)) {
               migratedCount++
-              // takenBy will be undefined for existing offers, which is correct
-              // It will only be set when offers are taken going forward
+              // Persist the update with takenBy field set to undefined
+              await tx.table('offers').update(offer.id, { takenBy: undefined })
             }
           })
         )

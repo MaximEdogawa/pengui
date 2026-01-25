@@ -610,11 +610,12 @@ export class OfferStorageService {
       )
 
       // Filter for offers where user is the creator or taker
+      const walletAddressLower = walletAddress?.toLowerCase()
       const myOffers = allOffers.filter((offer) => {
         return (
-          offer.walletAddress === walletAddress ||
-          offer.creatorAddress === walletAddress ||
-          offer.takenBy === walletAddress
+          (offer.walletAddress?.toLowerCase() === walletAddressLower) ||
+          (offer.creatorAddress?.toLowerCase() === walletAddressLower) ||
+          (offer.takenBy?.toLowerCase() === walletAddressLower)
         )
       })
 

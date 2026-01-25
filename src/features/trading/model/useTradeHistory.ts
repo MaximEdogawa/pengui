@@ -186,13 +186,17 @@ export function useTradeHistory(options: TradeHistoryOptions = {}) {
 
   const openOffers = useMemo(() => {
     if (!orderBookData?.length) return []
-    return orderBookData.map((order) => ({
+    return orderBookData.map((order): DexieOffer => ({
       id: order.id,
       requested: order.requesting,
       offered: order.offering,
       maker: order.maker,
       date_found: order.date_found,
-    } as unknown as DexieOffer))
+      status: order.status,
+      price: order.pricePerUnit ?? 0,
+      fees: 0,
+      known_taker: null,
+    }))
   }, [orderBookData])
 
   const isOfferMine = useCallback((offer: DexieOffer) => {

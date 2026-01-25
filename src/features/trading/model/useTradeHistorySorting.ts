@@ -55,8 +55,12 @@ function getSortValue(item: TradeHistoryOfferItem, column: SortColumn): number |
 }
 
 function compareValues(aValue: number | string, bValue: number | string, direction: SortDirection): number {
-  if (aValue === undefined || aValue === null) return 1
-  if (bValue === undefined || bValue === null) return -1
+  const aIsNullish = aValue === undefined || aValue === null
+  const bIsNullish = bValue === undefined || bValue === null
+
+  if (aIsNullish && bIsNullish) return 0
+  if (aIsNullish) return 1
+  if (bIsNullish) return -1
 
   if (typeof aValue === 'number' && typeof bValue === 'number') {
     return direction === 'asc' ? aValue - bValue : bValue - aValue

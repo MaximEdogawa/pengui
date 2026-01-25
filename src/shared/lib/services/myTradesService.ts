@@ -205,7 +205,9 @@ export class MyTradesService {
    */
   private isNativeAsset(asset: OfferDetails['assetsOffered'][0], network: 'mainnet' | 'testnet'): boolean {
     const nativeTicker = getNativeTokenTickerForNetwork(network).toLowerCase()
-    return asset.assetId?.toLowerCase().includes('xch') || asset.symbol?.toLowerCase() === nativeTicker
+    const assetIdLower = asset.assetId?.toLowerCase()
+    const isExactXch = assetIdLower === 'xch' || /^xch($|[:_-])/i.test(assetIdLower || '')
+    return isExactXch || asset.symbol?.toLowerCase() === nativeTicker
   }
 
   /**
