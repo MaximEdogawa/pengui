@@ -155,8 +155,10 @@ export class MyTradesService {
       }
 
       // Determine trade type based on what user is doing
-      const isCreator = offer.walletAddress === walletAddress || offer.creatorAddress === walletAddress
-      const isTaker = offer.takenBy === walletAddress
+      // Normalize addresses to lowercase for case-insensitive comparison
+      const normalizedWallet = (walletAddress || '').toLowerCase()
+      const isCreator = (offer.walletAddress || '').toLowerCase() === normalizedWallet || (offer.creatorAddress || '').toLowerCase() === normalizedWallet
+      const isTaker = (offer.takenBy || '').toLowerCase() === normalizedWallet
       const network = offer.network || this.getCurrentNetwork()
 
       // Determine trade type using helper
