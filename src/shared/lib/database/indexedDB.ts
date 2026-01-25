@@ -11,6 +11,7 @@ export interface StoredOffer extends OfferDetails {
   isLocal: boolean
   walletAddress?: string
   network: 'mainnet' | 'testnet' // Network the offer belongs to
+  takenBy?: string // Wallet address of user who took/accepted this offer
 }
 
 // Database class
@@ -45,6 +46,29 @@ export class PenguiDB extends Dexie {
         )
         if (migratedCount > 0) {
           logger.info(`✅ Migrated ${migratedCount} offers to include network field`)
+        }
+      })
+
+    // Version 3: Add takenBy field to track offers taken by user
+    this.version(3)
+      .stores({
+        offers: '++id, id, tradeId, status, createdAt, lastModified, walletAddress, syncedAt, network, takenBy',
+      })
+      .upgrade(async (tx) => {
+        // Migration: Add takenBy field to all existing offers (default to undefined)
+        const offers = await tx.table('offers').toArray()
+        let migratedCount = 0
+        await Promise.all(
+          offers.map(async (offer) => {
+            if (!('takenBy' in offer)) {
+              migratedCount++
+              // Persist the update with takenBy field set to undefined
+              await tx.table('offers').update(offer.id, { takenBy: undefined })
+            }
+          })
+        )
+        if (migratedCount > 0) {
+          logger.info(`✅ Migrated ${migratedCount} offers to include takenBy field`)
         }
       })
   }

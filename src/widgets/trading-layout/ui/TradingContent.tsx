@@ -3,7 +3,7 @@
 import OrderBookContainer from '@/features/trading/ui/orderbook/OrderBookContainer'
 import { PriceChart } from '@/features/trading/ui/chart'
 import MarketDepthView from '@/features/trading/ui/depth/MarketDepthView'
-import { useThemeClasses } from '@/shared/hooks'
+import { TradeHistoryContainer } from '@/features/trading/ui/trade-history'
 import type { OrderBookOrder } from '@/features/trading/lib/orderBookTypes'
 
 interface TradingContentProps {
@@ -16,7 +16,6 @@ interface TradingContentProps {
 }
 
 export default function TradingContent({ activeView, filters, onOrderClick }: TradingContentProps) {
-  const { t } = useThemeClasses()
 
   if (activeView === 'orderbook') {
     return <OrderBookContainer filters={filters} onOrderClick={onOrderClick} />
@@ -30,17 +29,9 @@ export default function TradingContent({ activeView, filters, onOrderClick }: Tr
     return <MarketDepthView filters={filters} onOrderClick={onOrderClick} />
   }
 
-  // Placeholder for trades view
-  return (
-    <div className={`${t.card} p-4 h-full flex flex-col`}>
-      <h3 className={`text-lg font-semibold ${t.text} mb-4`}>
-        Market Trades
-      </h3>
-      <div className={`flex-1 ${t.card} rounded-lg flex items-center justify-center`}>
-        <p className={t.textSecondary}>
-          Market trades component will be implemented here
-        </p>
-      </div>
-    </div>
-  )
+  if (activeView === 'trades') {
+    return <TradeHistoryContainer onOfferClick={onOrderClick} />
+  }
+
+  return null
 }

@@ -37,8 +37,8 @@ const getWalletConnectConfig = () => {
       penguiIcon: '/pengui-logo.png',
       metadata: {
         name: 'Pengui',
-        description: 'Penguin Pool - Decentralized lending platform on Chia Network',
-        url: 'https://penguin.pool',
+        description: 'Pengui - Decentralized lending platform on Chia Network',
+        url: 'https://penguinpool.space',
         icons: ['/pengui-logo.png'],
       },
     }
@@ -49,7 +49,7 @@ const getWalletConnectConfig = () => {
     penguiIcon,
     metadata: {
       name: 'Pengui',
-      description: 'Penguin Pool - Decentralized lending platform on Chia Network',
+      description: 'Pengui - Decentralized lending platform on Chia Network',
       url: window.location.origin,
       icons: [penguiIcon],
     },

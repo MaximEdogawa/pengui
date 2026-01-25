@@ -1,10 +1,14 @@
 'use client'
 
-import { useState } from 'react'
-import { BarChart3, LineChart } from 'lucide-react'
+import { useState, useMemo } from 'react'
+import { BarChart3, LineChart, User } from 'lucide-react'
 import { usePriceChart } from '../../model/usePriceChart'
 import { LightweightChart } from './LightweightChart'
 import type { ChartConfig, Timeframe } from '../../lib/chartTypes'
+import { useMyTrades } from '../../model/useMyTrades'
+import { useOrderBookFilters } from '../../model/OrderBookFiltersProvider'
+import { resolveTickerId } from '../../lib/tickerResolution'
+import { useTickers } from '@/entities/asset/model/useTickers'
 
 const DEFAULT_CONFIG: ChartConfig = {
   chartType: 'candlestick',
@@ -48,6 +52,9 @@ function ErrorState({ error }: { error?: unknown }) {
 export default function PriceChart() {
   const [config, setConfig] = useState<ChartConfig>(DEFAULT_CONFIG)
   const [isUserScrolling, setIsUserScrolling] = useState(false)
+  const { filters: orderBookFilters } = useOrderBookFilters()
+  const { data: tickersData } = useTickers()
+  const tickers = useMemo(() => tickersData?.data || [], [tickersData?.data])
 
   const {
     ohlcData,
@@ -57,6 +64,22 @@ export default function PriceChart() {
     indicators,
     isUsingSyntheticData,
   } = usePriceChart({ config, isUserScrolling })
+
+  // Get ticker ID for my trades
+  const tickerId = useMemo(() => {
+    if (!orderBookFilters) return null
+    return resolveTickerId(orderBookFilters, tickers)
+  }, [orderBookFilters, tickers])
+
+  // Get my trades for current asset pair
+  const { myTrades } = useMyTrades({
+    tickerId: tickerId || undefined,
+  })
+
+  // Check if user has trades for this asset pair
+  const hasMyTrades = useMemo(() => {
+    return myTrades.length > 0
+  }, [myTrades])
 
   const updateConfig = (updates: Partial<ChartConfig>) => {
     setConfig((prev) => ({ ...prev, ...updates }))
@@ -68,6 +91,16 @@ export default function PriceChart() {
   // Always show the chart, even if there's no data - it will display empty gracefully
   return (
     <div className="h-full flex flex-col relative bg-[#131722]">
+      {/* My Trades Indicator */}
+      {hasMyTrades && (
+        <div className="absolute top-3 right-3 z-10 flex items-center gap-1.5 px-2 py-1 backdrop-blur-xl bg-blue-500/20 border border-blue-400/30 rounded-lg shadow-lg">
+          <User className="w-3 h-3 text-blue-400" />
+          <span className="text-xs text-blue-400 font-medium">
+            {myTrades.length} {myTrades.length === 1 ? 'Trade' : 'Trades'}
+          </span>
+        </div>
+      )}
+
       <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2">
         {/* Chart Type Toggle - Glass morphism style */}
         <div className="flex items-center gap-0.5 p-0.5 backdrop-blur-xl bg-white/5 border border-white/10 rounded-lg shadow-lg">

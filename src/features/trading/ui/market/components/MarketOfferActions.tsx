@@ -2,6 +2,7 @@
 
 import { Button } from '@/shared/ui'
 import { Loader2, ShoppingCart } from 'lucide-react'
+import type { OrderBookOrder } from '../../../lib/orderBookTypes'
 
 interface MarketOfferActionsProps {
   mode?: 'modal' | 'inline'
@@ -9,6 +10,7 @@ interface MarketOfferActionsProps {
   isFormValid: boolean
   isSubmitting: boolean
   orderType: 'buy' | 'sell' | null
+  order?: OrderBookOrder | null
 }
 
 export default function MarketOfferActions({
@@ -17,7 +19,10 @@ export default function MarketOfferActions({
   isFormValid,
   isSubmitting,
   orderType,
+  order,
 }: MarketOfferActionsProps) {
+  const isTakeable = order?.offerState ? order.offerState === 'Open' : true
+
   return (
     <div className="flex flex-wrap justify-end gap-2">
       {mode === 'modal' && onClose && (
@@ -25,21 +30,23 @@ export default function MarketOfferActions({
           Cancel
         </Button>
       )}
-      <Button
-        type="submit"
-        disabled={!isFormValid || isSubmitting}
-        variant={orderType === 'sell' ? 'danger' : 'success'}
-        icon={isSubmitting ? undefined : ShoppingCart}
-      >
-        {isSubmitting ? (
-          <>
-            <Loader2 size={12} className="animate-spin" />
-            Taking...
-          </>
-        ) : (
-          'Take Offer'
-        )}
-      </Button>
+      {isTakeable && (
+        <Button
+          type="submit"
+          disabled={!isFormValid || isSubmitting}
+          variant={orderType === 'sell' ? 'danger' : 'success'}
+          icon={isSubmitting ? undefined : ShoppingCart}
+        >
+          {isSubmitting ? (
+            <>
+              <Loader2 size={12} className="animate-spin" />
+              Taking...
+            </>
+          ) : (
+            'Take Offer'
+          )}
+        </Button>
+      )}
     </div>
   )
 }

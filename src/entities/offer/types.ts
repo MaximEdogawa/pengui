@@ -61,6 +61,7 @@ export interface DexieAsset {
 }
 
 export interface DexieOffer {
+  maker: string
   id: string
   status: number // Legacy field - we'll calculate state from dates instead
   offer?: string // Original offer string (available in POST responses)
@@ -299,6 +300,15 @@ export interface DexieOffer {
   known_taker?: unknown | null // null = cancelled, not null = completed
 }
 
+/** Map Dexie API status (2=Pending, 3=Cancelled, 4=Completed, 6=Expired) when date-based logic is inconclusive. */
+function dexieStatusToState(status: number): OfferState | null {
+  if (status === 4) return 'Completed'
+  if (status === 3) return 'Cancelled'
+  if (status === 6) return 'Expired'
+  if (status === 2) return 'Pending'
+  return null
+}
+
 /**
  * Calculate offer state based on date fields and known_taker according to the specified logic:
  * Priority order (checked in sequence):
@@ -324,17 +334,15 @@ export function calculateOfferState(
   const dateExpiry = offer.date_expiry ? new Date(offer.date_expiry) : null
   const blockExpiry = offer.block_expiry
   const spentBlockIndex = offer.spent_block_index
-  const knownTaker = offer.known_taker
+  const apiStatus =
+    typeof (offer as { status?: number }).status === 'number' ? (offer as { status: number }).status : null
 
   // Helper functions
   const isCancelled = (spentBlockIndex: number | null | undefined): boolean => {
     return spentBlockIndex !== null && spentBlockIndex !== undefined
   }
 
-  const isCompleted = (dateCompleted: Date | null, knownTaker: unknown | null | undefined): boolean => {
-    const hasValidKnownTaker = knownTaker !== null && knownTaker !== undefined
-    return dateCompleted !== null && hasValidKnownTaker
-  }
+  const isCompleted = (dateCompleted: Date | null): boolean => dateCompleted !== null
 
   const isPending = (datePending: Date | null): boolean => {
     return datePending !== null
@@ -388,8 +396,8 @@ export function calculateOfferState(
   // 1. CANCELLED: spent_block_index exists (coin was spent, offer cancelled) - highest priority
   if (isCancelled(spentBlockIndex)) return 'Cancelled'
 
-  // 2. COMPLETED: date_completed exists AND known_taker is not null
-  if (isCompleted(dateCompleted, knownTaker)) return 'Completed'
+  // 2. COMPLETED: date_completed exists (known_taker may be omitted in compact API responses)
+  if (isCompleted(dateCompleted)) return 'Completed'
 
   // 3. PENDING: date_pending exists (but only if not cancelled or completed)
   if (isPending(datePending)) return 'Pending'
@@ -400,9 +408,13 @@ export function calculateOfferState(
 
   // 5. OPEN: date_found exists, no completion, no spending, within expiry (if any)
   if (isOpen(dateFound, dateCompleted, { dateExpiry, blockExpiry, currentBlockHeight })) {
+    const mapped = apiStatus !== null ? dexieStatusToState(apiStatus) : null
+    if (mapped) return mapped
     return 'Open'
   }
 
-  // 6. UNKNOWN: if every date is null
+  // 6. Fallback: Dexie offer.status when date-based logic yields Unknown (e.g. compact response missing dates)
+  const mapped = apiStatus !== null ? dexieStatusToState(apiStatus) : null
+  if (mapped) return mapped
   return 'Unknown'
 }

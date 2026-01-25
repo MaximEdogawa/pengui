@@ -127,24 +127,27 @@ export function useDexieMarketData() {
         })
         
         // Handle different response structures
+        // API response structure: {"success":true,"ticker_id":"...","trades":[...]}
+        // Priority: check 'trades' field first (as per API spec), then 'data' field
         let tradesData: unknown = data
         
-        // If response has a 'data' field, use it
-        if (data && typeof data === 'object' && 'data' in data) {
-          tradesData = (data as { data: unknown }).data
-        }
-        // If response has a 'trades' field, use it
-        else if (data && typeof data === 'object' && 'trades' in data) {
+        // If response has a 'trades' field, use it (primary structure)
+        if (data && typeof data === 'object' && 'trades' in data) {
           tradesData = (data as { trades: unknown }).trades
         }
-        // Otherwise use the data as-is
+        // If response has a 'data' field, use it (alternative structure)
+        else if (data && typeof data === 'object' && 'data' in data) {
+          tradesData = (data as { data: unknown }).data
+        }
+        // If data is already an array, use it directly
+        else if (Array.isArray(data)) {
+          tradesData = data
+        }
         
         // Ensure tradesData is an array for type safety
         const tradesArray = Array.isArray(tradesData) 
           ? tradesData 
-          : (tradesData && typeof tradesData === 'object' && 'trades' in tradesData && Array.isArray((tradesData as { trades: unknown }).trades))
-            ? (tradesData as { trades: unknown[] }).trades
-            : []
+          : []
         
         return {
           success: true,

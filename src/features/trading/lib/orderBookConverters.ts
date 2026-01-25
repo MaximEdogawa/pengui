@@ -1,4 +1,4 @@
-import type { DexieOffer } from '@/entities/offer'
+import { calculateOfferState, type DexieOffer } from '@/entities/offer'
 import type { OrderBookOrder } from './orderBookTypes'
 
 /**
@@ -46,6 +46,7 @@ export function convertDexieOfferToOrderBookOrder(
     date_pending: dexieOffer.date_pending,
     date_expiry: dexieOffer.date_expiry,
     known_taker: dexieOffer.known_taker,
+    offerState: calculateOfferState(dexieOffer),
   }
 }
 

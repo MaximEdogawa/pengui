@@ -80,6 +80,10 @@ export function useMyOffersSingleActions({
   const handleOfferTaken = useCallback(
     async (offer: OfferDetails) => {
       state.setOffers((prev) => updateOfferStatus(prev, offer.id, 'completed'))
+      
+      // Mark offer as taken by current user if wallet address is available
+      // Note: This assumes the offer was already saved with takenBy in useMarketOfferSubmission
+      // This is just updating the local state
       await refreshOffers()
     },
     [refreshOffers, state]
