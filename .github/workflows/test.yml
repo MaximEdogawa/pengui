@@ -2,17 +2,14 @@ name: Tests
 
 on:
   pull_request:
-    branches: [main, develop]
-  push:
-    branches: [main, develop]
-
+    branches: [main]
 jobs:
   test:
     name: Run Tests
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    # Run tests on pull requests and develop branch pushes
-    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/develop')
+    # Run tests on pull requests
+    if: github.event_name == 'pull_request'
 
     steps:
       - name: Checkout code

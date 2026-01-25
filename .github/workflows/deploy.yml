@@ -3,6 +3,18 @@ name: Deploy Release (Docker)
 on:
   release:
     types: [published]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Deployment"
+        required: true
+        type: choice
+        options:
+          - production
+      tag:
+        description: "Release tag to deploy"
+        required: true
+        type: string
 
 env:
   REGISTRY: ghcr.io
