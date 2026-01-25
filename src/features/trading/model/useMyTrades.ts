@@ -20,6 +20,7 @@ export function useMyTrades(filters?: MyTradesFilters) {
     if (!walletAddress) {
       setMyTrades([])
       setError(null)
+      setIsLoading(false)
       return
     }
 

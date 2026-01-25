@@ -26,7 +26,7 @@ async function fetchOffersForStatus(
     pageParam: number
   }
 ): Promise<DexieOffer[]> {
-  const { targetRequested, targetOffered, myTradesOnly, walletAddress, status, sort, pageParam } =
+  const { targetRequested, targetOffered, status, sort, pageParam } =
     opts
   if (!targetRequested && !targetOffered) return []
 
@@ -37,7 +37,6 @@ async function fetchOffersForStatus(
   q.append('page_size', String(PAGE_SIZE))
   q.append('page', String(pageParam))
   q.append('status', String(status))
-  if (myTradesOnly && walletAddress) q.append('maker', walletAddress)
 
   const res = await fetch(`${dexieBaseUrl}/v1/offers?${q.toString()}`)
   if (!res.ok) throw new Error(`Failed to fetch offers: ${res.status}`)

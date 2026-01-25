@@ -53,6 +53,7 @@ export class MyTradesService {
       }
 
       const currentNetwork = network || this.getCurrentNetwork()
+      const normalizedWallet = (walletAddress || '').toLowerCase()
 
       // Get offers where user is creator or taker
       const offers = await withTimeout(
@@ -61,9 +62,9 @@ export class MyTradesService {
           .equals(currentNetwork)
           .filter((offer) => {
             // User is creator
-            const isCreator = offer.walletAddress === walletAddress || offer.creatorAddress === walletAddress
+            const isCreator = (offer.walletAddress || '').toLowerCase() === normalizedWallet || (offer.creatorAddress || '').toLowerCase() === normalizedWallet
             // User is taker
-            const isTaker = offer.takenBy === walletAddress
+            const isTaker = (offer.takenBy || '').toLowerCase() === normalizedWallet
             return isCreator || isTaker
           })
           .toArray(),
