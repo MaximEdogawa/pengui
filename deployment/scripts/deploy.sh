@@ -29,11 +29,11 @@ echo "${GITHUB_TOKEN}" | docker login ghcr.io -u ${GITHUB_ACTOR} --password-stdi
 
 # Pull the new image
 echo -e "${YELLOW}Pulling new Docker image: ${DOCKER_IMAGE}${NC}"
-docker compose pull pengui
+docker-compose pull pengui
 
 # Restart services
 echo -e "${YELLOW}Restarting services...${NC}"
-docker compose up -d
+docker-compose up -d
 
 # Wait for app to be healthy
 echo -e "${YELLOW}Waiting for application to start...${NC}"
