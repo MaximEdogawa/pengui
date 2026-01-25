@@ -12,6 +12,9 @@ echo -e "${GREEN}Starting deployment...${NC}"
 # Navigate to deployment directory
 cd ~/pengui/deployment
 
+# Copy nginx configuration
+cp /nginx/nginx.conf ./nginx/nginx.conf
+
 # Create .env file with production variables
 echo -e "${YELLOW}Creating .env file...${NC}"
 cat > .env << 'ENV_EOF'
