@@ -74,7 +74,7 @@ jobs:
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           port: 22
-          script: mkdir -p ~/pengui/deployment
+          script: mkdir -p ~/pengui
 
       - name: Copy deployment files to server
         uses: appleboy/scp-action@v0.1.7
@@ -84,7 +84,7 @@ jobs:
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           port: 22
           source: "deployment/*"
-          target: "~/pengui/deployment"
+          target: "~/pengui/"
           overwrite: true
 
       # - name: Deploy to production server
