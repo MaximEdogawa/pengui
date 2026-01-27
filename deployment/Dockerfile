@@ -1,14 +1,15 @@
 # Build stage
 FROM oven/bun:1.2.23 AS builder
-
-COPY . /app
 WORKDIR /app
-
-RUN bun install
+COPY package.json bun.lock ./
+RUN bun install --frozen-lockfile
+COPY . .
 RUN bun run build
 
-# Data-only stage - just the dist files
-FROM scratch AS dist
+# Static export (if using Next.js static export)
+RUN bun run export || echo "Skipping export"
 
-# Copy only the dist folder
-COPY --from=builder /app/dist /dist
+# Data-only stage - absolutely minimal
+FROM scratch
+COPY --from=builder /app/.next/static /app/.next/static
+COPY --from=builder /app/public /app/public

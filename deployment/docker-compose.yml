@@ -1,12 +1,6 @@
 version: "3.8"
-services:
-  pengui-data:
-    image: ${DOCKER_IMAGE:-ghcr.io/maximedogawa/pengui:latest}
-    container_name: pengui-data
-    # This container doesn't run, it's just for data
-    entrypoint: ["true"]
-    restart: "no"
 
+services:
   nginx:
     image: nginx:alpine
     container_name: pengui-nginx
@@ -19,17 +13,12 @@ services:
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
       - ./certbot/conf:/etc/letsencrypt:ro
       - ./certbot/www:/var/www/certbot:ro
-      # Copy files from pengui-data image
-      - pengui-dist:/usr/share/nginx/html:ro
+    volumes_from:
+      - pengui-data:ro
     depends_on:
       - pengui-data
     networks:
       - pengui-network
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
     healthcheck:
       test:
         [
@@ -38,25 +27,33 @@ services:
           "--quiet",
           "--tries=1",
           "--spider",
-          "http://localhost:80",
+          "http://localhost/health",
         ]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  pengui-data:
+    image: ${DOCKER_IMAGE:-ghcr.io/maximedogawa/pengui:latest}
+    container_name: pengui-data
+    command: ["/bin/sh", "-c", "exit 0"]
+    restart: "no"
 
   certbot:
-    image: certbot/certbot
+    image: certbot/certbot:latest
     container_name: pengui-certbot
     volumes:
       - ./certbot/conf:/etc/letsencrypt
       - ./certbot/www:/var/www/certbot
-    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew --quiet; sleep 12h & wait $${!}; done;'"
     networks:
       - pengui-network
-
-volumes:
-  pengui-dist:
-    external: false
 
 networks:
   pengui-network:

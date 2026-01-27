@@ -1,35 +1,76 @@
 #!/bin/bash
-
 set -e
 
-echo "### Deploying new application version..."
+# Colors
+G='\033[0;32m'; R='\033[0;31m'; Y='\033[1;33m'; N='\033[0m'
+log() { echo -e "${G}[+]${N} $1"; }
+err() { echo -e "${R}[!]${N} $1"; exit 1; }
+warn() { echo -e "${Y}[!]${N} $1"; }
+
 cd ~/pengui/deployment
 
 # Load .env
-if [ -f .env ]; then
-    export $(cat .env | grep -v '#' | xargs)
+[ -f .env ] && export $(cat .env | grep -v '^#' | grep -v '^$' | xargs) || err ".env not found"
+[ -z "$DOMAIN" ] && err "DOMAIN not set in .env"
+[ -z "$EMAIL" ] && err "EMAIL not set in .env"
+
+log "Deploying $DOMAIN..."
+
+# Create directories
+mkdir -p certbot/{conf,www} nginx/conf.d
+
+# Check SSL certificate
+CERT="certbot/conf/live/$DOMAIN/fullchain.pem"
+NEED_CERT=false
+
+if [ -f "$CERT" ]; then
+    DAYS=$(( ($(date -d "$(openssl x509 -enddate -noout -in "$CERT" | cut -d= -f2)" +%s) - $(date +%s)) / 86400 ))
+    if [ $DAYS -gt 30 ]; then
+        log "SSL valid ($DAYS days left)"
+    else
+        warn "SSL expires in $DAYS days - renewing"
+        NEED_CERT=true
+    fi
+else
+    log "No SSL certificate - requesting one"
+    NEED_CERT=true
 fi
 
-# Check if SSL is set up
-if [ ! -f "certbot/conf/live/$DOMAIN/fullchain.pem" ]; then
-    echo "### SSL not configured. Running SSL setup first..."
-    chmod +x scripts/setup-ssl.sh
-    scripts/setup-ssl.sh
+# Request certificate if needed
+if [ "$NEED_CERT" = true ]; then
+    log "Setting up SSL..."
+    
+    # HTTP config for ACME challenge
+    envsubst '${DOMAIN}' < nginx/templates/http-only.conf.template > nginx/conf.d/default.conf
+    docker-compose up -d nginx
+    sleep 5
+    
+    # Request cert
+    STAGING_ARG=""; [ "${STAGING:-0}" != "0" ] && STAGING_ARG="--staging"
+    docker-compose run --rm certbot certonly \
+        --webroot -w /var/www/certbot \
+        $STAGING_ARG --email "$EMAIL" \
+        -d "$DOMAIN" -d "www.$DOMAIN" \
+        --rsa-key-size 4096 --agree-tos --non-interactive --force-renewal || err "Certificate failed"
+    
+    log "Certificate obtained"
 fi
 
-# Pull latest image if needed
-if [ ! -z "$DOCKER_IMAGE" ]; then
-    echo "### Pulling latest application image..."
-    docker-compose pull pengui
-fi
+# Apply HTTPS config
+log "Configuring HTTPS..."
+envsubst '${DOMAIN}' < nginx/templates/https.conf.template > nginx/conf.d/default.conf
 
-# Deploy application
-echo "### Starting/restarting application..."
-docker-compose up -d pengui
+# Pull latest image
+[ ! -z "$DOCKER_IMAGE" ] && log "Pulling image..." && docker-compose pull pengui-data
 
-# Ensure nginx and certbot are running
-echo "### Ensuring nginx and certbot are running..."
-docker-compose up -d nginx certbot
+# Start all services
+log "Starting services..."
+docker-compose up -d
 
-echo "### ✓ Deployment complete!"
-echo "### Application is running at https://$DOMAIN"
+# Verify
+sleep 3
+docker-compose ps nginx | grep -q "Up" && log "✓ Nginx running" || err "Nginx failed"
+curl -sf --max-time 10 "https://$DOMAIN" >/dev/null 2>&1 && log "✓ HTTPS working" || warn "HTTPS check failed"
+
+log "=== Deployment complete ==="
+log "🌐 https://$DOMAIN"

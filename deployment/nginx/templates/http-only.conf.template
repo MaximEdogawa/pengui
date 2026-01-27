@@ -1,0 +1,36 @@
+server {
+    listen 80;
+    server_name ${DOMAIN} www.${DOMAIN};
+    
+    # ACME challenge for Let's Encrypt
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+        try_files $uri =404;
+    }
+    
+    # Serve static Next.js files
+    location /_next/static/ {
+        alias /usr/share/nginx/html/.next/static/;
+        expires 365d;
+        add_header Cache-Control "public, immutable";
+    }
+    
+    location /static/ {
+        alias /usr/share/nginx/html/public/;
+        expires 30d;
+        add_header Cache-Control "public";
+    }
+    
+    # Main content - static site
+    location / {
+        root /usr/share/nginx/html/public;
+        try_files $uri $uri/ $uri.html /index.html;
+    }
+    
+    # Health check endpoint for Docker
+    location /health {
+        access_log off;
+        return 200 "healthy\n";
+        add_header Content-Type text/plain;
+    }
+}
