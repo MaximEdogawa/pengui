@@ -87,21 +87,21 @@ jobs:
           target: "~/pengui/"
           overwrite: true
 
-      # - name: Deploy to production server
-      #   uses: appleboy/ssh-action@v1.0.3
-      #   env:
-      #     DOCKER_IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.tag }}
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      #     GITHUB_ACTOR: ${{ github.actor }}
-      #     PRODUCTION_ENV: ${{ secrets.PRODUCTION_ENV }}
-      #   with:
-      #     host: ${{ secrets.DEPLOY_HOST }}
-      #     username: ${{ secrets.DEPLOY_USER }}
-      #     key: ${{ secrets.DEPLOY_SSH_KEY }}
-      #     port: 22
-      #     timeout: 10m
-      #     command_timeout: 10m
-      #     envs: DOCKER_IMAGE,GITHUB_USERNAME,GITHUB_TOKEN,GITHUB_ACTOR,PRODUCTION_ENV
-      #     script: |
-      #       chmod  775 ~/pengui/deployment/scripts/deploy.sh
-      #       ~/pengui/deployment/scripts/deploy.sh
+      - name: Deploy to production server
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          DOCKER_IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.tag }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
+          PRODUCTION_ENV: ${{ secrets.PRODUCTION_ENV }}
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: 22
+          timeout: 10m
+          command_timeout: 10m
+          envs: DOCKER_IMAGE,GITHUB_USERNAME,GITHUB_TOKEN,GITHUB_ACTOR,PRODUCTION_ENV
+          script: |
+            chmod  775 ~/pengui/deployment/scripts/deploy.sh
+            ~/pengui/deployment/scripts/deploy.sh

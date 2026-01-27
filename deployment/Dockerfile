@@ -6,10 +6,14 @@ RUN bun install --frozen-lockfile
 COPY . .
 RUN bun run build
 
-# Static export (if using Next.js static export)
-RUN bun run export || echo "Skipping export"
+# Minimal data container
+FROM busybox:latest
+WORKDIR /app
+COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/public ./public
 
-# Data-only stage - absolutely minimal
-FROM scratch
-COPY --from=builder /app/.next/static /app/.next/static
-COPY --from=builder /app/public /app/public
+# Add metadata and volume declaration
+LABEL maintainer="pengui-data"
+VOLUME ["/app"]
+
+CMD ["sh"]
