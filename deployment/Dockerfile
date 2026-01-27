@@ -1,12 +1,10 @@
 # Build stage
 FROM oven/bun:1.2.23 AS builder
 
+COPY . /app
 WORKDIR /app
 
-COPY package.json bun.lockb* ./
-RUN bun install --frozen-lockfile
-
-COPY . .
+RUN bun install
 RUN bun run build
 
 # Data-only stage - just the dist files
