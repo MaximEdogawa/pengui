@@ -9,11 +9,6 @@ warn() { echo -e "${Y}[!]${N} $1"; }
 
 cd ~/pengui/deployment
 
-# Load .env
-[ -f .env ] && export $(cat .env | grep -v '^#' | grep -v '^$' | xargs) || err ".env not found"
-[ -z "$DOMAIN" ] && err "DOMAIN not set in .env"
-[ -z "$EMAIL" ] && err "EMAIL not set in .env"
-
 log "Deploying $DOMAIN..."
 
 # Create directories
