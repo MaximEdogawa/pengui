@@ -13,9 +13,16 @@ cd ~/pengui/deployment
 
 log "Starting deployment for ${DOMAIN:-'unknown domain'}..."
 
+# Validate required environment sectets
+[ -z "$GITHUB_TOKEN" ] && err "GITHUB_TOKEN environment sectets is required"
+[ -z "$GITHUB_ACTOR" ] && err "GITHUB_ACTOR environment sectets is required"
+
+
 # Validate required environment variables
+[ -z "$DOCKER_IMAGE" ] && err "DOCKER_IMAGE environment variable is required"
 [ -z "$DOMAIN" ] && err "DOMAIN environment variable is required"
 [ -z "$CERTBOT_EMAIL" ] && err "CERTBOT_EMAIL environment variable is required"
+[ -z "$CERTBOT_STAGING" ] && err "CERTBOT_STAGING environment variable is required"
 
 # Create required directories
 log "Creating directories..."
@@ -25,12 +32,6 @@ mkdir -p certbot/{conf,www} nginx/conf.d
 if [ -n "$GITHUB_TOKEN" ] && [ -n "$GITHUB_ACTOR" ]; then
     log "Logging into GitHub Container Registry..."
     echo "$GITHUB_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin || warn "Registry login failed"
-fi
-
-# Write production environment file if provided
-if [ -n "$PRODUCTION_ENV" ]; then
-    log "Writing environment configuration..."
-    echo "$PRODUCTION_ENV" > .env
 fi
 
 # Check SSL certificate status
@@ -85,7 +86,7 @@ if [ "$NEED_CERT" = true ]; then
         --webroot \
         -w /var/www/certbot \
         $STAGING_ARG \
-        --email "$EMAIL" \
+        --email "$CERTBOT_EMAIL" \
         -d "$DOMAIN" \
         -d "www.$DOMAIN" \
         --rsa-key-size 4096 \

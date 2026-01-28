@@ -122,8 +122,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_ACTOR: ${{ github.actor }}
           DOMAIN: ${{ vars.DOMAIN }}
-          EMAIL: ${{ vars.CERTBOT_EMAIL }}
-          STAGING: ${{ secrets.CERTBOT_STAGING }}
+          CERTBOT_EMAIL: ${{ vars.CERTBOT_EMAIL }}
+          CERTBOT_STAGING: ${{ vars.CERTBOT_STAGING }}
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
