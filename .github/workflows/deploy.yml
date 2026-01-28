@@ -10,6 +10,9 @@ on:
         required: true
         type: choice
         options:
+          - demo
+          - alpha
+          - beta
           - production
       tag:
         description: "Release tag to deploy (leave empty for latest)"
@@ -56,8 +59,17 @@ jobs:
           else
             TAG="latest"
           fi
+
+          # Set environment: use input for workflow_dispatch, default to production for releases
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            NEXT_PUBLIC_APP_ENV="${{ github.event.inputs.environment }}"
+          else
+            NEXT_PUBLIC_APP_ENV="production"
+          fi
+
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "full_image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:$TAG" >> "$GITHUB_OUTPUT"
+          echo "app_env=$NEXT_PUBLIC_APP_ENV" >> "$GITHUB_OUTPUT"
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
@@ -72,6 +84,7 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             NEXT_PUBLIC_APP_VERSION=${{ steps.meta.outputs.tag }}
+            NEXT_PUBLIC_APP_ENV=${{ steps.meta.outputs.app_env }}
             NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID=${{ secrets.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID }}
             NEXT_PUBLIC_WALLET_CONNECT_RELAY_URL=${{ vars.NEXT_PUBLIC_WALLET_CONNECT_RELAY_URL }}
             NEXT_PUBLIC_DEXIE_MAINNET_API_URL=${{ vars.NEXT_PUBLIC_DEXIE_MAINNET_API_URL }}
