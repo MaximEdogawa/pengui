@@ -126,7 +126,10 @@ docker compose down --remove-orphans 2>/dev/null || true
 
 # Force remove any stuck containers
 log "Cleaning up old containers..."
-docker rm -f $(docker ps -aq --filter "name=pengui") 2>/dev/null || true
+mapfile -t PENGUI_CONTAINERS < <(docker ps -aq --filter "name=pengui")
++ if [ ${`#PENGUI_CONTAINERS`[@]} -gt 0 ]; then
++   docker rm -f "${PENGUI_CONTAINERS[@]}" 2>/dev/null || true
++ fi
 
 log "Starting Next.js application..."
 docker compose up -d pengui

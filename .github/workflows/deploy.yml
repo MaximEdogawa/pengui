@@ -56,8 +56,8 @@ jobs:
           else
             TAG="latest"
           fi
-          echo "tag=$TAG" >> $GITHUB_OUTPUT
-          echo "full_image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:$TAG" >> $GITHUB_OUTPUT
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "full_image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:$TAG" >> "$GITHUB_OUTPUT"
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
@@ -116,7 +116,7 @@ jobs:
           overwrite: true
 
       - name: Deploy to production server
-        uses: appleboy/ssh-action@v1.0.3
+        uses: appleboy/ssh-action@v1.2.5
         env:
           DOCKER_IMAGE: ${{ needs.build-and-push.outputs.full_image }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -143,7 +143,7 @@ jobs:
             ~/pengui/deployment/scripts/deploy.sh
 
       - name: Verify deployment
-        uses: appleboy/ssh-action@v1.0.3
+        uses: appleboy/ssh-action@v1.2.5
         env:
           DOMAIN: ${{ vars.DOMAIN }}
         with:
