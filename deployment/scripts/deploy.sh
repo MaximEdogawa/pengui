@@ -8,35 +8,18 @@ err() { echo -e "${R}[!]${N} $1"; exit 1; }
 warn() { echo -e "${Y}[!]${N} $1"; }
 info() { echo -e "${B}[*]${N} $1"; }
 
-# Detect docker-compose command and create wrapper function
-# v1 standalone: docker-compose
-# v2 plugin: docker compose
-detect_docker_compose() {
-    if command -v docker-compose &> /dev/null; then
-        log "Using: docker-compose (standalone v1)"
-        dc() { docker-compose "$@"; }
-    elif docker compose version &> /dev/null 2>&1; then
-        log "Using: docker compose (plugin v2)"
-        dc() { docker compose "$@"; }
-    else
-        err "Docker Compose not found. Please install docker-compose or the Docker Compose plugin."
-    fi
-}
-detect_docker_compose
+# Verify Docker Compose V2 is available
+if ! docker compose version &> /dev/null; then
+    err "Docker Compose V2 not found. Please install: https://docs.docker.com/compose/install/"
+fi
+log "Docker Compose: $(docker compose version --short)"
 
 # Change to deployment directory
 cd ~/pengui/deployment
 
 log "Starting deployment for ${DOMAIN:-'unknown domain'}..."
 
-# Validate required environment sectets
-[ -z "$GITHUB_TOKEN" ] && err "GITHUB_TOKEN environment sectets is required"
-[ -z "$GITHUB_ACTOR" ] && err "GITHUB_ACTOR environment sectets is required"
-
-
 # Validate required environment variables
-[ -z "$DOCKER_IMAGE" ] && err "DOCKER_IMAGE environment variable is required"
-[ -z "$DOMAIN" ] && err "DOMAIN environment variable is required"
 [ -z "$DOMAIN" ] && err "DOMAIN environment variable is required"
 [ -z "$EMAIL" ] && err "EMAIL environment variable is required"
 
@@ -86,10 +69,10 @@ if [ "$NEED_CERT" = true ]; then
     
     # Pull and start nginx for certificate request
     log "Starting nginx for ACME challenge..."
-    dc pull pengui || true
-    dc up -d pengui
+    docker compose pull pengui || true
+    docker compose up -d pengui
     sleep 5
-    dc up -d nginx
+    docker compose up -d nginx
     sleep 10
     
     # Determine staging flag
@@ -98,7 +81,7 @@ if [ "$NEED_CERT" = true ]; then
     
     # Request certificate
     log "Requesting SSL certificate from Let's Encrypt..."
-    dc run --rm certbot certonly \
+    docker compose run --rm certbot certonly \
         --webroot \
         -w /var/www/certbot \
         $STAGING_ARG \
@@ -120,30 +103,30 @@ envsubst '${DOMAIN}' < nginx/templates/https.conf.template > nginx/conf.d/defaul
 # Pull latest Docker image
 if [ -n "$DOCKER_IMAGE" ]; then
     log "Pulling Docker image: $DOCKER_IMAGE"
-    dc pull pengui || err "Failed to pull Docker image"
+    docker compose pull pengui || err "Failed to pull Docker image"
 fi
 
 # Start/restart all services
-log "Starting services..."
-dc down --remove-orphans 2>/dev/null || true
+log "Stopping existing services..."
+docker compose down --remove-orphans 2>/dev/null || true
 
 log "Starting Next.js application..."
-dc up -d pengui
+docker compose up -d pengui
 sleep 5
 
 # Check if pengui started
-if dc ps pengui | grep -q "Up\|running"; then
+if docker compose ps pengui | grep -q "Up\|running"; then
     log "✓ Next.js container started"
     # Show logs for debugging if health check might fail
     log "Application logs (last 10 lines):"
-    dc logs --tail=10 pengui || true
+    docker compose logs --tail=10 pengui || true
 else
     err "Failed to start Next.js container. Logs:"
-    dc logs pengui || true
+    docker compose logs pengui || true
 fi
 
 log "Starting nginx..."
-dc up -d nginx
+docker compose up -d nginx
 
 # Wait for services to be healthy
 log "Waiting for services to be healthy..."
@@ -155,7 +138,7 @@ RETRY_DELAY=5
 
 for i in $(seq 1 $RETRIES); do
     # Check nginx
-    if dc ps nginx | grep -q "Up\|running"; then
+    if docker compose ps nginx | grep -q "Up\|running"; then
         log "✓ Nginx is running"
     else
         warn "Nginx not ready (attempt $i/$RETRIES)"
@@ -164,7 +147,7 @@ for i in $(seq 1 $RETRIES); do
     fi
     
     # Check Next.js app
-    if dc ps pengui | grep -q "Up\|running"; then
+    if docker compose ps pengui | grep -q "Up\|running"; then
         log "✓ Next.js application is running"
     else
         warn "Next.js app not ready (attempt $i/$RETRIES)"
@@ -185,7 +168,7 @@ done
 
 # Show running containers
 info "Container status:"
-dc ps
+docker compose ps
 
 log "=== Deployment complete ==="
 log "🌐 https://$DOMAIN"
