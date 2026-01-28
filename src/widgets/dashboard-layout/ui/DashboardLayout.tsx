@@ -1,6 +1,7 @@
 'use client'
 
 import { getThemeClasses } from '@/shared/lib/theme'
+import { InfoBanner, VersionDisplay } from '@/shared/ui'
 import { useTheme } from 'next-themes'
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
@@ -9,6 +10,9 @@ import { Header } from './Header'
 import { BackgroundGradient } from './BackgroundGradient'
 import { useScrollDetection } from '../model/use-scroll-detection'
 import { useMenuItems } from '../model/use-menu-items'
+
+// App version from package.json (exposed via next.config.ts)
+const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION || '0.0.1'
 
 interface DashboardLayoutProps {
   children: React.ReactNode
@@ -102,9 +106,14 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           className={`flex-1 overflow-y-auto overflow-x-hidden pt-1 lg:pt-2 pb-2 lg:pb-4 pl-2 lg:pl-3 pr-3 w-full max-w-full relative z-[1] min-h-0 border-r-0 scrollbar-modern ${isScrolling ? 'scrollbar-visible' : ''}`}
           style={{ scrollbarGutter: 'auto' }}
         >
+          {/* Info Banner - inside content area */}
+          <InfoBanner currentVersion={APP_VERSION} />
           <div className="w-full max-w-full h-full flex flex-col">{children}</div>
         </main>
       </div>
+
+      {/* Version Display - fixed position bottom-right */}
+      <VersionDisplay version={APP_VERSION} />
     </div>
   )
 }
