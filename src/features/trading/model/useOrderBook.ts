@@ -143,10 +143,17 @@ export function useOrderBook(filters?: OrderBookFilters) {
     },
     staleTime: calculateStaleTime(pagination),
     gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
-    refetchInterval: calculateRefetchInterval(pagination),
+    // Only refetch on interval if query is successful (prevents infinite loop on errors)
+    refetchInterval: (query) => {
+      if (query.state.status === 'error') {
+        return false // Stop refetching on error
+      }
+      return calculateRefetchInterval(pagination)
+    },
     refetchIntervalInBackground: pagination !== 'all', // Continue refetching only if not "all"
     refetchOnMount: true, // Always refetch when component mounts
     refetchOnWindowFocus: pagination !== 'all', // Refetch on focus only if not "all"
+    retry: 3, // Max 3 retries for failed queries
   })
 
   const orderBookData = orderBookQuery.data?.orders || []
