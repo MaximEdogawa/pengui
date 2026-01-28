@@ -1,5 +1,6 @@
 'use client'
 
+import { ExternalLink } from 'lucide-react'
 import { PenguinLogo, NetworkPicker, SafeConnectButton } from '@/shared/ui'
 
 export default function LoginForm() {
@@ -86,9 +87,15 @@ export default function LoginForm() {
 
         {/* Footer */}
         <div className="text-center pt-1">
-          <p className="text-white/55 dark:text-gray-400 text-[9px] sm:text-[10px] md:text-[11px] leading-relaxed tracking-wide">
-            Connect your wallet to get started
-          </p>
+          <a
+            href="https://sagewallet.net/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-white/55 hover:text-white/80 dark:text-gray-400 dark:hover:text-gray-300 text-[9px] sm:text-[10px] md:text-[11px] leading-relaxed tracking-wide transition-colors duration-200"
+          >
+            <span>Connect with Sage Wallet</span>
+            <ExternalLink className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+          </a>
         </div>
       </div>
     </div>
