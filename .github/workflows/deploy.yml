@@ -122,8 +122,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_ACTOR: ${{ github.actor }}
           DOMAIN: ${{ vars.DOMAIN }}
-          CERTBOT_EMAIL: ${{ vars.CERTBOT_EMAIL }}
-          CERTBOT_STAGING: ${{ vars.CERTBOT_STAGING }}
+          EMAIL: ${{ vars.EMAIL }}
+          STAGING: ${{ vars.STAGING }}
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
@@ -131,14 +131,14 @@ jobs:
           port: 22
           timeout: 10m
           command_timeout: 10m
-          envs: DOCKER_IMAGE,GITHUB_TOKEN,GITHUB_ACTOR,DOMAIN,CERTBOT_EMAIL,CERTBOT_STAGING
+          envs: DOCKER_IMAGE,GITHUB_TOKEN,GITHUB_ACTOR,DOMAIN,EMAIL,STAGING
           script: |
             export DOCKER_IMAGE="$DOCKER_IMAGE"
             export GITHUB_TOKEN="$GITHUB_TOKEN"
             export GITHUB_ACTOR="$GITHUB_ACTOR"
             export DOMAIN="$DOMAIN"
-            export CERTBOT_EMAIL="$CERTBOT_EMAIL"
-            export CERTBOT_STAGING="$CERTBOT_STAGING"
+            export EMAIL="$EMAIL"
+            export STAGING="${STAGING:-0}"
             chmod +x ~/pengui/deployment/scripts/deploy.sh
             ~/pengui/deployment/scripts/deploy.sh
 

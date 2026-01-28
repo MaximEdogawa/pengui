@@ -8,6 +8,22 @@ err() { echo -e "${R}[!]${N} $1"; exit 1; }
 warn() { echo -e "${Y}[!]${N} $1"; }
 info() { echo -e "${B}[*]${N} $1"; }
 
+# Detect docker-compose command and create wrapper function
+# v1 standalone: docker-compose
+# v2 plugin: docker compose
+detect_docker_compose() {
+    if command -v docker-compose &> /dev/null; then
+        log "Using: docker-compose (standalone v1)"
+        dc() { docker-compose "$@"; }
+    elif docker compose version &> /dev/null 2>&1; then
+        log "Using: docker compose (plugin v2)"
+        dc() { docker compose "$@"; }
+    else
+        err "Docker Compose not found. Please install docker-compose or the Docker Compose plugin."
+    fi
+}
+detect_docker_compose
+
 # Change to deployment directory
 cd ~/pengui/deployment
 
@@ -21,8 +37,8 @@ log "Starting deployment for ${DOMAIN:-'unknown domain'}..."
 # Validate required environment variables
 [ -z "$DOCKER_IMAGE" ] && err "DOCKER_IMAGE environment variable is required"
 [ -z "$DOMAIN" ] && err "DOMAIN environment variable is required"
-[ -z "$CERTBOT_EMAIL" ] && err "CERTBOT_EMAIL environment variable is required"
-[ -z "$CERTBOT_STAGING" ] && err "CERTBOT_STAGING environment variable is required"
+[ -z "$DOMAIN" ] && err "DOMAIN environment variable is required"
+[ -z "$EMAIL" ] && err "EMAIL environment variable is required"
 
 # Create required directories
 log "Creating directories..."
@@ -70,23 +86,23 @@ if [ "$NEED_CERT" = true ]; then
     
     # Pull and start nginx for certificate request
     log "Starting nginx for ACME challenge..."
-    docker compose pull pengui || true
-    docker compose up -d pengui
+    dc pull pengui || true
+    dc up -d pengui
     sleep 5
-    docker compose up -d nginx
+    dc up -d nginx
     sleep 10
     
     # Determine staging flag
     STAGING_ARG=""
-    [ "$CERTBOT_STAGING" != "0" ] && STAGING_ARG="--staging" && warn "Using Let's Encrypt staging environment"
+    [ "${STAGING:-0}" != "0" ] && STAGING_ARG="--staging" && warn "Using Let's Encrypt staging environment"
     
     # Request certificate
     log "Requesting SSL certificate from Let's Encrypt..."
-    docker compose run --rm certbot certonly \
+    dc run --rm certbot certonly \
         --webroot \
         -w /var/www/certbot \
         $STAGING_ARG \
-        --email "$CERTBOT_EMAIL" \
+        --email "$EMAIL" \
         -d "$DOMAIN" \
         -d "www.$DOMAIN" \
         --rsa-key-size 4096 \
@@ -104,13 +120,13 @@ envsubst '${DOMAIN}' < nginx/templates/https.conf.template > nginx/conf.d/defaul
 # Pull latest Docker image
 if [ -n "$DOCKER_IMAGE" ]; then
     log "Pulling Docker image: $DOCKER_IMAGE"
-    docker compose pull pengui || err "Failed to pull Docker image"
+    dc pull pengui || err "Failed to pull Docker image"
 fi
 
 # Start/restart all services
 log "Starting services..."
-docker compose down --remove-orphans 2>/dev/null || true
-docker compose up -d
+dc down --remove-orphans 2>/dev/null || true
+dc up -d
 
 # Wait for services to be healthy
 log "Waiting for services to be healthy..."
@@ -122,7 +138,7 @@ RETRY_DELAY=5
 
 for i in $(seq 1 $RETRIES); do
     # Check nginx
-    if docker compose ps nginx | grep -q "Up"; then
+    if dc ps nginx | grep -q "Up\|running"; then
         log "✓ Nginx is running"
     else
         warn "Nginx not ready (attempt $i/$RETRIES)"
@@ -131,7 +147,7 @@ for i in $(seq 1 $RETRIES); do
     fi
     
     # Check Next.js app
-    if docker compose ps pengui | grep -q "Up"; then
+    if dc ps pengui | grep -q "Up\|running"; then
         log "✓ Next.js application is running"
     else
         warn "Next.js app not ready (attempt $i/$RETRIES)"
@@ -152,7 +168,7 @@ done
 
 # Show running containers
 info "Container status:"
-docker compose ps
+dc ps
 
 log "=== Deployment complete ==="
 log "🌐 https://$DOMAIN"
