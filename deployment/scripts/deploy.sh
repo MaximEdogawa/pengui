@@ -1,12 +1,43 @@
 #!/bin/bash
-set -e
 
 # Colors for output
 G='\033[0;32m'; R='\033[0;31m'; Y='\033[1;33m'; B='\033[0;34m'; N='\033[0m'
 log() { echo -e "${G}[+]${N} $1"; }
-err() { echo -e "${R}[!]${N} $1"; exit 1; }
+err() { echo -e "${R}[!]${N} $1"; exit 1; }  # trap will ensure services start
 warn() { echo -e "${Y}[!]${N} $1"; }
 info() { echo -e "${B}[*]${N} $1"; }
+
+# Ensure services are always running on exit (even if script fails)
+cleanup_and_start() {
+    local exit_code=$?
+    cd ~/pengui/deployment 2>/dev/null || true
+    
+    if [ $exit_code -ne 0 ]; then
+        warn "Deployment encountered errors (exit code: $exit_code)"
+        warn "Ensuring services are running anyway..."
+    fi
+    
+    # Always try to ensure services are running
+    # Start pengui if not running
+    if ! docker compose ps pengui 2>/dev/null | grep -q "Up\|running"; then
+        docker compose up -d pengui 2>/dev/null || true
+    fi
+    
+    # Start nginx if not running, or reload if it is
+    if docker compose ps nginx 2>/dev/null | grep -q "Up\|running"; then
+        docker compose exec -T nginx nginx -s reload 2>/dev/null || true
+    else
+        docker compose up -d nginx 2>/dev/null || true
+    fi
+    
+    # Show final status
+    info "Final container status:"
+    docker compose ps --format "table {{.Name}}\t{{.Status}}" 2>/dev/null || true
+    
+    exit $exit_code
+}
+
+trap cleanup_and_start EXIT
 
 # Verify Docker Compose V2 is available
 if ! docker compose version &> /dev/null; then
@@ -72,8 +103,9 @@ if [ "$NEED_CERT" = true ]; then
     # Create ACME challenge directory
     mkdir -p certbot/www/.well-known/acme-challenge
     
-    # Copy HTTP-only config for ACME challenge (no envsubst needed)
-    cp nginx/templates/http-only.conf.template nginx/conf.d/default.conf
+    # Copy HTTP-only config for ACME challenge (atomic write)
+    cp nginx/templates/http-only.conf.template nginx/conf.d/default.conf.tmp
+    mv nginx/conf.d/default.conf.tmp nginx/conf.d/default.conf
     
     # Pull and start services for certificate request
     log "Starting services for ACME challenge..."
@@ -115,9 +147,10 @@ if [ "$NEED_CERT" = true ]; then
     log "SSL certificate obtained successfully"
 fi
 
-# Apply HTTPS configuration
+# Apply HTTPS configuration (atomic write to prevent serving incomplete config)
 log "Configuring nginx with HTTPS..."
-envsubst '${DOMAIN}' < nginx/templates/https.conf.template > nginx/conf.d/default.conf
+envsubst '${DOMAIN}' < nginx/templates/https.conf.template > nginx/conf.d/default.conf.tmp
+mv nginx/conf.d/default.conf.tmp nginx/conf.d/default.conf
 
 # Pull latest Docker image
 if [ -n "$DOCKER_IMAGE" ]; then
@@ -125,34 +158,36 @@ if [ -n "$DOCKER_IMAGE" ]; then
     docker compose pull pengui || err "Failed to pull Docker image"
 fi
 
-# Start/restart all services
-log "Stopping existing services..."
-docker compose down --remove-orphans 2>/dev/null || true
+# Zero-downtime deployment: start new containers before stopping old ones
+log "Deploying with zero-downtime strategy..."
 
-# Force remove any stuck containers
-log "Cleaning up old containers..."
-mapfile -t PENGUI_CONTAINERS < <(docker ps -aq --filter "name=pengui")
-if [ ${`#PENGUI_CONTAINERS`[@]} -gt 0 ]; then
-   docker rm -f "${PENGUI_CONTAINERS[@]}" 2>/dev/null || true
-fi
+# Pull new images first (while old containers still running)
+log "Pulling latest images..."
+docker compose pull pengui || warn "Failed to pull pengui image"
 
-log "Starting Next.js application..."
-docker compose up -d pengui
-sleep 5
+log "Updating pengui application..."
+docker compose up -d --no-deps --wait pengui || warn "Pengui update had issues"
 
-# Check if pengui started
-if docker compose ps pengui | grep -q "Up\|running"; then
-    log "Next.js container started"
-    # Show logs for debugging if health check might fail
-    log "Application logs (last 10 lines):"
-    docker compose logs --tail=10 pengui || true
+# Check if pengui is healthy
+if docker compose ps pengui | grep -q "Up\|running\|healthy"; then
+    log "Next.js container is running"
 else
-    err "Failed to start Next.js container. Logs:"
-    docker compose logs pengui || true
+    warn "Next.js container may still be starting"
+    docker compose logs --tail=10 pengui || true
 fi
 
-log "Starting nginx..."
-docker compose up -d nginx
+# Update nginx - reload config if running, otherwise start it
+log "Updating nginx..."
+if docker compose ps nginx 2>/dev/null | grep -q "Up\|running"; then
+    # Nginx is running - just reload config (no restart = no downtime)
+    docker compose exec -T nginx nginx -s reload || docker compose up -d --no-deps nginx
+else
+    # Nginx not running - start it
+    docker compose up -d --no-deps nginx || warn "Nginx start had issues"
+fi
+
+# Clean up any orphaned containers
+docker compose up -d --remove-orphans 2>/dev/null || true
 
 # Wait for services to be healthy
 log "Waiting for services to be healthy..."

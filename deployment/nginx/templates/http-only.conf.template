@@ -33,8 +33,13 @@ server {
         proxy_cache_bypass $http_upgrade;
         
         # Timeouts
-        proxy_connect_timeout 60s;
+        proxy_connect_timeout 5s;
         proxy_send_timeout 60s;
         proxy_read_timeout 60s;
+        
+        # Retry on connection failure (helps during container restart)
+        proxy_next_upstream error timeout http_502 http_503 http_504;
+        proxy_next_upstream_tries 3;
+        proxy_next_upstream_timeout 10s;
     }
 }
