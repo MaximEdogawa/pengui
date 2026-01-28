@@ -3,6 +3,7 @@ services:
   pengui:
     image: ${DOCKER_IMAGE:-ghcr.io/maximedogawa/pengui:latest}
     container_name: pengui-app
+    hostname: pengui
     restart: unless-stopped
     expose:
       - "3000"
@@ -11,13 +12,16 @@ services:
       - PORT=3000
       - HOSTNAME=0.0.0.0
     networks:
-      - pengui-network
+      pengui-network:
+        aliases:
+          - pengui
+          - app
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 60s
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     logging:
       driver: "json-file"
       options:
@@ -38,9 +42,13 @@ services:
       - ./certbot/conf:/etc/letsencrypt:ro
       - ./certbot/www:/var/www/certbot:ro
     depends_on:
-      - pengui
+      pengui:
+        condition: service_healthy
     networks:
       - pengui-network
+    # Add DNS configuration for reliable resolution
+    dns:
+      - 127.0.0.11
     healthcheck:
       test:
         [
@@ -76,3 +84,5 @@ services:
 networks:
   pengui-network:
     driver: bridge
+    driver_opts:
+      com.docker.network.bridge.enable_icc: "true"
