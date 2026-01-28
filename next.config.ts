@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next'
+import packageJson from './package.json'
 
 const nextConfig: NextConfig = {
   /* config options here */
@@ -23,6 +24,10 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: '2mb',
     },
+  },
+  // Expose app version from package.json
+  env: {
+    NEXT_PUBLIC_APP_VERSION: packageJson.version,
   },
 }
 

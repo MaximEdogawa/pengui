@@ -56,6 +56,8 @@ export { EmptyState, type EmptyStateProps } from './utilities/empty-state'
 export { WalletConnectionGuard } from './layout/wallet-connection-guard'
 export { NetworkPicker } from './layout/network-picker'
 export { SectionHeader, type SectionHeaderProps } from './layout/section-header'
+export { InfoBanner, type InfoBannerProps, type Environment, type BannerAnnouncement } from './layout/info-banner'
+export { VersionDisplay, type VersionDisplayProps } from './layout/version-display'
 
 // ============================================================================
 // ERROR BOUNDARY
