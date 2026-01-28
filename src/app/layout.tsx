@@ -1,6 +1,5 @@
 'use client'
 
-import { cn } from '@/shared/lib/utils/index'
 import ReactQueryProvider from '@/shared/providers/ReactQueryProvider'
 import { NetworkProvider } from '@/shared/providers/NetworkProvider'
 import { DashboardLayout } from '@/widgets/dashboard-layout'
@@ -12,7 +11,6 @@ import {
   store,
 } from '@maximedogawa/chia-wallet-connect-react'
 import { ThemeProvider } from 'next-themes'
-import { Inter } from 'next/font/google'
 import { usePathname } from 'next/navigation'
 import Script from 'next/script'
 import { useEffect } from 'react'
@@ -27,9 +25,6 @@ import { networkToChainId } from '@/shared/lib/utils/networkUtils'
 import '@maximedogawa/chia-wallet-connect-react/styles'
 import './wallet-connect.css'
 
-
-const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
-
 // Wallet metadata configuration (shared between WalletManager and restoreConnectionState)
 const getWalletConnectConfig = () => {
   if (typeof window === 'undefined') {
@@ -38,7 +33,7 @@ const getWalletConnectConfig = () => {
       metadata: {
         name: 'Pengui',
         description: 'Pengui - Decentralized lending platform on Chia Network',
-        url: 'https://penguinpool.space',
+        url: process.env.NEXT_PUBLIC_APP_URL||'https://penguinpool.space',
         icons: ['/pengui-logo.png'],
       },
     }
@@ -118,7 +113,7 @@ export default function UILayout({ children }: { children: React.ReactNode }) {
         />
       </head>
       <body
-        className={cn(inter.variable, 'w-full overflow-x-hidden font-sans')}
+        className="w-full overflow-x-hidden font-sans"
         style={{ width: '100vw', maxWidth: '100vw', margin: 0, padding: 0, borderRight: 'none' }}
       >
         <Script

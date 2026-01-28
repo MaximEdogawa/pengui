@@ -134,7 +134,6 @@ Pengui provides a comprehensive suite of financial tools for the Chia ecosystem,
    ```
 
    Configure your environment variables:
-
    - WalletConnect project ID
    - API endpoints
    - Other service configurations
@@ -277,18 +276,18 @@ See the [UI Component Documentation](./src/shared/ui/README.md) and [Component C
 
 ```tsx
 // Button
-import { Button } from '@/shared/ui'
-;<Button variant="primary" onClick={handleClick}>
+import { Button } from "@/shared/ui";
+<Button variant="primary" onClick={handleClick}>
   Click Me
-</Button>
+</Button>;
 
 // Modal
-import { Modal } from '@/shared/ui'
-;<Modal onClose={handleClose}>Content</Modal>
+import { Modal } from "@/shared/ui";
+<Modal onClose={handleClose}>Content</Modal>;
 
 // Asset Selector
-import { AssetSelector } from '@/shared/ui'
-;<AssetSelector assets={assets} onAssetsChange={handleChange} />
+import { AssetSelector } from "@/shared/ui";
+<AssetSelector assets={assets} onAssetsChange={handleChange} />;
 ```
 
 ## 🔌 Wallet Integration
@@ -355,8 +354,6 @@ Pre-commit hooks are configured via Husky and lint-staged to ensure code quality
 - **Lint & Type Check**: ESLint and TypeScript checks on staged files (with auto-fix)
 - **Build**: Ensures the project builds successfully
 - **Test**: Runs the test suite
-
-See [Git Hooks Documentation](./docs/development/git-hooks.md) for details.
 
 ## 🔒 Security
 

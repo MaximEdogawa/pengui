@@ -1,0 +1,45 @@
+# Use Docker's internal DNS resolver for dynamic resolution
+resolver 127.0.0.11 valid=10s ipv6=off;
+
+server {
+    listen 80 default_server;
+    server_name _;
+    
+    # ACME challenge for Let's Encrypt SSL certificate
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+        try_files $uri =404;
+    }
+    
+    # Health check endpoint for Docker/load balancer
+    location /health {
+        access_log off;
+        return 200 "healthy\n";
+    }
+    
+    # Proxy all requests to Next.js
+    location / {
+        # Use variable to force DNS re-resolution on each request
+        set $upstream http://pengui:3000;
+        proxy_pass $upstream;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_cache_bypass $http_upgrade;
+        
+        # Timeouts
+        proxy_connect_timeout 5s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+        
+        # Retry on connection failure (helps during container restart)
+        proxy_next_upstream error timeout http_502 http_503 http_504;
+        proxy_next_upstream_tries 3;
+        proxy_next_upstream_timeout 10s;
+    }
+}

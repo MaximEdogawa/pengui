@@ -70,3 +70,6 @@ coverage/
 .nyc_output/
 playwright-report/
 test-results/
+
+#Deployment
+/deployment/.env
