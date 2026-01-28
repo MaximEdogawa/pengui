@@ -110,6 +110,10 @@ fi
 log "Stopping existing services..."
 docker compose down --remove-orphans 2>/dev/null || true
 
+# Force remove any stuck containers
+log "Cleaning up old containers..."
+docker rm -f $(docker ps -aq --filter "name=pengui") 2>/dev/null || true
+
 log "Starting Next.js application..."
 docker compose up -d pengui
 sleep 5

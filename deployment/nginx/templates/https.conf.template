@@ -1,17 +1,21 @@
-# Upstream for Next.js application
-upstream nextjs_upstream {
-    server pengui-app:3000;
-    keepalive 64;
-}
+# Use Docker's internal DNS resolver for dynamic resolution
+resolver 127.0.0.11 valid=10s ipv6=off;
 
-# HTTP server - redirect to HTTPS
+# HTTP server - redirect to HTTPS (or serve directly for ACME)
 server {
-    listen 80;
-    server_name ${DOMAIN} www.${DOMAIN};
+    listen 80 default_server;
+    server_name _;
     
     # ACME challenge for Let's Encrypt SSL renewal
     location /.well-known/acme-challenge/ {
         root /var/www/certbot;
+    }
+    
+    # Health check endpoint
+    location /health {
+        access_log off;
+        return 200 "healthy\n";
+        add_header Content-Type text/plain;
     }
     
     # Redirect all HTTP traffic to HTTPS
@@ -22,8 +26,8 @@ server {
 
 # HTTPS server
 server {
-    listen 443 ssl http2;
-    server_name ${DOMAIN} www.${DOMAIN};
+    listen 443 ssl http2 default_server;
+    server_name _;
     
     # SSL certificates
     ssl_certificate /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
@@ -40,7 +44,7 @@ server {
     # OCSP Stapling
     ssl_stapling on;
     ssl_stapling_verify on;
-    resolver 8.8.8.8 8.8.4.4 valid=300s;
+    resolver 127.0.0.11 8.8.8.8 8.8.4.4 valid=300s;
     resolver_timeout 5s;
     
     # Security headers
@@ -59,7 +63,8 @@ server {
     
     # Static files - served directly by Next.js with long cache
     location /_next/static/ {
-        proxy_pass http://nextjs_upstream;
+        set $upstream http://pengui:3000;
+        proxy_pass $upstream;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_cache_valid 200 365d;
@@ -68,7 +73,8 @@ server {
     
     # Next.js image optimization
     location /_next/image {
-        proxy_pass http://nextjs_upstream;
+        set $upstream http://pengui:3000;
+        proxy_pass $upstream;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
@@ -78,7 +84,8 @@ server {
     
     # Public static files
     location /static/ {
-        proxy_pass http://nextjs_upstream;
+        set $upstream http://pengui:3000;
+        proxy_pass $upstream;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         expires 30d;
@@ -87,7 +94,8 @@ server {
     
     # All other requests - proxy to Next.js
     location / {
-        proxy_pass http://nextjs_upstream;
+        set $upstream http://pengui:3000;
+        proxy_pass $upstream;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
