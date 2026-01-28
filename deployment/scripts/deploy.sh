@@ -126,7 +126,24 @@ fi
 # Start/restart all services
 log "Starting services..."
 dc down --remove-orphans 2>/dev/null || true
-dc up -d
+
+log "Starting Next.js application..."
+dc up -d pengui
+sleep 5
+
+# Check if pengui started
+if dc ps pengui | grep -q "Up\|running"; then
+    log "✓ Next.js container started"
+    # Show logs for debugging if health check might fail
+    log "Application logs (last 10 lines):"
+    dc logs --tail=10 pengui || true
+else
+    err "Failed to start Next.js container. Logs:"
+    dc logs pengui || true
+fi
+
+log "Starting nginx..."
+dc up -d nginx
 
 # Wait for services to be healthy
 log "Waiting for services to be healthy..."
