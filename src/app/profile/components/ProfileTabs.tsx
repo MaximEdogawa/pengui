@@ -3,7 +3,7 @@
 import type { LucideIcon } from 'lucide-react'
 import type { ThemeClasses } from '@/shared/lib/theme'
 
-export type TabId = 'profile' | 'themes' | 'security' | 'preferences'
+export type TabId = 'profile' | 'themes' | 'security' | 'preferences' | 'about'
 
 interface Tab {
   id: TabId

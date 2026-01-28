@@ -77,21 +77,23 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         activeItem={activeItem}
         onNavigation={handleNavigation}
         onToggleTheme={toggleTheme}
+        onToggleSidebar={() => {
+          if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
+            setSidebarCollapsed(!sidebarCollapsed)
+          } else {
+            setSidebarOpen(!sidebarOpen)
+          }
+        }}
         isDark={isDark}
       />
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden relative z-10 w-full max-w-full mr-0 pr-0 border-r-0">
         {/* Top Bar */}
-        <Header
-          t={t}
-          onMenuClick={() => {
-            if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
-              setSidebarCollapsed(!sidebarCollapsed)
-            } else {
-              setSidebarOpen(!sidebarOpen)
-            }
-          }}
+        <Header 
+          t={t} 
+          isDark={isDark}
+          onMenuClick={() => setSidebarOpen(!sidebarOpen)}
         />
 
         {/* Content Area */}

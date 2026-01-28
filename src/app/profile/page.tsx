@@ -1,7 +1,7 @@
 'use client'
 
 import { getThemeClasses } from '@/shared/lib/theme'
-import { UserCircle, Palette, Shield, Settings } from 'lucide-react'
+import { UserCircle, Palette, Shield, Settings, Info } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { useEffect, useState } from 'react'
 import { ProfileHeader } from './components/ProfileHeader'
@@ -29,6 +29,7 @@ export default function ProfilePage() {
     { id: 'themes' as const, icon: Palette, label: 'Themes' },
     { id: 'security' as const, icon: Shield, label: 'Security' },
     { id: 'preferences' as const, icon: Settings, label: 'Preferences' },
+    { id: 'about' as const, icon: Info, label: 'About' },
   ]
 
   return (
