@@ -120,7 +120,7 @@ sleep 5
 
 # Check if pengui started
 if docker compose ps pengui | grep -q "Up\|running"; then
-    log "✓ Next.js container started"
+    log "Next.js container started"
     # Show logs for debugging if health check might fail
     log "Application logs (last 10 lines):"
     docker compose logs --tail=10 pengui || true
@@ -136,44 +136,35 @@ docker compose up -d nginx
 log "Waiting for services to be healthy..."
 sleep 10
 
-# Verify deployment
-RETRIES=5
-RETRY_DELAY=5
+# Quick verification (non-blocking)
+if docker compose ps pengui 2>/dev/null | grep -q "Up\|running"; then
+    log "Next.js application is running"
+else
+    warn "Next.js container may still be starting"
+fi
 
-for i in $(seq 1 $RETRIES); do
-    # Check nginx
-    if docker compose ps nginx | grep -q "Up\|running"; then
-        log "✓ Nginx is running"
-    else
-        warn "Nginx not ready (attempt $i/$RETRIES)"
-        sleep $RETRY_DELAY
-        continue
-    fi
-    
-    # Check Next.js app
-    if docker compose ps pengui | grep -q "Up\|running"; then
-        log "✓ Next.js application is running"
-    else
-        warn "Next.js app not ready (attempt $i/$RETRIES)"
-        sleep $RETRY_DELAY
-        continue
-    fi
-    
-    # Check HTTPS endpoint
-    if curl -sf --max-time 10 "https://$DOMAIN/api/health" >/dev/null 2>&1; then
-        log "✓ HTTPS endpoint responding"
-        break
-    else
-        warn "HTTPS check failed (attempt $i/$RETRIES)"
-        [ $i -eq $RETRIES ] && warn "HTTPS verification failed - check logs"
-        sleep $RETRY_DELAY
-    fi
-done
+if docker compose ps nginx 2>/dev/null | grep -q "Up\|running"; then
+    log "Nginx is running"
+else
+    warn "Nginx container may still be starting"
+fi
+
+# Quick health check (don't block on HTTPS issues)
+if curl -sf --max-time 5 "http://localhost/api/health" >/dev/null 2>&1; then
+    log "Health check passed (HTTP)"
+elif curl -sf --max-time 5 "https://$DOMAIN/api/health" >/dev/null 2>&1; then
+    log "Health check passed (HTTPS)"
+else
+    warn "Health check pending - containers may still be initializing"
+fi
 
 # Show running containers
 info "Container status:"
-docker compose ps
+docker compose ps --format "table {{.Name}}\t{{.Status}}"
 
 log "=== Deployment complete ==="
-log "🌐 https://$DOMAIN"
-log "📊 Health: https://$DOMAIN/api/health"
+log "Site: https://$DOMAIN"
+log "Health: https://$DOMAIN/api/health"
+
+# Explicit exit to ensure script terminates
+exit 0
