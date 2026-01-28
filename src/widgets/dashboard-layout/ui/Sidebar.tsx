@@ -52,8 +52,8 @@ export function Sidebar({
             ${isDark ? 'lg:hover:bg-white/5' : 'lg:hover:bg-black/5'}
           `}
         >
-          <div className="w-6 h-6 rounded-full overflow-hidden flex items-center justify-center">
-            <PenguinLogo size={24} className={`${t.text} rounded-full`} />
+          <div className="w-7 h-7 rounded-full overflow-hidden flex items-center justify-center">
+            <PenguinLogo size={28} className={`${t.text} rounded-full`} />
           </div>
           
           {/* Text - only on desktop when expanded */}
