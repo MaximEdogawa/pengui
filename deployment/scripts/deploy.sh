@@ -19,9 +19,14 @@ cd ~/pengui/deployment
 
 log "Starting deployment for ${DOMAIN:-'unknown domain'}..."
 
+# Validate required environment secrets
+[ -z "$GITHUB_ACTOR" ] && err "GITHUB_ACTOR environment secret is required"
+
 # Validate required environment variables
 [ -z "$DOMAIN" ] && err "DOMAIN environment variable is required"
+[ -z "$DOCKER_IMAGE" ] && err "DOCKER_IMAGE environment variable is required"
 [ -z "$EMAIL" ] && err "EMAIL environment variable is required"
+[ -z "$STAGING" ] && err "STAGING environment variable is required"
 
 # Create required directories
 log "Creating directories..."
@@ -76,7 +81,7 @@ if [ "$NEED_CERT" = true ]; then
     docker compose up -d pengui
     sleep 5
     docker compose up -d nginx
-    sleep 10
+    sleep 5
     
     # Verify ACME challenge path is accessible
     log "Verifying ACME challenge path..."
@@ -127,9 +132,9 @@ docker compose down --remove-orphans 2>/dev/null || true
 # Force remove any stuck containers
 log "Cleaning up old containers..."
 mapfile -t PENGUI_CONTAINERS < <(docker ps -aq --filter "name=pengui")
-+ if [ ${`#PENGUI_CONTAINERS`[@]} -gt 0 ]; then
-+   docker rm -f "${PENGUI_CONTAINERS[@]}" 2>/dev/null || true
-+ fi
+if [ ${`#PENGUI_CONTAINERS`[@]} -gt 0 ]; then
+   docker rm -f "${PENGUI_CONTAINERS[@]}" 2>/dev/null || true
+fi
 
 log "Starting Next.js application..."
 docker compose up -d pengui

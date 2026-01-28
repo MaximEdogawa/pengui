@@ -5,6 +5,9 @@ set -o pipefail
 
 echo "🔍 Running pre-commit checks..."
 
+echo "🏗️  Building project..."
+bun run build
+
 echo "📝 Linting staged files..."
 bun run lint
 
@@ -13,9 +16,6 @@ bun run test:unit
 
 echo "🔗 Running integration tests..."
 bun run test:integration
-
-echo "🏗️  Building project..."
-bun run build
 
 echo "✅ All pre-commit checks passed!"
 
