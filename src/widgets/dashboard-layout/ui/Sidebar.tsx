@@ -12,6 +12,7 @@ interface SidebarProps {
   activeItem: string
   onNavigation: (path: string) => void
   onToggleTheme: () => void
+  onToggleSidebar: () => void
   isDark: boolean
 }
 
@@ -23,6 +24,7 @@ export function Sidebar({
   activeItem,
   onNavigation,
   onToggleTheme,
+  onToggleSidebar,
   isDark,
 }: SidebarProps) {
   const router = useRouter()
@@ -33,32 +35,34 @@ export function Sidebar({
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       } lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-[100] ${
         sidebarCollapsed ? 'lg:w-12' : 'lg:w-56'
-      } w-16 transition-all duration-300 ease-in-out backdrop-blur-3xl ${t.sidebar} flex flex-col overflow-hidden flex-shrink-0 mobile-landscape-sidebar`}
+      } w-12 transition-all duration-300 ease-in-out backdrop-blur-3xl ${t.sidebar} flex flex-col overflow-hidden flex-shrink-0 mobile-landscape-sidebar`}
     >
-      {/* Logo - Fixed at top */}
+      {/* Logo Button - Fixed at top, toggles sidebar */}
       <div
-        className={`h-12 flex-shrink-0 flex items-center border-b ${t.border} transition-all duration-300 ${
-          sidebarCollapsed
-            ? 'lg:justify-center lg:px-0'
-            : 'justify-center lg:justify-start px-2 lg:px-3'
+        className={`h-10 flex-shrink-0 flex items-center justify-center border-b ${t.border} transition-all duration-300 ${
+          sidebarCollapsed ? '' : 'lg:justify-start lg:px-3'
         }`}
       >
-        {sidebarCollapsed ? (
-          <div className="flex items-center justify-center">
-            <div className="w-12 h-12 lg:w-9 lg:h-9 rounded-full overflow-hidden flex items-center justify-center">
-              <PenguinLogo size={32} className={`${t.text} rounded-full lg:!w-7 lg:!h-7`} />
-            </div>
+        <button
+          onClick={onToggleSidebar}
+          className={`
+            relative group flex items-center gap-2 rounded-lg transition-colors duration-200
+            p-1
+            ${sidebarCollapsed ? '' : 'lg:pr-3'}
+            ${isDark ? 'lg:hover:bg-white/5' : 'lg:hover:bg-black/5'}
+          `}
+        >
+          <div className="w-6 h-6 rounded-full overflow-hidden flex items-center justify-center">
+            <PenguinLogo size={24} className={`${t.text} rounded-full`} />
           </div>
-        ) : (
-          <div className="flex items-center lg:items-center gap-2.5">
-            <div className="w-12 h-12 lg:w-10 lg:h-10 rounded-full overflow-hidden flex items-center justify-center">
-              <PenguinLogo size={32} className={`${t.text} rounded-full lg:!w-7 lg:!h-7`} />
-            </div>
-            <span className="hidden lg:inline font-semibold text-lg lg:text-base transition-all duration-300 whitespace-nowrap">
+          
+          {/* Text - only on desktop when expanded */}
+          {!sidebarCollapsed && (
+            <span className={`hidden lg:inline font-semibold text-sm whitespace-nowrap ${t.text}`}>
               Pengui
             </span>
-          </div>
-        )}
+          )}
+        </button>
       </div>
 
       {/* Menu Items - Scrollable on mobile landscape */}
