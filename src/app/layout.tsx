@@ -22,6 +22,7 @@ import './globals.css'
 import { logger } from '@/shared/lib/logger'
 import { getStoredNetwork, hasNetworkPreference, setStoredNetwork } from '@/shared/lib/utils/networkStorage'
 import { networkToChainId } from '@/shared/lib/utils/networkUtils'
+import { NetworkFilterSync } from './NetworkFilterSync'
 import '@maximedogawa/chia-wallet-connect-react/styles'
 import './wallet-connect.css'
 
@@ -197,6 +198,7 @@ export default function UILayout({ children }: { children: React.ReactNode }) {
                 <div className="wallet-connect-scope">
                   <ReactQueryProvider>
                     <NetworkProvider>
+                      <NetworkFilterSync />
                       <WalletConnectionGuard>
                         <DashboardLayoutWrapper>{children}</DashboardLayoutWrapper>
                       </WalletConnectionGuard>

@@ -120,11 +120,99 @@ Run `npm run lint` or `bun run lint` to check for issues.
 3. **Network Tab**: Check for repeated API calls
 4. **Performance Tab**: Look for continuous JavaScript execution
 
+### 3. TanStack Query Infinite Refetch Loops
+
+**Problem**: When a query has `refetchInterval` configured but the query keeps failing (e.g., due to invalid filter parameters from localStorage), it creates an infinite request loop.
+
+**Example (BAD)**:
+```typescript
+const query = useQuery({
+  queryKey: ['orderBook', filters],
+  queryFn: fetchOrderBook,
+  refetchInterval: 30000, // Refetches every 30s even on errors!
+})
+```
+
+**Solution**: Use a function for `refetchInterval` that checks query status, and add explicit retry limits.
+
+**Example (GOOD)**:
+```typescript
+const query = useQuery({
+  queryKey: ['orderBook', filters],
+  queryFn: fetchOrderBook,
+  refetchInterval: (query) => {
+    if (query.state.status === 'error') {
+      return false // Stop refetching on error
+    }
+    return 30000
+  },
+  retry: 3, // Max 3 retries
+})
+```
+
+**Location**: `src/features/trading/model/useOrderBook.ts`
+
+### 4. LocalStorage Filters Causing Invalid API Requests
+
+**Problem**: Stored filters from a previous session (e.g., different network) can cause API requests to fail continuously when loaded.
+
+**Solution**: 
+1. Use Zustand with persist middleware to manage filter state
+2. Store the network context (`savedNetwork`) with filters
+3. Validate stored filters match current network on load
+4. Clear filters automatically when network changes
+
+**Implementation**: The `orderBookFilterStore` uses Zustand's `persist` middleware with network validation:
+
+```typescript
+// Zustand store with persistence
+export const useOrderBookFilterStore = create<OrderBookFilterStore>()(
+  persist(
+    (set, get) => ({
+      // ... state and actions
+      clearForNetworkChange: (newNetwork) => {
+        const state = get()
+        if (state.savedNetwork !== newNetwork) {
+          set({ ...createDefaultState(newNetwork) })
+        }
+      },
+    }),
+    {
+      name: 'orderBookFilterState',
+      storage: createJSONStorage(() => localStorage),
+    }
+  )
+)
+```
+
+**Location**: `src/features/trading/model/orderBookFilterStore.ts`
+
+### 5. Double Query Invalidation + Refetch
+
+**Problem**: Calling both `invalidateQueries` and `refetchQueries` causes duplicate requests. `invalidateQueries` already marks queries as stale, and active queries will automatically refetch.
+
+**Example (BAD)**:
+```typescript
+queryClient.invalidateQueries({ queryKey: ['orderBook'] })
+queryClient.refetchQueries({ queryKey: ['orderBook'] }) // Redundant!
+```
+
+**Example (GOOD)**:
+```typescript
+// Only invalidate - TanStack Query handles refetching automatically
+queryClient.invalidateQueries({ queryKey: ['orderBook'] })
+```
+
+**Location**: `src/features/trading/model/useOrderBookFilters.ts`
+
 ## Related Files
 
 - `src/shared/providers/NetworkProvider.tsx` - Network state management
+- `src/shared/providers/ReactQueryProvider.tsx` - TanStack Query configuration
 - `src/hooks/use-toast.ts` - Toast state management
-- `src/features/trading/model/useOrderBookFilters.ts` - Filter state management
+- `src/features/trading/model/orderBookFilterStore.ts` - Zustand store for filter persistence
+- `src/features/trading/model/useOrderBookFilters.ts` - Filter state hook (uses Zustand store)
+- `src/features/trading/model/useOrderBook.ts` - Order book data fetching
 
 ## Additional Resources
 

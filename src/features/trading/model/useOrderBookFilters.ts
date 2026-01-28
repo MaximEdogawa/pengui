@@ -1,186 +1,145 @@
 'use client'
 
-import { getNativeTokenTickerForNetwork } from '@/shared/lib/config/environment'
 import { useNetwork } from '@/shared/hooks/useNetwork'
 import { useQueryClient } from '@tanstack/react-query'
-import { useCallback, useEffect, useMemo, useState, useRef } from 'react'
-import type { OrderBookFilters, OrderBookPagination, SuggestionItem } from '../lib/orderBookTypes'
-import {
-  loadFilterStateFromStorage,
-  createDefaultFilterState,
-  saveFilterStateToStorage,
-  clearFilterStateFromStorage,
-} from '../lib/orderBookFilterStorage'
-import { useOrderBookFilterActions } from './hooks/useOrderBookFilterActions'
+import { useCallback, useEffect, useMemo, useRef } from 'react'
+import type { OrderBookPagination, SuggestionItem } from '../lib/orderBookTypes'
+import { useOrderBookFilterStore, useHasActiveFilters, useHasHydrated } from './orderBookFilterStore'
 import { usePriceDataPrefetch } from './usePriceDataPrefetch'
 
-interface FilterState {
-  filters: OrderBookFilters
-  searchValue: string
-  filteredSuggestions: SuggestionItem[]
-  assetsSwapped: boolean
-  showFilterPane: boolean
-  userClearedFilters: boolean
-}
-
 const DEFAULT_PAGINATION: OrderBookPagination = 50
-
-const defaultFilters: OrderBookFilters = {
-  buyAsset: [],
-  sellAsset: [],
-  status: [],
-  pagination: DEFAULT_PAGINATION,
-}
 
 export function useOrderBookFilters() {
   const queryClient = useQueryClient()
   const { network } = useNetwork()
   const prevNetworkRef = useRef<typeof network | null>(null)
-  const [state, setState] = useState<FilterState>(() => {
-    const loadedState = loadFilterStateFromStorage()
-    return loadedState || createDefaultFilterState()
-  })
 
-  // Clear all filters when network changes
+  // Get state from Zustand store (reactive)
+  const filters = useOrderBookFilterStore((state) => state.filters)
+  const searchValue = useOrderBookFilterStore((state) => state.searchValue)
+  const filteredSuggestions = useOrderBookFilterStore((state) => state.filteredSuggestions)
+  const assetsSwapped = useOrderBookFilterStore((state) => state.assetsSwapped)
+  const showFilterPane = useOrderBookFilterStore((state) => state.showFilterPane)
+  const savedNetwork = useOrderBookFilterStore((state) => state.savedNetwork)
+  const hasActiveFilters = useHasActiveFilters()
+  const hasHydrated = useHasHydrated()
+
+  // Get actions directly from store for network change handling
+  const storeClearFiltersForNetwork = useOrderBookFilterStore((state) => state.clearAllFilters)
+  const setSavedNetwork = useOrderBookFilterStore((state) => state.setSavedNetwork)
+
+  // Handle network changes - clear ALL filters when network changes
+  // Wait for hydration to complete before making network-based decisions
   useEffect(() => {
-    // Clear filters when network changes (but not on initial mount)
-    if (prevNetworkRef.current !== null && prevNetworkRef.current !== network) {
-      // Network changed - clear all filters
-      setState((prev) => ({
-        ...prev,
-        filters: defaultFilters,
-        searchValue: '',
-        filteredSuggestions: [],
-        assetsSwapped: false,
-        userClearedFilters: true,
-      }))
-      clearFilterStateFromStorage()
+    // Don't run until store has been hydrated from localStorage
+    if (!hasHydrated) return
+
+    if (prevNetworkRef.current === null) {
+      // Initial mount (after hydration) - check if stored network matches current network
+      if (savedNetwork !== null && savedNetwork !== network) {
+        // Network mismatch - clear all filters and update network
+        storeClearFiltersForNetwork()
+        setSavedNetwork(network)
+      } else if (savedNetwork === null) {
+        // No saved network - set it
+        setSavedNetwork(network)
+      }
+      prevNetworkRef.current = network
+    } else if (prevNetworkRef.current !== network) {
+      // Network changed - clear all filters and update network
+      storeClearFiltersForNetwork()
+      setSavedNetwork(network)
+      prevNetworkRef.current = network
+    }
+  }, [network, savedNetwork, hasHydrated, storeClearFiltersForNetwork, setSavedNetwork])
+
+  // Invalidate queries when filters or pagination change
+  const buyAssetKey = JSON.stringify(filters.buyAsset || [])
+  const sellAssetKey = JSON.stringify(filters.sellAsset || [])
+  const statusKey = JSON.stringify(filters.status || [])
+  const isInitializedRef = useRef(false)
+
+  useEffect(() => {
+    // Skip until hydrated and network effect has run
+    if (!hasHydrated || prevNetworkRef.current === null) {
+      return
     }
 
-    prevNetworkRef.current = network
-  }, [network])
-
-  // Ensure default filters are set on mount if not already set
-  useEffect(() => {
-    if (
-      (!state.filters.buyAsset || state.filters.buyAsset.length === 0) &&
-      (!state.filters.sellAsset || state.filters.sellAsset.length === 0) &&
-      !state.userClearedFilters
-    ) {
-      const nativeTicker = getNativeTokenTickerForNetwork(network)
-      setState((prev) => ({
-        ...prev,
-        filters: {
-          buyAsset: [nativeTicker],
-          sellAsset: ['TBYC'],
-          status: prev.filters.status || [],
-        },
-      }))
+    // Skip the first run after initialization to avoid unnecessary invalidation
+    if (!isInitializedRef.current) {
+      isInitializedRef.current = true
+      return
     }
-  }, [network, state.filters.buyAsset, state.filters.sellAsset, state.userClearedFilters])
 
-  // Save to localStorage whenever relevant state changes
-  // Create a stable key for comparison to prevent unnecessary saves
-  const stateKey = useMemo(
-    () =>
-      JSON.stringify({
-        buyAsset: state.filters.buyAsset || [],
-        sellAsset: state.filters.sellAsset || [],
-        status: state.filters.status || [],
-        pagination: state.filters.pagination,
-        searchValue: state.searchValue,
-        assetsSwapped: state.assetsSwapped,
-        userClearedFilters: state.userClearedFilters,
-        showFilterPane: state.showFilterPane,
-      }),
-    [state]
-  )
-  const prevStateKeyRef = useRef<string>('')
-
-  useEffect(() => {
-    // Only save if state actually changed
-    if (stateKey !== prevStateKeyRef.current) {
-      prevStateKeyRef.current = stateKey
-      saveFilterStateToStorage(state)
-    }
-  }, [state, stateKey])
-
-  // Invalidate and refetch queries when filters or pagination change
-  // This ensures new API requests are made when filters change
-  const buyAssetKey = JSON.stringify(state.filters.buyAsset || [])
-  const sellAssetKey = JSON.stringify(state.filters.sellAsset || [])
-  const statusKey = JSON.stringify(state.filters.status || [])
-
-  useEffect(() => {
     // Use a small delay to ensure state has fully updated
     const timeoutId = setTimeout(() => {
+      // Only invalidate - TanStack Query will automatically refetch active queries
       queryClient.invalidateQueries({ queryKey: ['orderBook'] })
-      queryClient.refetchQueries({ queryKey: ['orderBook'] })
       // Also invalidate price data queries when filters change
       queryClient.invalidateQueries({ queryKey: ['priceData'] })
     }, 50)
 
     return () => clearTimeout(timeoutId)
-  }, [buyAssetKey, sellAssetKey, statusKey, state.filters.pagination, queryClient])
-
-  const hasActiveFilters = useMemo(() => {
-    return (
-      (state.filters.buyAsset && state.filters.buyAsset.length > 0) ||
-      (state.filters.sellAsset && state.filters.sellAsset.length > 0) ||
-      (state.filters.status && state.filters.status.length > 0)
-    )
-  }, [state.filters.buyAsset, state.filters.sellAsset, state.filters.status])
+  }, [buyAssetKey, sellAssetKey, statusKey, filters.pagination, queryClient, hasHydrated])
 
   // Return filters as a new object reference when filters change to ensure reactivity
-  // This ensures useOrderBook hook detects filter changes via query key
-  const filters = useMemo(() => {
-    // Create new arrays to ensure reference changes
-    return {
-      buyAsset: state.filters.buyAsset ? [...state.filters.buyAsset] : [],
-      sellAsset: state.filters.sellAsset ? [...state.filters.sellAsset] : [],
-      status: state.filters.status ? [...state.filters.status] : [],
-      pagination: state.filters.pagination || DEFAULT_PAGINATION,
-    }
-  }, [
-    state.filters.buyAsset,
-    state.filters.sellAsset,
-    state.filters.status,
-    state.filters.pagination,
-  ])
+  const memoizedFilters = useMemo(() => ({
+    buyAsset: filters.buyAsset ? [...filters.buyAsset] : [],
+    sellAsset: filters.sellAsset ? [...filters.sellAsset] : [],
+    status: filters.status ? [...filters.status] : [],
+    pagination: filters.pagination || DEFAULT_PAGINATION,
+  }), [filters.buyAsset, filters.sellAsset, filters.status, filters.pagination])
 
-  // Prefetch price data when filters change (so it's ready when switching to chart tab)
-  usePriceDataPrefetch(filters)
+  // Prefetch price data when filters change
+  usePriceDataPrefetch(memoizedFilters)
 
-  // Extract filter action handlers
-  const filterActions = useOrderBookFilterActions({
-    setState,
-    defaultFilters,
-  })
+  // Get action functions directly from store (these are stable references)
+  const storeSetSearchValue = useOrderBookFilterStore((state) => state.setSearchValue)
+  const storeSetFilteredSuggestions = useOrderBookFilterStore((state) => state.setFilteredSuggestions)
+  const storeAddFilter = useOrderBookFilterStore((state) => state.addFilter)
+  const storeRemoveFilter = useOrderBookFilterStore((state) => state.removeFilter)
+  const storeClearAllFilters = useOrderBookFilterStore((state) => state.clearAllFilters)
+  const storeSwapBuySellAssets = useOrderBookFilterStore((state) => state.swapBuySellAssets)
+  const storeToggleFilterPane = useOrderBookFilterStore((state) => state.toggleFilterPane)
+  const storeSetShowFilterPane = useOrderBookFilterStore((state) => state.setShowFilterPane)
+  const storeSetPagination = useOrderBookFilterStore((state) => state.setPagination)
+
+  // Stable action wrappers
+  const setSearchValue = useCallback((value: string) => {
+    storeSetSearchValue(value)
+  }, [storeSetSearchValue])
+
+  const setFilteredSuggestions = useCallback((suggestions: SuggestionItem[]) => {
+    storeSetFilteredSuggestions(suggestions)
+  }, [storeSetFilteredSuggestions])
+
+  const addFilter = useCallback((column: 'buyAsset' | 'sellAsset' | 'status', value: string) => {
+    storeAddFilter(column, value)
+  }, [storeAddFilter])
+
+  const removeFilter = useCallback((column: 'buyAsset' | 'sellAsset' | 'status', value: string) => {
+    storeRemoveFilter(column, value)
+  }, [storeRemoveFilter])
+
+  const clearAllFilters = useCallback(() => {
+    storeClearAllFilters()
+  }, [storeClearAllFilters])
+
+  const swapBuySellAssets = useCallback(() => {
+    storeSwapBuySellAssets()
+  }, [storeSwapBuySellAssets])
 
   const toggleFilterPane = useCallback(() => {
-    setState((prev) => ({
-      ...prev,
-      showFilterPane: !prev.showFilterPane,
-    }))
-  }, [])
+    storeToggleFilterPane()
+  }, [storeToggleFilterPane])
 
   const setShowFilterPane = useCallback((show: boolean) => {
-    setState((prev) => ({
-      ...prev,
-      showFilterPane: show,
-    }))
-  }, [])
+    storeSetShowFilterPane(show)
+  }, [storeSetShowFilterPane])
 
-  // Set pagination
   const setPagination = useCallback((pagination: OrderBookPagination) => {
-    setState((prev) => ({
-      ...prev,
-      filters: {
-        ...prev.filters,
-        pagination,
-      },
-    }))
-  }, [])
+    storeSetPagination(pagination)
+  }, [storeSetPagination])
 
   // Refresh function (placeholder - actual refresh handled by useOrderBook hook)
   const refreshOrderBook = useCallback(() => {
@@ -190,21 +149,21 @@ export function useOrderBookFilters() {
 
   return {
     // State
-    filters,
-    pagination: filters.pagination || DEFAULT_PAGINATION,
-    searchValue: state.searchValue,
-    filteredSuggestions: state.filteredSuggestions,
-    assetsSwapped: state.assetsSwapped,
-    showFilterPane: state.showFilterPane,
+    filters: memoizedFilters,
+    pagination: memoizedFilters.pagination,
+    searchValue,
+    filteredSuggestions,
+    assetsSwapped,
+    showFilterPane,
     hasActiveFilters,
 
     // Methods
-    setSearchValue: filterActions.setSearchValue,
-    setFilteredSuggestions: filterActions.setFilteredSuggestions,
-    addFilter: filterActions.addFilter,
-    removeFilter: filterActions.removeFilter,
-    clearAllFilters: filterActions.clearAllFilters,
-    swapBuySellAssets: filterActions.swapBuySellAssets,
+    setSearchValue,
+    setFilteredSuggestions,
+    addFilter,
+    removeFilter,
+    clearAllFilters,
+    swapBuySellAssets,
     toggleFilterPane,
     setShowFilterPane,
     setPagination,

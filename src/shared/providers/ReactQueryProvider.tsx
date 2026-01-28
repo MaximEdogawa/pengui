@@ -10,6 +10,11 @@ function ReactQueryProvider({ children }: { children: React.ReactNode }) {
         defaultOptions: {
           queries: {
             staleTime: 60 * 1000,
+            retry: 3, // Max 3 retries for failed queries
+            retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
+          },
+          mutations: {
+            retry: 3, // Max 3 retries for failed mutations
           },
         },
       })
