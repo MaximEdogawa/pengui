@@ -1,52 +1,111 @@
+# Upstream for Next.js application
+upstream nextjs_upstream {
+    server pengui-app:3000;
+    keepalive 64;
+}
+
+# HTTP server - redirect to HTTPS
 server {
     listen 80;
     server_name ${DOMAIN} www.${DOMAIN};
     
+    # ACME challenge for Let's Encrypt SSL renewal
     location /.well-known/acme-challenge/ {
         root /var/www/certbot;
     }
     
+    # Redirect all HTTP traffic to HTTPS
     location / {
         return 301 https://$host$request_uri;
     }
 }
 
+# HTTPS server
 server {
     listen 443 ssl http2;
     server_name ${DOMAIN} www.${DOMAIN};
     
+    # SSL certificates
     ssl_certificate /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
     
-    # SSL Security
+    # SSL configuration
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_prefer_server_ciphers on;
     ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384;
     ssl_session_cache shared:SSL:10m;
     ssl_session_timeout 10m;
+    ssl_session_tickets off;
     
-    # Security Headers
-    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    # OCSP Stapling
+    ssl_stapling on;
+    ssl_stapling_verify on;
+    resolver 8.8.8.8 8.8.4.4 valid=300s;
+    resolver_timeout 5s;
+    
+    # Security headers
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
     add_header X-Frame-Options "SAMEORIGIN" always;
     add_header X-Content-Type-Options "nosniff" always;
     add_header X-XSS-Protection "1; mode=block" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
     
-    # Static files from data container
-    location /_next/static/ {
-        alias /usr/share/nginx/html/.next/static/;
-        expires 365d;
-        add_header Cache-Control "public, immutable";
+    # Health check endpoint for Docker/load balancer
+    location /health {
+        access_log off;
+        return 200 "healthy\n";
+        add_header Content-Type text/plain;
     }
     
+    # Static files - served directly by Next.js with long cache
+    location /_next/static/ {
+        proxy_pass http://nextjs_upstream;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_cache_valid 200 365d;
+        add_header Cache-Control "public, max-age=31536000, immutable";
+    }
+    
+    # Next.js image optimization
+    location /_next/image {
+        proxy_pass http://nextjs_upstream;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+    
+    # Public static files
     location /static/ {
-        alias /usr/share/nginx/html/public/;
+        proxy_pass http://nextjs_upstream;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
         expires 30d;
         add_header Cache-Control "public";
     }
     
-    # For static Next.js export
+    # All other requests - proxy to Next.js
     location / {
-        root /usr/share/nginx/html/public;
-        try_files $uri $uri/ $uri.html /index.html;
+        proxy_pass http://nextjs_upstream;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_cache_bypass $http_upgrade;
+        
+        # Timeouts
+        proxy_connect_timeout 60s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+        
+        # Buffering
+        proxy_buffering on;
+        proxy_buffer_size 4k;
+        proxy_buffers 8 4k;
     }
 }

@@ -6,14 +6,14 @@ on:
   workflow_dispatch:
     inputs:
       environment:
-        description: "Deployment"
+        description: "Deployment environment"
         required: true
         type: choice
         options:
           - production
       tag:
-        description: "Release tag to deploy"
-        required: true
+        description: "Release tag to deploy (leave empty for latest)"
+        required: false
         type: string
 
 env:
@@ -21,14 +21,16 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  build-and-deploy:
-    name: Build and Deploy Docker Image
+  build-and-push:
+    name: Build and Push Docker Image
     runs-on: ubuntu-latest
-    timeout-minutes: 45
-    environment: production
+    timeout-minutes: 30
     permissions:
       contents: read
       packages: write
+    outputs:
+      image_tag: ${{ steps.meta.outputs.tag }}
+      full_image: ${{ steps.meta.outputs.full_image }}
 
     steps:
       - name: Checkout code
@@ -47,11 +49,15 @@ jobs:
       - name: Extract metadata
         id: meta
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "tag=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ github.event.inputs.tag }}" ]; then
+            TAG="${{ github.event.inputs.tag }}"
+          elif [ "${{ github.event_name }}" = "release" ]; then
+            TAG="${{ github.ref_name }}"
           else
-            echo "tag=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+            TAG="latest"
           fi
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "full_image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:$TAG" >> $GITHUB_OUTPUT
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
@@ -66,6 +72,26 @@ jobs:
           cache-to: type=gha,mode=max
           build-args: |
             NEXT_PUBLIC_APP_VERSION=${{ steps.meta.outputs.tag }}
+            NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID=${{ secrets.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID }}
+            NEXT_PUBLIC_WALLET_CONNECT_RELAY_URL=${{ env.NEXT_PUBLIC_WALLET_CONNECT_RELAY_URL }}
+            NEXT_PUBLIC_DEXIE_MAINNET_API_URL=${{ env.NEXT_PUBLIC_DEXIE_MAINNET_API_URL }}
+            NEXT_PUBLIC_DEXIE_TESTNET_API_URL=${{ env.NEXT_PUBLIC_DEXIE_TESTNET_API_URL }}
+            NEXT_PUBLIC_API_BASE_URL=${{ env.NEXT_PUBLIC_API_BASE_URL }}
+            NEXT_PUBLIC_APP_URL=${{ env.NEXT_PUBLIC_APP_URL }}
+
+  deploy:
+    name: Deploy to Production
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production
+    permissions:
+      contents: read
+      packages: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Ensure deployment directory exists
         uses: appleboy/ssh-action@v1.0.3
@@ -74,7 +100,9 @@ jobs:
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           port: 22
-          script: mkdir -p ~/pengui
+          script: |
+            mkdir -p ~/pengui/deployment
+            echo "Deployment directory ready"
 
       - name: Copy deployment files to server
         uses: appleboy/scp-action@v0.1.7
@@ -90,10 +118,13 @@ jobs:
       - name: Deploy to production server
         uses: appleboy/ssh-action@v1.0.3
         env:
-          DOCKER_IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.tag }}
+          DOCKER_IMAGE: ${{ needs.build-and-push.outputs.full_image }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_ACTOR: ${{ github.actor }}
           PRODUCTION_ENV: ${{ secrets.PRODUCTION_ENV }}
+          DOMAIN: ${{ env.DOMAIN }}
+          CERTBOT_EMAIL: ${{ env.CERTBOT_EMAIL }}
+          CERTBOT_STAGING: ${{ env.CERTBOT_STAGING }}
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
@@ -101,7 +132,30 @@ jobs:
           port: 22
           timeout: 10m
           command_timeout: 10m
-          envs: DOCKER_IMAGE,GITHUB_USERNAME,GITHUB_TOKEN,GITHUB_ACTOR,PRODUCTION_ENV
+          envs: DOCKER_IMAGE,GITHUB_TOKEN,GITHUB_ACTOR,PRODUCTION_ENV,DOMAIN, CERTBOT_EMAIL,CERTBOT_STAGING
           script: |
-            chmod  775 ~/pengui/deployment/scripts/deploy.sh
+            export DOCKER_IMAGE="$DOCKER_IMAGE"
+            export GITHUB_TOKEN="$GITHUB_TOKEN"
+            export GITHUB_ACTOR="$GITHUB_ACTOR"
+            export PRODUCTION_ENV="$PRODUCTION_ENV"
+            export DOMAIN="$DOMAIN"
+            export CERTBOT_EMAIL="$CERTBOT_EMAIL"
+            export CERTBOT_STAGING="$CERTBOT_STAGING"
+            export STAGING="${STAGING:-0}"
+            chmod +x ~/pengui/deployment/scripts/deploy.sh
             ~/pengui/deployment/scripts/deploy.sh
+
+      - name: Verify deployment
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          DOMAIN: ${{ env.DOMAIN }}
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: 22
+          envs: DOMAIN
+          script: |
+            echo "Checking deployment health..."
+            sleep 5
+            curl -sf --max-time 30 "https://$DOMAIN/api/health" && echo "Deployment verified!" || echo "Health check pending"

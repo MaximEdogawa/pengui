@@ -1,145 +1,187 @@
-# Deployment Guide
+# Pengui Deployment Guide
 
-This directory contains all necessary files for deploying Pengui to production using Docker.
+This directory contains everything needed to deploy Pengui to production with **zero manual configuration** using Docker, nginx, and automatic SSL.
 
-## Quick Start
+## Architecture
 
-### Prerequisites
-
-- Docker and Docker Compose installed on the production server
-- SSH access to the server
-- GitHub token with read access to `ghcr.io`
-- Environment variables configured in GitHub Secrets
-
-### Deployment Flow
-
-1. **Create a Release** in GitHub with a version tag (e.g., `v1.0.0`)
-2. **Automated Pipeline Triggers:**
-   - Builds Docker image from `deployment/Dockerfile`
-   - Pushes to GitHub Container Registry
-   - Deploys to production server via SSH
-   - Creates `.env` from `PRODUCTION_ENV` secret
-   - Runs Docker Compose to start the application
-   - Performs health check
-
-## Files
-
-### `Dockerfile`
-
-Multi-stage production Docker image using Bun runtime. Features:
-
-- Optimized for performance with minimal size
-- Non-root user for security
-- Health checks built-in
-- Proper signal handling with dumb-init
-
-### `docker-compose.yml`
-
-Orchestrates the Pengui application container with:
-
-- Automatic restart policy
-- Health checks
-- Volume and network management
-- Logging configuration
-
-### `.env.example`
-
-Template for environment variables. Copy to `.env.production` and fill in actual values.
-
-## Server Setup
-
-### Initial Setup (First Time Only)
-
-1. SSH into the server:
-
-```bash
-ssh user@server
+```
+┌─────────────────────────────────────────────────────────┐
+│                    Production Server                     │
+│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐  │
+│  │   Certbot   │    │    Nginx    │    │   Next.js   │  │
+│  │  (SSL Cert) │───▶│  (Reverse   │───▶│    App      │  │
+│  │             │    │   Proxy)    │    │  (Port 3000)│  │
+│  └─────────────┘    └─────────────┘    └─────────────┘  │
+│        │                  │                   │          │
+│        └──────────────────┼───────────────────┘          │
+│                           ▼                              │
+│                    Docker Network                        │
+└─────────────────────────────────────────────────────────┘
 ```
 
-2. Create deployment directory:
+## Quick Start (Automated CI/CD)
+
+### 1. Configure GitHub Secrets
+
+Go to **Settings → Secrets and variables → Actions** and add:
+
+| Secret | Description | Example |
+|--------|-------------|---------|
+| `DEPLOY_HOST` | Server hostname/IP | `deploy.example.com` |
+| `DEPLOY_USER` | SSH username | `deploy` |
+| `DEPLOY_SSH_KEY` | Private SSH key | *(see below)* |
+| `DEPLOY_PORT` | SSH port (optional) | `22` |
+| `DOMAIN` | Your domain name | `pengui.example.com` |
+| `CERTBOT_EMAIL` | Email for SSL certs | `admin@example.com` |
+| `CERTBOT_STAGING` | Use staging SSL (testing) | `0` |
+| `PRODUCTION_ENV` | Multiline env vars | *(see below)* |
+
+### 2. Configure GitHub Variables
+
+Go to **Settings → Secrets and variables → Actions → Variables** and add:
+
+| Variable | Description |
+|----------|-------------|
+| `NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID` | WalletConnect project ID |
+| `NEXT_PUBLIC_WALLET_CONNECT_RELAY_URL` | WalletConnect relay URL |
+| `NEXT_PUBLIC_DEXIE_MAINNET_API_URL` | Dexie mainnet API |
+| `NEXT_PUBLIC_DEXIE_TESTNET_API_URL` | Dexie testnet API |
+| `NEXT_PUBLIC_API_BASE_URL` | Your API base URL |
+| `NEXT_PUBLIC_APP_URL` | Your app URL |
+
+### 3. Create SSH Key Pair
 
 ```bash
-mkdir -p /pengui
-cd /pengui
-```
-
-3. Create GitHub token for Docker login:
-
-```bash
-# Generate a GitHub PAT with read access to packages
-# Store in a secure location
-```
-
-4. Copy `docker-compose.yml` and `.env.example`:
-
-```bash
-# Copy files from this repository to /var/pengui/
-cp deployment/docker-compose.yml /pengui/
-touch /pengui/.env
-```
-
-5. Edit `.env` with actual production values:
-
-```bash
-nano .env
-```
-
-### GitHub Secrets Configuration
-
-Set these in your repository settings under **Settings → Secrets and variables → Actions**:
-
-| Secret Name      | Description                                 | Example                      |
-| ---------------- | ------------------------------------------- | ---------------------------- |
-| `DEPLOY_HOST`    | Production server hostname                  | `deploy.example.com`         |
-| `DEPLOY_USER`    | SSH user                                    | `deploy`                     |
-| `DEPLOY_SSH_KEY` | Private SSH key for authentication          | _(multiline)_                |
-| `DEPLOY_PORT`    | SSH port (optional, defaults to 22)         | `22`                         |
-| `DEPLOY_URL`     | Application URL for status updates          | `https://pengui.example.com` |
-| `PRODUCTION_ENV` | Environment variables for `.env.production` | `NODE_ENV=production...`     |
-
-#### Creating SSH Key Pair
-
-```bash
-# On your local machine
+# Generate key pair
 ssh-keygen -t ed25519 -f deploy_key -C "GitHub Actions"
 
 # Copy public key to server
 ssh-copy-id -i deploy_key.pub user@server
 
-# Add private key to GitHub Secret (deploy_key content)
+# Add private key content to DEPLOY_SSH_KEY secret
+cat deploy_key
 ```
 
-#### Creating PRODUCTION_ENV Secret
+### 4. Prepare PRODUCTION_ENV Secret
 
-Combine all environment variables in a single multiline secret:
+Create a multiline secret with runtime environment variables:
 
 ```
 NODE_ENV=production
-PORT=3000
-NEXT_TELEMETRY_DISABLED=1
-DATABASE_URL=postgresql://...
-NEXT_PUBLIC_API_URL=https://api.example.com
 ```
 
-## Manual Deployment (Fallback)
+### 5. Deploy
 
-If automated deployment fails:
+**Option A: Create a GitHub Release**
+- Go to Releases → Create new release
+- Tag with version (e.g., `v1.0.0`)
+- Publish release
+- Deployment starts automatically
+
+**Option B: Manual Dispatch**
+- Go to Actions → Deploy Release (Docker)
+- Click "Run workflow"
+- Select environment and optionally specify a tag
+
+## Manual Deployment
+
+If you need to deploy manually without CI/CD:
+
+### Prerequisites
+
+- Docker and Docker Compose on the server
+- SSH access to the server
+- Domain pointing to server IP
+
+### Steps
 
 ```bash
-cd /pengui
+# 1. Clone/copy deployment files to server
+scp -r deployment/* user@server:~/pengui/
 
-# Login to GitHub Container Registry
-docker login ghcr.io
+# 2. SSH into server
+ssh user@server
+cd ~/pengui
 
-# Pull the latest image
-docker pull ghcr.io/pengui:v1.0.0
+# 3. Create environment file
+cp .env.example .env
+nano .env  # Edit with your values
 
-# Update and restart
-docker-compose down
-docker-compose up -d
+# 4. Run deployment
+export DOMAIN="your-domain.com"
+export EMAIL="your-email@example.com"
+chmod +x scripts/deploy.sh
+./scripts/deploy.sh
+```
 
-# Check logs
-docker-compose logs -f
+## Files
+
+| File | Description |
+|------|-------------|
+| `Dockerfile` | Multi-stage build for Next.js standalone server |
+| `docker-compose.yml` | Service orchestration (Next.js + nginx + certbot) |
+| `nginx/nginx.conf` | Base nginx configuration |
+| `nginx/templates/*.conf.template` | Domain-specific nginx configs |
+| `scripts/deploy.sh` | Automated deployment script |
+| `.env.example` | Environment variable template |
+
+## How It Works
+
+1. **Build Phase** (GitHub Actions)
+   - Builds Next.js in standalone mode
+   - Creates optimized Docker image (~150MB)
+   - Pushes to GitHub Container Registry
+
+2. **Deploy Phase** (GitHub Actions)
+   - Copies deployment files to server
+   - Pulls Docker image
+   - Runs `deploy.sh` script
+
+3. **Deploy Script** (`deploy.sh`)
+   - Creates required directories
+   - Checks/obtains SSL certificate via Let's Encrypt
+   - Configures nginx as reverse proxy
+   - Starts all services
+   - Verifies deployment health
+
+## SSL Certificates
+
+SSL certificates are automatically obtained from Let's Encrypt:
+
+- **First deployment**: Obtains new certificate
+- **Renewal**: Certbot container automatically renews certificates every 12 hours (when within 30 days of expiry)
+- **Testing**: Set `CERTBOT_STAGING=1` to use staging environment (avoids rate limits)
+
+## Monitoring
+
+### View Logs
+
+```bash
+# All services
+docker compose logs -f
+
+# Specific service
+docker compose logs -f pengui
+docker compose logs -f nginx
+```
+
+### Check Health
+
+```bash
+# Container status
+docker compose ps
+
+# Application health
+curl https://your-domain.com/api/health
+
+# SSL certificate info
+echo | openssl s_client -servername your-domain.com -connect your-domain.com:443 2>/dev/null | openssl x509 -noout -dates
+```
+
+### Resource Usage
+
+```bash
+docker stats
 ```
 
 ## Troubleshooting
@@ -147,93 +189,48 @@ docker-compose logs -f
 ### Application won't start
 
 ```bash
-# Check logs
-docker-compose logs pengui
-
-# Check health status
-docker ps | grep pengui
-docker inspect pengui --format='{{.State.Health.Status}}'
+docker compose logs pengui --tail 100
 ```
 
-### Health check failing
+### SSL certificate issues
 
 ```bash
-# Test manually
-curl http://localhost:3000
+# Check certificate files
+ls -la certbot/conf/live/your-domain.com/
 
-# Check container logs
-docker logs pengui --tail 50
+# Request new certificate manually
+docker compose run --rm certbot certonly \
+  --webroot -w /var/www/certbot \
+  --email your-email@example.com \
+  -d your-domain.com \
+  --agree-tos --non-interactive
 ```
 
-### Port already in use
+### Nginx configuration errors
 
 ```bash
-# Find what's using port 3000
-lsof -i :3000
+# Test nginx config
+docker compose exec nginx nginx -t
 
-# Or change port in docker-compose.yml
-# Then restart: docker-compose down && docker-compose up -d
+# Reload nginx
+docker compose exec nginx nginx -s reload
 ```
 
-### Rollback to previous version
+### Rollback
 
 ```bash
-cd /var/pengui
-
-# List available images
-docker images | grep pengui
-
-# Run previous version
-docker-compose down
-export APP_VERSION=v0.9.0  # Set to previous version
-docker-compose up -d
-```
-
-## Monitoring
-
-### View application logs
-
-```bash
-docker-compose logs -f pengui
-```
-
-### Check resource usage
-
-```bash
-docker stats pengui
-```
-
-### Database connections (if applicable)
-
-```bash
-docker-compose exec pengui curl -s http://localhost:3000/health
-```
-
-## Updating Environment Variables
-
-1. Update the `PRODUCTION_ENV` secret in GitHub
-2. Create and publish a new release tag
-3. The deployment pipeline will automatically use the new environment variables
-
-Or manually:
-
-```bash
-cd /pengui
-nano .env
-docker-compose down && docker-compose up -d
+# Pull specific version
+export DOCKER_IMAGE=ghcr.io/maximedogawa/pengui:v1.0.0
+docker compose pull pengui
+docker compose up -d
 ```
 
 ## Cleanup
 
-Remove old Docker images to save space:
-
 ```bash
 # Remove unused images
-docker image prune
+docker image prune -a
 
-# Remove unused volumes
-docker volume prune
-
-# Aggressive cleanup (be careful!)
+# Full cleanup (careful!)
 docker system prune -a --volumes
 ```
