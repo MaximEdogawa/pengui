@@ -130,7 +130,7 @@ jobs:
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           port: 22
           timeout: 10m
-          command_timeout: 10m
+          command_timeout: 5m
           envs: DOCKER_IMAGE,GITHUB_TOKEN,GITHUB_ACTOR,DOMAIN,EMAIL,STAGING
           script: |
             export DOCKER_IMAGE="$DOCKER_IMAGE"

@@ -64,34 +64,48 @@ fi
 if [ "$NEED_CERT" = true ]; then
     log "Setting up SSL certificate..."
     
-    # Generate HTTP-only config for ACME challenge
-    envsubst '${DOMAIN}' < nginx/templates/http-only.conf.template > nginx/conf.d/default.conf
+    # Create ACME challenge directory
+    mkdir -p certbot/www/.well-known/acme-challenge
     
-    # Pull and start nginx for certificate request
-    log "Starting nginx for ACME challenge..."
+    # Copy HTTP-only config for ACME challenge (no envsubst needed)
+    cp nginx/templates/http-only.conf.template nginx/conf.d/default.conf
+    
+    # Pull and start services for certificate request
+    log "Starting services for ACME challenge..."
     docker compose pull pengui || true
     docker compose up -d pengui
     sleep 5
     docker compose up -d nginx
     sleep 10
     
+    # Verify ACME challenge path is accessible
+    log "Verifying ACME challenge path..."
+    echo "acme-test" > certbot/www/.well-known/acme-challenge/test
+    if curl -sf --max-time 5 "http://$DOMAIN/.well-known/acme-challenge/test" | grep -q "acme-test"; then
+        log "ACME challenge path verified"
+        rm -f certbot/www/.well-known/acme-challenge/test
+    else
+        warn "ACME challenge path may not be accessible - continuing anyway"
+    fi
+    
     # Determine staging flag
     STAGING_ARG=""
     [ "${STAGING:-0}" != "0" ] && STAGING_ARG="--staging" && warn "Using Let's Encrypt staging environment"
     
-    # Request certificate
+    # Request certificate using docker run directly (more reliable output)
     log "Requesting SSL certificate from Let's Encrypt..."
-    docker compose run --rm certbot certonly \
+    docker run --rm \
+        -v "$(pwd)/certbot/conf:/etc/letsencrypt" \
+        -v "$(pwd)/certbot/www:/var/www/certbot" \
+        certbot/certbot certonly \
         --webroot \
         -w /var/www/certbot \
         $STAGING_ARG \
         --email "$EMAIL" \
         -d "$DOMAIN" \
-        -d "www.$DOMAIN" \
         --rsa-key-size 4096 \
         --agree-tos \
-        --non-interactive \
-        --force-renewal || err "Failed to obtain SSL certificate"
+        --non-interactive || err "Failed to obtain SSL certificate"
     
     log "SSL certificate obtained successfully"
 fi
@@ -161,6 +175,16 @@ fi
 # Show running containers
 info "Container status:"
 docker compose ps --format "table {{.Name}}\t{{.Status}}"
+
+# Set up certificate renewal cron job (runs daily at 3 AM)
+CRON_CMD="0 3 * * * cd $HOME/pengui/deployment && docker compose --profile certbot run --rm certbot renew --quiet && docker compose exec -T nginx nginx -s reload >/dev/null 2>&1"
+if ! crontab -l 2>/dev/null | grep -q "certbot renew"; then
+    log "Setting up automatic certificate renewal cron job..."
+    (crontab -l 2>/dev/null || true; echo "$CRON_CMD") | crontab -
+    log "Certificate renewal cron job added (daily at 3 AM)"
+else
+    log "Certificate renewal cron job already exists"
+fi
 
 log "=== Deployment complete ==="
 log "Site: https://$DOMAIN"
