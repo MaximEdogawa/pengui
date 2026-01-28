@@ -73,11 +73,11 @@ jobs:
           build-args: |
             NEXT_PUBLIC_APP_VERSION=${{ steps.meta.outputs.tag }}
             NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID=${{ secrets.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID }}
-            NEXT_PUBLIC_WALLET_CONNECT_RELAY_URL=${{ env.NEXT_PUBLIC_WALLET_CONNECT_RELAY_URL }}
-            NEXT_PUBLIC_DEXIE_MAINNET_API_URL=${{ env.NEXT_PUBLIC_DEXIE_MAINNET_API_URL }}
-            NEXT_PUBLIC_DEXIE_TESTNET_API_URL=${{ env.NEXT_PUBLIC_DEXIE_TESTNET_API_URL }}
-            NEXT_PUBLIC_API_BASE_URL=${{ env.NEXT_PUBLIC_API_BASE_URL }}
-            NEXT_PUBLIC_APP_URL=${{ env.NEXT_PUBLIC_APP_URL }}
+            NEXT_PUBLIC_WALLET_CONNECT_RELAY_URL=${{ vars.NEXT_PUBLIC_WALLET_CONNECT_RELAY_URL }}
+            NEXT_PUBLIC_DEXIE_MAINNET_API_URL=${{ vars.NEXT_PUBLIC_DEXIE_MAINNET_API_URL }}
+            NEXT_PUBLIC_DEXIE_TESTNET_API_URL=${{ vars.NEXT_PUBLIC_DEXIE_TESTNET_API_URL }}
+            NEXT_PUBLIC_API_BASE_URL=${{ vars.NEXT_PUBLIC_API_BASE_URL }}
+            NEXT_PUBLIC_APP_URL=${{ vars.NEXT_PUBLIC_APP_URL }}
 
   deploy:
     name: Deploy to Production
@@ -121,10 +121,9 @@ jobs:
           DOCKER_IMAGE: ${{ needs.build-and-push.outputs.full_image }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_ACTOR: ${{ github.actor }}
-          PRODUCTION_ENV: ${{ secrets.PRODUCTION_ENV }}
-          DOMAIN: ${{ env.DOMAIN }}
-          CERTBOT_EMAIL: ${{ env.CERTBOT_EMAIL }}
-          CERTBOT_STAGING: ${{ env.CERTBOT_STAGING }}
+          DOMAIN: ${{ vars.DOMAIN }}
+          EMAIL: ${{ vars.CERTBOT_EMAIL }}
+          STAGING: ${{ secrets.CERTBOT_STAGING }}
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
@@ -132,23 +131,21 @@ jobs:
           port: 22
           timeout: 10m
           command_timeout: 10m
-          envs: DOCKER_IMAGE,GITHUB_TOKEN,GITHUB_ACTOR,PRODUCTION_ENV,DOMAIN, CERTBOT_EMAIL,CERTBOT_STAGING
+          envs: DOCKER_IMAGE,GITHUB_TOKEN,GITHUB_ACTOR,DOMAIN,CERTBOT_EMAIL,CERTBOT_STAGING
           script: |
             export DOCKER_IMAGE="$DOCKER_IMAGE"
             export GITHUB_TOKEN="$GITHUB_TOKEN"
             export GITHUB_ACTOR="$GITHUB_ACTOR"
-            export PRODUCTION_ENV="$PRODUCTION_ENV"
             export DOMAIN="$DOMAIN"
             export CERTBOT_EMAIL="$CERTBOT_EMAIL"
             export CERTBOT_STAGING="$CERTBOT_STAGING"
-            export STAGING="${STAGING:-0}"
             chmod +x ~/pengui/deployment/scripts/deploy.sh
             ~/pengui/deployment/scripts/deploy.sh
 
       - name: Verify deployment
         uses: appleboy/ssh-action@v1.0.3
         env:
-          DOMAIN: ${{ env.DOMAIN }}
+          DOMAIN: ${{ vars.DOMAIN }}
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
