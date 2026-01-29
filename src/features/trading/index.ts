@@ -4,23 +4,26 @@
  */
 
 // Model exports
-export { useOrderBook } from './model/useOrderBook'
-export { useOrderBookFilters, OrderBookFiltersProvider } from './model/OrderBookFiltersProvider'
-export { useOrderBookOfferSubmission } from './model/useOrderBookOfferSubmission'
+export { useOrderBook } from "./hooks/useOrderBook";
+export {
+  useOrderBookFilters,
+  OrderBookFiltersProvider,
+} from "./hooks/OrderBookFiltersProvider";
+export { useOrderBookOfferSubmission } from "./hooks/useOrderBookOfferSubmission";
 
 // UI exports
-export { default as OrderBookContainer } from './ui/orderbook/OrderBookContainer'
-export { default as OrderBookTable } from './ui/orderbook/OrderBookTable'
-export { default as OrderBookFilters } from './ui/orderbook/OrderBookFilters'
-export { default as OrderTooltip } from './ui/orderbook/OrderTooltip'
-export { default as FilterPanel } from './ui/layout/FilterPanel'
-export { default as LimitOfferTab } from './ui/layout/OfferTab'
-export { default as CreateOfferModal } from './ui/modals/CreateOfferModal'
-export { default as CreateOfferForm } from './ui/limit/CreateOfferForm'
-export { default as TakeOfferModal } from './ui/modals/TakeOfferModal'
+export { default as OrderBookContainer } from "./ui/widgets/orderbook/OrderBookContainer";
+export { default as OrderBookTable } from "./ui/widgets/orderbook/OrderBookTable";
+export { default as OrderBookFilters } from "./ui/widgets/orderbook/OrderBookFilters";
+export { default as OrderTooltip } from "./ui/widgets/orderbook/OrderTooltip";
+export { default as FilterPanel } from "./ui/layout/FilterPanel";
+export { default as LimitOfferTab } from "./ui/layout/OfferTab";
+export { default as CreateOfferModal } from "./ui/componets/offer/CreateOfferDialog";
+export { default as CreateOfferForm } from "./ui/componets/limit/CreateOfferForm";
+export { default as TakeOfferModal } from "./ui/componets/offer/TakeOfferDialog";
 
 // Chart feature exports
-export * from './ui/chart'
+export * from "./ui/widgets/chart";
 
 // Type exports
 export type {
@@ -29,4 +32,4 @@ export type {
   OrderBookQueryResult,
   SuggestionItem,
   DexieAssetItem,
-} from './lib/orderBookTypes'
+} from "./lib/orderBookTypes";

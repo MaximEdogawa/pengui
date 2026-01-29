@@ -1,28 +1,28 @@
-'use client'
+"use client";
 
-import { useDexieSearch } from './hooks/useDexieSearch'
-import { useDexieInspect } from './hooks/useDexieInspect'
-import { useDexieUpload } from './hooks/useDexieUpload'
-import { useDexieMarketData } from './hooks/useDexieMarketData'
-import { useDexieUtils } from './hooks/useDexieUtils'
+import { useDexieSearch } from "../hooks/useDexieSearch";
+import { useDexieInspect } from "../hooks/useDexieInspect";
+import { useDexieUpload } from "../hooks/useDexieUpload";
+import { useDexieMarketData } from "../hooks/useDexieMarketData";
+import { useDexieUtils } from "../hooks/useDexieUtils";
 
 /**
  * Main hook for Dexie data service
  * Composed from smaller hooks for better maintainability
  */
 export function useDexieDataService() {
-  const search = useDexieSearch()
-  const inspect = useDexieInspect()
-  const upload = useDexieUpload()
-  const marketData = useDexieMarketData()
-  const utils = useDexieUtils()
+  const search = useDexieSearch();
+  const inspect = useDexieInspect();
+  const upload = useDexieUpload();
+  const marketData = useDexieMarketData();
+  const utils = useDexieUtils();
 
   const isLoading =
     search.searchOffersMutation.isPending ||
     inspect.inspectOfferMutation.isPending ||
     marketData.getOrderBookMutation.isPending ||
     marketData.getHistoricalTradesMutation.isPending ||
-    upload.postOfferMutation.isPending
+    upload.postOfferMutation.isPending;
 
   return {
     // Search
@@ -60,5 +60,5 @@ export function useDexieDataService() {
     currentOffer: null,
     isLoading,
     error: null,
-  }
+  };
 }

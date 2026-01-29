@@ -1,14 +1,14 @@
-'use client'
+"use client";
 
-import { useTransactionHistory } from '../model/useTransactionHistory'
-import { History } from 'lucide-react'
-import Card from './shared/Card'
-import SectionHeader from './shared/SectionHeader'
-import EmptyState from './shared/EmptyState'
-import TransactionItem from './TransactionItem'
+import { useTransactionHistory } from "../hooks/useTransactionHistory";
+import { History } from "lucide-react";
+import Card from "./shared/Card";
+import SectionHeader from "./shared/SectionHeader";
+import EmptyState from "./shared/EmptyState";
+import TransactionItem from "./TransactionItem";
 
 export default function RecentTransactions() {
-  const transactions = useTransactionHistory()
+  const transactions = useTransactionHistory();
 
   return (
     <Card>
@@ -26,5 +26,5 @@ export default function RecentTransactions() {
         </div>
       )}
     </Card>
-  )
+  );
 }

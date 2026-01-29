@@ -49,6 +49,9 @@ export { FormInput, type FormInputProps } from './forms/form-input'
 export { CopyableHexString } from './utilities/copyable-hex-string'
 export { EmptyState, type EmptyStateProps } from './utilities/empty-state'
 
+// Shared asset list component
+export { AssetList, type AssetListProps } from './components/asset-list/AssetList'
+
 // ============================================================================
 // LAYOUT COMPONENTS
 // ============================================================================
@@ -83,3 +86,4 @@ export { PenguinLogo } from './branding/penguin-logo'
 
 export { default as GithubIcon } from './icons/GithubIcon'
 export { default as XIcon } from './icons/XIcon'
+export { default as TokenIcon, XchIcon, type TokenIconProps } from './icons/TokenIcon'

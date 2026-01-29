@@ -1,20 +1,23 @@
-'use client'
+"use client";
 
-import { useThemeClasses } from '@/shared/hooks'
-import type { OrderBookFilters, OrderBookOrder } from '@/features/trading/lib/orderBookTypes'
-import CreateOfferForm from '@/features/trading/ui/limit/CreateOfferForm'
-import MarketOfferTab from '@/features/trading/ui/market/MarketOfferContent'
-import LimitOfferTab from './OfferTab'
+import { useThemeClasses } from "@/shared/hooks";
+import type {
+  OrderBookFilters,
+  OrderBookOrder,
+} from "@/features/trading/lib/orderBookTypes";
+import CreateOfferForm from "@/features/trading/ui/componets/limit/CreateOfferForm";
+import LimitOfferTab from "./OfferTab";
+import MarketOfferTab from "@/features/trading/ui/widgets/market/MarketOfferContent";
 
 interface TradingRightPanelProps {
-  currentMode: 'maker' | 'taker'
-  selectedOrderForTaking: OrderBookOrder | null
-  selectedOrderForMaking: OrderBookOrder | null
-  onModeChange: (mode: 'maker' | 'taker') => void
-  onOfferTaken: () => void
-  onOfferCreated: () => void
-  onOpenCreateModal: () => void
-  filters: OrderBookFilters
+  currentMode: "maker" | "taker";
+  selectedOrderForTaking: OrderBookOrder | null;
+  selectedOrderForMaking: OrderBookOrder | null;
+  onModeChange: (mode: "maker" | "taker") => void;
+  onOfferTaken: () => void;
+  onOfferCreated: () => void;
+  onOpenCreateModal: () => void;
+  filters: OrderBookFilters;
 }
 
 export default function TradingRightPanel({
@@ -27,7 +30,7 @@ export default function TradingRightPanel({
   onOpenCreateModal,
   filters,
 }: TradingRightPanelProps) {
-  const { t } = useThemeClasses()
+  const { t } = useThemeClasses();
 
   return (
     <div className="hidden lg:flex flex-col w-96 flex-shrink-0">
@@ -39,11 +42,11 @@ export default function TradingRightPanel({
       />
       <div
         className={`${t.card} rounded-lg border ${t.border} flex-1 overflow-y-auto`}
-        style={{ scrollbarGutter: 'stable' }}
+        style={{ scrollbarGutter: "stable" }}
       >
         {/* Show inline content on desktop when order is selected */}
         {/* Keep both components mounted to preserve state when switching tabs */}
-        <div className={`${currentMode === 'taker' ? '' : 'hidden'}`}>
+        <div className={`${currentMode === "taker" ? "" : "hidden"}`}>
           <div className="w-full p-4">
             {selectedOrderForTaking ? (
               <MarketOfferTab
@@ -56,9 +59,12 @@ export default function TradingRightPanel({
             ) : (
               <div className="space-y-4">
                 <div>
-                  <h3 className={`text-sm font-semibold ${t.text} mb-2`}>Market</h3>
+                  <h3 className={`text-sm font-semibold ${t.text} mb-2`}>
+                    Market
+                  </h3>
                   <p className={`text-xs ${t.textSecondary} mb-4`}>
-                    Click an offer from the order book to take it, or create a new offer manually.
+                    Click an offer from the order book to take it, or create a
+                    new offer manually.
                   </p>
                 </div>
 
@@ -74,7 +80,7 @@ export default function TradingRightPanel({
           </div>
         </div>
 
-        <div className={`${currentMode === 'maker' ? '' : 'hidden'}`}>
+        <div className={`${currentMode === "maker" ? "" : "hidden"}`}>
           <div className="w-full p-4">
             {selectedOrderForMaking ? (
               <CreateOfferForm
@@ -88,10 +94,12 @@ export default function TradingRightPanel({
             ) : (
               <div className="space-y-4">
                 <div>
-                  <h3 className={`text-sm font-semibold ${t.text} mb-2`}>Create Offer</h3>
+                  <h3 className={`text-sm font-semibold ${t.text} mb-2`}>
+                    Create Offer
+                  </h3>
                   <p className={`text-xs ${t.textSecondary} mb-4`}>
-                    Create a new trading offer. Click an offer from the order book to use it as a
-                    template.
+                    Create a new trading offer. Click an offer from the order
+                    book to use it as a template.
                   </p>
                 </div>
 
@@ -108,5 +116,5 @@ export default function TradingRightPanel({
         </div>
       </div>
     </div>
-  )
+  );
 }

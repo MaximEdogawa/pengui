@@ -5,6 +5,7 @@ This document explains the Feature-Sliced Design (FSD) structure used in the Pen
 ## Overview
 
 Feature-Sliced Design is a methodology for organizing frontend code that emphasizes:
+
 - **Vertical slicing** by business features/domains
 - **Layer separation** with clear boundaries
 - **Colocation** of related files
@@ -21,9 +22,10 @@ app → widgets → features → entities → shared
 ### Layer Responsibilities
 
 #### `app/` - Application Layer
+
 - **Purpose**: Next.js App Router pages and routing
 - **Can import from**: All layers
-- **Contains**: 
+- **Contains**:
   - Route pages (`page.tsx` files)
   - Root layout (`layout.tsx`)
   - Global styles (`globals.css`)
@@ -31,6 +33,7 @@ app → widgets → features → entities → shared
 **Note**: Due to Next.js App Router requirements, pages remain in `app/` directory rather than a separate `pages/` layer.
 
 #### `widgets/` - Widgets Layer
+
 - **Purpose**: Large composite UI blocks used across multiple pages
 - **Can import from**: `features`, `entities`, `shared`
 - **Cannot import from**: `app`, other `widgets`
@@ -39,6 +42,7 @@ app → widgets → features → entities → shared
   - `trading-layout/` - Trading interface layout
 
 #### `features/` - Features Layer
+
 - **Purpose**: User interactions and business capabilities
 - **Can import from**: `entities`, `shared`
 - **Cannot import from**: `app`, `widgets`, other `features`
@@ -56,6 +60,7 @@ app → widgets → features → entities → shared
   - `loans/` - Loan features
 
 #### `entities/` - Entities Layer
+
 - **Purpose**: Business domain entities with state and behavior
 - **Can import from**: `shared` only
 - **Cannot import from**: `app`, `widgets`, `features`, other `entities`
@@ -71,6 +76,7 @@ app → widgets → features → entities → shared
   - `transaction/` - Transaction types and utilities
 
 #### `shared/` - Shared Layer
+
 - **Purpose**: Reusable infrastructure code
 - **Cannot import from**: Any other layer
 - **Contains**:
@@ -88,50 +94,61 @@ app → widgets → features → entities → shared
 ## Decision Matrix: Where Does Code Go?
 
 ### Is it a user-facing interaction/capability?
+
 ✅ → `features/[domain]/[action]/`
 
 **Example**: Login form → `features/auth/login/`
 
 ### Is it a business entity with state and behavior?
+
 ✅ → `entities/[entity-name]/`
 
 **Example**: Transaction types → `entities/transaction/`
 
 ### Is it a large UI composition used on multiple pages?
+
 ✅ → `widgets/[widget-name]/`
 
 **Example**: Dashboard layout → `widgets/dashboard-layout/`
 
 ### Is it a route/page component?
+
 ✅ → `app/[route-name]/page.tsx`
 
 **Example**: Dashboard page → `app/dashboard/page.tsx`
 
 ### Is it reusable across 3+ features/entities?
+
 ✅ → `shared/[category]/`
 
 **Example**: Button component → `shared/ui/button/`
 
 ### Is it only used in one feature?
+
 ✅ → Keep it colocated in that feature folder
 
 ### Is it a tiny utility used once?
+
 ✅ → Colocate with the component using it
 
 ## File Organization Principles
 
 ### Colocation
+
 Keep related files together:
+
 - Component + styles + tests + types in the same folder
 - Hooks used by a component in the same folder or nearby
 - Types used by a component in the same file or nearby
 
 ### Folder Structure
+
 Each module follows this structure:
+
 ```
 [module-name]/
 ├── ui/           # UI components
-├── model/        # Business logic, hooks, state
+├── hooks/        # Business logic, hooks, state
 ├── api/          # API calls (if needed)
 ├── lib/          # Module-specific utilities (if needed)
 └── index.ts      # Public API exports
@@ -148,6 +165,7 @@ Each module follows this structure:
 ## Import Rules
 
 ### Path Aliases
+
 - `@/widgets/*` → `./src/widgets/*`
 - `@/features/*` → `./src/features/*`
 - `@/entities/*` → `./src/entities/*`
@@ -155,18 +173,21 @@ Each module follows this structure:
 - `@/*` → `./src/*` (backward compatibility)
 
 ### Import Examples
+
 ```typescript
 // ✅ Good - Using layer aliases
-import { Button } from '@/shared/ui'
-import { LoginForm } from '@/features/auth/login'
-import { Transaction } from '@/entities/transaction'
+import { Button } from "@/shared/ui";
+import { LoginForm } from "@/features/auth/login";
+import { Transaction } from "@/entities/transaction";
 
 // ❌ Bad - Direct file imports (use barrel exports)
-import Button from '@/shared/ui/button/Button'
+import Button from "@/shared/ui/button/Button";
 ```
 
 ### ESLint Enforcement
+
 ESLint rules enforce layer boundaries:
+
 - `app` can import from all layers
 - `widgets` can import from `features`, `entities`, `shared`
 - `features` can import from `entities`, `shared`
@@ -185,6 +206,7 @@ ESLint rules enforce layer boundaries:
 ## Component Collection
 
 Shared UI components are documented in Storybook:
+
 - Run `bun run storybook` to view component library
 - Stories are colocated with components
 - See `src/shared/ui/COMPONENT_CATALOG.md` for quick reference

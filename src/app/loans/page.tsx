@@ -14,7 +14,7 @@ import {
   MyCreatedLoans,
   LoanIncomeAnalytics,
 } from '@/features/loans'
-import { filterLoans } from '@/features/loans/model/useLoanFilters'
+import { filterLoans } from '@/features/loans/hooks/useLoanFilters'
 
 const TAKER_TABS = [
   { label: 'Available Loans', value: 'available', icon: List },

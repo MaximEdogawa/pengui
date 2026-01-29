@@ -40,3 +40,12 @@ export function getDexieApiUrl(network: 'mainnet' | 'testnet'): string {
     ? process.env.NEXT_PUBLIC_DEXIE_MAINNET_API_URL||'https://api.dexie.space'
     : process.env.NEXT_PUBLIC_DEXIE_TESTNET_API_URL||'https://api-testnet.dexie.space';
 }
+
+/**
+ * Get Space Scan API URL
+ * Note: Space Scan uses the same API for both mainnet and testnet tokens
+ * @returns The Space Scan API base URL
+ */
+export function getSpaceScanApiUrl(): string {
+  return process.env.NEXT_PUBLIC_SPACESCAN_API_URL || 'https://api.spacescan.io';
+}

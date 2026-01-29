@@ -1,6 +1,10 @@
-import { logger } from '@/shared/lib/logger'
-import type { DexieOffer } from '@/entities/offer'
-import type { OrderBookFilters, OrderBookOrder, OrderBookPagination } from './orderBookTypes'
+import { logger } from "@/shared/lib/logger";
+import type { DexieOffer } from "@/entities/offer";
+import type {
+  OrderBookFilters,
+  OrderBookOrder,
+  OrderBookPagination,
+} from "./orderBookTypes";
 import {
   fetchBidirectionalPair,
   fetchSingleFilter,
@@ -9,105 +13,115 @@ import {
   type SingleFilterConfig,
   type AllOrdersConfig,
   type DexieSearchOffers,
-} from '../model/orderBookQueryHelpers'
-import { deduplicateOrders, sortOrdersByPrice } from './orderBookSorting'
+} from "../hooks/orderBookQueryHelpers";
+import { deduplicateOrders, sortOrdersByPrice } from "./orderBookSorting";
 
 /**
  * Determine which fetch strategy to use based on filters
  */
-function determineFetchStrategy(filters?: OrderBookFilters): 'bidirectional' | 'single' | 'all' {
+function determineFetchStrategy(
+  filters?: OrderBookFilters,
+): "bidirectional" | "single" | "all" {
   if (
     filters?.buyAsset &&
     filters.buyAsset.length > 0 &&
     filters?.sellAsset &&
     filters.sellAsset.length > 0
   ) {
-    return 'bidirectional'
+    return "bidirectional";
   }
 
   if (
     (filters?.buyAsset && filters.buyAsset.length > 0) ||
     (filters?.sellAsset && filters.sellAsset.length > 0)
   ) {
-    return 'single'
+    return "single";
   }
 
-  return 'all'
+  return "all";
 }
 
 /**
  * Execute bidirectional pair fetch
  */
 async function executeBidirectionalFetch(
-  config: BidirectionalPairConfig
+  config: BidirectionalPairConfig,
 ): Promise<{ orders: OrderBookOrder[]; total: number; hasMore: boolean }> {
-  return fetchBidirectionalPair(config)
+  return fetchBidirectionalPair(config);
 }
 
 /**
  * Execute single filter fetch
  */
 async function executeSingleFilterFetch(
-  config: SingleFilterConfig
+  config: SingleFilterConfig,
 ): Promise<{ orders: OrderBookOrder[]; total: number; hasMore: boolean }> {
-  return fetchSingleFilter(config)
+  return fetchSingleFilter(config);
 }
 
 /**
  * Execute all orders fetch
  */
 async function executeAllOrdersFetch(
-  config: AllOrdersConfig
+  config: AllOrdersConfig,
 ): Promise<{ orders: OrderBookOrder[]; total: number; hasMore: boolean }> {
-  return fetchAllOrders(config)
+  return fetchAllOrders(config);
 }
 
 /**
  * Configuration for order book query execution
  */
 export interface OrderBookQueryConfig {
-  filters: OrderBookFilters | undefined
-  pagination: OrderBookPagination
-  network: 'mainnet' | 'testnet'
+  filters: OrderBookFilters | undefined;
+  pagination: OrderBookPagination;
+  network: "mainnet" | "testnet";
   buildSearchParams: (
     page: number,
     buyAsset?: string | null,
     sellAsset?: string | null,
-    pageSize?: number
+    pageSize?: number,
   ) => {
-    requested?: string | null
-    offered?: string | null
-    page: number
-    page_size: number
-    status?: number
-  }
+    requested?: string | null;
+    offered?: string | null;
+    page: number;
+    page_size: number;
+    status?: number;
+  };
   fetchAllPages: (options?: {
-    buyAsset?: string | null
-    sellAsset?: string | null
-  }) => Promise<{ orders: OrderBookOrder[]; total: number }>
-  searchOffers: DexieSearchOffers
-  convertFn: (offer: DexieOffer) => OrderBookOrder
+    buyAsset?: string | null;
+    sellAsset?: string | null;
+  }) => Promise<{ orders: OrderBookOrder[]; total: number }>;
+  searchOffers: DexieSearchOffers;
+  convertFn: (offer: DexieOffer) => OrderBookOrder;
 }
 
 /**
  * Process and return order book query result
  */
 export async function executeOrderBookQuery(
-  config: OrderBookQueryConfig
+  config: OrderBookQueryConfig,
 ): Promise<{ orders: OrderBookOrder[]; total: number; hasMore: boolean }> {
-  const { filters, pagination, network, buildSearchParams, fetchAllPages, searchOffers, convertFn } = config
-  logger.debug('Fetching order book', {
+  const {
+    filters,
+    pagination,
+    network,
+    buildSearchParams,
+    fetchAllPages,
+    searchOffers,
+    convertFn,
+  } = config;
+  logger.debug("Fetching order book", {
     hasBuyAsset: !!filters?.buyAsset?.length,
     hasSellAsset: !!filters?.sellAsset?.length,
     buyAssetCount: filters?.buyAsset?.length || 0,
     sellAssetCount: filters?.sellAsset?.length || 0,
     pagination,
-  })
+  });
 
-  const strategy = determineFetchStrategy(filters)
-  let result: { orders: OrderBookOrder[]; total: number; hasMore: boolean }
+  const strategy = determineFetchStrategy(filters);
+  let result: { orders: OrderBookOrder[]; total: number; hasMore: boolean };
 
-  if (strategy === 'bidirectional') {
+  if (strategy === "bidirectional") {
     result = await executeBidirectionalFetch({
       buyAsset: filters!.buyAsset![0],
       sellAsset: filters!.sellAsset![0],
@@ -116,15 +130,15 @@ export async function executeOrderBookQuery(
       fetchAllPages,
       searchOffers,
       convertFn,
-    })
-  } else if (strategy === 'single') {
+    });
+  } else if (strategy === "single") {
     result = await executeSingleFilterFetch({
       buyAsset: filters?.buyAsset?.[0],
       sellAsset: filters?.sellAsset?.[0],
       buildSearchParams,
       searchOffers,
       convertFn,
-    })
+    });
   } else {
     result = await executeAllOrdersFetch({
       pagination,
@@ -132,18 +146,18 @@ export async function executeOrderBookQuery(
       fetchAllPages,
       searchOffers,
       convertFn,
-    })
+    });
   }
 
   // Deduplicate and sort orders
-  const deduplicatedOrders = deduplicateOrders(result.orders)
-  const sortedOrders = sortOrdersByPrice(deduplicatedOrders, network)
+  const deduplicatedOrders = deduplicateOrders(result.orders);
+  const sortedOrders = sortOrdersByPrice(deduplicatedOrders, network);
 
-  logger.debug(`Orders after deduplication: ${sortedOrders.length}`)
+  logger.debug(`Orders after deduplication: ${sortedOrders.length}`);
 
   return {
     orders: sortedOrders,
     hasMore: result.hasMore,
     total: result.total,
-  }
+  };
 }

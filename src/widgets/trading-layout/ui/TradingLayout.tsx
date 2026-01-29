@@ -1,29 +1,29 @@
-'use client'
+"use client";
 
-import { useThemeClasses } from '@/shared/hooks'
-import { useResponsive } from '@/shared/hooks/useResponsive'
-import { useCallback, useState } from 'react'
-import type { OrderBookOrder } from '@/features/trading/lib/orderBookTypes'
-import { useOrderBookFilters } from '@/features/trading/model/OrderBookFiltersProvider'
-import { useSelectedOrder } from '@/features/trading/model/SelectedOrderProvider'
-import CreateOfferModal from '@/features/trading/ui/modals/CreateOfferModal'
-import TakeOfferModal from '@/features/trading/ui/modals/TakeOfferModal'
-import OrderBookFilters from '@/features/trading/ui/orderbook/OrderBookFilters'
-import LimitOfferTab from './OfferTab'
-import TradingContent from './TradingContent'
-import TradingRightPanel from './TradingRightPanel'
+import { useThemeClasses } from "@/shared/hooks";
+import { useResponsive } from "@/shared/hooks/useResponsive";
+import { useCallback, useState } from "react";
+import type { OrderBookOrder } from "@/features/trading/lib/orderBookTypes";
+import { useOrderBookFilters } from "@/features/trading/hooks/OrderBookFiltersProvider";
+import { useSelectedOrder } from "@/features/trading/hooks/SelectedOrderProvider";
+import CreateOfferModal from "@/features/trading/ui/componets/offer/CreateOfferDialog";
+import TakeOfferModal from "@/features/trading/ui/componets/offer/TakeOfferDialog";
+import OrderBookFilters from "@/features/trading/ui/widgets/orderbook/OrderBookFilters";
+import LimitOfferTab from "./OfferTab";
+import TradingContent from "./TradingContent";
+import TradingRightPanel from "./TradingRightPanel";
 
 interface TradingLayoutProps {
-  activeTradingView?: 'orderbook' | 'chart' | 'depth' | 'trades'
-  activeMode?: 'maker' | 'taker'
+  activeTradingView?: "orderbook" | "chart" | "depth" | "trades";
+  activeMode?: "maker" | "taker";
 }
 
 export default function TradingLayout({
-  activeTradingView = 'orderbook',
-  activeMode = 'taker',
+  activeTradingView = "orderbook",
+  activeMode = "taker",
 }: TradingLayoutProps) {
-  const { t } = useThemeClasses()
-  const { filters } = useOrderBookFilters()
+  const { t } = useThemeClasses();
+  const { filters } = useOrderBookFilters();
   const {
     selectedOrderForTaking,
     selectedOrderForMaking,
@@ -32,84 +32,92 @@ export default function TradingLayout({
     clearSelectedOrders,
     resetForm,
     useAsTemplate,
-  } = useSelectedOrder()
-  const { isMobile } = useResponsive()
+  } = useSelectedOrder();
+  const { isMobile } = useResponsive();
 
-  const [showCreateOfferModal, setShowCreateOfferModal] = useState(false)
-  const [showTakeOfferModal, setShowTakeOfferModal] = useState(false)
-  const [currentMode, setCurrentMode] = useState<'maker' | 'taker'>(activeMode)
+  const [showCreateOfferModal, setShowCreateOfferModal] = useState(false);
+  const [showTakeOfferModal, setShowTakeOfferModal] = useState(false);
+  const [currentMode, setCurrentMode] = useState<"maker" | "taker">(activeMode);
 
   const handleOrderClick = useCallback(
     async (order: OrderBookOrder) => {
       // Select order for taking (fills market tab)
-      await selectOrderForTaking(order)
-      
-      // Also select for making (fills limit tab)
-      selectOrderForMaking(order)
+      await selectOrderForTaking(order);
 
-      if (currentMode === 'taker') {
+      // Also select for making (fills limit tab)
+      selectOrderForMaking(order);
+
+      if (currentMode === "taker") {
         if (isMobile) {
-          setShowTakeOfferModal(true)
+          setShowTakeOfferModal(true);
         }
       } else {
         if (isMobile) {
           // useAsTemplate is a callback function returned from useOrderBookOfferSubmission hook, not a hook itself
           // eslint-disable-next-line react-hooks/rules-of-hooks
-          useAsTemplate(order)
-          setShowCreateOfferModal(true)
+          useAsTemplate(order);
+          setShowCreateOfferModal(true);
         }
         // Desktop: show inline (handled in render)
       }
     },
-    [currentMode, useAsTemplate, isMobile, selectOrderForTaking, selectOrderForMaking]
-  )
+    [
+      currentMode,
+      useAsTemplate,
+      isMobile,
+      selectOrderForTaking,
+      selectOrderForMaking,
+    ],
+  );
 
   const handleFiltersChange = useCallback(() => {
     // Filters change will trigger useOrderBook to refetch automatically
     // via the query key dependency
-  }, [])
+  }, []);
 
-  const handleModeChange = useCallback((mode: 'maker' | 'taker') => {
-    setCurrentMode(mode)
+  const handleModeChange = useCallback((mode: "maker" | "taker") => {
+    setCurrentMode(mode);
     // Don't clear selected orders or reset form when switching modes
     // Keep the state of each tab until a new offer is selected
-    setShowTakeOfferModal(false)
-    setShowCreateOfferModal(false)
-  }, [])
+    setShowTakeOfferModal(false);
+    setShowCreateOfferModal(false);
+  }, []);
 
   const handleTakeOfferClose = useCallback(() => {
-    setShowTakeOfferModal(false)
-    clearSelectedOrders()
-  }, [clearSelectedOrders])
+    setShowTakeOfferModal(false);
+    clearSelectedOrders();
+  }, [clearSelectedOrders]);
 
   const handleOfferTaken = useCallback(() => {
-    setShowTakeOfferModal(false)
-    clearSelectedOrders()
+    setShowTakeOfferModal(false);
+    clearSelectedOrders();
     // Order book will auto-refresh via useOrderBook hook
-  }, [clearSelectedOrders])
+  }, [clearSelectedOrders]);
 
   const handleOfferCreated = useCallback(() => {
-    setShowCreateOfferModal(false)
+    setShowCreateOfferModal(false);
     // Keep selectedOrderForMaking so it can be used for pre-filling next time
     // Only clear it when mode changes or explicitly needed
-    resetForm()
+    resetForm();
     // Order book will auto-refresh via useOrderBook hook
-  }, [resetForm])
+  }, [resetForm]);
 
-  const handleMobileModeToggle = useCallback((mode: 'maker' | 'taker') => {
-    setCurrentMode(mode)
-    if (mode === 'maker') {
-      // Limit: open Create Offer modal
-      setShowCreateOfferModal(true)
-      setShowTakeOfferModal(false)
-    } else {
-      // Market: open Take Offer modal
-      // Clear selected order so offer string field is shown
-      clearSelectedOrders()
-      setShowTakeOfferModal(true)
-      setShowCreateOfferModal(false)
-    }
-  }, [clearSelectedOrders])
+  const handleMobileModeToggle = useCallback(
+    (mode: "maker" | "taker") => {
+      setCurrentMode(mode);
+      if (mode === "maker") {
+        setShowCreateOfferModal(true);
+        setShowTakeOfferModal(false);
+      } else {
+        // Market: open Take Offer modal
+        // Clear selected order so offer string field is shown
+        clearSelectedOrders();
+        setShowTakeOfferModal(true);
+        setShowCreateOfferModal(false);
+      }
+    },
+    [clearSelectedOrders],
+  );
 
   return (
     <div className="flex h-full">
@@ -168,9 +176,9 @@ export default function TradingLayout({
         <CreateOfferModal
           initialOrder={selectedOrderForMaking || undefined}
           onClose={() => {
-            setShowCreateOfferModal(false)
+            setShowCreateOfferModal(false);
             // Don't clear selectedOrderForMaking here - keep it for pre-filling
-            resetForm()
+            resetForm();
           }}
           onOfferCreated={handleOfferCreated}
           filters={filters}
@@ -186,5 +194,5 @@ export default function TradingLayout({
         />
       )}
     </div>
-  )
+  );
 }
