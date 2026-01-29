@@ -15,6 +15,7 @@ interface TokenSearchInputProps {
   isDropdownOpen: boolean;
   onCloseDropdown: () => void;
   allTokens?: Token[];
+  useAssetList?: boolean;
 }
 
 export default function TokenSearchInput({
@@ -29,10 +30,10 @@ export default function TokenSearchInput({
   isDropdownOpen,
   onCloseDropdown,
   allTokens = [],
+  useAssetList = false,
 }: TokenSearchInputProps) {
   const { t, isDark } = useThemeClasses();
 
-  // Find selected token by matching value to ticker (case insensitive)
   const selectedToken = allTokens.find(
     (token) => token.ticker.toLowerCase() === value.toLowerCase(),
   );
@@ -85,6 +86,7 @@ export default function TokenSearchInput({
         onSelect={onSelectToken}
         onClose={onCloseDropdown}
         searchValue={value}
+        useAssetList={useAssetList}
       />
     </div>
   );

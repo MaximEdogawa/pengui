@@ -53,7 +53,7 @@ export interface TokenIconAutoProps {
 export default function TokenIcon({
   imageUrl,
   ticker = "",
-  size = 24,
+  size = 28,
   className = "",
   isLoading = false,
 }: TokenIconProps) {
@@ -110,7 +110,7 @@ export default function TokenIcon({
  * XchIcon - Native XCH/TXCH icon with Chia leaf
  */
 export function XchIcon({
-  size = 24,
+  size = 28,
   className = "",
   isTestnet = false,
 }: {
@@ -123,22 +123,22 @@ export function XchIcon({
       className={className}
       style={{
         ...iconStyle(size),
-        backgroundColor: isTestnet ? "#059669" : "#16a34a",
+        backgroundColor: '#000000',
       }}
     >
       <img
         src="/icons/chia-icon.svg"
         alt={isTestnet ? "TXCH" : "XCH"}
-        width={size * 0.7}
-        height={size * 0.7}
-        style={{ width: size * 0.7, height: size * 0.7, objectFit: "contain" }}
+        width={size * 0.85}
+        height={size * 0.85}
+        style={{ width: size * 0.85, height: size * 0.85, objectFit: "contain" }}
         onError={(e) => {
           e.currentTarget.style.display = "none";
           if (e.currentTarget.parentElement) {
             e.currentTarget.parentElement.textContent = isTestnet ? "TX" : "X";
             e.currentTarget.parentElement.style.color = "#fff";
             e.currentTarget.parentElement.style.fontWeight = "700";
-            e.currentTarget.parentElement.style.fontSize = `${Math.floor(size * 0.5)}px`;
+            e.currentTarget.parentElement.style.fontSize = `${Math.floor(size * 0.6)}px`;
           }
         }}
       />

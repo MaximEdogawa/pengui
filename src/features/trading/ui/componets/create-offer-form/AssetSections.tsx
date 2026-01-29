@@ -72,6 +72,7 @@ export function AssetSections({
               onRemove={() => removeOfferedAsset(index)}
               availableTokens={availableTokens}
               isLoadingTickers={isLoadingTickers}
+              useAssetListForDropdown={true}
             />
           ))}
           <Button
@@ -106,6 +107,7 @@ export function AssetSections({
               onRemove={() => removeRequestedAsset(index)}
               availableTokens={availableTokens}
               isLoadingTickers={isLoadingTickers}
+              useAssetListForDropdown={true}
             />
           ))}
           <Button

@@ -1,6 +1,7 @@
 "use client";
 
 import { useThemeClasses } from "@/shared/hooks";
+import { AssetList } from '@/shared/ui'
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
@@ -17,6 +18,7 @@ interface TokenDropdownProps {
   onSelect: (token: Token) => void;
   onClose: () => void;
   searchValue: string;
+  useAssetList?: boolean;
 }
 
 export default function TokenDropdown({
@@ -25,6 +27,7 @@ export default function TokenDropdown({
   onSelect,
   onClose,
   searchValue,
+  useAssetList = false,
 }: TokenDropdownProps) {
   const { isDark } = useThemeClasses();
   const [mounted, setMounted] = useState(false);
@@ -37,17 +40,6 @@ export default function TokenDropdown({
     return () => setMounted(false);
   }, []);
 
-  // Note: Icon preloading disabled - it causes request loops
-  // Icons load on-demand via TokenIconAuto component when needed
-  // useEffect(() => {
-  //   if (isOpen && tokens.length > 0) {
-  //     const assetIds = tokens
-  //       .slice(0, PRELOAD_COUNT)
-  //       .map(t => t.assetId)
-  //       .filter(id => id && id.length > 0)
-  //     preloadIcons(assetIds)
-  //   }
-  // }, [isOpen, tokens])
 
   // Reset selected index when tokens change
   useEffect(() => {
@@ -156,59 +148,82 @@ export default function TokenDropdown({
             maxHeight: searchValue ? "calc(60vh - 60px)" : "calc(60vh - 20px)",
           }}
         >
-          {tokens.map((token, index) => {
-            const isSelected = index === selectedIndex;
-            return (
-              <div
-                key={token.assetId || "xch"}
-                ref={(el) => {
-                  itemRefs.current[index] = el;
+          {useAssetList ? (
+            // Use shared AssetList for modal-style display while keeping selection behavior
+            <div className="p-2">
+              {/* Map tokens into AssetList-friendly shape */}
+              {/* AssetList will call onSelect with asset id; use selectedIndex for highlight */}
+              {/* eslint-disable-next-line @typescript-eslint/ban-ts-comment */}
+              {/* @ts-ignore */}
+              <AssetList
+                label={searchValue ? `Results` : `Tokens`}
+                assets={tokens.map((t) => ({ id: t.assetId || '', code: t.ticker }))}
+                getTickerSymbol={(assetId: string, code?: string) => code || 'XCH'}
+                onSelect={(assetId: string) => {
+                  const token = tokens.find((t) => (t.assetId || '') === assetId) || tokens.find((t) => t.ticker === assetId)
+                  if (token) {
+                    onSelect(token)
+                    onClose()
+                  }
                 }}
-                onClick={() => {
-                  onSelect(token);
-                  onClose();
-                }}
-                className={`px-3 py-2 cursor-pointer text-xs transition-colors border-b ${
-                  isSelected
-                    ? isDark
-                      ? "bg-gray-700/80 text-white border-gray-600"
-                      : "bg-gray-200 text-gray-900 border-gray-300"
-                    : isDark
-                      ? "text-white border-gray-700 hover:bg-gray-700/50 active:bg-gray-600"
-                      : "text-gray-900 border-gray-200 hover:bg-gray-100 active:bg-gray-200"
-                } last:border-b-0`}
-              >
-                <div className="flex items-center gap-3">
-                  {/* Token Details */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2">
-                      <div
-                        className={`font-semibold truncate ${isDark ? "text-white" : "text-gray-900"}`}
-                      >
-                        {token.ticker}
-                      </div>
-                      {token.assetId && (
+                highlightedIndex={selectedIndex}
+              />
+            </div>
+          ) : (
+            tokens.map((token, index) => {
+              const isSelected = index === selectedIndex;
+              return (
+                <div
+                  key={token.assetId || "xch"}
+                  ref={(el) => {
+                    itemRefs.current[index] = el;
+                  }}
+                  onClick={() => {
+                    onSelect(token);
+                    onClose();
+                  }}
+                  className={`px-3 py-2 cursor-pointer text-xs transition-colors border-b ${
+                    isSelected
+                      ? isDark
+                        ? "bg-gray-700/80 text-white border-gray-600"
+                        : "bg-gray-200 text-gray-900 border-gray-300"
+                      : isDark
+                        ? "text-white border-gray-700 hover:bg-gray-700/50 active:bg-gray-600"
+                        : "text-gray-900 border-gray-200 hover:bg-gray-100 active:bg-gray-200"
+                  } last:border-b-0`}
+                >
+                  <div className="flex items-center gap-3">
+                    {/* Token Details */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
                         <div
-                          className={`text-xs font-mono flex-shrink-0 ${
-                            isDark ? "text-gray-400" : "text-gray-500"
-                          }`}
+                          className={`font-semibold truncate ${isDark ? "text-white" : "text-gray-900"}`}
                         >
-                          {token.assetId.slice(0, 8)}...
+                          {token.ticker}
+                        </div>
+                        {token.assetId && (
+                          <div
+                            className={`text-xs font-mono flex-shrink-0 ${
+                              isDark ? "text-gray-400" : "text-gray-500"
+                            }`}
+                          >
+                            {token.assetId.slice(0, 8)}...
+                          </div>
+                        )}
+                      </div>
+                      {token.name && token.name !== token.ticker && (
+                        <div
+                          className={`text-xs mt-0.5 truncate ${isDark ? "text-gray-400" : "text-gray-600"}`}
+                        >
+                          {token.name}
                         </div>
                       )}
                     </div>
-                    {token.name && token.name !== token.ticker && (
-                      <div
-                        className={`text-xs mt-0.5 truncate ${isDark ? "text-gray-400" : "text-gray-600"}`}
-                      >
-                        {token.name}
-                      </div>
-                    )}
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })
+          )}
         </div>
       </div>
     </>

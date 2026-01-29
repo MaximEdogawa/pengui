@@ -38,6 +38,7 @@ export interface AssetSelectorProps {
   // Token data props (to avoid FSD violation - shared cannot import from entities)
   availableTokens?: TokenInfo[]
   isLoadingTickers?: boolean
+  useAssetListForDropdown?: boolean
 }
 
 /**
@@ -55,6 +56,7 @@ export default function AssetSelector({
   className = '',
   availableTokens: providedTokens = [],
   isLoadingTickers = false,
+  useAssetListForDropdown = false,
 }: AssetSelectorProps) {
   const { t } = useThemeClasses()
   const [showDropdown, setShowDropdown] = useState(false)
@@ -191,6 +193,7 @@ export default function AssetSelector({
             isDropdownOpen={showDropdown}
             onCloseDropdown={handleDropdownClose}
             allTokens={availableTokens}
+            useAssetList={useAssetListForDropdown}
           />
         ) : (
           <AssetIdInput
