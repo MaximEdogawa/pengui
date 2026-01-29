@@ -1,13 +1,13 @@
 "use client";
 
 import { useThemeClasses } from "@/shared/hooks";
-import type {
+import {
   OrderBookFilters,
   OrderBookOrder,
 } from "@/features/trading/lib/orderBookTypes";
-import CreateOfferForm from "@/features/trading/ui/componets/limit/CreateOfferForm";
-import LimitOfferTab from "./OfferTab";
-import MarketOfferTab from "@/features/trading/ui/widgets/market/MarketOfferContent";
+import CreateOfferForm from "../limit/CreateOfferForm";
+import MarketOfferTab from "../market/MarketOfferContent";
+import LimitOfferTab from "../../layout/OfferTab";
 
 interface TradingRightPanelProps {
   currentMode: "maker" | "taker";

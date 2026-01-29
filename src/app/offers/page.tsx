@@ -1,16 +1,20 @@
-'use client'
+"use client";
 
-import type { OfferDetails } from '@/entities/offer'
-import { OfferDetailsModal, OfferHistory, useMyOffers } from '@/features/offers'
-import { CreateOfferModal, TakeOfferModal } from '@/features/trading'
-import { OrderBookFiltersProvider } from '@/features/trading/model/OrderBookFiltersProvider'
-import { useThemeClasses } from '@/shared/hooks'
-import { useEffect, useState } from 'react'
-import { OffersPageHeader } from './components/OffersPageHeader'
-import { CancelOfferConfirmationModal } from './components/CancelOfferConfirmationModal'
+import type { OfferDetails } from "@/entities/offer";
+import {
+  OfferDetailsModal,
+  OfferHistory,
+  useMyOffers,
+} from "@/features/offers";
+import { CreateOfferModal, TakeOfferModal } from "@/features/trading";
+import { OrderBookFiltersProvider } from "@/features/trading/hooks/OrderBookFiltersProvider";
+import { useThemeClasses } from "@/shared/hooks";
+import { useEffect, useState } from "react";
+import { OffersPageHeader } from "./components/OffersPageHeader";
+import { CancelOfferConfirmationModal } from "./components/CancelOfferConfirmationModal";
 
 export default function OffersPage() {
-  const { isDark, t } = useThemeClasses()
+  const { isDark, t } = useThemeClasses();
   const {
     selectedOffer,
     isLoading,
@@ -41,42 +45,42 @@ export default function OffersPage() {
     totalPages,
     goToPage,
     changePageSize,
-  } = useMyOffers()
+  } = useMyOffers();
 
-  const [showCreateOffer, setShowCreateOffer] = useState(false)
-  const [showTakeOffer, setShowTakeOffer] = useState(false)
-  const [mounted, setMounted] = useState(false)
-  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [showCreateOffer, setShowCreateOffer] = useState(false);
+  const [showTakeOffer, setShowTakeOffer] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
-    setMounted(true)
+    setMounted(true);
     // Don't call refreshOffers here - OfferHistory handles it on mount
-  }, [])
+  }, []);
 
   const handleRefresh = async () => {
-    setIsRefreshing(true)
+    setIsRefreshing(true);
     try {
-      await refreshOffers()
+      await refreshOffers();
       // Add a small delay to show the refresh animation
-      await new Promise((resolve) => setTimeout(resolve, 500))
+      await new Promise((resolve) => setTimeout(resolve, 500));
     } catch {
       // Error handled by refreshOffers
     } finally {
-      setIsRefreshing(false)
+      setIsRefreshing(false);
     }
-  }
+  };
 
   const handleOfferCreatedWrapper = async (offer: OfferDetails) => {
-    await handleOfferCreated(offer)
-    setShowCreateOffer(false)
-  }
+    await handleOfferCreated(offer);
+    setShowCreateOffer(false);
+  };
 
   const handleViewOffer = (offer: OfferDetails) => {
-    viewOffer(offer)
-  }
+    viewOffer(offer);
+  };
 
   if (!mounted) {
-    return null
+    return null;
   }
 
   return (
@@ -94,7 +98,7 @@ export default function OffersPage() {
       {/* Offers Content */}
       <div
         className={`backdrop-blur-[40px] ${t.card} rounded-2xl p-4 border ${t.border} transition-all duration-300 shadow-lg shadow-black/5 ${
-          isDark ? 'bg-white/[0.03]' : 'bg-white/30'
+          isDark ? "bg-white/[0.03]" : "bg-white/30"
         }`}
       >
         <OfferHistory
@@ -135,7 +139,7 @@ export default function OffersPage() {
             onClose={() => setShowTakeOffer(false)}
             onOfferTaken={() => {
               // Offer was taken successfully, modal will close automatically
-              setShowTakeOffer(false)
+              setShowTakeOffer(false);
             }}
           />
         </OrderBookFiltersProvider>
@@ -165,5 +169,5 @@ export default function OffersPage() {
         />
       )}
     </div>
-  )
+  );
 }

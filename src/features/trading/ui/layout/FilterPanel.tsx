@@ -1,35 +1,41 @@
-'use client'
+"use client";
 
-import { useThemeClasses } from '@/shared/hooks'
-import { X } from 'lucide-react'
-import { useOrderBookFilters } from '../../model/OrderBookFiltersProvider'
+import { useThemeClasses } from "@/shared/hooks";
+import { X } from "lucide-react";
+import { useOrderBookFilters } from "@/features/trading/hooks/OrderBookFiltersProvider";
 
 interface FilterPanelProps {
-  onFiltersChange?: () => void
+  onFiltersChange?: () => void;
 }
 
 export default function FilterPanel({ onFiltersChange }: FilterPanelProps) {
-  const { t } = useThemeClasses()
-  const { filters, hasActiveFilters, clearAllFilters, showFilterPane, setShowFilterPane } =
-    useOrderBookFilters()
+  const { t } = useThemeClasses();
+  const {
+    filters,
+    hasActiveFilters,
+    clearAllFilters,
+    showFilterPane,
+    setShowFilterPane,
+  } = useOrderBookFilters();
 
   const handleClearAll = () => {
-    clearAllFilters()
+    clearAllFilters();
     // Trigger callback after state update
     setTimeout(() => {
-      onFiltersChange?.()
-    }, 0)
-  }
+      onFiltersChange?.();
+    }, 0);
+  };
 
   if (!showFilterPane) {
-    return null
+    return null;
   }
 
   return (
     <div
       className={`fixed bottom-4 left-1/2 transform -translate-x-1/2 z-[100] backdrop-blur-[40px] ${t.card} border-2 ${t.border} rounded-lg shadow-2xl p-4 max-w-2xl w-full mx-4`}
       style={{
-        boxShadow: '0 20px 40px -12px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1)',
+        boxShadow:
+          "0 20px 40px -12px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1)",
       }}
     >
       <div className="flex items-center justify-between mb-2">
@@ -81,5 +87,5 @@ export default function FilterPanel({ onFiltersChange }: FilterPanelProps) {
         </div>
       )}
     </div>
-  )
+  );
 }
