@@ -5,11 +5,11 @@ import { InfoBanner, VersionDisplay } from "@/shared/ui";
 import { useTheme } from "next-themes";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Sidebar } from "./Sidebar";
-import { Header } from "./Header";
-import { BackgroundGradient } from "./BackgroundGradient";
-import { useMenuItems } from "../hooks/use-menu-items";
-import { useScrollDetection } from "../hooks/use-scroll-detection";
+import { BackgroundGradient } from "../components/BackgroundGradient";
+import { useMenuItems } from "../../hooks/use-menu-items";
+import { useScrollDetection } from "../../hooks/use-scroll-detection";
+import { Sidebar } from "../components/Sidebar";
+import { Header } from "../components/Header";
 
 // App version from package.json (exposed via next.config.ts)
 const APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION || "0.0.1";

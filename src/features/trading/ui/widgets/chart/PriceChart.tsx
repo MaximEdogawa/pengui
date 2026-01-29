@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { BarChart3, LineChart, User } from "lucide-react";
 import { LightweightChart } from "./LightweightChart";
-import { useTickers } from "@/entities/asset/model/useTickers";
+import { useTickers } from "@/entities/asset/hooks/useTickers";
 import { ChartConfig, Timeframe } from "@/features/trading/lib/chartTypes";
 import { useOrderBookFilters } from "@/features/trading/hooks";
 import { usePriceChart } from "@/features/trading/hooks/usePriceChart";

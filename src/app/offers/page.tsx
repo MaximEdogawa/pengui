@@ -10,8 +10,8 @@ import { CreateOfferModal, TakeOfferModal } from "@/features/trading";
 import { OrderBookFiltersProvider } from "@/features/trading/hooks/OrderBookFiltersProvider";
 import { useThemeClasses } from "@/shared/hooks";
 import { useEffect, useState } from "react";
-import { OffersPageHeader } from "./components/OffersPageHeader";
-import { CancelOfferConfirmationModal } from "./components/CancelOfferConfirmationModal";
+import { OffersPageHeader } from "@/features/offers/ui/components/OfferHistory/OffersPageHeader";
+import { CancelOfferConfirmationModal } from "@/features/offers/ui/components/OfferHistory/CancelOfferConfirmationModal";
 
 export default function OffersPage() {
   const { isDark, t } = useThemeClasses();

@@ -12,7 +12,7 @@ import { useThemeClasses } from "@/shared/hooks";
 import { OrderBookOrder } from "@/features/trading/lib/orderBookTypes";
 import { useOrderBookFilters } from "@/features/trading/hooks/useOrderBookFilters";
 import { useOrderBook } from "@/features/trading/hooks/useOrderBook";
-import { useTickers } from "@/entities/asset/model/useTickers";
+import { useTickers } from "@/entities/asset/hooks/useTickers";
 import { useOrderBookDetails } from "@/features/trading/hooks/useOrderBookDetails";
 import { calculateAveragePrice } from "@/features/trading/lib/services/priceCalculation";
 import { formatPriceForDisplay } from "@/features/trading/lib/formatAmount";

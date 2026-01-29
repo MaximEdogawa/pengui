@@ -1,36 +1,41 @@
-'use client'
+"use client";
 
-import { getThemeClasses } from '@/shared/lib/theme'
-import { UserCircle, Palette, Shield, Settings, Info } from 'lucide-react'
-import { useTheme } from 'next-themes'
-import { useEffect, useState } from 'react'
-import { ProfileHeader } from './components/ProfileHeader'
-import { ProfileTabs, type TabId } from './components/ProfileTabs'
-import { ProfileTabContent } from './components/ProfileTabContent'
+import { getThemeClasses } from "@/shared/lib/theme";
+import { UserCircle, Palette, Shield, Settings, Info } from "lucide-react";
+import { useTheme } from "next-themes";
+import { useEffect, useState } from "react";
+import { ProfileHeader } from "@/features/profile/components/ProfileHeader";
+import {
+  ProfileTabs,
+  type TabId,
+} from "@/features/profile/components/ProfileTabs";
+import { ProfileTabContent } from "@/features/profile/components/ProfileTabContent";
 
 export default function ProfilePage() {
-  const [mounted, setMounted] = useState(false)
-  const [activeTab, setActiveTab] = useState<TabId>('profile')
-  const { theme: currentTheme, systemTheme, setTheme } = useTheme()
+  const [mounted, setMounted] = useState(false);
+  const [activeTab, setActiveTab] = useState<TabId>("profile");
+  const { theme: currentTheme, systemTheme, setTheme } = useTheme();
 
-  const isDark = currentTheme === 'dark' || (currentTheme === 'system' && systemTheme === 'dark')
-  const t = getThemeClasses(isDark)
+  const isDark =
+    currentTheme === "dark" ||
+    (currentTheme === "system" && systemTheme === "dark");
+  const t = getThemeClasses(isDark);
 
   useEffect(() => {
-    setMounted(true)
-  }, [])
+    setMounted(true);
+  }, []);
 
   if (!mounted) {
-    return null
+    return null;
   }
 
   const tabs = [
-    { id: 'profile' as const, icon: UserCircle, label: 'Profile' },
-    { id: 'themes' as const, icon: Palette, label: 'Themes' },
-    { id: 'security' as const, icon: Shield, label: 'Security' },
-    { id: 'preferences' as const, icon: Settings, label: 'Preferences' },
-    { id: 'about' as const, icon: Info, label: 'About' },
-  ]
+    { id: "profile" as const, icon: UserCircle, label: "Profile" },
+    { id: "themes" as const, icon: Palette, label: "Themes" },
+    { id: "security" as const, icon: Shield, label: "Security" },
+    { id: "preferences" as const, icon: Settings, label: "Preferences" },
+    { id: "about" as const, icon: Info, label: "About" },
+  ];
 
   return (
     <div className="w-full relative z-10">
@@ -49,5 +54,5 @@ export default function ProfilePage() {
         onThemeChange={setTheme}
       />
     </div>
-  )
+  );
 }
