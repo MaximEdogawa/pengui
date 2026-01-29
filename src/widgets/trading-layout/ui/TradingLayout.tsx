@@ -106,7 +106,6 @@ export default function TradingLayout({
     (mode: "maker" | "taker") => {
       setCurrentMode(mode);
       if (mode === "maker") {
-        // Limit: open Create Offer modal
         setShowCreateOfferModal(true);
         setShowTakeOfferModal(false);
       } else {

@@ -160,7 +160,7 @@ export default function AssetSelector({
 
   return (
     <div
-      className={`flex items-center space-x-2 p-2.5 rounded-lg border ${t.border} ${t.card} ${className}`}
+      className={`flex items-center space-x-2 p-2 rounded-lg border ${t.border} ${t.card} ${className}`}
     >
       {/* Asset Type Selector */}
       <AssetTypeSelector
@@ -170,7 +170,7 @@ export default function AssetSelector({
       />
 
       {/* Asset Selection */}
-      <div className={`relative ${hideAmountInput ? 'flex-[2]' : 'flex-1'}`}>
+      <div className={`relative h-10 md:h-8 flex items-center ${hideAmountInput ? 'flex-[1]' : 'flex-[0.7]'}`}>
         {asset.type === 'cat' || asset.type === 'xch' ? (
           <TokenSearchInput
             value={asset.searchQuery || ''}
@@ -214,7 +214,7 @@ export default function AssetSelector({
 
       {/* Amount Input - Hidden for NFT and Option */}
       {!hideAmountInput && (
-        <div className="flex-1">
+        <div className="flex-[1.3] h-8">
           <AmountInput
             value={asset.amount}
             tempInput={asset._amountInput}
