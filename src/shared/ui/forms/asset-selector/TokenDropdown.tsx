@@ -1,26 +1,22 @@
-'use client'
+"use client";
 
-import { useNetwork, useThemeClasses, usePreloadTokenIcons } from '@/shared/hooks'
-import { TokenIconAuto, XchIcon } from '@/shared/ui/icons/TokenIcon'
-import { useEffect, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
-
-// Number of icons to preload when dropdown opens
-const PRELOAD_COUNT = 15
+import { useThemeClasses } from "@/shared/hooks";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 export interface Token {
-  assetId: string
-  ticker: string
-  symbol?: string
-  name?: string
+  assetId: string;
+  ticker: string;
+  symbol?: string;
+  name?: string;
 }
 
 interface TokenDropdownProps {
-  tokens: Token[]
-  isOpen: boolean
-  onSelect: (token: Token) => void
-  onClose: () => void
-  searchValue: string
+  tokens: Token[];
+  isOpen: boolean;
+  onSelect: (token: Token) => void;
+  onClose: () => void;
+  searchValue: string;
 }
 
 export default function TokenDropdown({
@@ -30,88 +26,86 @@ export default function TokenDropdown({
   onClose,
   searchValue,
 }: TokenDropdownProps) {
-  const { isDark } = useThemeClasses()
-  const { network } = useNetwork()
-  const isTestnet = network === 'testnet'
-  const [mounted, setMounted] = useState(false)
-  const [selectedIndex, setSelectedIndex] = useState(0)
-  const listRef = useRef<HTMLDivElement>(null)
-  const itemRefs = useRef<(HTMLDivElement | null)[]>([])
-  const preloadIcons = usePreloadTokenIcons()
+  const { isDark } = useThemeClasses();
+  const [mounted, setMounted] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const listRef = useRef<HTMLDivElement>(null);
+  const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
 
   useEffect(() => {
-    setMounted(true)
-    return () => setMounted(false)
-  }, [])
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
 
-  // Preload first 15 icons when dropdown opens
-  useEffect(() => {
-    if (isOpen && tokens.length > 0) {
-      const assetIds = tokens
-        .slice(0, PRELOAD_COUNT)
-        .map(t => t.assetId)
-        .filter(id => id && id.length > 0)
-      preloadIcons(assetIds)
-    }
-  }, [isOpen, tokens, preloadIcons])
+  // Note: Icon preloading disabled - it causes request loops
+  // Icons load on-demand via TokenIconAuto component when needed
+  // useEffect(() => {
+  //   if (isOpen && tokens.length > 0) {
+  //     const assetIds = tokens
+  //       .slice(0, PRELOAD_COUNT)
+  //       .map(t => t.assetId)
+  //       .filter(id => id && id.length > 0)
+  //     preloadIcons(assetIds)
+  //   }
+  // }, [isOpen, tokens])
 
   // Reset selected index when tokens change
   useEffect(() => {
-    setSelectedIndex(0)
-  }, [tokens])
+    setSelectedIndex(0);
+  }, [tokens]);
 
   // Scroll selected item into view
   useEffect(() => {
     if (itemRefs.current[selectedIndex]) {
       itemRefs.current[selectedIndex]?.scrollIntoView({
-        behavior: 'smooth',
-        block: 'nearest',
-      })
+        behavior: "smooth",
+        block: "nearest",
+      });
     }
-  }, [selectedIndex])
+  }, [selectedIndex]);
 
   useEffect(() => {
-    if (!isOpen) return
+    if (!isOpen) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose()
-        return
+      if (e.key === "Escape") {
+        onClose();
+        return;
       }
 
-      if (e.key === 'ArrowDown') {
-        e.preventDefault()
-        setSelectedIndex((prev) => (prev + 1) % tokens.length)
-        return
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setSelectedIndex((prev) => (prev + 1) % tokens.length);
+        return;
       }
 
-      if (e.key === 'ArrowUp') {
-        e.preventDefault()
-        setSelectedIndex((prev) => (prev - 1 + tokens.length) % tokens.length)
-        return
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setSelectedIndex((prev) => (prev - 1 + tokens.length) % tokens.length);
+        return;
       }
 
-      if (e.key === 'Enter') {
-        e.preventDefault()
+      if (e.key === "Enter") {
+        e.preventDefault();
         if (tokens[selectedIndex]) {
-          onSelect(tokens[selectedIndex])
-          onClose()
+          onSelect(tokens[selectedIndex]);
+          onClose();
         }
       }
-    }
+    };
 
-    document.addEventListener('keydown', handleKeyDown)
+    document.addEventListener("keydown", handleKeyDown);
     // Prevent body scroll when dropdown is open
-    document.body.style.overflow = 'hidden'
+    document.body.style.overflow = "hidden";
 
     return () => {
-      document.removeEventListener('keydown', handleKeyDown)
-      document.body.style.overflow = ''
-    }
-  }, [isOpen, onClose, tokens, selectedIndex, onSelect])
+      document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = "";
+    };
+  }, [isOpen, onClose, tokens, selectedIndex, onSelect]);
 
   if (!mounted || !isOpen || tokens.length === 0) {
-    return null
+    return null;
   }
 
   const dropdownContent = (
@@ -119,19 +113,19 @@ export default function TokenDropdown({
       {/* Backdrop - Highest layer, covers everything */}
       <div
         className={`absolute inset-0 z-[9998] flex items-center justify-center p-4 ${
-          isDark ? 'bg-black/50' : 'bg-black/30'
+          isDark ? "bg-black/50" : "bg-black/30"
         } backdrop-blur-sm`}
         onClick={onClose}
       />
       {/* Dropdown - Above everything including modals, centered and smaller with glass effect */}
       <div
         className={`absolute z-[9999] rounded-lg shadow-xl overflow-y-auto max-w-3xl w-full max-h-[60vh] backdrop-blur-[40px] border transition-all duration-300 ${
-          isDark ? 'bg-white/10 border-white/20' : 'bg-white/60 border-white/70'
+          isDark ? "bg-white/10 border-white/20" : "bg-white/60 border-white/70"
         }`}
         style={{
-          left: '50%',
-          top: '50%',
-          transform: 'translate(-50%, -50%)',
+          left: "50%",
+          top: "50%",
+          transform: "translate(-50%, -50%)",
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -139,11 +133,18 @@ export default function TokenDropdown({
         {searchValue && (
           <div
             className={`px-3 py-2 border-b ${
-              isDark ? 'border-gray-700 bg-gray-800/50' : 'border-gray-200 bg-gray-50'
+              isDark
+                ? "border-gray-700 bg-gray-800/50"
+                : "border-gray-200 bg-gray-50"
             }`}
           >
-            <label className={`text-xs font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>
-              Search: <span className={isDark ? 'text-white' : 'text-gray-900'}>{searchValue}</span>
+            <label
+              className={`text-xs font-medium ${isDark ? "text-gray-300" : "text-gray-700"}`}
+            >
+              Search:{" "}
+              <span className={isDark ? "text-white" : "text-gray-900"}>
+                {searchValue}
+              </span>
             </label>
           </div>
         )}
@@ -151,53 +152,45 @@ export default function TokenDropdown({
         <div
           ref={listRef}
           className="overflow-y-auto"
-          style={{ maxHeight: searchValue ? 'calc(60vh - 60px)' : 'calc(60vh - 20px)' }}
+          style={{
+            maxHeight: searchValue ? "calc(60vh - 60px)" : "calc(60vh - 20px)",
+          }}
         >
           {tokens.map((token, index) => {
-            const isSelected = index === selectedIndex
+            const isSelected = index === selectedIndex;
             return (
               <div
-                key={token.assetId || 'xch'}
+                key={token.assetId || "xch"}
                 ref={(el) => {
-                  itemRefs.current[index] = el
+                  itemRefs.current[index] = el;
                 }}
                 onClick={() => {
-                  onSelect(token)
-                  onClose()
+                  onSelect(token);
+                  onClose();
                 }}
                 className={`px-3 py-2 cursor-pointer text-xs transition-colors border-b ${
                   isSelected
                     ? isDark
-                      ? 'bg-gray-700/80 text-white border-gray-600'
-                      : 'bg-gray-200 text-gray-900 border-gray-300'
+                      ? "bg-gray-700/80 text-white border-gray-600"
+                      : "bg-gray-200 text-gray-900 border-gray-300"
                     : isDark
-                      ? 'text-white border-gray-700 hover:bg-gray-700/50 active:bg-gray-600'
-                      : 'text-gray-900 border-gray-200 hover:bg-gray-100 active:bg-gray-200'
+                      ? "text-white border-gray-700 hover:bg-gray-700/50 active:bg-gray-600"
+                      : "text-gray-900 border-gray-200 hover:bg-gray-100 active:bg-gray-200"
                 } last:border-b-0`}
               >
                 <div className="flex items-center gap-3">
-                  {/* Token Icon - fetched on-demand */}
-                  {!token.assetId || token.ticker === 'XCH' || token.ticker === 'TXCH' ? (
-                    <XchIcon size={28} isTestnet={isTestnet} />
-                  ) : (
-                    <TokenIconAuto
-                      assetId={token.assetId}
-                      ticker={token.ticker}
-                      size={28}
-                    />
-                  )}
                   {/* Token Details */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">
                       <div
-                        className={`font-semibold truncate ${isDark ? 'text-white' : 'text-gray-900'}`}
+                        className={`font-semibold truncate ${isDark ? "text-white" : "text-gray-900"}`}
                       >
                         {token.ticker}
                       </div>
                       {token.assetId && (
                         <div
                           className={`text-xs font-mono flex-shrink-0 ${
-                            isDark ? 'text-gray-400' : 'text-gray-500'
+                            isDark ? "text-gray-400" : "text-gray-500"
                           }`}
                         >
                           {token.assetId.slice(0, 8)}...
@@ -206,7 +199,7 @@ export default function TokenDropdown({
                     </div>
                     {token.name && token.name !== token.ticker && (
                       <div
-                        className={`text-xs mt-0.5 truncate ${isDark ? 'text-gray-400' : 'text-gray-600'}`}
+                        className={`text-xs mt-0.5 truncate ${isDark ? "text-gray-400" : "text-gray-600"}`}
                       >
                         {token.name}
                       </div>
@@ -214,12 +207,12 @@ export default function TokenDropdown({
                   </div>
                 </div>
               </div>
-            )
+            );
           })}
         </div>
       </div>
     </>
-  )
+  );
 
-  return createPortal(dropdownContent, document.body)
+  return createPortal(dropdownContent, document.body);
 }

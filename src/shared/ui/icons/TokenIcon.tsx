@@ -1,21 +1,21 @@
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react'
-import { useTokenIcon, isXchAssetId } from '@/shared/hooks'
-
+import { useState, useEffect } from "react";
 /**
  * Token Icon Components
  * - TokenIcon: Presentational component (renders icon or fallback)
  * - TokenIconAuto: Self-fetching component using TanStack Query
  * - XchIcon: Special icon for native XCH/TXCH
- * 
+ *
  * All icon fetching uses TanStack Query for consistent caching across the app
  */
 
 // Generate color from string for fallback
 function stringToColor(str: string): string {
-  const hash = str.split('').reduce((acc, char) => char.charCodeAt(0) + ((acc << 5) - acc), 0)
-  return `hsl(${Math.abs(hash % 360)}, ${65 + (Math.abs(hash >> 8) % 20)}%, ${45 + (Math.abs(hash >> 16) % 15)}%)`
+  const hash = str
+    .split("")
+    .reduce((acc, char) => char.charCodeAt(0) + ((acc << 5) - acc), 0);
+  return `hsl(${Math.abs(hash % 360)}, ${65 + (Math.abs(hash >> 8) % 20)}%, ${45 + (Math.abs(hash >> 16) % 15)}%)`;
 }
 
 // Common icon container styles
@@ -24,27 +24,27 @@ const iconStyle = (size: number): React.CSSProperties => ({
   height: size,
   minWidth: size,
   minHeight: size,
-  borderRadius: '50%',
-  overflow: 'hidden',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
+  borderRadius: "50%",
+  overflow: "hidden",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
   flexShrink: 0,
-})
+});
 
 export interface TokenIconProps {
-  imageUrl?: string | null
-  ticker?: string
-  size?: number
-  className?: string
-  isLoading?: boolean
+  imageUrl?: string | null;
+  ticker?: string;
+  size?: number;
+  className?: string;
+  isLoading?: boolean;
 }
 
 export interface TokenIconAutoProps {
-  assetId: string
-  ticker?: string
-  size?: number
-  className?: string
+  assetId: string;
+  ticker?: string;
+  size?: number;
+  className?: string;
 }
 
 /**
@@ -52,17 +52,17 @@ export interface TokenIconAutoProps {
  */
 export default function TokenIcon({
   imageUrl,
-  ticker = '',
+  ticker = "",
   size = 24,
-  className = '',
+  className = "",
   isLoading = false,
 }: TokenIconProps) {
-  const [hasError, setHasError] = useState(false)
+  const [hasError, setHasError] = useState(false);
 
   // Reset error state when imageUrl changes
   useEffect(() => {
-    setHasError(false)
-  }, [imageUrl])
+    setHasError(false);
+  }, [imageUrl]);
 
   if (isLoading) {
     return (
@@ -70,40 +70,40 @@ export default function TokenIcon({
         className={`animate-pulse bg-gray-300 dark:bg-gray-600 ${className}`}
         style={iconStyle(size)}
       />
-    )
+    );
   }
 
   if (!imageUrl || hasError) {
-    const initials = ticker ? ticker.slice(0, 2).toUpperCase() : '?'
+    const initials = ticker ? ticker.slice(0, 2).toUpperCase() : "?";
     return (
       <div
         className={className}
         style={{
           ...iconStyle(size),
-          backgroundColor: ticker ? stringToColor(ticker) : '#6b7280',
-          color: '#fff',
+          backgroundColor: ticker ? stringToColor(ticker) : "#6b7280",
+          color: "#fff",
           fontSize: Math.max(8, Math.floor(size * 0.45)),
           fontWeight: 600,
         }}
       >
         {initials}
       </div>
-    )
+    );
   }
 
   return (
     <div className={className} style={iconStyle(size)}>
       <img
         src={imageUrl}
-        alt={ticker ? `${ticker} icon` : 'Token icon'}
+        alt={ticker ? `${ticker} icon` : "Token icon"}
         width={size}
         height={size}
         loading="lazy"
-        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+        style={{ width: "100%", height: "100%", objectFit: "cover" }}
         onError={() => setHasError(true)}
       />
     </div>
-  )
+  );
 }
 
 /**
@@ -111,61 +111,37 @@ export default function TokenIcon({
  */
 export function XchIcon({
   size = 24,
-  className = '',
+  className = "",
   isTestnet = false,
 }: {
-  size?: number
-  className?: string
-  isTestnet?: boolean
+  size?: number;
+  className?: string;
+  isTestnet?: boolean;
 }) {
   return (
     <div
       className={className}
       style={{
         ...iconStyle(size),
-        backgroundColor: isTestnet ? '#059669' : '#16a34a',
+        backgroundColor: isTestnet ? "#059669" : "#16a34a",
       }}
     >
       <img
         src="/icons/chia-icon.svg"
-        alt={isTestnet ? 'TXCH' : 'XCH'}
+        alt={isTestnet ? "TXCH" : "XCH"}
         width={size * 0.7}
         height={size * 0.7}
-        style={{ width: size * 0.7, height: size * 0.7, objectFit: 'contain' }}
+        style={{ width: size * 0.7, height: size * 0.7, objectFit: "contain" }}
         onError={(e) => {
-          e.currentTarget.style.display = 'none'
+          e.currentTarget.style.display = "none";
           if (e.currentTarget.parentElement) {
-            e.currentTarget.parentElement.textContent = isTestnet ? 'TX' : 'X'
-            e.currentTarget.parentElement.style.color = '#fff'
-            e.currentTarget.parentElement.style.fontWeight = '700'
-            e.currentTarget.parentElement.style.fontSize = `${Math.floor(size * 0.5)}px`
+            e.currentTarget.parentElement.textContent = isTestnet ? "TX" : "X";
+            e.currentTarget.parentElement.style.color = "#fff";
+            e.currentTarget.parentElement.style.fontWeight = "700";
+            e.currentTarget.parentElement.style.fontSize = `${Math.floor(size * 0.5)}px`;
           }
         }}
       />
     </div>
-  )
-}
-
-/**
- * TokenIconAuto - Self-fetching token icon using TanStack Query
- * Shares cache with all other icon components in the app
- */
-export function TokenIconAuto({
-  assetId,
-  ticker = '',
-  size = 24,
-  className = '',
-}: TokenIconAutoProps) {
-  const isXch = isXchAssetId(assetId)
-  const { imageUrl, isLoading } = useTokenIcon(isXch ? null : assetId)
-
-  return (
-    <TokenIcon
-      imageUrl={imageUrl}
-      ticker={ticker}
-      size={size}
-      className={className}
-      isLoading={isLoading}
-    />
-  )
+  );
 }

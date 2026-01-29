@@ -1,6 +1,6 @@
 "use client";
 
-import { useThemeClasses, usePreloadTokenIcons } from "@/shared/hooks";
+import { useThemeClasses } from "@/shared/hooks";
 import { useCatTokens, TickerIcon, XchIcon } from "@/entities/asset";
 import { getNativeTokenTickerForNetwork } from "@/shared/lib/config/environment";
 import { useNetwork } from "@/shared/hooks/useNetwork";
@@ -38,7 +38,6 @@ export default function OrderBookFilters({
   const [showSuggestions, setShowSuggestions] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
-  const preloadIcons = usePreloadTokenIcons();
 
   // Create a map of ticker -> assetId for quick lookups
   const tickerToAssetId = useMemo(() => {
@@ -54,31 +53,6 @@ export default function OrderBookFilters({
     const lower = ticker.toLowerCase();
     return lower === "xch" || lower === "txch";
   };
-
-  // Preload icons for filtered assets and suggestions
-  useEffect(() => {
-    const allAssets = [
-      ...(filters.buyAsset || []),
-      ...(filters.sellAsset || []),
-    ];
-    const suggestionTickers = filteredSuggestions
-      .slice(0, 15)
-      .map((s) => s.value);
-    const allTickers = [...allAssets, ...suggestionTickers];
-    const assetIds = allTickers
-      .filter((ticker) => !isXchTicker(ticker))
-      .map((ticker) => tickerToAssetId.get(ticker.toLowerCase()))
-      .filter((id): id is string => !!id);
-    if (assetIds.length > 0) {
-      preloadIcons(assetIds);
-    }
-  }, [
-    filters.buyAsset,
-    filters.sellAsset,
-    filteredSuggestions,
-    tickerToAssetId,
-    preloadIcons,
-  ]);
 
   // Generate suggestions based on search value
   useEffect(() => {

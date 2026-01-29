@@ -78,7 +78,7 @@ export async function fetchTokenInfo(assetId: string): Promise<SpaceScanTokenInf
 
     return data.info
   } catch (error) {
-    logger.error(`Failed to fetch token info from Space Scan for asset ${assetId}:`, error)
+    logger.error(`Failed to fetch token info for asset ${assetId} from Space Scan:`, error)
     return null
   }
 }

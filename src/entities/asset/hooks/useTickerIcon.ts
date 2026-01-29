@@ -65,22 +65,3 @@ export function useTickerIcon(
     error: error as Error | null,
   };
 }
-
-/**
- * Hook to prefetch multiple ticker icons (no-op - icons are fetched in bulk)
- * @param assetIds - Array of asset IDs to prefetch
- */
-export function usePreloadTickerIcons(
-  _assetIds: (string | null | undefined)[],
-): void {
-  // No-op - useAllTokenIcons fetches all icons at once
-  useAllTokenIcons();
-}
-
-/**
- * Clear blob URL cache (no longer needed with TanStack Query)
- * @deprecated TanStack Query handles caching automatically
- */
-export function clearBlobUrlCache(): void {
-  // No-op for backward compatibility
-}
