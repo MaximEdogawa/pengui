@@ -1,7 +1,7 @@
 'use client'
 
 import EmptyState from '@/features/wallet/ui/shared/EmptyState'
-import { useDexieOfferPolling } from '../model'
+import { useDexieOfferPolling } from '../hooks'
 import { useThemeClasses } from '@/shared/hooks'
 import { Handshake } from 'lucide-react'
 import type { OfferDetails } from '@/entities/offer'

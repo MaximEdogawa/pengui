@@ -1,9 +1,9 @@
 'use client'
 
-import LoanCard from '../../LoanCard'
-import { SettledLoanCard } from './SettledLoanCard'
+import LoanCard from '../../widgets/LoanCard'
 import type { LoanOffer, SettledLoan } from '@/entities/loan'
 import type { ThemeClasses } from '@/shared/lib/theme'
+import { SettledLoanCard } from './SettledLoanCard'
 
 interface MyCreatedLoansContentProps {
   loans: LoanOffer[]

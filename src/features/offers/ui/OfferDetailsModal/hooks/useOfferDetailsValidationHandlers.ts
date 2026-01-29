@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
 import { convertOfferStateToStatus, type OfferDetails } from '@/entities/offer'
-import { useOfferStorage, useOfferInspection } from '../../../model'
+import { useOfferStorage, useOfferInspection } from '../../../hooks'
 import { calculateOfferState } from '../../../lib/dexieUtils'
 import type { UseOfferDetailsStateReturn } from './useOfferDetailsState'
 

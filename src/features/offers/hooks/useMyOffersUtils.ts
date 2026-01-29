@@ -3,7 +3,7 @@
 import { useCatTokens } from '@/entities/asset'
 import { formatAssetAmount } from '@/shared/lib/utils/chia-units'
 import { useCallback, useEffect, useRef } from 'react'
-import type { UseMyOffersState, UseMyOffersSetters } from '../useMyOffersState'
+import type { UseMyOffersState, UseMyOffersSetters } from './useMyOffersState'
 
 interface UseMyOffersUtilsProps {
   state: UseMyOffersState & UseMyOffersSetters

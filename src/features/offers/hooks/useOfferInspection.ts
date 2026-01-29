@@ -4,8 +4,8 @@ import { useDexieDataService } from '../api/useDexieDataService'
 import type { DexieOfferSearchParams, DexiePostOfferParams } from '../lib/dexieTypes'
 
 export type ValidatedOfferString = string & { readonly __validated: true }
-
-/**
+ 
+/** 
  * Hook for offer inspection and search using Dexie API
  * Provides a convenient interface for components to interact with Dexie
  */

@@ -3,8 +3,8 @@
 import { Shield } from 'lucide-react'
 import type { CreateLoanForm } from '@/entities/loan'
 import type { ThemeClasses } from '@/shared/lib/theme'
-import { CollateralTypeSelector } from './CollateralSection/components/CollateralTypeSelector'
-import { CollateralRatioInput } from './CollateralSection/components/CollateralRatioInput'
+import { CollateralTypeSelector } from './CollateralTypeSelector'
+import { CollateralRatioInput } from './CollateralRatioInput'
 
 interface CollateralSectionProps {
   formData: CreateLoanForm

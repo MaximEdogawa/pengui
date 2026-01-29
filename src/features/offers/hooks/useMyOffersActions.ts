@@ -3,11 +3,11 @@
 import type { OfferDetails } from '@/entities/offer'
 import { useCancelOffer } from '@/features/wallet'
 import { useCallback } from 'react'
-import { useOfferStorage } from '../useOfferStorage'
-import { createOfferCreatedEvent } from '../useMyOffersHandlers'
-import type { UseMyOffersState, UseMyOffersSetters } from '../useMyOffersState'
-import { useMyOffersSingleActions } from './useMyOffersSingleActions'
 import { useMyOffersBulkActions } from './useMyOffersBulkActions'
+import { UseMyOffersSetters, UseMyOffersState } from './useMyOffersState'
+import { useOfferStorage } from './useOfferStorage'
+import { useMyOffersSingleActions } from './useMyOffersSingleActions'
+import { createOfferCreatedEvent } from './useMyOffersHandlers'
 
 interface UseMyOffersActionsProps {
   state: UseMyOffersState & UseMyOffersSetters

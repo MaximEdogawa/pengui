@@ -1,7 +1,7 @@
 'use client'
 
 import { type OfferDetails } from '@/entities/offer'
-import { useOfferInspection } from '@/features/offers/model/useOfferInspection'
+import { useOfferInspection } from '@/features/offers/hooks/useOfferInspection'
 import { useThemeClasses } from '@/shared/hooks'
 import { formatXchAmount, getMinimumFeeInXch, formatAssetAmountForInput, getAmountPlaceholder } from '@/shared/lib/utils/chia-units'
 import { logger } from '@/shared/lib/logger'

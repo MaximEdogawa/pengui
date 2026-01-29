@@ -1,6 +1,6 @@
 'use client'
 
-import { detectChipType } from '../model/useLoanFilters'
+import { detectChipType } from '../../hooks/useLoanFilters'
 import { getThemeClasses } from '@/shared/lib/theme'
 import type { AmountFilter, LoanFilters } from '@/entities/loan'
 import { Search, X } from 'lucide-react'

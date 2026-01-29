@@ -2,14 +2,11 @@
 
 import type { OfferDetails } from '@/entities/offer'
 import { useCallback } from 'react'
-import { useOfferStorage } from '../useOfferStorage'
 import { useCancelOffer } from '@/features/wallet'
-import {
-  updateOfferStatus,
-  removeOfferFromState,
-  updateOfferInState,
-} from '../useMyOffersHandlers'
-import type { UseMyOffersState, UseMyOffersSetters } from '../useMyOffersState'
+import { UseMyOffersSetters, UseMyOffersState } from './useMyOffersState'
+import { useOfferStorage } from './useOfferStorage'
+import { removeOfferFromState, updateOfferInState, updateOfferStatus } from './useMyOffersHandlers'
+
 
 interface UseMyOffersSingleActionsProps {
   state: UseMyOffersState & UseMyOffersSetters
@@ -80,10 +77,6 @@ export function useMyOffersSingleActions({
   const handleOfferTaken = useCallback(
     async (offer: OfferDetails) => {
       state.setOffers((prev) => updateOfferStatus(prev, offer.id, 'completed'))
-      
-      // Mark offer as taken by current user if wallet address is available
-      // Note: This assumes the offer was already saved with takenBy in useMarketOfferSubmission
-      // This is just updating the local state
       await refreshOffers()
     },
     [refreshOffers, state]

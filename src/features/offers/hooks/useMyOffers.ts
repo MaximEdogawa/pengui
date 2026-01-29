@@ -1,9 +1,9 @@
 'use client'
 
 import { useCallback } from 'react'
-import { useMyOffersData } from './hooks/useMyOffersData'
-import { useMyOffersActions } from './hooks/useMyOffersActions'
-import { useMyOffersUtils } from './hooks/useMyOffersUtils'
+import { useMyOffersData } from './useMyOffersData'
+import { useMyOffersActions } from './useMyOffersActions'
+import { useMyOffersUtils } from './useMyOffersUtils'
 
 /**
  * Hook for managing user's offers
@@ -11,16 +11,11 @@ import { useMyOffersUtils } from './hooks/useMyOffersUtils'
  * Composed from smaller hooks for better maintainability
  */
 export function useMyOffers() {
-  // Data management (loading, syncing, filtering)
   const { state, filteredOffers, refreshOffers } = useMyOffersData()
 
-  // Actions (cancel, delete, update, etc.)
   const actions = useMyOffersActions({ state, refreshOffers })
-
-  // Utilities (formatting, copying, etc.)
   const utils = useMyOffersUtils({ state })
 
-  // Pagination handlers
   const goToPage = useCallback(
     (page: number) => {
       state.setCurrentPage(Math.max(1, Math.min(page, state.totalPages || 1)))
@@ -54,7 +49,6 @@ export function useMyOffers() {
     deleteAllError: state.deleteAllError,
     filters: state.filters,
     setFilters: state.setFilters,
-
     // Pagination
     currentPage: state.currentPage,
     pageSize: state.pageSize,
@@ -62,10 +56,8 @@ export function useMyOffers() {
     totalPages: state.totalPages,
     goToPage,
     changePageSize,
-
     // Computed
     filteredOffers,
-
     // Methods
     refreshOffers,
     ...actions,

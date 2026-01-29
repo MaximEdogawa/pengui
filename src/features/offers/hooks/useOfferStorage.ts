@@ -2,9 +2,12 @@
 
 import type { StoredOffer } from '@/shared/lib/database/indexedDB'
 import { useMemo, useState } from 'react'
-import { useOfferCRUD } from './hooks/useOfferCRUD'
-import { useOfferQueries } from './hooks/useOfferQueries'
+import { useOfferCRUD } from './useOfferCRUD'
+import { useOfferQueries } from './useOfferQueries'
 
+/**
+ * Hook for managing offer storage and related operations
+ */
 export function useOfferStorage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)

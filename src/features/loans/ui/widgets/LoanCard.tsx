@@ -3,9 +3,9 @@
 import { getThemeClasses } from '@/shared/lib/theme'
 import type { LoanOffer, LoanAgreement } from '@/entities/loan'
 import { useTheme } from 'next-themes'
-import { LoanCardHeader } from './LoanCard/components/LoanCardHeader'
-import { LoanCardBody } from './LoanCard/components/LoanCardBody'
-import { LoanCardActions } from './LoanCard/components/LoanCardActions'
+import { LoanCardHeader } from '../components/LoanCard/LoanCardHeader'
+import { LoanCardBody } from '../components/LoanCard/LoanCardBody'
+import { LoanCardActions } from '../components/LoanCard/LoanCardActions'
 
 interface LoanCardProps {
   loan: LoanOffer | LoanAgreement

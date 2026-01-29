@@ -3,11 +3,12 @@
 import { getThemeClasses } from '@/shared/lib/theme'
 import type { CreateLoanForm } from '@/entities/loan'
 import { useTheme } from 'next-themes'
-import { useCreateLoanForm } from './CreateLoanForm/hooks/useCreateLoanForm'
-import { LoanAssetSection } from './CreateLoanForm/components/LoanAssetSection'
-import { LoanTermsSection } from './CreateLoanForm/components/LoanTermsSection'
-import { CollateralSection } from './CreateLoanForm/components/CollateralSection'
-import { OptionContractSection } from './CreateLoanForm/components/OptionContractSection'
+import { useCreateLoanForm } from '../../hooks/useCreateLoanForm'
+import { LoanAssetSection } from '../components/CreateLoanForm/LoanAssetSection'
+import { LoanTermsSection } from '../components/CreateLoanForm/LoanTermsSection'
+import { CollateralSection } from '../components/CreateLoanForm/CollateralSection'
+import { OptionContractSection } from '../components/CreateLoanForm/OptionContractSection'
+
 
 interface CreateLoanFormProps {
   onSubmit?: (formData: CreateLoanForm) => void

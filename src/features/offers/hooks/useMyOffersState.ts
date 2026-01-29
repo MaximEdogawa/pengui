@@ -1,11 +1,11 @@
-/**
- * State management for useMyOffers hook
- * Extracted to reduce complexity
- */
 
 import { useState } from 'react'
 import type { OfferDetails, OfferFilters } from '@/entities/offer'
 
+/**
+ * State management for useMyOffers hook
+ * Extracted to reduce complexity
+ */
 export interface UseMyOffersState {
   offers: OfferDetails[]
   isLoading: boolean

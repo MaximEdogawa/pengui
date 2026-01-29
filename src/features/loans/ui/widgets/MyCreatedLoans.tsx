@@ -4,9 +4,9 @@ import { getThemeClasses } from '@/shared/lib/theme'
 import type { LoanOffer, SettledLoan } from '@/entities/loan'
 import { useTheme } from 'next-themes'
 import { useState } from 'react'
-import { MyCreatedLoansStats } from './MyCreatedLoans/components/MyCreatedLoansStats'
-import { MyCreatedLoansFilters } from './MyCreatedLoans/components/MyCreatedLoansFilters'
-import { MyCreatedLoansContent } from './MyCreatedLoans/components/MyCreatedLoansContent'
+import { MyCreatedLoansStats } from '../components/MyCreatedLoans/MyCreatedLoansStats'
+import { MyCreatedLoansFilters } from '../components/MyCreatedLoans/MyCreatedLoansFilters'
+import { MyCreatedLoansContent } from '../components/MyCreatedLoans/MyCreatedLoansContent'
 
 interface MyCreatedLoansProps {
   loans?: LoanOffer[]

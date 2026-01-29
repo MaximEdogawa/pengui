@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import type { OfferDetails } from '@/entities/offer'
-import { useMyOffers } from '../../../model'
+import { useMyOffers } from '../../../hooks'
 
 interface UseOfferHistoryStateProps {
   offers?: OfferDetails[]

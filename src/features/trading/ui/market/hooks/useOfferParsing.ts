@@ -2,7 +2,7 @@
 
 import { useDexieDataService } from '@/features/offers/api/useDexieDataService'
 import { type DexieOffer, type OfferAsset } from '@/entities/offer'
-import { useOfferInspection } from '@/features/offers/model/useOfferInspection'
+import { useOfferInspection } from '@/features/offers/hooks/useOfferInspection'
 import { useCatTokens } from '@/entities/asset'
 import { useNetwork } from '@/shared/hooks/useNetwork'
 import { logger } from '@/shared/lib/logger'

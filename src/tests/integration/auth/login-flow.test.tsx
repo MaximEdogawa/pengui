@@ -5,7 +5,7 @@
 
 import { describe, it, expect, beforeEach } from "bun:test";
 import { render, screen } from "@/test-utils";
-import LoginForm from "@/features/auth/login/ui/LoginForm";
+import LoginForm from "@/features/auth/ui/LoginForm";
 
 // Note: Mocking external libraries in Bun tests requires different approach
 // For now, we test what we can without mocking WalletConnect

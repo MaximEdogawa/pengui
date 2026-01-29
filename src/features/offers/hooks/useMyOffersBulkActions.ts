@@ -1,10 +1,10 @@
 'use client'
 
 import { useCallback } from 'react'
-import { useOfferStorage } from '../useOfferStorage'
+import { useOfferStorage } from './useOfferStorage'
 import { useCancelOffer } from '@/features/wallet'
-import { cancelAllActiveOffers } from '../useMyOffersHandlers'
-import type { UseMyOffersState, UseMyOffersSetters } from '../useMyOffersState'
+import { cancelAllActiveOffers } from './useMyOffersHandlers'
+import type { UseMyOffersState, UseMyOffersSetters } from './useMyOffersState'
 
 interface UseMyOffersBulkActionsProps {
   state: UseMyOffersState & UseMyOffersSetters

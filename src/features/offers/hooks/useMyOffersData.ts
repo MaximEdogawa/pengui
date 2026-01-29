@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef } from 'react'
 import { trackEffectRun } from '@/shared/lib/utils/useEffectGuard'
-import { useOfferStorage } from '../useOfferStorage'
-import { useMyOffersState } from '../useMyOffersState'
+import { useOfferStorage } from './useOfferStorage'
+import { useMyOffersState } from './useMyOffersState'
 
 /**
  * Hook for managing offer data loading and synchronization
@@ -12,12 +12,10 @@ export function useMyOffersData() {
   const offerStorage = useOfferStorage()
   const state = useMyOffersState()
 
-  // Extract stable references
   const loadOffersFromStorage = offerStorage.loadOffers
   const storageOffers = offerStorage.offers
   const pagination = offerStorage.pagination
 
-  // Extract stable setters
   const {
     setIsLoading,
     setTotalOffers,
@@ -120,7 +118,6 @@ export function useMyOffersData() {
       }))
       setStateOffers(loadedOffers)
     }
-    // Only depend on offersKey - storageOffers array reference changes on every render
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [offersKey])
 
