@@ -1,10 +1,14 @@
 'use client'
 
-import { useThemeClasses } from '@/shared/hooks'
+import { useNetwork, useThemeClasses, usePreloadTokenIcons } from '@/shared/hooks'
+import { TokenIconAuto, XchIcon } from '@/shared/ui/icons/TokenIcon'
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
-interface Token {
+// Number of icons to preload when dropdown opens
+const PRELOAD_COUNT = 15
+
+export interface Token {
   assetId: string
   ticker: string
   symbol?: string
@@ -27,15 +31,29 @@ export default function TokenDropdown({
   searchValue,
 }: TokenDropdownProps) {
   const { isDark } = useThemeClasses()
+  const { network } = useNetwork()
+  const isTestnet = network === 'testnet'
   const [mounted, setMounted] = useState(false)
   const [selectedIndex, setSelectedIndex] = useState(0)
   const listRef = useRef<HTMLDivElement>(null)
   const itemRefs = useRef<(HTMLDivElement | null)[]>([])
+  const preloadIcons = usePreloadTokenIcons()
 
   useEffect(() => {
     setMounted(true)
     return () => setMounted(false)
   }, [])
+
+  // Preload first 15 icons when dropdown opens
+  useEffect(() => {
+    if (isOpen && tokens.length > 0) {
+      const assetIds = tokens
+        .slice(0, PRELOAD_COUNT)
+        .map(t => t.assetId)
+        .filter(id => id && id.length > 0)
+      preloadIcons(assetIds)
+    }
+  }, [isOpen, tokens, preloadIcons])
 
   // Reset selected index when tokens change
   useEffect(() => {
@@ -157,29 +175,44 @@ export default function TokenDropdown({
                       : 'text-gray-900 border-gray-200 hover:bg-gray-100 active:bg-gray-200'
                 } last:border-b-0`}
               >
-                <div className="flex items-center justify-between gap-2 min-w-0">
-                  <div
-                    className={`font-semibold truncate ${isDark ? 'text-white' : 'text-gray-900'}`}
-                  >
-                    {token.ticker}
-                  </div>
-                  {token.assetId && (
-                    <div
-                      className={`text-xs font-mono flex-shrink-0 ${
-                        isDark ? 'text-gray-400' : 'text-gray-500'
-                      }`}
-                    >
-                      {token.assetId.slice(0, 8)}...
-                    </div>
+                <div className="flex items-center gap-3">
+                  {/* Token Icon - fetched on-demand */}
+                  {!token.assetId || token.ticker === 'XCH' || token.ticker === 'TXCH' ? (
+                    <XchIcon size={28} isTestnet={isTestnet} />
+                  ) : (
+                    <TokenIconAuto
+                      assetId={token.assetId}
+                      ticker={token.ticker}
+                      size={28}
+                    />
                   )}
-                </div>
-                {token.name && token.name !== token.ticker && (
-                  <div
-                    className={`text-xs mt-0.5 truncate ${isDark ? 'text-gray-400' : 'text-gray-600'}`}
-                  >
-                    {token.name}
+                  {/* Token Details */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <div
+                        className={`font-semibold truncate ${isDark ? 'text-white' : 'text-gray-900'}`}
+                      >
+                        {token.ticker}
+                      </div>
+                      {token.assetId && (
+                        <div
+                          className={`text-xs font-mono flex-shrink-0 ${
+                            isDark ? 'text-gray-400' : 'text-gray-500'
+                          }`}
+                        >
+                          {token.assetId.slice(0, 8)}...
+                        </div>
+                      )}
+                    </div>
+                    {token.name && token.name !== token.ticker && (
+                      <div
+                        className={`text-xs mt-0.5 truncate ${isDark ? 'text-gray-400' : 'text-gray-600'}`}
+                      >
+                        {token.name}
+                      </div>
+                    )}
                   </div>
-                )}
+                </div>
               </div>
             )
           })}

@@ -1,6 +1,8 @@
 'use client'
 
 import type { OfferDetails } from '@/entities/offer'
+import { TickerIcon, XchIcon } from '@/entities/asset'
+import { useNetwork } from '@/shared/hooks'
 import { formatAssetAmount } from '@/shared/lib/utils/chia-units'
 import type { ThemeClasses } from '@/shared/lib/theme'
 
@@ -15,6 +17,19 @@ export function OfferAssetsSection({
   getTickerSymbol,
   t,
 }: OfferAssetsSectionProps) {
+  const { network } = useNetwork()
+  const isTestnet = network === 'testnet'
+
+  const renderAssetIcon = (assetId: string | undefined, symbol: string | undefined, type: string) => {
+    const ticker = assetId ? getTickerSymbol(assetId) : (symbol || type.toUpperCase())
+    const isXch = !assetId || ticker === 'XCH' || ticker === 'TXCH'
+    
+    if (isXch) {
+      return <XchIcon size={20} isTestnet={isTestnet} />
+    }
+    return <TickerIcon assetId={assetId} ticker={ticker} size={20} />
+  }
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
       {/* Assets Offered */}
@@ -23,30 +38,35 @@ export function OfferAssetsSection({
           Assets Offered ({(offer.assetsOffered || []).length})
         </h3>
         <div className="space-y-2 max-h-32 overflow-y-auto">
-          {(offer.assetsOffered || []).map((asset, index) => (
-            <div
-              key={`offered-${index}`}
-              className={`flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors duration-200`}
-            >
-              <div className="flex-1">
-                <div className="flex items-center space-x-2">
-                  <span className={`font-medium ${t.text} text-base`}>
-                    {formatAssetAmount(asset.amount, asset.type)}
-                  </span>
-                  <span className={`text-xs font-medium ${t.textSecondary}`}>
-                    {asset.assetId
-                      ? getTickerSymbol(asset.assetId)
-                      : asset.symbol || asset.type.toUpperCase()}
+          {(offer.assetsOffered || []).map((asset, index) => {
+            const ticker = asset.assetId
+              ? getTickerSymbol(asset.assetId)
+              : asset.symbol || asset.type.toUpperCase()
+            
+            return (
+              <div
+                key={`offered-${index}`}
+                className={`flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors duration-200`}
+              >
+                <div className="flex-1">
+                  <div className="flex items-center space-x-2">
+                    {renderAssetIcon(asset.assetId, asset.symbol, asset.type)}
+                    <span className={`font-medium ${t.text} text-base`}>
+                      {formatAssetAmount(asset.amount, asset.type)}
+                    </span>
+                    <span className={`text-xs font-medium ${t.textSecondary}`}>
+                      {ticker}
+                    </span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300">
+                    {asset.type.toUpperCase()}
                   </span>
                 </div>
               </div>
-              <div className="text-right">
-                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300">
-                  {asset.type.toUpperCase()}
-                </span>
-              </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </div>
 
@@ -56,30 +76,35 @@ export function OfferAssetsSection({
           Assets Requested ({(offer.assetsRequested || []).length})
         </h3>
         <div className="space-y-2 max-h-32 overflow-y-auto">
-          {(offer.assetsRequested || []).map((asset, index) => (
-            <div
-              key={`requested-${index}`}
-              className={`flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors duration-200`}
-            >
-              <div className="flex-1">
-                <div className="flex items-center space-x-2">
-                  <span className={`font-medium ${t.text} text-base`}>
-                    {formatAssetAmount(asset.amount, asset.type)}
-                  </span>
-                  <span className={`text-xs font-medium ${t.textSecondary}`}>
-                    {asset.assetId
-                      ? getTickerSymbol(asset.assetId)
-                      : asset.symbol || asset.type.toUpperCase()}
+          {(offer.assetsRequested || []).map((asset, index) => {
+            const ticker = asset.assetId
+              ? getTickerSymbol(asset.assetId)
+              : asset.symbol || asset.type.toUpperCase()
+            
+            return (
+              <div
+                key={`requested-${index}`}
+                className={`flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors duration-200`}
+              >
+                <div className="flex-1">
+                  <div className="flex items-center space-x-2">
+                    {renderAssetIcon(asset.assetId, asset.symbol, asset.type)}
+                    <span className={`font-medium ${t.text} text-base`}>
+                      {formatAssetAmount(asset.amount, asset.type)}
+                    </span>
+                    <span className={`text-xs font-medium ${t.textSecondary}`}>
+                      {ticker}
+                    </span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300">
+                    {asset.type.toUpperCase()}
                   </span>
                 </div>
               </div>
-              <div className="text-right">
-                <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300">
-                  {asset.type.toUpperCase()}
-                </span>
-              </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </div>
     </div>

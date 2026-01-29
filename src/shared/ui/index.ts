@@ -83,3 +83,4 @@ export { PenguinLogo } from './branding/penguin-logo'
 
 export { default as GithubIcon } from './icons/GithubIcon'
 export { default as XIcon } from './icons/XIcon'
+export { default as TokenIcon, XchIcon, type TokenIconProps } from './icons/TokenIcon'

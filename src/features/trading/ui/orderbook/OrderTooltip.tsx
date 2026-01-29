@@ -1,6 +1,6 @@
 'use client'
 
-import { useCatTokens } from '@/entities/asset'
+import { useCatTokens, TickerIcon, XchIcon } from '@/entities/asset'
 import { getNativeTokenTickerForNetwork } from '@/shared/lib/config/environment'
 import { useNetwork } from '@/shared/hooks/useNetwork'
 import { useMemo } from 'react'
@@ -24,12 +24,21 @@ export default function OrderTooltip({
 }: OrderTooltipProps) {
   const { getCatTokenInfo } = useCatTokens()
   const { network } = useNetwork()
+  const isTestnet = network === 'testnet'
 
   const getTickerSymbol = (assetId: string, code?: string): string => {
     if (code) return code
     if (!assetId) return getNativeTokenTickerForNetwork(network)
     const tickerInfo = getCatTokenInfo(assetId)
     return tickerInfo?.ticker || assetId.slice(0, 8)
+  }
+
+  const renderAssetIcon = (assetId: string, ticker: string) => {
+    const isXch = !assetId || ticker === 'XCH' || ticker === 'TXCH'
+    if (isXch) {
+      return <XchIcon size={14} isTestnet={isTestnet} />
+    }
+    return <TickerIcon assetId={assetId} ticker={ticker} size={14} />
   }
 
   const tooltipStyle = useMemo(() => {
@@ -106,16 +115,20 @@ export default function OrderTooltip({
         <div>
           <span className="text-xs text-gray-500 dark:text-gray-400">Offering:</span>
           <div className="mt-1 space-y-1">
-            {order.offering.map((asset, idx) => (
-              <div key={idx} className="flex items-center justify-between text-xs">
-                <span className="text-gray-900 dark:text-white">
-                  {asset.code || getTickerSymbol(asset.id)}
-                </span>
-                <span className="font-mono text-gray-700 dark:text-gray-300">
-                  {formatAmountForTooltip(asset.amount || 0)}
-                </span>
-              </div>
-            ))}
+            {order.offering.map((asset, idx) => {
+              const ticker = asset.code || getTickerSymbol(asset.id)
+              return (
+                <div key={idx} className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-1.5">
+                    {renderAssetIcon(asset.id, ticker)}
+                    <span className="text-gray-900 dark:text-white">{ticker}</span>
+                  </div>
+                  <span className="font-mono text-gray-700 dark:text-gray-300">
+                    {formatAmountForTooltip(asset.amount || 0)}
+                  </span>
+                </div>
+              )
+            })}
           </div>
         </div>
 
@@ -123,16 +136,20 @@ export default function OrderTooltip({
         <div>
           <span className="text-xs text-gray-500 dark:text-gray-400">Requested:</span>
           <div className="mt-1 space-y-1">
-            {order.requesting.map((asset, idx) => (
-              <div key={idx} className="flex items-center justify-between text-xs">
-                <span className="text-gray-900 dark:text-white">
-                  {asset.code || getTickerSymbol(asset.id)}
-                </span>
-                <span className="font-mono text-gray-700 dark:text-gray-300">
-                  {formatAmountForTooltip(asset.amount || 0)}
-                </span>
-              </div>
-            ))}
+            {order.requesting.map((asset, idx) => {
+              const ticker = asset.code || getTickerSymbol(asset.id)
+              return (
+                <div key={idx} className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-1.5">
+                    {renderAssetIcon(asset.id, ticker)}
+                    <span className="text-gray-900 dark:text-white">{ticker}</span>
+                  </div>
+                  <span className="font-mono text-gray-700 dark:text-gray-300">
+                    {formatAmountForTooltip(asset.amount || 0)}
+                  </span>
+                </div>
+              )
+            })}
           </div>
         </div>
 

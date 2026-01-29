@@ -58,8 +58,8 @@ export default function CreateOfferForm({
     <div className={containerClass}>
       <form onSubmit={formData.handleSubmit} className={containerClass}>
         <OfferPreview
-          previewOffered={formData.previewOffered}
-          previewRequested={formData.previewRequested}
+          offeredAssets={formData.extendedMakerAssets.filter(a => a.assetId || a.type === 'xch')}
+          requestedAssets={formData.extendedTakerAssets.filter(a => a.assetId || a.type === 'xch')}
           fee={formData.fee}
           t={t}
         />

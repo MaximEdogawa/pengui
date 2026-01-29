@@ -2,6 +2,7 @@ import { Plus } from 'lucide-react'
 import { AssetSelector, type ExtendedAsset as ExtendedOfferAsset, Button } from '@/shared/ui'
 import type { ThemeClasses } from '@/shared/lib/theme'
 import { useCatTokens } from '@/entities/asset'
+import { useMemo } from 'react'
 
 interface AssetSectionsProps {
   extendedMakerAssets: ExtendedOfferAsset[]
@@ -31,8 +32,8 @@ export function AssetSections({
 }: AssetSectionsProps) {
   const { availableCatTokens, availableAssets, isLoading: isLoadingTickers } = useCatTokens()
 
-  // Prepare token data for AssetSelector
-  const availableTokens =
+  // Prepare token data (icons are fetched on-demand by TokenIconAuto component)
+  const availableTokens = useMemo(() =>
     availableAssets.length > 0
       ? availableAssets.map((asset) => ({
           assetId: asset.assetId,
@@ -45,7 +46,9 @@ export function AssetSections({
           ticker: token.ticker,
           symbol: token.symbol,
           name: token.name,
-        }))
+        })),
+    [availableAssets, availableCatTokens]
+  )
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

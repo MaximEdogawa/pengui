@@ -2,6 +2,8 @@
 
 import { type OfferDetails } from '@/entities/offer'
 import { useOfferInspection } from '@/features/offers/model/useOfferInspection'
+import { useThemeClasses } from '@/shared/hooks'
+import { formatXchAmount, getMinimumFeeInXch, formatAssetAmountForInput, getAmountPlaceholder } from '@/shared/lib/utils/chia-units'
 import { logger } from '@/shared/lib/logger'
 import { useEffect } from 'react'
 import type { OrderBookFilters, OrderBookOrder } from '../../lib/orderBookTypes'
@@ -32,6 +34,7 @@ export default function MarketOfferTab({
   filters,
 }: MarketOfferTabProps) {
   const { isPosting } = useOfferInspection()
+  const { t } = useThemeClasses()
 
   // Use extracted hooks
   const formState = useMarketOfferForm()
@@ -87,17 +90,15 @@ export default function MarketOfferTab({
   return (
     <div className={containerClass}>
       <form onSubmit={handleSubmit} className={containerClass}>
+        {/* Offer String Input (only when no order) */}
         <MarketOfferFormInputs
           order={order}
           offerString={formState.offerString}
           setOfferString={formState.setOfferString}
-          fee={formState.fee}
-          feeInput={formState.feeInput}
-          handleFeeChange={formState.handleFeeChange}
-          handleFeeBlur={formState.handleFeeBlur}
           isSubmitting={formState.isSubmitting}
         />
 
+        {/* Offer Preview */}
         {offerPreview && (
           <OfferPreview
             offerPreview={offerPreview}
@@ -109,6 +110,34 @@ export default function MarketOfferTab({
           />
         )}
 
+        {/* Transaction Fee - After preview, before action buttons */}
+        <div>
+          <label className={`block text-xs font-medium ${t.text} mb-1.5`}>
+            Transaction Fee (XCH)
+          </label>
+          <input
+            type="text"
+            inputMode="decimal"
+            pattern="[0-9]*\.?[0-9]*"
+            value={
+              formState.feeInput !== undefined
+                ? formState.feeInput
+                : formState.fee && formState.fee > 0
+                  ? formatAssetAmountForInput(formState.fee, 'xch')
+                  : ''
+            }
+            onChange={(e) => formState.handleFeeChange(e.target.value)}
+            onBlur={formState.handleFeeBlur}
+            placeholder={getAmountPlaceholder('xch')}
+            className={`w-full px-2 py-1.5 border rounded-lg text-xs ${t.input} ${t.border} backdrop-blur-xl`}
+            disabled={formState.isSubmitting}
+          />
+          <p className={`mt-1 text-xs ${t.textSecondary}`}>
+            Fee can be 0 for free transactions (minimum: {formatXchAmount(getMinimumFeeInXch())} XCH)
+          </p>
+        </div>
+
+        {/* Action Buttons */}
         <MarketOfferActions
           mode={mode}
           onClose={onClose}
@@ -118,6 +147,7 @@ export default function MarketOfferTab({
           order={order}
         />
 
+        {/* Status Messages */}
         <MarketOfferStatusMessages
           isLoadingOfferString={isLoadingOfferString}
           parseError={parseError}

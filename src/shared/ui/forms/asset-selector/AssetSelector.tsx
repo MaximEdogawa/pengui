@@ -21,6 +21,10 @@ export interface TokenInfo {
   ticker: string
   symbol?: string
   name?: string
+  /** Optional icon URL for the token */
+  iconUrl?: string | null
+  /** Whether the icon is currently loading */
+  iconLoading?: boolean
 }
 
 export interface AssetSelectorProps {
@@ -186,6 +190,7 @@ export default function AssetSelector({
             onSelectToken={selectToken}
             isDropdownOpen={showDropdown}
             onCloseDropdown={handleDropdownClose}
+            allTokens={availableTokens}
           />
         ) : (
           <AssetIdInput

@@ -32,9 +32,16 @@ export function convertDexieOfferToAppOffer(dexieResponse: DexiePostOfferRespons
   const offer = dexieResponse.offer
   const calculatedState = calculateOfferState(offer)
 
+  // Helper to check if asset is XCH (handles various formats from Dexie)
+  const isXchAsset = (id: string | undefined | null): boolean => {
+    if (!id) return true
+    const lowerId = id.toLowerCase()
+    return lowerId === 'xch' || lowerId === 'txch'
+  }
+
   // Convert Dexie assets to app assets
   const assetsOffered: OfferAsset[] = (offer.offered || []).map((asset) => {
-    const isXch = !asset.id || asset.id === 'XCH'
+    const isXch = isXchAsset(asset.id)
     return {
       amount: asset.amount,
       assetId: isXch ? '' : asset.id,
@@ -44,7 +51,7 @@ export function convertDexieOfferToAppOffer(dexieResponse: DexiePostOfferRespons
   })
 
   const assetsRequested: OfferAsset[] = (offer.requested || []).map((asset) => {
-    const isXch = !asset.id || asset.id === 'XCH'
+    const isXch = isXchAsset(asset.id)
     return {
       amount: asset.amount,
       assetId: isXch ? '' : asset.id,

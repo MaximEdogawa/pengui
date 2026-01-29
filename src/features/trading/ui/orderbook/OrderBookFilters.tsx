@@ -1,11 +1,11 @@
 'use client'
 
-import { useThemeClasses } from '@/shared/hooks'
-import { useCatTokens } from '@/entities/asset'
+import { useThemeClasses, usePreloadTokenIcons } from '@/shared/hooks'
+import { useCatTokens, TickerIcon, XchIcon } from '@/entities/asset'
 import { getNativeTokenTickerForNetwork } from '@/shared/lib/config/environment'
 import { useNetwork } from '@/shared/hooks/useNetwork'
 import { X } from 'lucide-react'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { SuggestionItem } from '../../lib/orderBookTypes'
 import { useOrderBookFilters } from '../../model/OrderBookFiltersProvider'
 import AssetSwapToggle from './AssetSwapToggle'
@@ -32,9 +32,40 @@ export default function OrderBookFilters({ onFiltersChange }: OrderBookFiltersPr
 
   const { availableCatTokens } = useCatTokens()
   const { network } = useNetwork()
+  const isTestnet = network === 'testnet'
   const [showSuggestions, setShowSuggestions] = useState(false)
   const searchInputRef = useRef<HTMLInputElement>(null)
   const suggestionsRef = useRef<HTMLDivElement>(null)
+  const preloadIcons = usePreloadTokenIcons()
+
+  // Create a map of ticker -> assetId for quick lookups
+  const tickerToAssetId = useMemo(() => {
+    const map = new Map<string, string>()
+    availableCatTokens.forEach(token => {
+      map.set(token.ticker.toLowerCase(), token.assetId)
+    })
+    return map
+  }, [availableCatTokens])
+
+  // Helper to check if ticker is XCH/TXCH
+  const isXchTicker = (ticker: string) => {
+    const lower = ticker.toLowerCase()
+    return lower === 'xch' || lower === 'txch'
+  }
+
+  // Preload icons for filtered assets and suggestions
+  useEffect(() => {
+    const allAssets = [...(filters.buyAsset || []), ...(filters.sellAsset || [])]
+    const suggestionTickers = filteredSuggestions.slice(0, 15).map(s => s.value)
+    const allTickers = [...allAssets, ...suggestionTickers]
+    const assetIds = allTickers
+      .filter(ticker => !isXchTicker(ticker))
+      .map(ticker => tickerToAssetId.get(ticker.toLowerCase()))
+      .filter((id): id is string => !!id)
+    if (assetIds.length > 0) {
+      preloadIcons(assetIds)
+    }
+  }, [filters.buyAsset, filters.sellAsset, filteredSuggestions, tickerToAssetId, preloadIcons])
 
   // Generate suggestions based on search value
   useEffect(() => {
@@ -140,19 +171,32 @@ export default function OrderBookFilters({ onFiltersChange }: OrderBookFiltersPr
                   '0 20px 40px -12px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1)',
               }}
             >
-              {filteredSuggestions.map((suggestion, index) => (
-                <button
-                  key={`${suggestion.column}-${suggestion.value}-${index}`}
-                  type="button"
-                  onClick={() => handleSuggestionClick(suggestion)}
-                  className={`w-full text-left px-3 py-2 text-sm ${t.cardHover} ${t.text} transition-colors border-b ${t.border} last:border-b-0`}
-                >
-                  <div className="font-medium">{suggestion.label}</div>
-                  <div className={`text-xs ${t.textSecondary}`}>
-                    {suggestion.column === 'buyAsset' ? 'Buy Asset' : 'Sell Asset'}
-                  </div>
-                </button>
-              ))}
+              {filteredSuggestions.map((suggestion, index) => {
+                const assetId = tickerToAssetId.get(suggestion.value.toLowerCase())
+                const isXch = isXchTicker(suggestion.value)
+                return (
+                  <button
+                    key={`${suggestion.column}-${suggestion.value}-${index}`}
+                    type="button"
+                    onClick={() => handleSuggestionClick(suggestion)}
+                    className={`w-full text-left px-3 py-2 text-sm ${t.cardHover} ${t.text} transition-colors border-b ${t.border} last:border-b-0`}
+                  >
+                    <div className="flex items-center gap-2">
+                      {isXch ? (
+                        <XchIcon size={20} isTestnet={isTestnet} />
+                      ) : assetId ? (
+                        <TickerIcon assetId={assetId} ticker={suggestion.label} size={20} />
+                      ) : null}
+                      <div>
+                        <div className="font-medium">{suggestion.label}</div>
+                        <div className={`text-xs ${t.textSecondary}`}>
+                          {suggestion.column === 'buyAsset' ? 'Buy Asset' : 'Sell Asset'}
+                        </div>
+                      </div>
+                    </div>
+                  </button>
+                )
+              })}
             </div>
           )}
         </div>
@@ -168,38 +212,56 @@ export default function OrderBookFilters({ onFiltersChange }: OrderBookFiltersPr
         )}
       </div>
 
-      {/* Filter Chips */}
+      {/* Filter Chips with Icons */}
       <div className="flex flex-wrap items-center gap-2">
-        {filters.buyAsset?.map((asset) => (
-          <div
-            key={`buy-${asset}`}
-            className={`inline-flex items-center gap-1 px-2 py-1 rounded-md ${t.card} border ${t.border} text-xs`}
-          >
-            <span className={t.text}>Buy: {asset}</span>
-            <button
-              type="button"
-              onClick={() => handleRemoveFilter('buyAsset', asset)}
-              className={`${t.textSecondary} hover:${t.text} transition-colors`}
+        {filters.buyAsset?.map((asset) => {
+          const assetId = tickerToAssetId.get(asset.toLowerCase())
+          const isXch = isXchTicker(asset)
+          return (
+            <div
+              key={`buy-${asset}`}
+              className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md ${t.card} border ${t.border} text-xs`}
             >
-              <X size={14} />
-            </button>
-          </div>
-        ))}
-        {filters.sellAsset?.map((asset) => (
-          <div
-            key={`sell-${asset}`}
-            className={`inline-flex items-center gap-1 px-2 py-1 rounded-md ${t.card} border ${t.border} text-xs`}
-          >
-            <span className={t.text}>Sell: {asset}</span>
-            <button
-              type="button"
-              onClick={() => handleRemoveFilter('sellAsset', asset)}
-              className={`${t.textSecondary} hover:${t.text} transition-colors`}
+              {isXch ? (
+                <XchIcon size={16} isTestnet={isTestnet} />
+              ) : assetId ? (
+                <TickerIcon assetId={assetId} ticker={asset} size={16} />
+              ) : null}
+              <span className={t.text}>Buy: {asset}</span>
+              <button
+                type="button"
+                onClick={() => handleRemoveFilter('buyAsset', asset)}
+                className={`${t.textSecondary} hover:${t.text} transition-colors`}
+              >
+                <X size={14} />
+              </button>
+            </div>
+          )
+        })}
+        {filters.sellAsset?.map((asset) => {
+          const assetId = tickerToAssetId.get(asset.toLowerCase())
+          const isXch = isXchTicker(asset)
+          return (
+            <div
+              key={`sell-${asset}`}
+              className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md ${t.card} border ${t.border} text-xs`}
             >
-              <X size={14} />
-            </button>
-          </div>
-        ))}
+              {isXch ? (
+                <XchIcon size={16} isTestnet={isTestnet} />
+              ) : assetId ? (
+                <TickerIcon assetId={assetId} ticker={asset} size={16} />
+              ) : null}
+              <span className={t.text}>Sell: {asset}</span>
+              <button
+                type="button"
+                onClick={() => handleRemoveFilter('sellAsset', asset)}
+                className={`${t.textSecondary} hover:${t.text} transition-colors`}
+              >
+                <X size={14} />
+              </button>
+            </div>
+          )
+        })}
       </div>
     </div>
   )

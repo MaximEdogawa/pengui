@@ -2,6 +2,7 @@ import { AssetSelector, type ExtendedAsset as ExtendedOfferAsset, Button } from 
 import { Plus } from 'lucide-react'
 import { useThemeClasses } from '@/shared/hooks'
 import { useCatTokens } from '@/entities/asset'
+import { useMemo } from 'react'
 
 interface AssetSectionProps {
   title: string
@@ -25,8 +26,8 @@ export function AssetSection({
   const { t } = useThemeClasses()
   const { availableCatTokens, availableAssets, isLoading: isLoadingTickers } = useCatTokens()
 
-  // Prepare token data for AssetSelector
-  const availableTokens =
+  // Prepare token data (icons are fetched on-demand by TokenIconAuto component)
+  const availableTokens = useMemo(() => 
     availableAssets.length > 0
       ? availableAssets.map((asset) => ({
           assetId: asset.assetId,
@@ -39,7 +40,9 @@ export function AssetSection({
           ticker: token.ticker,
           symbol: token.symbol,
           name: token.name,
-        }))
+        })),
+    [availableAssets, availableCatTokens]
+  )
 
   return (
     <div className="space-y-3">

@@ -2,6 +2,8 @@
 
 import { Eye, X as XIcon } from 'lucide-react'
 import type { OfferDetails } from '@/entities/offer'
+import { TickerIcon, XchIcon } from '@/entities/asset'
+import { useNetwork } from '@/shared/hooks'
 import { formatAssetAmount } from '@/shared/lib/utils/chia-units'
 import type { ThemeClasses } from '@/shared/lib/theme'
 
@@ -28,6 +30,17 @@ export function OfferHistoryCards({
   onCancelOffer,
   t,
 }: OfferHistoryCardsProps) {
+  const { network } = useNetwork()
+  const isTestnet = network === 'testnet'
+
+  const renderAssetIcon = (assetId: string, ticker: string) => {
+    const isXch = !assetId || ticker === 'XCH' || ticker === 'TXCH'
+    if (isXch) {
+      return <XchIcon size={14} isTestnet={isTestnet} />
+    }
+    return <TickerIcon assetId={assetId} ticker={ticker} size={14} />
+  }
+
   return (
     <div className="md:hidden space-y-4 pb-8">
       {offers.map((offer) => (
@@ -61,17 +74,23 @@ export function OfferHistoryCards({
               Assets Offered ({(offer.assetsOffered || []).length})
             </div>
             <div className="space-y-1">
-              {(offer.assetsOffered || []).slice(0, 3).map((asset, idx) => (
-                <div
-                  key={`mobile-offered-${asset.assetId}-${idx}`}
-                  className="flex items-center justify-between text-xs py-1"
-                >
-                  <span className="font-medium">
-                    {formatAssetAmount(asset.amount, asset.type)}
-                  </span>
-                  <span className={t.textSecondary}>{getTickerSymbol(asset.assetId)}</span>
-                </div>
-              ))}
+              {(offer.assetsOffered || []).slice(0, 3).map((asset, idx) => {
+                const ticker = getTickerSymbol(asset.assetId)
+                return (
+                  <div
+                    key={`mobile-offered-${asset.assetId}-${idx}`}
+                    className="flex items-center justify-between text-xs py-1"
+                  >
+                    <span className="font-medium">
+                      {formatAssetAmount(asset.amount, asset.type)}
+                    </span>
+                    <span className={`${t.textSecondary} flex items-center gap-1`}>
+                      {renderAssetIcon(asset.assetId, ticker)}
+                      {ticker}
+                    </span>
+                  </div>
+                )
+              })}
               {(offer.assetsOffered || []).length > 3 && (
                 <div className={`text-xs ${t.textSecondary} font-medium`}>
                   +{(offer.assetsOffered || []).length - 3} more assets

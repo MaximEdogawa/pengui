@@ -2,7 +2,8 @@
 
 import { formatAssetAmount, formatXchAmount } from '@/shared/lib/utils/chia-units'
 import { getDexieStatusDescription, type OfferAsset } from '@/entities/offer'
-import { useThemeClasses } from '@/shared/hooks'
+import { TickerIcon, XchIcon } from '@/entities/asset'
+import { useThemeClasses, useNetwork } from '@/shared/hooks'
 import { formatPriceForDisplay } from '../../../lib/formatAmount'
 
 interface OfferPreviewProps {
@@ -30,34 +31,52 @@ export default function OfferPreview({
   fee,
 }: OfferPreviewProps) {
   const { t } = useThemeClasses()
+  const { network } = useNetwork()
+  const isTestnet = network === 'testnet'
+
+  const renderAssetWithIcon = (asset: OfferAsset) => {
+    const ticker = getTickerSymbol(asset.assetId, asset.symbol)
+    const isXch = !asset.assetId || ticker === 'XCH' || ticker === 'TXCH'
+    
+    return (
+      <span key={asset.assetId || ticker} className="inline-flex items-center gap-1">
+        {isXch ? (
+          <XchIcon size={14} isTestnet={isTestnet} />
+        ) : (
+          <TickerIcon assetId={asset.assetId} ticker={ticker} size={14} />
+        )}
+        <span>{formatAssetAmount(asset.amount, asset.type)} {ticker}</span>
+      </span>
+    )
+  }
 
   return (
     <div className={`p-3 rounded-lg ${t.cardHover} backdrop-blur-xl border ${t.border}`}>
       <h4 className={`text-xs font-medium ${t.text} mb-2`}>Offer Preview</h4>
       <div className="space-y-1.5 text-xs">
-        <div className="flex justify-between">
+        <div className="flex justify-between items-start">
           <span className={t.textSecondary}>You will receive:</span>
-          <span className={t.text}>
+          <span className={`${t.text} flex flex-wrap gap-1 justify-end`}>
             {offerPreview.assetsOffered && offerPreview.assetsOffered.length > 0
-              ? offerPreview.assetsOffered
-                  .map(
-                    (a) =>
-                      `${formatAssetAmount(a.amount, a.type)} ${getTickerSymbol(a.assetId, a.symbol)}`
-                  )
-                  .join(', ')
+              ? offerPreview.assetsOffered.map((a, idx) => (
+                  <span key={a.assetId || idx} className="inline-flex items-center gap-1">
+                    {renderAssetWithIcon(a)}
+                    {idx < offerPreview.assetsOffered!.length - 1 && ','}
+                  </span>
+                ))
               : 'Assets from offer'}
           </span>
         </div>
-        <div className="flex justify-between">
+        <div className="flex justify-between items-start">
           <span className={t.textSecondary}>You will pay:</span>
-          <span className={t.text}>
+          <span className={`${t.text} flex flex-wrap gap-1 justify-end`}>
             {offerPreview.assetsRequested && offerPreview.assetsRequested.length > 0
-              ? offerPreview.assetsRequested
-                  .map(
-                    (a) =>
-                      `${formatAssetAmount(a.amount, a.type)} ${getTickerSymbol(a.assetId, a.symbol)}`
-                  )
-                  .join(', ')
+              ? offerPreview.assetsRequested.map((a, idx) => (
+                  <span key={a.assetId || idx} className="inline-flex items-center gap-1">
+                    {renderAssetWithIcon(a)}
+                    {idx < offerPreview.assetsRequested!.length - 1 && ','}
+                  </span>
+                ))
               : 'Assets to offer creator'}
           </span>
         </div>

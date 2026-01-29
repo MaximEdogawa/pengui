@@ -71,6 +71,19 @@ export class PenguiDB extends Dexie {
           logger.info(`✅ Migrated ${migratedCount} offers to include takenBy field`)
         }
       })
+
+    // Version 4: Previously added tickerImages table (now removed - using TanStack Query instead)
+    // Keep version 4 for users who already upgraded, then remove table in version 5
+    this.version(4).stores({
+      offers: '++id, id, tradeId, status, createdAt, lastModified, walletAddress, syncedAt, network, takenBy',
+      tickerImages: 'assetId, network, expiresAt',
+    })
+
+    // Version 5: Remove tickerImages table (migrated to TanStack Query caching)
+    this.version(5).stores({
+      offers: '++id, id, tradeId, status, createdAt, lastModified, walletAddress, syncedAt, network, takenBy',
+      tickerImages: null, // Delete the table
+    })
   }
 }
 
