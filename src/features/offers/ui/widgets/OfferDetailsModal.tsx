@@ -1,23 +1,23 @@
-'use client'
+"use client";
 
-import type { OfferDetails } from '@/entities/offer'
-import { useThemeClasses } from '@/shared/hooks'
-import { useCatTokens } from '@/entities/asset'
-import { Modal } from '@/shared/ui'
-import { useMyOffers } from '../hooks'
-import { useOfferDetailsActions } from './OfferDetailsModal/hooks/useOfferDetailsActions'
-import { OfferDetailsHeader } from './OfferDetailsModal/components/OfferDetailsHeader'
-import { OfferDetailsContent } from './OfferDetailsModal/components/OfferDetailsContent'
-import { OfferActions } from './OfferDetailsModal/components/OfferActions'
-import { CancelOfferConfirmation } from './OfferDetailsModal/components/CancelOfferConfirmation'
-import { DeleteOfferConfirmation } from './OfferDetailsModal/components/DeleteOfferConfirmation'
+import type { OfferDetails } from "@/entities/offer";
+import { useThemeClasses } from "@/shared/hooks";
+import { useCatTokens } from "@/entities/asset";
+import { Modal } from "@/shared/ui";
+import { useMyOffers } from "@/features/offers/hooks";
+import { OfferDetailsHeader } from "../components/OfferDetailsModal/OfferDetailsHeader";
+import { OfferDetailsContent } from "../components/OfferDetailsModal/OfferDetailsContent";
+import { OfferActions } from "../components/OfferDetailsModal/OfferActions";
+import { CancelOfferConfirmation } from "../components/OfferDetailsModal/CancelOfferConfirmation";
+import { DeleteOfferConfirmation } from "../components/OfferDetailsModal/DeleteOfferConfirmation";
+import { useOfferDetailsActions } from "../../hooks/useOfferDetailsActions";
 
 interface OfferDetailsModalProps {
-  offer: OfferDetails
-  onClose: () => void
-  onOfferCancelled: (offer: OfferDetails) => void
-  onOfferDeleted: (offer: OfferDetails) => void
-  onOfferUpdated: (offer: OfferDetails) => void
+  offer: OfferDetails;
+  onClose: () => void;
+  onOfferCancelled: (offer: OfferDetails) => void;
+  onOfferDeleted: (offer: OfferDetails) => void;
+  onOfferUpdated: (offer: OfferDetails) => void;
 }
 
 export default function OfferDetailsModal({
@@ -27,9 +27,9 @@ export default function OfferDetailsModal({
   onOfferDeleted,
   onOfferUpdated,
 }: OfferDetailsModalProps) {
-  const { t } = useThemeClasses()
-  const { getCatTokenInfo } = useCatTokens()
-  const { getStatusClass, formatDate } = useMyOffers()
+  const { t } = useThemeClasses();
+  const { getCatTokenInfo } = useCatTokens();
+  const { getStatusClass, formatDate } = useMyOffers();
 
   const actions = useOfferDetailsActions({
     offer,
@@ -37,16 +37,16 @@ export default function OfferDetailsModal({
     onOfferDeleted,
     onOfferUpdated,
     onClose,
-  })
+  });
 
   const getTickerSymbol = (assetId: string): string => {
-      const tokenInfo = getCatTokenInfo(assetId)
-      return tokenInfo.ticker
-  }
+    const tokenInfo = getCatTokenInfo(assetId);
+    return tokenInfo.ticker;
+  };
 
   const dexieUrl = offer.dexieOfferId
     ? `https://testnet.dexie.space/offers/${offer.dexieOfferId}`
-    : null
+    : null;
 
   return (
     <>
@@ -109,5 +109,5 @@ export default function OfferDetailsModal({
         />
       )}
     </>
-  )
+  );
 }

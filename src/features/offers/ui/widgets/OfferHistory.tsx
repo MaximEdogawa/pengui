@@ -1,40 +1,40 @@
-'use client'
+"use client";
 
-import EmptyState from '@/features/wallet/ui/shared/EmptyState'
-import { useDexieOfferPolling } from '../hooks'
-import { useThemeClasses } from '@/shared/hooks'
-import { Handshake } from 'lucide-react'
-import type { OfferDetails } from '@/entities/offer'
-import { useOfferHistoryState } from './OfferHistory/hooks/useOfferHistoryState'
-import { OfferHistoryHeader } from './OfferHistory/components/OfferHistoryHeader'
-import { OfferHistoryTable } from './OfferHistory/components/OfferHistoryTable'
-import { OfferHistoryCards } from './OfferHistory/components/OfferHistoryCards'
-import { OfferHistoryPagination } from './OfferHistory/components/OfferHistoryPagination'
-import { CancelAllConfirmation } from './OfferHistory/components/CancelAllConfirmation'
-import { DeleteAllConfirmation } from './OfferHistory/components/DeleteAllConfirmation'
+import EmptyState from "@/features/wallet/ui/shared/EmptyState";
+import { useThemeClasses } from "@/shared/hooks";
+import { Handshake } from "lucide-react";
+import type { OfferDetails } from "@/entities/offer";
+import { useOfferHistoryState } from "../../hooks/useOfferHistoryState";
+import { useDexieOfferPolling } from "../../hooks/useDexieOfferPolling";
+import { OfferHistoryHeader } from "../components/OfferHistory/OfferHistoryHeader";
+import { OfferHistoryTable } from "../components/OfferHistory/OfferHistoryTable";
+import { OfferHistoryCards } from "../components/OfferHistory/OfferHistoryCards";
+import { OfferHistoryPagination } from "../components/OfferHistory/OfferHistoryPagination";
+import { CancelAllConfirmation } from "../components/OfferHistory/CancelAllConfirmation";
+import { DeleteAllConfirmation } from "../components/OfferHistory/DeleteAllConfirmation";
 
 interface OfferHistoryProps {
-  onCreateOffer: () => void
-  onViewOffer: (offer: OfferDetails) => void
-  onCancelOffer?: (offer: OfferDetails) => void
+  onCreateOffer: () => void;
+  onViewOffer: (offer: OfferDetails) => void;
+  onCancelOffer?: (offer: OfferDetails) => void;
   // Optional props to share state from parent
-  offers?: OfferDetails[]
-  isLoading?: boolean
-  filters?: { status?: string }
-  setFilters?: (filters: { status?: string }) => void
-  getStatusClass?: (status: string) => string
-  formatDate?: (date: Date) => string
-  copyOfferString?: (offerString: string) => Promise<void>
-  getTickerSymbol?: (assetId: string) => string
-  isCopied?: string | null
-  refreshOffers?: () => Promise<void>
+  offers?: OfferDetails[];
+  isLoading?: boolean;
+  filters?: { status?: string };
+  setFilters?: (filters: { status?: string }) => void;
+  getStatusClass?: (status: string) => string;
+  formatDate?: (date: Date) => string;
+  copyOfferString?: (offerString: string) => Promise<void>;
+  getTickerSymbol?: (assetId: string) => string;
+  isCopied?: string | null;
+  refreshOffers?: () => Promise<void>;
   // Pagination props
-  currentPage?: number
-  pageSize?: number
-  totalOffers?: number
-  totalPages?: number
-  goToPage?: (page: number) => void
-  changePageSize?: (pageSize: number) => void
+  currentPage?: number;
+  pageSize?: number;
+  totalOffers?: number;
+  totalPages?: number;
+  goToPage?: (page: number) => void;
+  changePageSize?: (pageSize: number) => void;
 }
 
 export default function OfferHistory({
@@ -58,7 +58,7 @@ export default function OfferHistory({
   goToPage: parentGoToPage,
   changePageSize: parentChangePageSize,
 }: OfferHistoryProps) {
-  const { isDark, t } = useThemeClasses()
+  const { isDark, t } = useThemeClasses();
 
   const state = useOfferHistoryState({
     offers: parentOffers,
@@ -77,19 +77,19 @@ export default function OfferHistory({
     totalPages: parentTotalPages,
     goToPage: parentGoToPage,
     changePageSize: parentChangePageSize,
-  })
+  });
 
-  useDexieOfferPolling(state.filteredOffers)
+  useDexieOfferPolling(state.filteredOffers);
 
   const handleViewOffer = (offer: OfferDetails) => {
-    onViewOffer(offer)
-  }
+    onViewOffer(offer);
+  };
 
   const handleFilterChange = (status: string | undefined) => {
-    state.setFilters({ ...state.filters, status })
-  }
+    state.setFilters({ ...state.filters, status });
+  };
 
-  const cancelOffer = onCancelOffer || (() => {})
+  const cancelOffer = onCancelOffer || (() => {});
 
   return (
     <div className={`${t.card} p-4 sm:p-6 pb-8`}>
@@ -171,5 +171,5 @@ export default function OfferHistory({
         t={t}
       />
     </div>
-  )
+  );
 }
