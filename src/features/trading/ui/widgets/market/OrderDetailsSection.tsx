@@ -6,7 +6,7 @@ import { useNetwork } from "@/shared/hooks/useNetwork";
 import { useCallback } from "react";
 import { OrderBookOrder } from "@/features/trading/lib/orderBookTypes";
 import { CopyableField } from "../order-details-section/CopyableField";
-import { AssetList } from "../order-details-section/AssetList";
+import { AssetList } from '@/shared/ui'
 
 interface OrderDetailsSectionProps {
   order: OrderBookOrder;

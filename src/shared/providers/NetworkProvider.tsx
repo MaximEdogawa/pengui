@@ -1,161 +1,172 @@
-'use client'
+"use client";
 
-import { useQueryClient } from '@tanstack/react-query'
+import { useQueryClient } from "@tanstack/react-query";
 import {
   useWalletConnectionState,
   useAppSelector,
-} from '@maximedogawa/chia-wallet-connect-react'
-import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react'
-import { chainIdToNetwork, networkToChainId } from '@/shared/lib/utils/networkUtils'
-import { getStoredNetwork, setStoredNetwork, hasNetworkPreference } from '@/shared/lib/utils/networkStorage'
-import { getAssetBalance } from '@/shared/lib/walletConnect/repositories/walletQueries.repository'
-import { logger } from '@/shared/lib/logger'
-import { trackEffectRun } from '@/shared/lib/utils/useEffectGuard'
+} from "@maximedogawa/chia-wallet-connect-react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  useCallback,
+} from "react";
+import {
+  chainIdToNetwork,
+  networkToChainId,
+} from "@/shared/lib/utils/networkUtils";
+import {
+  getStoredNetwork,
+  setStoredNetwork,
+  hasNetworkPreference,
+} from "@/shared/lib/utils/networkStorage";
+import { getAssetBalance } from "@/shared/lib/walletConnect/repositories/walletQueries.repository";
+import { logger } from "@/shared/lib/logger";
+import { trackEffectRun } from "@/shared/lib/utils/useEffectGuard";
 
-type Network = 'mainnet' | 'testnet'
+type Network = "mainnet" | "testnet";
 
 interface NetworkContextType {
-  network: Network
-  setNetwork: (network: Network) => Promise<boolean>
-  isMainnet: boolean
-  isTestnet: boolean
+  network: Network;
+  setNetwork: (network: Network) => Promise<boolean>;
+  isMainnet: boolean;
+  isTestnet: boolean;
 }
 
-const NetworkContext = createContext<NetworkContextType | undefined>(undefined)
+const NetworkContext = createContext<NetworkContextType | undefined>(undefined);
 
 export function NetworkProvider({ children }: { children: React.ReactNode }) {
-  const queryClient = useQueryClient()
-  const { isConnected, walletConnectSession } = useWalletConnectionState()
-  const selectedSession = useAppSelector((state) => state.walletConnect?.selectedSession)
-  // CRITICAL: Always default to 'mainnet' - ensure network preference is set to mainnet if not already set
+  const queryClient = useQueryClient();
+  const { isConnected, walletConnectSession } = useWalletConnectionState();
+  const selectedSession = useAppSelector(
+    (state) => state.walletConnect?.selectedSession,
+  );
   const [network, setNetworkState] = useState<Network>(() => {
-    const stored = getStoredNetwork()
-    // If no preference exists, explicitly set it to mainnet
+    const stored = getStoredNetwork();
     if (!hasNetworkPreference()) {
-      setStoredNetwork('mainnet')
+      setStoredNetwork("mainnet");
     }
-    return stored
-  })
-  const [isSwitching, setIsSwitching] = useState(false)
-  const hasAutoSyncedRef = useRef(false)
-  const lastWalletChainIdRef = useRef<string | null>(null)
-  const testRequestTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  
+    return stored;
+  });
+  const [isSwitching, setIsSwitching] = useState(false);
+  const hasAutoSyncedRef = useRef(false);
+  const lastWalletChainIdRef = useRef<string | null>(null);
+  const testRequestTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   // Ensure network is initialized to mainnet on mount if no preference exists
   useEffect(() => {
     if (!hasNetworkPreference()) {
-      setStoredNetwork('mainnet')
-      setNetworkState('mainnet')
+      setStoredNetwork("mainnet");
+      setNetworkState("mainnet");
     }
-  }, [])
+  }, []);
 
   // Helper function to perform core network switch operations
   // This ensures both manual network switches and auto-sync perform the same cache invalidation
   const applyNetworkChange = useCallback(
     (newNetwork: Network) => {
       // Update React state
-      setNetworkState(newNetwork)
+      setNetworkState(newNetwork);
       // Update localStorage
-      setStoredNetwork(newNetwork)
+      setStoredNetwork(newNetwork);
       // Clear TanStack Query cache
-      queryClient.clear()
+      queryClient.clear();
       // Invalidate WalletConnect SignClient instance to force reinitialization
-      queryClient.invalidateQueries({ queryKey: ['walletConnect', 'instance'] })
+      queryClient.invalidateQueries({
+        queryKey: ["walletConnect", "instance"],
+      });
       // Invalidate all wallet queries to force refetch with new network
-      queryClient.invalidateQueries({ queryKey: ['walletConnect'] })
+      queryClient.invalidateQueries({ queryKey: ["walletConnect"] });
       // Invalidate order book data (limit and market orders)
-      queryClient.invalidateQueries({ queryKey: ['orderBook'] })
-      queryClient.invalidateQueries({ queryKey: ['orderBookDetails'] })
+      queryClient.invalidateQueries({ queryKey: ["orderBook"] });
+      queryClient.invalidateQueries({ queryKey: ["orderBookDetails"] });
       // Invalidate Dexie API data (pairs, tickers, offers)
-      queryClient.invalidateQueries({ queryKey: ['dexie'] })
+      queryClient.invalidateQueries({ queryKey: ["dexie"] });
     },
-    [queryClient]
-  )
+    [queryClient],
+  );
 
-  // Auto-sync network to wallet on first connection
-  // ⚠️ CRITICAL: Do NOT include 'network' in dependency array!
-  // Including 'network' here causes infinite loops because setNetworkState() updates 'network',
-  // which triggers this effect again. Use getStoredNetwork() to read current value instead.
-  // See: docs/development/infinite-loop-guardrails.md
   useEffect(() => {
-    trackEffectRun('NetworkProvider: auto-sync')
-    if (typeof window === 'undefined') return
+    trackEffectRun("NetworkProvider: auto-sync");
+    if (typeof window === "undefined") return;
 
     // Check if we've already auto-synced or if there's a user preference
     if (!isConnected || hasNetworkPreference() || hasAutoSyncedRef.current) {
-      return
+      return;
     }
 
     // Get chain ID from wallet session
-    const sessionData = walletConnectSession
+    const sessionData = walletConnectSession;
     if (!sessionData?.namespaces?.chia?.chains?.[0]) {
-      return
+      return;
     }
 
-    const walletChainId = sessionData.namespaces.chia.chains[0]
-    
+    const walletChainId = sessionData.namespaces.chia.chains[0];
+
     // Only auto-sync if chain ID changed (first connection or reconnection)
     if (lastWalletChainIdRef.current === walletChainId) {
-      return
+      return;
     }
 
-    lastWalletChainIdRef.current = walletChainId
+    lastWalletChainIdRef.current = walletChainId;
 
     // Extract network from chain ID
-    const walletNetwork = chainIdToNetwork(walletChainId)
+    const walletNetwork = chainIdToNetwork(walletChainId);
 
     // Get current network from state (don't use dependency to avoid re-renders)
-    const currentNetwork = getStoredNetwork()
+    const currentNetwork = getStoredNetwork();
 
     // Auto-sync if no user preference exists and networks differ
     if (!hasNetworkPreference() && walletNetwork !== currentNetwork) {
-      applyNetworkChange(walletNetwork)
-      hasAutoSyncedRef.current = true
+      applyNetworkChange(walletNetwork);
+      hasAutoSyncedRef.current = true;
     }
-  }, [isConnected, walletConnectSession, applyNetworkChange])
+  }, [isConnected, walletConnectSession, applyNetworkChange]);
 
   // Reset auto-sync flag when wallet disconnects
   useEffect(() => {
     if (!isConnected) {
-      hasAutoSyncedRef.current = false
-      lastWalletChainIdRef.current = null
+      hasAutoSyncedRef.current = false;
+      lastWalletChainIdRef.current = null;
       // Clear test request timeout if wallet disconnects
       if (testRequestTimeoutRef.current) {
-        clearTimeout(testRequestTimeoutRef.current)
-        testRequestTimeoutRef.current = null
+        clearTimeout(testRequestTimeoutRef.current);
+        testRequestTimeoutRef.current = null;
       }
     }
-  }, [isConnected])
+  }, [isConnected]);
 
   // Cleanup timeout on unmount
   useEffect(() => {
     return () => {
       if (testRequestTimeoutRef.current) {
-        clearTimeout(testRequestTimeoutRef.current)
+        clearTimeout(testRequestTimeoutRef.current);
       }
-    }
-  }, [])
+    };
+  }, []);
 
   const setNetwork = useCallback(
     async (newNetwork: Network): Promise<boolean> => {
       if (newNetwork === network || isSwitching) {
-        return true
+        return true;
       }
 
-      setIsSwitching(true)
+      setIsSwitching(true);
 
       try {
         // Mark as user-selected (not auto-synced)
-        hasAutoSyncedRef.current = true
+        hasAutoSyncedRef.current = true;
 
         // Use the shared helper to ensure cache invalidation and SignClient refresh
-        applyNetworkChange(newNetwork)
+        applyNetworkChange(newNetwork);
 
         // After network switch, test wallet connection with a balance request
         if (isConnected && walletConnectSession) {
           // Clear any existing timeout
           if (testRequestTimeoutRef.current) {
-            clearTimeout(testRequestTimeoutRef.current)
+            clearTimeout(testRequestTimeoutRef.current);
           }
 
           // Wait a bit for the network switch to complete, then test the connection
@@ -164,93 +175,116 @@ export function NetworkProvider({ children }: { children: React.ReactNode }) {
               // Try to get SignClient from cache (may need to wait for it to initialize)
               // Try both old and new network keys in case the new one isn't ready yet
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              let instanceData = queryClient.getQueryData<{ signClient: any }>(['walletConnect', 'instance', newNetwork])
+              let instanceData = queryClient.getQueryData<{ signClient: any }>([
+                "walletConnect",
+                "instance",
+                newNetwork,
+              ]);
               if (!instanceData) {
                 // Fallback to old network's SignClient (it should still work)
                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                instanceData = queryClient.getQueryData<{ signClient: any }>(['walletConnect', 'instance', network])
+                instanceData = queryClient.getQueryData<{ signClient: any }>([
+                  "walletConnect",
+                  "instance",
+                  network,
+                ]);
               }
-              const signClient = instanceData?.signClient
+              const signClient = instanceData?.signClient;
 
-              if (!signClient || !walletConnectSession && !selectedSession) {
-                return
+              if (!signClient || (!walletConnectSession && !selectedSession)) {
+                return;
               }
 
-              const sessionData = walletConnectSession || selectedSession
+              const sessionData = walletConnectSession || selectedSession;
               if (!sessionData) {
-                return
+                return;
               }
 
               // Extract chainId from session
-              const chains = sessionData.namespaces?.chia?.chains
-              const accounts = sessionData.namespaces?.chia?.accounts
-              let walletChainId: string
+              const chains = sessionData.namespaces?.chia?.chains;
+              const accounts = sessionData.namespaces?.chia?.accounts;
+              let walletChainId: string;
 
               if (chains && chains.length > 0) {
-                walletChainId = chains[0]
+                walletChainId = chains[0];
               } else if (accounts && accounts.length > 0) {
-                const accountParts = accounts[0].split(':')
-                if (accountParts.length >= 4 && accountParts[1] === 'chia') {
-                  walletChainId = `chia:${accountParts[2]}`
+                const accountParts = accounts[0].split(":");
+                if (accountParts.length >= 4 && accountParts[1] === "chia") {
+                  walletChainId = `chia:${accountParts[2]}`;
                 } else if (accountParts.length >= 3) {
-                  if (accountParts[1] === 'chia') {
-                    walletChainId = `chia:${accountParts[2]}`
+                  if (accountParts[1] === "chia") {
+                    walletChainId = `chia:${accountParts[2]}`;
                   } else {
-                    walletChainId = `chia:${accountParts[1]}`
+                    walletChainId = `chia:${accountParts[1]}`;
                   }
                 } else {
-                  walletChainId = networkToChainId(newNetwork)
+                  walletChainId = networkToChainId(newNetwork);
                 }
               } else {
-                walletChainId = networkToChainId(newNetwork)
+                walletChainId = networkToChainId(newNetwork);
               }
 
               // Create a minimal session object for the request
               const testSession = {
                 session: sessionData,
                 chainId: walletChainId,
-                fingerprint: accounts && accounts.length > 0
-                  ? parseInt(accounts[0].split(':')[accounts[0].split(':').length - 1] || '0')
-                  : 0,
+                fingerprint:
+                  accounts && accounts.length > 0
+                    ? parseInt(
+                        accounts[0].split(":")[
+                          accounts[0].split(":").length - 1
+                        ] || "0",
+                      )
+                    : 0,
                 topic: sessionData.topic,
                 isConnected: true,
-              }
+              };
 
               // Test wallet connection with a balance request
-              await getAssetBalance(signClient, testSession, null, null)
+              await getAssetBalance(signClient, testSession, null, null);
             } catch {
               // Silently handle test errors
             }
-          }, 500) // Wait 500ms for network switch to complete
+          }, 500); // Wait 500ms for network switch to complete
         }
       } catch (error) {
-        logger.error('❌ Failed to switch network:', error)
+        logger.error("❌ Failed to switch network:", error);
         // Revert state on error
-        setNetworkState(network)
-        return false
+        setNetworkState(network);
+        return false;
       } finally {
-        setIsSwitching(false)
+        setIsSwitching(false);
       }
-      
-      return true
+
+      return true;
     },
-    [network, isSwitching, queryClient, isConnected, walletConnectSession, selectedSession, applyNetworkChange]
-  )
+    [
+      network,
+      isSwitching,
+      queryClient,
+      isConnected,
+      walletConnectSession,
+      selectedSession,
+      applyNetworkChange,
+    ],
+  );
 
   const value: NetworkContextType = {
     network,
     setNetwork,
-    isMainnet: network === 'mainnet',
-    isTestnet: network === 'testnet',
-  }
+    isMainnet: network === "mainnet",
+    isTestnet: network === "testnet",
+  };
 
-  return <NetworkContext.Provider value={value}>{children}</NetworkContext.Provider>
+  return (
+    <NetworkContext.Provider value={value}>{children}</NetworkContext.Provider>
+  );
 }
 
 export function useNetwork(): NetworkContextType {
-  const context = useContext(NetworkContext)
+  const context = useContext(NetworkContext);
   if (context === undefined) {
-    throw new Error('useNetwork must be used within a NetworkProvider')
+    throw new Error("useNetwork must be used within a NetworkProvider");
   }
-  return context
+  return context;
 }

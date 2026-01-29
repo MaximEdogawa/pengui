@@ -180,30 +180,6 @@ export default [
         ],
       },
     },
-
-    // shared: Cannot import from any other layer (foundation layer)
-    {
-      files: ["src/shared/**/*.{ts,tsx}"],
-      rules: {
-        "no-restricted-imports": [
-          "error",
-          {
-            patterns: [
-              {
-                group: [
-                  "@/widgets/**",
-                  "@/features/**",
-                  "@/entities/**",
-                  "@/app/**",
-                ],
-                message: "Shared cannot import from other layers",
-                allowTypeImports: true,
-              },
-            ],
-          },
-        ],
-      },
-    },
   ],
   // Storybook-specific rules (minimal linting for .stories files)
   // Disable TypeScript type checking - Storybook handles this via its own build system

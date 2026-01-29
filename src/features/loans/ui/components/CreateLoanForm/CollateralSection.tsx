@@ -5,6 +5,8 @@ import type { CreateLoanForm } from '@/entities/loan'
 import type { ThemeClasses } from '@/shared/lib/theme'
 import { CollateralTypeSelector } from './CollateralTypeSelector'
 import { CollateralRatioInput } from './CollateralRatioInput'
+import AssetSelector, { type ExtendedAsset } from '@/shared/ui/forms/asset-selector/AssetSelector'
+import { useCatTokens } from '@/entities/asset'
 
 interface CollateralSectionProps {
   formData: CreateLoanForm
@@ -12,8 +14,6 @@ interface CollateralSectionProps {
   isDark: boolean
   t: ThemeClasses
 }
-
-const collateralAssets = [{ label: 'XCH', value: 'XCH' }]
 
 const nftCollections = [
   { label: 'ChiaPunks', value: 'ChiaPunks' },
@@ -29,6 +29,10 @@ const optionTypes = [
 ]
 
 export function CollateralSection({ formData, onUpdate, isDark, t }: CollateralSectionProps) {
+  const { availableCatTokens, availableAssets, isLoading: isLoadingTickers } = useCatTokens()
+  const availableTokens = availableAssets.length > 0
+    ? availableAssets.map((asset) => ({ assetId: asset.assetId, ticker: asset.ticker, symbol: asset.symbol, name: asset.name }))
+    : availableCatTokens.map((token) => ({ assetId: token.assetId, ticker: token.ticker, symbol: token.symbol, name: token.name }))
   return (
     <div
       className={`rounded-xl p-3 border ${
@@ -52,23 +56,14 @@ export function CollateralSection({ formData, onUpdate, isDark, t }: CollateralS
             <label className={`${t.textSecondary} text-[10px] font-medium mb-1 block`}>
               Asset
             </label>
-            <select
-              value={formData.collateralType}
-              onChange={(e) => onUpdate({ collateralType: e.target.value })}
-              className={`w-full px-2 py-1.5 rounded-lg text-xs ${
-                isDark
-                  ? 'bg-white/5 border border-white/10 text-white'
-                  : 'bg-white/40 border border-white/60 text-slate-800'
-              } backdrop-blur-xl focus:outline-none focus:ring-2 ${
-                isDark ? 'focus:ring-cyan-400/30' : 'focus:ring-cyan-600/30'
-              }`}
-            >
-              {collateralAssets.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
+            <AssetSelector
+              asset={{ assetId: formData.collateralType || '', type: 'cat', amount: formData.collateralRatio || 0, symbol: '' } as ExtendedAsset}
+              onUpdate={(asset) => onUpdate({ collateralType: asset.assetId })}
+              placeholder="Search tokens (XCH, CAT tokens, asset IDs)..."
+              availableTokens={availableTokens}
+              isLoadingTickers={isLoadingTickers}
+              showRemoveButton={false}
+            />
           </div>
         )}
 

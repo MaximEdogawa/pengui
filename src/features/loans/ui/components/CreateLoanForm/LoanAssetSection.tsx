@@ -1,70 +1,76 @@
-'use client'
+"use client";
 
-import React from 'react'
-import { DollarSign } from 'lucide-react'
-import type { CreateLoanForm } from '@/entities/loan'
-import type { ThemeClasses } from '@/shared/lib/theme'
+import React from "react";
+import { DollarSign } from "lucide-react";
+import type { CreateLoanForm } from "@/entities/loan";
+import type { ThemeClasses } from "@/shared/lib/theme";
+import AssetSelector, {
+  type ExtendedAsset,
+} from "@/shared/ui/forms/asset-selector/AssetSelector";
+import { useCatTokens } from "@/entities/asset";
 
 interface LoanAssetSectionProps {
-  formData: CreateLoanForm
-  onUpdate: (updates: Partial<CreateLoanForm>) => void
-  isDark: boolean
-  t: ThemeClasses
+  formData: CreateLoanForm;
+  onUpdate: (updates: Partial<CreateLoanForm>) => void;
+  isDark: boolean;
+  t: ThemeClasses;
 }
 
-const currencyOptions = [
-  { label: 'b.USDC', value: 'b.USDC' },
-  { label: 'b.USDT', value: 'b.USDT' },
-  { label: 'XCH', value: 'XCH' },
-]
-
 const nftCollections = [
-  { label: 'ChiaPunks', value: 'ChiaPunks' },
-  { label: 'ChiaArt', value: 'ChiaArt' },
-  { label: 'ChiaCollectibles', value: 'ChiaCollectibles' },
-]
+  { label: "ChiaPunks", value: "ChiaPunks" },
+  { label: "ChiaArt", value: "ChiaArt" },
+  { label: "ChiaCollectibles", value: "ChiaCollectibles" },
+];
 
-const optionUnderlyings = [{ label: 'XCH', value: 'XCH' }]
+const optionUnderlyings = [{ label: "XCH", value: "XCH" }];
 
 const optionTypes = [
-  { label: 'Call', value: 'Call' },
-  { label: 'Put', value: 'Put' },
-]
+  { label: "Call", value: "Call" },
+  { label: "Put", value: "Put" },
+];
 
 const getInputClasses = (isDark: boolean) =>
   `w-full px-2 py-1.5 rounded-lg text-xs backdrop-blur-xl focus:outline-none focus:ring-2 ${
     isDark
-      ? 'bg-white/5 border border-white/10 text-white placeholder:text-slate-500 focus:ring-cyan-400/30'
-      : 'bg-white/40 border border-white/60 text-slate-800 placeholder:text-slate-500 focus:ring-cyan-600/30'
-  }`
+      ? "bg-white/5 border border-white/10 text-white placeholder:text-slate-500 focus:ring-cyan-400/30"
+      : "bg-white/40 border border-white/60 text-slate-800 placeholder:text-slate-500 focus:ring-cyan-600/30"
+  }`;
 
 const getSelectClasses = (isDark: boolean) =>
   `w-full px-2 py-1.5 rounded-lg text-xs backdrop-blur-xl focus:outline-none focus:ring-2 ${
     isDark
-      ? 'bg-white/5 border border-white/10 text-white focus:ring-cyan-400/30'
-      : 'bg-white/40 border border-white/60 text-slate-800 focus:ring-cyan-600/30'
-  }`
+      ? "bg-white/5 border border-white/10 text-white focus:ring-cyan-400/30"
+      : "bg-white/40 border border-white/60 text-slate-800 focus:ring-cyan-600/30"
+  }`;
 
-const Label = ({ children, className }: { children: React.ReactNode; className?: string }) => (
-  <label className={`${className} text-[10px] font-medium mb-1 block`}>{children}</label>
-)
+const Label = ({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) => (
+  <label className={`${className} text-[10px] font-medium mb-1 block`}>
+    {children}
+  </label>
+);
 
 const InputField = ({
   label,
   value,
   onChange,
   placeholder,
-  type = 'text',
+  type = "text",
   isDark,
   t,
 }: {
-  label: string
-  value: string | number
-  onChange: (value: string) => void
-  placeholder?: string
-  type?: string
-  isDark: boolean
-  t: ThemeClasses
+  label: string;
+  value: string | number;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  type?: string;
+  isDark: boolean;
+  t: ThemeClasses;
 }) => (
   <div>
     <Label className={t.textSecondary}>{label}</Label>
@@ -76,7 +82,7 @@ const InputField = ({
       className={getInputClasses(isDark)}
     />
   </div>
-)
+);
 
 const SelectField = ({
   label,
@@ -86,16 +92,20 @@ const SelectField = ({
   isDark,
   t,
 }: {
-  label: string
-  value: string
-  onChange: (value: string) => void
-  options: Array<{ label: string; value: string }>
-  isDark: boolean
-  t: ThemeClasses
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: Array<{ label: string; value: string }>;
+  isDark: boolean;
+  t: ThemeClasses;
 }) => (
   <div>
     <Label className={t.textSecondary}>{label}</Label>
-    <select value={value} onChange={(e) => onChange(e.target.value)} className={getSelectClasses(isDark)}>
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className={getSelectClasses(isDark)}
+    >
       {options.map((opt) => (
         <option key={opt.value} value={opt.value}>
           {opt.label}
@@ -103,18 +113,44 @@ const SelectField = ({
       ))}
     </select>
   </div>
-)
+);
 
-export function LoanAssetSection({ formData, onUpdate, isDark, t }: LoanAssetSectionProps) {
+export function LoanAssetSection({
+  formData,
+  onUpdate,
+  isDark,
+  t,
+}: LoanAssetSectionProps) {
+  const {
+    availableCatTokens,
+    availableAssets,
+    isLoading: isLoadingTickers,
+  } = useCatTokens();
+
+  const availableTokens =
+    availableAssets.length > 0
+      ? availableAssets.map((asset) => ({
+          assetId: asset.assetId,
+          ticker: asset.ticker,
+          symbol: asset.symbol,
+          name: asset.name,
+        }))
+      : availableCatTokens.map((token) => ({
+          assetId: token.assetId,
+          ticker: token.ticker,
+          symbol: token.symbol,
+          name: token.name,
+        }));
+
   return (
     <div
       className={`rounded-xl p-3 border ${
-        isDark ? 'bg-white/5 border-white/10' : 'bg-white/20 border-white/30'
+        isDark ? "bg-white/5 border-white/10" : "bg-white/20 border-white/30"
       }`}
     >
       <div className="flex items-center gap-2 mb-3">
         <DollarSign
-          className={isDark ? 'text-cyan-400' : 'text-cyan-700'}
+          className={isDark ? "text-cyan-400" : "text-cyan-700"}
           size={14}
           strokeWidth={2}
         />
@@ -123,11 +159,13 @@ export function LoanAssetSection({ formData, onUpdate, isDark, t }: LoanAssetSec
 
       {/* Asset Type Selector */}
       <div className="mb-3">
-        <label className={`${t.textSecondary} text-[10px] font-medium mb-1.5 block`}>
+        <label
+          className={`${t.textSecondary} text-[10px] font-medium mb-1.5 block`}
+        >
           Asset Type
         </label>
         <div className="grid grid-cols-3 gap-1.5">
-          {(['CAT', 'NFT', 'Options'] as const).map((type) => (
+          {(["CAT", "NFT", "Options"] as const).map((type) => (
             <button
               key={type}
               type="button"
@@ -135,11 +173,11 @@ export function LoanAssetSection({ formData, onUpdate, isDark, t }: LoanAssetSec
               className={`px-2 py-1.5 rounded-lg text-[11px] font-medium transition-all ${
                 formData.assetType === type
                   ? isDark
-                    ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/30'
-                    : 'bg-cyan-600 text-white border border-cyan-600'
+                    ? "bg-cyan-500/20 text-cyan-300 border border-cyan-400/30"
+                    : "bg-cyan-600 text-white border border-cyan-600"
                   : isDark
-                    ? 'bg-white/5 border border-white/10 text-white hover:bg-white/10'
-                    : 'bg-white/40 border border-white/60 text-slate-800 hover:bg-white/50'
+                    ? "bg-white/5 border border-white/10 text-white hover:bg-white/10"
+                    : "bg-white/40 border border-white/60 text-slate-800 hover:bg-white/50"
               }`}
             >
               {type}
@@ -149,7 +187,7 @@ export function LoanAssetSection({ formData, onUpdate, isDark, t }: LoanAssetSec
       </div>
 
       {/* CAT Fields */}
-      {formData.assetType === 'CAT' && (
+      {formData.assetType === "CAT" && (
         <div className="grid grid-cols-2 gap-2">
           <InputField
             label="Amount"
@@ -160,19 +198,31 @@ export function LoanAssetSection({ formData, onUpdate, isDark, t }: LoanAssetSec
             isDark={isDark}
             t={t}
           />
-          <SelectField
-            label="Currency"
-            value={formData.currency}
-            onChange={(value) => onUpdate({ currency: value })}
-            options={currencyOptions}
-            isDark={isDark}
-            t={t}
-          />
+          <div>
+            <Label className={t.textSecondary}>Currency</Label>
+            <AssetSelector
+              asset={
+                {
+                  assetId: formData.currency || "",
+                  type: "cat",
+                  amount: formData.amount || 0,
+                  symbol: "",
+                } as ExtendedAsset
+              }
+              onUpdate={(asset) =>
+                onUpdate({ currency: asset.assetId || asset.searchQuery || "" })
+              }
+              placeholder="Search tokens (XCH, CAT tokens, asset IDs)..."
+              availableTokens={availableTokens}
+              isLoadingTickers={isLoadingTickers}
+              showRemoveButton={false}
+            />
+          </div>
         </div>
       )}
 
       {/* NFT Fields */}
-      {formData.assetType === 'NFT' && (
+      {formData.assetType === "NFT" && (
         <div className="space-y-2">
           <div>
             <Label className={t.textSecondary}>Collection</Label>
@@ -212,7 +262,7 @@ export function LoanAssetSection({ formData, onUpdate, isDark, t }: LoanAssetSec
       )}
 
       {/* Options Fields */}
-      {formData.assetType === 'Options' && (
+      {formData.assetType === "Options" && (
         <div className="space-y-2">
           <div className="grid grid-cols-2 gap-2">
             <SelectField
@@ -227,7 +277,11 @@ export function LoanAssetSection({ formData, onUpdate, isDark, t }: LoanAssetSec
               <Label className={t.textSecondary}>Type</Label>
               <select
                 value={formData.optionContractType}
-                onChange={(e) => onUpdate({ optionContractType: e.target.value as 'Call' | 'Put' })}
+                onChange={(e) =>
+                  onUpdate({
+                    optionContractType: e.target.value as "Call" | "Put",
+                  })
+                }
                 className={getSelectClasses(isDark)}
               >
                 {optionTypes.map((opt) => (
@@ -270,5 +324,5 @@ export function LoanAssetSection({ formData, onUpdate, isDark, t }: LoanAssetSec
         </div>
       )}
     </div>
-  )
+  );
 }
