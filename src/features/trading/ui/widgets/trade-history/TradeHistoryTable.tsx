@@ -44,7 +44,7 @@ export default function TradeHistoryTable({
     t.text === "text-slate-700"
       ? "hover:text-slate-800"
       : "hover:text-slate-200";
-  const headerCellClass = `px-3 py-2 text-xs font-medium ${t.textSecondary} cursor-pointer ${hoverClass} transition-colors flex items-center gap-1`;
+  const headerCellClass = `px-1.5 sm:px-3 py-1.5 sm:py-2 text-[10px] sm:text-xs font-medium ${t.textSecondary} cursor-pointer ${hoverClass} transition-colors flex items-center gap-0.5 sm:gap-1`;
 
   if (offers.length === 0) {
     return (
@@ -69,8 +69,41 @@ export default function TradeHistoryTable({
 
   return (
     <div className="w-full">
+      {/* Mobile: compact sort bar */}
       <div
-        className={`sticky top-0 z-10 backdrop-blur-xl ${t.card} border-b ${t.border} grid grid-cols-8 gap-2`}
+        className={`sm:hidden sticky top-0 z-10 backdrop-blur-xl ${t.card} border-b ${t.border} flex items-center gap-0.5 px-2 py-1`}
+        style={{
+          boxShadow:
+            "0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)",
+        }}
+      >
+        {(
+          [
+            ["requested", "Req"],
+            ["offered", "Off"],
+            ["price", "Price"],
+            ["date", "Date"],
+            ["status", "Status"],
+          ] as const
+        ).map(([col, label]) => (
+          <button
+            key={col}
+            onClick={() => onSort(col)}
+            className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-medium transition-colors ${
+              sortConfig.column === col
+                ? `bg-white/10 dark:bg-white/10 ${t.text}`
+                : t.textSecondary
+            }`}
+          >
+            {label}
+            {getSortIcon(col)}
+          </button>
+        ))}
+      </div>
+
+      {/* Desktop: full table header */}
+      <div
+        className={`hidden sm:grid sticky top-0 z-10 backdrop-blur-xl ${t.card} border-b ${t.border} grid-cols-8 gap-2`}
         style={{
           boxShadow:
             "0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)",

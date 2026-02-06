@@ -29,10 +29,10 @@ export default function CreateOfferModal({
 
   return (
     <Modal onClose={onClose} maxWidth="max-w-5xl">
-      <div className="p-4">
+      <div className="p-3 sm:p-4">
         {/* Header */}
-        <div className="flex items-center justify-between mb-4">
-          <h2 className={`text-lg font-semibold ${t.text}`}>Create Offer</h2>
+        <div className="flex items-center justify-between mb-3 sm:mb-4">
+          <h2 className={`text-base sm:text-lg font-semibold ${t.text}`}>Create Offer</h2>
           <button
             onClick={onClose}
             className={`${t.textSecondary} hover:${t.text} transition-colors`}

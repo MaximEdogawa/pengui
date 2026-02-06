@@ -262,6 +262,13 @@
     }
   }
 
+  /* Prevent overscroll/bounce on mobile - critical for chart interaction */
+  html,
+  body {
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
   /* iOS PWA optimizations for wallet connect button */
   button,
   [role='button'],
@@ -278,6 +285,11 @@
     [role='button']:active {
       opacity: 0.9;
     }
+  }
+
+  /* Prevent scrollable containers from propagating scroll to parent on mobile */
+  .scrollbar-modern {
+    overscroll-behavior: contain;
   }
 
   /* Mobile landscape: make sidebar navigation scrollable while keeping logo fixed */

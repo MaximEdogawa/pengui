@@ -38,9 +38,9 @@ export default function AmountInput({
 
   // Dynamic font sizing: scale down if amount is very long
   const amountLength = displayValue.length
-  let amountFontSize = 12
-  if (amountLength > 15) {
-    amountFontSize = Math.max(10, 12 - (amountLength - 15) * 0.15)
+  let amountFontSize = 11
+  if (amountLength > 12) {
+    amountFontSize = Math.max(9, 11 - (amountLength - 12) * 0.15)
   }
 
   return (
@@ -61,7 +61,7 @@ export default function AmountInput({
       style={{
         fontSize: `${amountFontSize}px`,
       }}
-      className={`w-full h-10 md:h-8 px-3 md:px-2 font-medium rounded-lg border ${t.border} ${t.bg} transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-base md:text-sm text-right ${
+      className={`w-full h-8 sm:h-10 md:h-8 px-1.5 sm:px-3 md:px-2 font-medium rounded-lg border ${t.border} ${t.bg} transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-sm md:text-sm text-right ${
         isDark
           ? 'text-white placeholder:text-gray-400'
           : 'text-slate-900 placeholder:text-slate-500'

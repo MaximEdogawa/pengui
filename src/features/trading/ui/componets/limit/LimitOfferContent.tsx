@@ -159,7 +159,7 @@ export default function MakerOfferContent({
           />
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
           <AssetSection
             title="Offered"
             description="Assets you are offering."

@@ -633,8 +633,8 @@ function OHLCDataPanel({
   if (!data) return null;
 
   return (
-    <div className="absolute top-2 left-2 z-10 px-2 py-1.5 bg-[#1e222d]/70 backdrop-blur-sm rounded-md border border-[#2a2e39]/50 shadow-md max-w-[calc(50%-1rem)]">
-      <div className="flex flex-col gap-1 text-[10px]">
+    <div className="absolute top-2 left-2 z-10 px-1.5 sm:px-2 py-1 sm:py-1.5 bg-[#1e222d]/70 backdrop-blur-sm rounded-md border border-[#2a2e39]/50 shadow-md max-w-[calc(50%-1rem)]">
+      <div className="flex flex-col gap-0.5 sm:gap-1 text-[9px] sm:text-[10px]">
         {/* Line 1: O, H */}
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 min-w-0">
@@ -1011,8 +1011,8 @@ export function LightweightChart({
       {/* OHLC Data Panel */}
       <OHLCDataPanel data={displayData} change={change} />
 
-      <div className="flex-1 relative min-h-[400px]">
-        <div ref={chartContainerRef} className="w-full h-full min-h-[400px]" />
+      <div className="flex-1 relative min-h-[300px] sm:min-h-[400px]">
+        <div ref={chartContainerRef} className="w-full h-full min-h-[300px] sm:min-h-[400px] touch-manipulation" style={{ touchAction: 'none' }} />
       </div>
     </div>
   );

@@ -17,11 +17,11 @@ export default function AssetTypeSelector({
   const { t } = useThemeClasses();
 
   return (
-    <div className="flex-shrink-0 w-21">
+    <div className="flex-shrink-0 w-16 sm:w-21">
       <select
         value={value}
         onChange={(e) => onChange(e.target.value as AssetType)}
-        className={`w-full px-1 py-2 text-xs rounded-lg border ${t.border} ${t.bg} ${t.text} transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/50`}
+        className={`w-full px-0.5 sm:px-1 py-1.5 sm:py-2 text-[11px] sm:text-xs rounded-lg border ${t.border} ${t.bg} ${t.text} transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/50`}
       >
         {enabledAssetTypes.includes("cat") && (
           <option value="cat">Token</option>

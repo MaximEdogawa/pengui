@@ -171,7 +171,7 @@ export default function OrderBookFilters({
               filteredSuggestions.length > 0 && setShowSuggestions(true)
             }
             placeholder={`Search assets (e.g., ${getNativeTokenTickerForNetwork(network)}, TBYC)...`}
-            className={`w-full px-2 py-1.5 text-xs rounded-lg border-2 ${t.border} ${t.bg} ${t.text} focus:outline-none focus:ring-2 focus:ring-blue-500/50 backdrop-blur-sm`}
+            className={`w-full px-1.5 sm:px-2 py-1 sm:py-1.5 text-[11px] sm:text-xs rounded-lg border-2 ${t.border} ${t.bg} ${t.text} focus:outline-none focus:ring-2 focus:ring-blue-500/50 backdrop-blur-sm`}
           />
 
           {/* Suggestions Dropdown */}
@@ -237,19 +237,19 @@ export default function OrderBookFilters({
       </div>
 
       {/* Filter Chips with Icons */}
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
         {filters.buyAsset?.map((asset) => {
           const assetId = tickerToAssetId.get(asset.toLowerCase());
           const isXch = isXchTicker(asset);
           return (
             <div
               key={`buy-${asset}`}
-              className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md ${t.card} border ${t.border} text-xs`}
+              className={`inline-flex items-center gap-1 sm:gap-1.5 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md ${t.card} border ${t.border} text-[10px] sm:text-xs`}
             >
               {isXch ? (
-                <XchIcon size={16} isTestnet={isTestnet} />
+                <XchIcon size={14} isTestnet={isTestnet} />
               ) : assetId ? (
-                <TickerIcon assetId={assetId} ticker={asset} size={16} />
+                <TickerIcon assetId={assetId} ticker={asset} size={14} />
               ) : null}
               <span className={t.text}>Buy: {asset}</span>
               <button
@@ -257,7 +257,7 @@ export default function OrderBookFilters({
                 onClick={() => handleRemoveFilter("buyAsset", asset)}
                 className={`${t.textSecondary} hover:${t.text} transition-colors`}
               >
-                <X size={14} />
+                <X size={12} className="sm:w-3.5 sm:h-3.5" />
               </button>
             </div>
           );
@@ -268,12 +268,12 @@ export default function OrderBookFilters({
           return (
             <div
               key={`sell-${asset}`}
-              className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md ${t.card} border ${t.border} text-xs`}
+              className={`inline-flex items-center gap-1 sm:gap-1.5 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md ${t.card} border ${t.border} text-[10px] sm:text-xs`}
             >
               {isXch ? (
-                <XchIcon size={16} isTestnet={isTestnet} />
+                <XchIcon size={14} isTestnet={isTestnet} />
               ) : assetId ? (
-                <TickerIcon assetId={assetId} ticker={asset} size={16} />
+                <TickerIcon assetId={assetId} ticker={asset} size={14} />
               ) : null}
               <span className={t.text}>Sell: {asset}</span>
               <button
@@ -281,7 +281,7 @@ export default function OrderBookFilters({
                 onClick={() => handleRemoveFilter("sellAsset", asset)}
                 className={`${t.textSecondary} hover:${t.text} transition-colors`}
               >
-                <X size={14} />
+                <X size={12} className="sm:w-3.5 sm:h-3.5" />
               </button>
             </div>
           );
