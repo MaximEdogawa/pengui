@@ -9,6 +9,7 @@ import { logger } from "@/shared/lib/logger";
 import { useQueryClient } from "@tanstack/react-query";
 import type { ExtendedAsset as ExtendedOfferAsset } from "@/shared/ui";
 import { useOrderBook } from "@/features/trading/hooks/useOrderBook";
+import { broadcastOfferToSplash } from "@/features/splash-terminal";
 
 interface UseFormSubmissionProps {
   extendedMakerAssets: ExtendedOfferAsset[];
@@ -121,6 +122,9 @@ export function useFormSubmission({
           // Log but don't fail - offer is still created locally
           logger.error("Failed to upload to Dexie:", uploadError);
         }
+
+        // Broadcast to Splash p2p network (fire-and-forget)
+        void broadcastOfferToSplash(newOffer.offerString);
 
         // Refresh order book
         refreshOrderBook();

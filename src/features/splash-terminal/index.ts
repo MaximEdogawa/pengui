@@ -3,9 +3,14 @@ export { parseTerminalCommand, HELP_TEXT } from "./commandParser";
 export { formatOfferLine } from "./formatOfferLine";
 export {
   useSplashWasm,
+  broadcastOfferToSplash,
   type UseSplashWasmResult,
   type SplashConnectionStatus,
 } from "./useSplashWasm";
+export {
+  SplashConnectionProvider,
+  useSplashConnection,
+} from "./SplashConnectionProvider";
 export {
   useTerminalOffersSync,
   buildTerminalQueryKey,

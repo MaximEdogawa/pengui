@@ -507,6 +507,11 @@ pub fn get_offers(_skip: usize, _limit: usize) -> Result<JsValue, JsValue> {
     Ok(js_sys::Array::new().into())
 }
 
+#[wasm_bindgen(js_name = broadcastOffer)]
+pub fn broadcast_offer_wrapper(offer: &str) -> Result<(), JsValue> {
+    WrapperState::broadcast(offer.to_string())
+}
+
 #[wasm_bindgen(js_name = getStats)]
 pub fn get_stats() -> Result<JsValue, JsValue> {
     let obj = js_sys::Object::new();
@@ -534,6 +539,7 @@ struct WrapperState {
     status: String,
     on_offers: Option<js_sys::Function>,
     on_status: Option<js_sys::Function>,
+    offer_sender: Option<futures::channel::mpsc::UnboundedSender<String>>,
 }
 
 thread_local! {
@@ -549,6 +555,7 @@ impl WrapperState {
                 status: "disconnected".to_string(),
                 on_offers: None,
                 on_status: None,
+                offer_sender: None,
             });
         });
         Ok(())
@@ -708,6 +715,19 @@ impl WrapperState {
                 log(&format!("[Splash] start error: {:?}", e));
                 return;
             }
+
+            // After start() the offer channel is live; store the sender in
+            // WrapperState so the JS-facing broadcastOffer() can use it.
+            if let Some(ref tx) = *node.offer_sender.borrow() {
+                let tx_clone = tx.clone();
+                WRAPPER.with(|cell| {
+                    if let Some(ref mut s) = *cell.borrow_mut() {
+                        s.offer_sender = Some(tx_clone);
+                    }
+                });
+                log("[Splash] Offer sender stored in WrapperState for broadcasting");
+            }
+
             if let Err(e) = node.connect_to_peer(multiaddr_str) {
                 WrapperState::set_status("error");
                 log(&format!("[Splash] connect_to_peer error: {:?}", e));
@@ -745,7 +765,31 @@ impl WrapperState {
     }
 
     fn disconnect() -> Result<(), JsValue> {
+        WRAPPER.with(|cell| {
+            if let Some(ref mut s) = *cell.borrow_mut() {
+                s.offer_sender = None;
+            }
+        });
         WrapperState::set_status("disconnected");
         Ok(())
+    }
+
+    fn broadcast(offer: String) -> Result<(), JsValue> {
+        WRAPPER.with(|cell| {
+            let state = cell.borrow();
+            let s = state
+                .as_ref()
+                .ok_or_else(|| JsValue::from_str("Not initialized. Call init() first."))?;
+            match &s.offer_sender {
+                Some(tx) => {
+                    tx.unbounded_send(offer)
+                        .map_err(|e| JsValue::from_str(&format!("Broadcast failed: {}", e)))?;
+                    Ok(())
+                }
+                None => Err(JsValue::from_str(
+                    "Not connected. Call connect() and wait for 'connected' status.",
+                )),
+            }
+        })
     }
 }

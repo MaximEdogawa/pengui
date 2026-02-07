@@ -43,6 +43,7 @@ interface SplashWasmModule {
   init: (relayUrl: string, network: string) => void;
   connect: () => void;
   disconnect: () => void;
+  broadcastOffer: (offer: string) => void;
   setOnOffersCallback: (cb: (offers: unknown) => void) => void;
   setOnStatusCallback: (cb: (obj: { status?: string }) => void) => void;
   setFilterAsset: (pair: string) => void;
@@ -60,13 +61,37 @@ export interface UseSplashWasmResult {
   error: string | null;
   initAndConnect: (relayUrl: string, network: "mainnet" | "testnet") => Promise<void>;
   disconnect: () => void;
+  broadcastOffer: (offer: string) => void;
   setFilterAsset: (pair: string) => void;
   setFilterPrice: (min: number, max: number) => void;
   setFilterAmount: (min: number) => void;
   clearFilters: () => void;
   getOffers: (skip: number, limit: number) => DexieOffer[];
   getStats: () => { received: number; filtered: number; bufferLen: number };
-  onOffers: (callback: (offers: DexieOffer[]) => void) => void;
+  onOffers: (callback: (offers: DexieOffer[]) => void) => () => void;
+}
+
+/**
+ * Broadcast an offer string to the Splash p2p network.
+ * Works from anywhere in the app — the WASM module is a global singleton,
+ * so once the streaming hook has initialised and connected it is ready.
+ */
+export async function broadcastOfferToSplash(offer: string): Promise<void> {
+  try {
+    const wasmPath = "/wasm/splash_wasm.js";
+    const wasmModule = await import(/* webpackIgnore: true */ wasmPath);
+    const mod = wasmModule as unknown as SplashWasmModule;
+    mod.broadcastOffer(offer);
+    if (process.env.NODE_ENV === "development") {
+      // eslint-disable-next-line no-console
+      console.log("[Splash] offer broadcast via global helper", `${offer.slice(0, 40)}…`);
+    }
+  } catch (e) {
+    if (process.env.NODE_ENV === "development") {
+      // eslint-disable-next-line no-console
+      console.warn("[Splash] broadcastOfferToSplash error:", e);
+    }
+  }
 }
 
 export function useSplashWasm(): UseSplashWasmResult {
@@ -74,13 +99,15 @@ export function useSplashWasm(): UseSplashWasmResult {
   const [isReady, setIsReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const moduleRef = useRef<SplashWasmModule | null>(null);
-  const offersCallbackRef = useRef<((offers: DexieOffer[]) => void) | null>(null);
+  const offersCallbacksRef = useRef<Set<(offers: DexieOffer[]) => void>>(new Set());
   const bufferRef = useRef<DexieOffer[]>([]);
   const receivedCountRef = useRef(0);
   const networkRef = useRef<"mainnet" | "testnet">("mainnet");
 
   const onOffers = useCallback((callback: (offers: DexieOffer[]) => void) => {
-    offersCallbackRef.current = callback;
+    offersCallbacksRef.current.add(callback);
+    // Return cleanup function to remove this specific listener
+    return () => { offersCallbacksRef.current.delete(callback); };
   }, []);
 
   const initAndConnect = useCallback(
@@ -164,7 +191,7 @@ export function useSplashWasm(): UseSplashWasmResult {
                 const buf = bufferRef.current;
                 if (buf.length >= MAX_BUFFER_LEN) buf.shift();
                 buf.push(enriched);
-                offersCallbackRef.current?.([enriched]);
+                offersCallbacksRef.current.forEach((cb) => cb([enriched]));
                 if (process.env.NODE_ENV === "development") {
                   // eslint-disable-next-line no-console
                   console.log(
@@ -203,6 +230,21 @@ export function useSplashWasm(): UseSplashWasmResult {
     moduleRef.current = null;
     setIsReady(false);
     setStatus("disconnected");
+  }, []);
+
+  const broadcastOffer = useCallback((offer: string) => {
+    try {
+      moduleRef.current?.broadcastOffer(offer);
+      if (process.env.NODE_ENV === "development") {
+        // eslint-disable-next-line no-console
+        console.log("[Splash] offer broadcast queued", `${offer.slice(0, 40)}…`);
+      }
+    } catch (e) {
+      if (process.env.NODE_ENV === "development") {
+        // eslint-disable-next-line no-console
+        console.warn("[Splash] broadcastOffer error:", e);
+      }
+    }
   }, []);
 
   const setFilterAsset = useCallback((pair: string) => {
@@ -259,6 +301,7 @@ export function useSplashWasm(): UseSplashWasmResult {
     error,
     initAndConnect,
     disconnect,
+    broadcastOffer,
     setFilterAsset,
     setFilterPrice,
     setFilterAmount,

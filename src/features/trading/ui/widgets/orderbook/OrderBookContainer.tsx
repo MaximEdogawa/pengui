@@ -3,7 +3,7 @@
 import { useCatTokens } from "@/entities/asset";
 import { getNativeTokenTickerForNetwork } from "@/shared/lib/config/environment";
 import { useNetwork } from "@/shared/hooks/useNetwork";
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import OrderBookResizeHandle from "./OrderBookResizeHandle";
 import OrderBookTable, { OrderBookTableHeader } from "./OrderBookTable";
 import OrderTooltip from "./OrderTooltip";
@@ -18,6 +18,8 @@ import { calculateAveragePrice } from "@/features/trading/lib/services/priceCalc
 import { formatPriceForDisplay } from "@/features/trading/lib/formatAmount";
 import { useMyTrades } from "@/features/trading/hooks/useMyTrades";
 import { resolveTickerId } from "@/features/trading/lib/tickerResolution";
+import { useWalletAddress } from "@/features/wallet/hooks/useWalletQueries";
+import { offerStorageService } from "@/shared/lib/services/offerStorageService";
 import { useOrderBookFiltering } from "@/features/trading/composables/useOrderBookFiltering";
 import { useOrderBookPriceDeviation } from "@/features/trading/composables/useOrderBookPriceDeviation";
 import { useOrderBookResize } from "@/features/trading/composables/useOrderBookResize";
@@ -46,6 +48,15 @@ export default function OrderBookContainer({
   const { getCatTokenInfo } = useCatTokens();
   const { network } = useNetwork();
   const { data: tickersData } = useTickers();
+  const { data: walletData } = useWalletAddress();
+
+  // ── My-offer identification ────────────────────────────────────────
+  const [myOfferIds, setMyOfferIds] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    const addr = walletData?.address;
+    if (!addr) { setMyOfferIds(new Set()); return; }
+    offerStorageService.getMyOfferIds(addr, network).then(setMyOfferIds).catch(() => setMyOfferIds(new Set()));
+  }, [walletData?.address, network, orderBookData]);
   const tickers = useMemo(() => tickersData?.data || [], [tickersData?.data]);
 
   // Get ticker ID for my trades
@@ -212,6 +223,7 @@ export default function OrderBookContainer({
             error={orderBookError}
             justifyEnd
             showHeader={false}
+            myOfferIds={myOfferIds}
           />
         </div>
 
@@ -243,6 +255,7 @@ export default function OrderBookContainer({
             totalOrders={orderBookData.length}
             emptyMessage={emptyMessage}
             showHeader={false}
+            myOfferIds={myOfferIds}
           />
         </div>
       </div>

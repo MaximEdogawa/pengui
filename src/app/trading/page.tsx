@@ -18,6 +18,7 @@ import {
   useOrderBookFilters,
 } from "@/features/trading/hooks/OrderBookFiltersProvider";
 import { SelectedOrderProvider } from "@/features/trading/hooks/SelectedOrderProvider";
+import { SplashConnectionProvider } from "@/features/splash-terminal";
 
 export default function TradingPage() {
   const [mounted, setMounted] = useState(false);
@@ -50,13 +51,15 @@ export default function TradingPage() {
   return (
     <OrderBookFiltersProvider>
       <SelectedOrderProvider>
-        <TradingPageContent
-          activeView={activeView}
-          setActiveView={setActiveView}
-          views={views}
-          isDark={isDark}
-          t={t}
-        />
+        <SplashConnectionProvider>
+          <TradingPageContent
+            activeView={activeView}
+            setActiveView={setActiveView}
+            views={views}
+            isDark={isDark}
+            t={t}
+          />
+        </SplashConnectionProvider>
       </SelectedOrderProvider>
     </OrderBookFiltersProvider>
   );

@@ -9,9 +9,8 @@ import { useTradeHistorySorting } from "@/features/trading/hooks/useTradeHistory
 import type { TradeHistoryOfferItem } from "@/features/trading/hooks/useTradeHistory";
 import type { OrderBookOrder } from "@/features/trading/lib/orderBookTypes";
 import type { DexieOffer } from "@/entities/offer";
-import { useSplashWasm } from "@/features/splash-terminal/useSplashWasm";
+import { useSplashConnection } from "@/features/splash-terminal/SplashConnectionProvider";
 import { useOrderBookFilterStore } from "@/features/trading/hooks/orderBookFilterStore";
-import { useQueryClient } from "@tanstack/react-query";
 import { Radio } from "lucide-react";
 
 /**
@@ -73,40 +72,15 @@ export default function StreamContainer({ onOfferClick }: StreamContainerProps) 
   const relayUrl = getDexieSplashRelayUrl(network);
   const [offers, setOffers] = useState<DexieOffer[]>([]);
   const [streamReceived, setStreamReceived] = useState(0);
-  const [relayReachable, setRelayReachable] = useState<boolean | null>(null);
 
-  const queryClient = useQueryClient();
   const buyAssets = useOrderBookFilterStore((s) => s.filters.buyAsset ?? []);
   const sellAssets = useOrderBookFilterStore((s) => s.filters.sellAsset ?? []);
 
-  const wasm = useSplashWasm();
+  // Use the shared WASM connection from SplashConnectionProvider
+  const wasm = useSplashConnection();
   const { sortTrades, sortConfig, setSort } = useTradeHistorySorting();
 
-  // Probe if the relay WebSocket is reachable (raw WS open; libp2p handshake is separate)
-  useEffect(() => {
-    if (!relayUrl || !relayUrl.startsWith("ws")) return;
-    setRelayReachable(null);
-    const ws = new WebSocket(relayUrl);
-    const tid = setTimeout(() => {
-      ws.close();
-      setRelayReachable((r) => (r === null ? false : r));
-    }, 3000);
-    ws.onopen = () => {
-      clearTimeout(tid);
-      ws.close();
-      setRelayReachable(true);
-    };
-    ws.onerror = () => {
-      clearTimeout(tid);
-      setRelayReachable((r) => (r === null ? false : r));
-    };
-    ws.onclose = () => clearTimeout(tid);
-    return () => {
-      clearTimeout(tid);
-      ws.close();
-    };
-  }, [relayUrl]);
-
+  // Accumulate offers in local state for the stream table
   const appendStreamOffers = useCallback((newOffers: DexieOffer[]) => {
     if (newOffers.length === 0) return;
     setOffers((prev) => {
@@ -119,31 +93,13 @@ export default function StreamContainer({ onOfferClick }: StreamContainerProps) 
       return Array.from(byKey.values());
     });
     setStreamReceived((n) => n + newOffers.length);
+  }, []);
 
-    // When an enriched stream offer matches the active pair filter, refresh the
-    // order book so it picks up the newly-indexed offer from Dexie.
-    const { buyAsset, sellAsset } = useOrderBookFilterStore.getState().filters;
-    const curBuy = buyAsset ?? [];
-    const curSell = sellAsset ?? [];
-    if (curBuy.length > 0 || curSell.length > 0) {
-      const hasMatch = newOffers.some(
-        (o) => o.id && o.offered?.length && offerMatchesPairFilter(o, curBuy, curSell),
-      );
-      if (hasMatch) {
-        queryClient.invalidateQueries({ queryKey: ["orderBook"] });
-      }
-    }
-  }, [queryClient]);
-
+  // Subscribe to stream offers (provider handles init/connect and order book invalidation)
   useEffect(() => {
-    wasm.onOffers(appendStreamOffers);
+    const cleanup = wasm.onOffers(appendStreamOffers);
+    return cleanup;
   }, [wasm, appendStreamOffers]);
-
-  useEffect(() => {
-    if (!relayUrl) return;
-    wasm.initAndConnect(relayUrl, network).catch(() => {});
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- connect only when relay URL or network changes
-  }, [relayUrl, network]);
 
   // Only display offers matching the global asset pair filter
   const filteredOffers = useMemo(
@@ -207,12 +163,7 @@ export default function StreamContainer({ onOfferClick }: StreamContainerProps) 
               <span className={`text-[9px] sm:text-[10px] ${t.textSecondary} truncate max-w-[180px] sm:max-w-none`} title={relayUrl}>
                 {relayUrl}
               </span>
-              {relayReachable === false && (
-                <span className="text-[10px] text-amber-600 dark:text-amber-400" title="Raw WebSocket to relay failed. Is the relay running (e.g. bun run relay)?">
-                  Relay unreachable
-                </span>
-              )}
-              {relayReachable === true && !isConnected && wasm.status === "connecting" && (
+              {!isConnected && wasm.status === "connecting" && (
                 <span className="text-[10px] text-amber-600 dark:text-amber-400" title="WebSocket is open but libp2p handshake has not completed. Check relay and browser console for [Splash] logs.">
                   Handshake…
                 </span>
