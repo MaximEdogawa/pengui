@@ -72,7 +72,7 @@ export { ErrorBoundary } from './error-boundary'
 // WALLET CONNECT WRAPPER
 // ============================================================================
 
-export { SafeConnectButton } from './wallet-connect-wrapper'
+export { SafeConnectButton, ConnectWalletModal } from './wallet-connect-wrapper'
 
 // ============================================================================
 // BRANDING COMPONENTS

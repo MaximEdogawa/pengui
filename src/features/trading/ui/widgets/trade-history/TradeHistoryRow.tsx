@@ -28,6 +28,19 @@ function formatOfferDate(offer: DexieOffer): string {
   return `${y}-${m}-${day} ${h}:${min}:${s}`;
 }
 
+function formatOfferDateShort(offer: DexieOffer): string {
+  const d = offer.date_completed
+    ? new Date(offer.date_completed)
+    : offer.date_pending
+      ? new Date(offer.date_pending)
+      : new Date(offer.date_found);
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  const h = String(d.getHours()).padStart(2, "0");
+  const min = String(d.getMinutes()).padStart(2, "0");
+  return `${m}-${day} ${h}:${min}`;
+}
+
 function formatAssetAmount(
   amount: number | undefined | null,
   code: string,
@@ -58,41 +71,88 @@ export default function TradeHistoryRow({
       : "bg-blue-500/10 hover:bg-blue-500/15"
     : "hover:bg-white/5 dark:hover:bg-white/5";
 
-  return (
-    <div
-      onClick={onClick}
-      className={`grid grid-cols-8 gap-2 px-3 py-2 border-b ${t.border} ${rowBgClass} transition-colors ${
-        isMyOffer ? "border-l-2 border-l-blue-500/30" : ""
-      } ${onClick ? "cursor-pointer" : ""}`}
+  const mineTag = isMyOffer ? (
+    <span
+      className={`inline-flex items-center px-1 py-0.5 rounded text-[9px] sm:text-[10px] font-medium ${
+        isDark
+          ? "bg-blue-500/20 text-blue-400"
+          : "bg-blue-500/25 text-blue-600"
+      }`}
     >
-      <div className={`text-xs font-mono ${t.text} col-span-2`}>
-        {requested
-          ? formatAssetAmount(requested.amount, requested.code ?? "")
-          : "—"}
-      </div>
-      <div className={`text-xs font-mono ${t.text} col-span-2`}>
-        {offered ? formatAssetAmount(offered.amount, offered.code ?? "") : "—"}
-      </div>
-      <div className={`text-xs font-mono ${t.text}`}>
-        {formatPriceForDisplay(price)}
-      </div>
-      <div className={`text-xs ${t.text} col-span-2`}>
-        {formatOfferDate(offer)}
-      </div>
-      <div className={`text-xs ${t.text} flex items-center gap-1.5 flex-wrap`}>
-        <span>{offerState}</span>
-        {isMyOffer && (
-          <span
-            className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${
-              isDark
-                ? "bg-blue-500/20 text-blue-400"
-                : "bg-blue-500/25 text-blue-600"
-            }`}
-          >
-            Mine
+      Mine
+    </span>
+  ) : null;
+
+  return (
+    <>
+      {/* Mobile: compact card layout */}
+      <div
+        onClick={onClick}
+        className={`sm:hidden px-2 py-1.5 border-b ${t.border} ${rowBgClass} transition-colors ${
+          isMyOffer ? "border-l-2 border-l-blue-500/30" : ""
+        } ${onClick ? "cursor-pointer" : ""}`}
+      >
+        {/* Row 1: Requested → Offered + Price */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1 min-w-0 flex-1">
+            <span className={`text-[10px] font-mono ${t.text} truncate`}>
+              {requested
+                ? formatAssetAmount(requested.amount, requested.code ?? "")
+                : "—"}
+            </span>
+            <span className={`text-[9px] ${t.textSecondary} flex-shrink-0`}>→</span>
+            <span className={`text-[10px] font-mono ${t.text} truncate`}>
+              {offered
+                ? formatAssetAmount(offered.amount, offered.code ?? "")
+                : "—"}
+            </span>
+          </div>
+          <span className={`text-[10px] font-mono ${t.text} flex-shrink-0 tabular-nums`}>
+            {formatPriceForDisplay(price)}
           </span>
-        )}
+        </div>
+        {/* Row 2: Date + Status + Mine badge */}
+        <div className="flex items-center justify-between gap-2 mt-0.5">
+          <span className={`text-[9px] ${t.textSecondary}`}>
+            {formatOfferDateShort(offer)}
+          </span>
+          <div className="flex items-center gap-1">
+            <span className={`text-[9px] ${t.textSecondary}`}>{offerState}</span>
+            {mineTag}
+          </div>
+        </div>
       </div>
-    </div>
+
+      {/* Desktop: grid table layout */}
+      <div
+        onClick={onClick}
+        className={`hidden sm:grid grid-cols-8 gap-2 px-3 py-2 border-b ${t.border} ${rowBgClass} transition-colors ${
+          isMyOffer ? "border-l-2 border-l-blue-500/30" : ""
+        } ${onClick ? "cursor-pointer" : ""}`}
+      >
+        <div className={`text-xs font-mono ${t.text} col-span-2 truncate`}>
+          {requested
+            ? formatAssetAmount(requested.amount, requested.code ?? "")
+            : "—"}
+        </div>
+        <div className={`text-xs font-mono ${t.text} col-span-2 truncate`}>
+          {offered
+            ? formatAssetAmount(offered.amount, offered.code ?? "")
+            : "—"}
+        </div>
+        <div className={`text-xs font-mono ${t.text} truncate`}>
+          {formatPriceForDisplay(price)}
+        </div>
+        <div className={`text-xs ${t.text} col-span-2 truncate`}>
+          {formatOfferDate(offer)}
+        </div>
+        <div
+          className={`text-xs ${t.text} flex items-center gap-1.5 flex-wrap`}
+        >
+          <span>{offerState}</span>
+          {mineTag}
+        </div>
+      </div>
+    </>
   );
 }

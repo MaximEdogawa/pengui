@@ -22,7 +22,7 @@ export default function Modal({
 
   return (
     <div
-      className={`fixed inset-0 flex items-center justify-center p-4 z-[60] ${
+      className={`fixed inset-0 flex items-center justify-center p-2 sm:p-4 z-[60] ${
         isDark ? 'bg-black/50' : 'bg-black/30'
       } backdrop-blur-sm`}
       onClick={(e) => {
@@ -33,7 +33,7 @@ export default function Modal({
       }}
     >
       <div
-        className={`backdrop-blur-[40px] rounded-lg shadow-xl ${maxWidth} w-full max-h-[85vh] my-auto overflow-y-auto border transition-all duration-300 ${
+        className={`backdrop-blur-[40px] rounded-lg shadow-xl ${maxWidth} w-full max-h-[90vh] sm:max-h-[85vh] my-auto overflow-y-auto border transition-all duration-300 ${
           isDark ? 'bg-white/10 border-white/20' : 'bg-white/60 border-white/70'
         } ${className}`}
       >

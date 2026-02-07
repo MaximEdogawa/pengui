@@ -51,17 +51,17 @@ export function AssetSections({
   )
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
       {/* Offered Section */}
       <div
-        className="p-4 rounded-lg backdrop-blur-xl bg-white/5 dark:bg-black/5 border border-white/10 dark:border-white/5"
+        className="p-2.5 sm:p-4 rounded-lg backdrop-blur-xl bg-white/5 dark:bg-black/5 border border-white/10 dark:border-white/5"
         style={{
           boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
         }}
       >
-        <div className="mb-3">
-          <h3 className={`text-sm font-semibold ${t.text} mb-0.5`}>Offered</h3>
-          <p className={`text-xs ${t.textSecondary}`}>Assets you are offering.</p>
+        <div className="mb-2 sm:mb-3">
+          <h3 className={`text-xs sm:text-sm font-semibold ${t.text} mb-0.5`}>Offered</h3>
+          <p className={`text-[10px] sm:text-xs ${t.textSecondary}`}>Assets you are offering.</p>
         </div>
         <div className="space-y-2">
           {extendedMakerAssets.map((asset, index) => (
@@ -89,14 +89,14 @@ export function AssetSections({
 
       {/* Requested Section */}
       <div
-        className="p-4 rounded-lg backdrop-blur-xl bg-white/5 dark:bg-black/5 border border-white/10 dark:border-white/5"
+        className="p-2.5 sm:p-4 rounded-lg backdrop-blur-xl bg-white/5 dark:bg-black/5 border border-white/10 dark:border-white/5"
         style={{
           boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
         }}
       >
-        <div className="mb-3">
-          <h3 className={`text-sm font-semibold ${t.text} mb-0.5`}>Requested</h3>
-          <p className={`text-xs ${t.textSecondary}`}>Assets you are requesting.</p>
+        <div className="mb-2 sm:mb-3">
+          <h3 className={`text-xs sm:text-sm font-semibold ${t.text} mb-0.5`}>Requested</h3>
+          <p className={`text-[10px] sm:text-xs ${t.textSecondary}`}>Assets you are requesting.</p>
         </div>
         <div className="space-y-2">
           {extendedTakerAssets.map((asset, index) => (

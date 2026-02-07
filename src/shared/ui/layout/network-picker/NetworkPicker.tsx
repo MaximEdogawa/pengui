@@ -98,7 +98,7 @@ export default function NetworkPicker() {
             ref={dropdownRef}
             className={`
               absolute top-full mt-1.5 rounded-xl
-              backdrop-blur-[40px] overflow-hidden
+              backdrop-blur-xl overflow-hidden
               shadow-2xl
               border transition-all duration-200
               min-w-[140px]
@@ -110,8 +110,8 @@ export default function NetworkPicker() {
               }
               ${
                 isDark
-                  ? 'bg-white/10 border-white/20 shadow-black/40'
-                  : 'bg-white/70 border-white/80 shadow-black/20'
+                  ? 'bg-slate-900/95 border-white/25 shadow-black/50'
+                  : 'bg-white/95 border-slate-200/90 shadow-black/25'
               }
               animate-in fade-in slide-in-from-top-2
             `}

@@ -194,7 +194,7 @@ export default function WalletConnectionGuard({ children }: { children: React.Re
   // Show loading state while checking connection (prevents flash of wrong page)
   if (!isHydrated) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-950 via-sky-950 to-slate-950">
         <div className="text-white">Loading...</div>
       </div>
     )

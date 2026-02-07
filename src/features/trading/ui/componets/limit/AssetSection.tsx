@@ -45,10 +45,10 @@ export function AssetSection({
   )
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2 sm:space-y-3">
       <div>
-        <h3 className={`text-sm font-medium ${t.text} mb-0.5`}>{title}</h3>
-        <p className={`text-xs ${t.textSecondary}`}>{description}</p>
+        <h3 className={`text-xs sm:text-sm font-medium ${t.text} mb-0.5`}>{title}</h3>
+        <p className={`text-[10px] sm:text-xs ${t.textSecondary}`}>{description}</p>
       </div>
       <div className="space-y-2">
         {assets.map((asset, index) => (

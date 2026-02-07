@@ -100,7 +100,7 @@ export default function LimitOfferTab({
         <button
           type="button"
           onClick={() => onModeChange('maker')}
-          className={`flex-1 px-2 py-1 rounded-md transition-all duration-200 font-medium text-xs relative overflow-hidden ${
+          className={`flex-1 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md transition-all duration-200 font-medium text-[11px] sm:text-xs relative overflow-hidden ${
             activeMode === 'maker'
               ? isDark
                 ? 'bg-white/10 text-white backdrop-blur-xl'
@@ -141,7 +141,7 @@ export default function LimitOfferTab({
         <button
           type="button"
           onClick={() => onModeChange('taker')}
-          className={`flex-1 px-2 py-1 rounded-md transition-all duration-200 font-medium text-xs relative overflow-hidden ${
+          className={`flex-1 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md transition-all duration-200 font-medium text-[11px] sm:text-xs relative overflow-hidden ${
             activeMode === 'taker'
               ? isDark
                 ? 'bg-white/10 text-white backdrop-blur-xl'

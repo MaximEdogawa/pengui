@@ -156,7 +156,7 @@ export default function MarketDepthView({
       className={`h-full flex flex-col ${t.card} rounded-lg overflow-hidden`}
     >
       {/* Chart Section */}
-      <div ref={chartContainerRef} className="flex-1 min-h-[400px] relative">
+      <div ref={chartContainerRef} className="flex-1 min-h-[300px] sm:min-h-[400px] relative touch-manipulation" style={{ touchAction: 'none' }}>
         {chartSize.width > 0 && chartSize.height > 0 && (
           <MarketDepthChart
             depthData={depthData}

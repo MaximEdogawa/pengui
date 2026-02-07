@@ -105,18 +105,13 @@ export default function TradingLayout({
   const handleMobileModeToggle = useCallback(
     (mode: "maker" | "taker") => {
       setCurrentMode(mode);
-      if (mode === "maker") {
-        setShowCreateOfferModal(true);
-        setShowTakeOfferModal(false);
-      } else {
-        // Market: open Take Offer modal
-        // Clear selected order so offer string field is shown
-        clearSelectedOrders();
-        setShowTakeOfferModal(true);
-        setShowCreateOfferModal(false);
-      }
+      // Just switch the active tab – don't open a modal.
+      // Modals are opened only when the user taps an order or explicitly
+      // clicks the action button.
+      setShowCreateOfferModal(false);
+      setShowTakeOfferModal(false);
     },
-    [clearSelectedOrders],
+    [],
   );
 
   return (

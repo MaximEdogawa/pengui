@@ -25,7 +25,7 @@ export default function OrderBookResizeHandle({
               '0 0 0 0.5px rgba(59, 130, 246, 0.2), 0 1px 2px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(147, 197, 253, 0.2), 0 0 8px rgba(59, 130, 246, 0.2), 0 0 12px rgba(59, 130, 246, 0.1)',
           }}
         >
-          <span className="text-[11px] font-semibold text-gray-800 dark:text-gray-100 font-mono tabular-nums leading-none">
+          <span className="text-[10px] sm:text-[11px] font-semibold text-gray-800 dark:text-gray-100 font-mono tabular-nums leading-none max-w-[120px] sm:max-w-none truncate inline-block">
             {averagePrice}
           </span>
         </div>
