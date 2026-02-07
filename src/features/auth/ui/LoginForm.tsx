@@ -1,7 +1,8 @@
 'use client'
 
 import { ExternalLink } from 'lucide-react'
-import { PenguinLogo, NetworkPicker, SafeConnectButton } from '@/shared/ui'
+import { PenguinLogo, NetworkPicker } from '@/shared/ui'
+import { LoginConnectWallet } from './LoginConnectWallet'
 
 export default function LoginForm() {
   return (
@@ -57,33 +58,12 @@ export default function LoginForm() {
           </div>
         </div>
 
-        {/* Wallet Connection Section */}
-        <div className="flex flex-col items-center w-full gap-3 sm:gap-4">
-          <div className="flex flex-col w-full">
-            <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl w-full">
-              {/* Gradient border effect */}
-              <div className="absolute inset-0 rounded-2xl sm:rounded-3xl bg-gradient-to-r from-cyan-500/60 via-sky-400/40 to-blue-500/60 p-[1px] pointer-events-none">
-                <div className="h-full w-full rounded-2xl sm:rounded-3xl bg-gradient-to-br from-slate-950/95 via-gray-900/95 to-slate-950/95" />
-              </div>
+        {/* Wallet Connection Section - QR code shown inline */}
+        <LoginConnectWallet />
 
-              {/* Main content container */}
-              <div
-                className="relative bg-gradient-to-br from-slate-900/30 via-slate-950/20 to-black/10 backdrop-blur-xl rounded-2xl sm:rounded-3xl border border-cyan-300/10 p-4 sm:p-5 md:p-6 min-h-[60px] sm:min-h-[70px]"
-                style={{ touchAction: 'manipulation' }}
-              >
-                <div
-                  className="relative z-10 flex items-center justify-center w-full h-full"
-                  style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
-                >
-                  <SafeConnectButton />
-                </div>
-              </div>
-            </div>
-          </div>
-          {/* Network Picker */}
-          <div className="flex justify-center w-full">
-            <NetworkPicker />
-          </div>
+        {/* Network Picker */}
+        <div className="flex justify-center w-full">
+          <NetworkPicker />
         </div>
 
         {/* Footer */}
