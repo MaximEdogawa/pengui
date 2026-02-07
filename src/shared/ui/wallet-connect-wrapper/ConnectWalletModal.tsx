@@ -1,5 +1,6 @@
 'use client'
 
+import { createPortal } from 'react-dom'
 import { QRCodeSVG } from 'qrcode.react'
 import { Copy, Check, RefreshCw, Loader2, X } from 'lucide-react'
 
@@ -22,8 +23,8 @@ export function ConnectWalletModal({
   onCopy,
   onRetry,
 }: ConnectWalletModalProps) {
-  return (
-    <div className="fixed inset-0 z-[10002] flex items-center justify-center p-4">
+  const modal = (
+    <div className="fixed inset-0 z-[10002] flex items-center justify-center p-4" aria-modal="true" role="dialog">
       {/* backdrop */}
       <div
         className="absolute inset-0 bg-black/60 backdrop-blur-xl animate-[fadeIn_200ms_ease-out]"
@@ -84,9 +85,7 @@ export function ConnectWalletModal({
             {/* Divider */}
             <div className="flex items-center gap-3 w-full">
               <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
-              <span className="text-[10px] text-white/20 uppercase tracking-widest font-medium">
-                or
-              </span>
+              <span className="text-[10px] text-white/20 uppercase tracking-widest font-medium">or</span>
               <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
             </div>
 
@@ -147,4 +146,9 @@ export function ConnectWalletModal({
       </div>
     </div>
   )
+
+  if (typeof document !== 'undefined') {
+    return createPortal(modal, document.body)
+  }
+  return modal
 }

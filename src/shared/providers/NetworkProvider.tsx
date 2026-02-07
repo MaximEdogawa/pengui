@@ -54,6 +54,23 @@ export function NetworkProvider({ children }: { children: React.ReactNode }) {
   const hasAutoSyncedRef = useRef(false);
   const lastWalletChainIdRef = useRef<string | null>(null);
   const testRequestTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const wasConnectedRef = useRef(false);
+
+  // When user just connected (e.g. new connection from login or manage wallet), the in-memory
+  // SignClient was created before the session existed. Invalidate so it re-initializes and
+  // picks up the new session from storage, fixing "Error loading balance".
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!isConnected) {
+      wasConnectedRef.current = false;
+      return;
+    }
+    if (!walletConnectSession && !selectedSession) return;
+    if (wasConnectedRef.current) return; // already was connected, avoid re-invalidating
+    wasConnectedRef.current = true;
+    queryClient.invalidateQueries({ queryKey: ["walletConnect", "instance"] });
+    queryClient.invalidateQueries({ queryKey: ["walletConnect"] });
+  }, [isConnected, walletConnectSession, selectedSession, queryClient]);
 
   // Ensure network is initialized to mainnet on mount if no preference exists
   useEffect(() => {

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { Loader2, Wallet } from 'lucide-react'
 import {
   WalletConnect,
@@ -15,7 +16,7 @@ import { getStoredNetwork, hasNetworkPreference, setStoredNetwork } from '@/shar
 import { getRequiredNamespaces } from '@/shared/lib/walletConnect/constants/wallet-connect'
 import toast from 'react-hot-toast'
 import type { SessionTypes } from '@walletconnect/types'
-import { ConnectWalletModal } from './ConnectWalletModal'
+import { ConnectWalletModal } from '@/shared/ui/wallet-connect-wrapper/ConnectWalletModal'
 
 /**
  * LoginConnectWallet
@@ -26,6 +27,7 @@ import { ConnectWalletModal } from './ConnectWalletModal'
  * Same experience on desktop and mobile — no native WC modal.
  */
 export function LoginConnectWallet() {
+  const queryClient = useQueryClient()
   const [uri, setUri] = useState<string | null>(null)
   const [isInitializing, setIsInitializing] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -53,8 +55,6 @@ export function LoginConnectWallet() {
 
   const processSession = useCallback(
     async (session: SessionTypes.Struct, wc: InstanceType<typeof WalletConnect>) => {
-      const { penguiIcon } = getConfig()
-
       store.dispatch(setPairingUri(null))
       setUri(null)
 
@@ -87,15 +87,17 @@ export function LoginConnectWallet() {
         setConnectedWallet({
           wallet: 'WalletConnect',
           address,
-          image: penguiIcon,
           name: 'WalletConnect',
         }),
       )
 
       toast.success('Wallet connected!')
       setIsModalOpen(false)
+      // So balance and other wallet queries use a SignClient that has the new session
+      queryClient.invalidateQueries({ queryKey: ['walletConnect', 'instance'] })
+      queryClient.invalidateQueries({ queryKey: ['walletConnect'] })
     },
-    [getConfig],
+    [queryClient],
   )
 
   const initConnection = useCallback(async () => {
