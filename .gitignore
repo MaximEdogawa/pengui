@@ -73,3 +73,10 @@ test-results/
 
 #Deployment
 /deployment/.env
+
+
+# Wasm / Rust
+/crates/splash-relay/target
+/crates/splash-wasm/target
+/crates/splash-wasm/pkg
+/crates/splash-wasm/public

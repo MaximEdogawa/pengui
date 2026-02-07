@@ -1,0 +1,61 @@
+[package]
+name = "splash-wasm"
+version = "0.2.0"
+edition = "2021"
+description = "libp2p WASM client for Splash network - connect to relay via WebSocket, receive offers via Gossipsub"
+
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+js-sys = "0.3"
+serde = { version = "1.0", features = ["derive"] }
+serde-wasm-bindgen = "0.6"
+console_error_panic_hook = "0.1"
+futures = "0.3"
+gloo-timers = { version = "0.3", features = ["futures"] }
+
+libp2p = { version = "0.55", default-features = false, features = [
+    "wasm-bindgen",
+    "gossipsub",
+    "kad",
+    "identify",
+    "macros",
+    "websocket-websys",
+    "yamux",
+    "noise",
+    "secp256k1",
+    "ed25519"
+] }
+libp2p-webrtc-websys = "0.4"
+
+web-sys = { version = "0.3", features = [
+    "console",
+    "Window",
+    "Document"
+] }
+instant = { version = "0.1", features = ["wasm-bindgen"] }
+
+[dependencies.getrandom]
+version = "0.2"
+features = ["js"]
+
+[dependencies.getrandom03]
+package = "getrandom"
+version = "0.3"
+features = ["wasm_js"]
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
+
+[dev-dependencies]
+wasm-bindgen-test = "0.3"

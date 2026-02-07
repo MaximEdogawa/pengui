@@ -14,7 +14,7 @@ import TradingContent from "./TradingContent";
 import TradingRightPanel from "./TradingRightPanel";
 
 interface TradingLayoutProps {
-  activeTradingView?: "orderbook" | "chart" | "depth" | "trades";
+  activeTradingView?: "orderbook" | "chart" | "depth" | "trades" | "terminal";
   activeMode?: "maker" | "taker";
 }
 

@@ -2,12 +2,13 @@
 
 import OrderBookContainer from "@/features/trading/ui/widgets/orderbook/OrderBookContainer";
 import { TradeHistoryContainer } from "@/features/trading/ui/widgets/trade-history";
+import StreamContainer from "@/features/trading/ui/widgets/stream/StreamContainer";
 import type { OrderBookOrder } from "@/features/trading/lib/orderBookTypes";
 import PriceChart from "@/features/trading/ui/widgets/chart/PriceChart";
 import { MarketDepthView } from "@/features/trading/ui/componets/depth";
 
 interface TradingContentProps {
-  activeView: "orderbook" | "chart" | "depth" | "trades";
+  activeView: "orderbook" | "chart" | "depth" | "trades" | "terminal";
   filters?: {
     buyAsset?: string[];
     sellAsset?: string[];
@@ -34,6 +35,14 @@ export default function TradingContent({
 
   if (activeView === "trades") {
     return <TradeHistoryContainer onOfferClick={onOrderClick} />;
+  }
+
+  if (activeView === "terminal") {
+    return (
+      <div className="h-full min-h-0">
+        <StreamContainer onOfferClick={onOrderClick} />
+      </div>
+    );
   }
 
   return null;

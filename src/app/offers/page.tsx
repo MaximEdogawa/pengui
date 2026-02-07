@@ -6,6 +6,7 @@ import {
   OfferHistory,
   useMyOffers,
 } from "@/features/offers";
+import { SplashTerminal } from "@/features/splash-terminal";
 import { CreateOfferModal, TakeOfferModal } from "@/features/trading";
 import { OrderBookFiltersProvider } from "@/features/trading/hooks/OrderBookFiltersProvider";
 import { useThemeClasses } from "@/shared/hooks";
@@ -51,6 +52,8 @@ export default function OffersPage() {
   const [showTakeOffer, setShowTakeOffer] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [terminalHeight, setTerminalHeight] = useState(0);
+  const [isDraggingTerminal, setIsDraggingTerminal] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -79,6 +82,25 @@ export default function OffersPage() {
     viewOffer(offer);
   };
 
+  const toggleTerminal = () => {
+    setTerminalHeight((h) => (h > 0 ? 0 : 250));
+  };
+
+  useEffect(() => {
+    if (!isDraggingTerminal) return;
+    const onMove = (ev: MouseEvent) => {
+      const y = window.innerHeight - ev.clientY;
+      if (y >= 150 && y <= 600) setTerminalHeight(y);
+    };
+    const onUp = () => setIsDraggingTerminal(false);
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+    };
+  }, [isDraggingTerminal]);
+
   if (!mounted) {
     return null;
   }
@@ -97,11 +119,14 @@ export default function OffersPage() {
 
       {/* Offers Content */}
       <div
-        className={`backdrop-blur-[40px] ${t.card} rounded-2xl p-4 border ${t.border} transition-all duration-300 shadow-lg shadow-black/5 ${
+        className={`flex flex-1 flex-col min-h-0 rounded-2xl ${
           isDark ? "bg-white/[0.03]" : "bg-white/30"
         }`}
       >
-        <OfferHistory
+        <div
+          className={`backdrop-blur-[40px] ${t.card} flex-1 p-4 border ${t.border} transition-all duration-300 shadow-lg shadow-black/5 overflow-auto min-h-0`}
+        >
+          <OfferHistory
           onCreateOffer={() => setShowCreateOffer(true)}
           onViewOffer={handleViewOffer}
           onCancelOffer={cancelOffer}
@@ -122,6 +147,34 @@ export default function OffersPage() {
           goToPage={goToPage}
           changePageSize={changePageSize}
         />
+        </div>
+
+        {/* Resizable Splash Terminal pane */}
+        <div className="mt-2 flex flex-col rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <button
+            type="button"
+            onClick={toggleTerminal}
+            className={`flex items-center justify-center gap-1 py-1 text-xs font-medium ${t.card} border-b ${t.border} hover:opacity-90`}
+          >
+            {terminalHeight > 0 ? "Hide" : "Show"} live stream terminal
+          </button>
+          {terminalHeight > 0 && (
+            <>
+              <div
+                role="separator"
+                aria-label="Resize terminal"
+                className="h-1 cursor-n-resize bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500"
+                onMouseDown={() => setIsDraggingTerminal(true)}
+              />
+              <div
+                className="flex min-h-0 flex-col"
+                style={{ height: terminalHeight }}
+              >
+                <SplashTerminal />
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Create Offer Modal */}

@@ -15,7 +15,11 @@ This directory contains everything needed to deploy Pengui to production with **
 │        │                  │                   │          │
 │        └──────────────────┼───────────────────┘          │
 │                           ▼                              │
-│                    Docker Network                        │
+│  ┌─────────────┐    ┌─────────────┐   Docker Network    │
+│  │splash-relay │    │splash-relay │                      │
+│  │ (mainnet)   │    │ (testnet)   │   (optional)        │
+│  │ :9090/:11511│    │ :9091       │                      │
+│  └─────────────┘    └─────────────┘                      │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -114,12 +118,28 @@ chmod +x scripts/deploy.sh
 ./scripts/deploy.sh
 ```
 
+## Splash relay (Stream tab)
+
+The **splash-relay** services join the Splash network (libp2p) and expose WebSocket so the app’s Stream tab can receive live offers. They are included in `docker-compose.yml`.
+
+- **splash-relay** (mainnet): WebSocket on port **9090**, TCP on 11511.
+- **splash-relay-testnet**: WebSocket on host port **9091** (container 9090), `--testnet`.
+
+To have the app **auto-connect** to these relays, set at **build time** (e.g. in CI or when building the image):
+
+- `NEXT_PUBLIC_DEXIE_SPLASH_RELAY_WS_URL` – default relay (e.g. `wss://splash-relay.example.com`)
+- `NEXT_PUBLIC_DEXIE_SPLASH_RELAY_MAINNET_WS_URL` – mainnet relay
+- `NEXT_PUBLIC_DEXIE_SPLASH_RELAY_TESTNET_WS_URL` – testnet relay
+
+If the app and relays are on the same host and you expose 9090/9091, you can use `ws://localhost:9090` and `ws://localhost:9091` for local testing. For production, put nginx in front and use `wss://splash-relay.yourdomain.com` (and add a WebSocket proxy to the relay container).
+
 ## Files
 
 | File | Description |
 |------|-------------|
 | `Dockerfile` | Multi-stage build for Next.js standalone server |
-| `docker-compose.yml` | Service orchestration (Next.js + nginx + certbot) |
+| `docker-compose.yml` | Service orchestration (Next.js + nginx + certbot + splash-relay) |
+| `splash-relay/Dockerfile` | Build for splash-relay (Rust) |
 | `nginx/nginx.conf` | Base nginx configuration |
 | `nginx/templates/*.conf.template` | Domain-specific nginx configs |
 | `scripts/deploy.sh` | Automated deployment script |
