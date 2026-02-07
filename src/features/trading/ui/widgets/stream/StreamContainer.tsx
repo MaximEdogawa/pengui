@@ -10,7 +10,50 @@ import type { TradeHistoryOfferItem } from "@/features/trading/hooks/useTradeHis
 import type { OrderBookOrder } from "@/features/trading/lib/orderBookTypes";
 import type { DexieOffer } from "@/entities/offer";
 import { useSplashWasm } from "@/features/splash-terminal/useSplashWasm";
+import { useOrderBookFilterStore } from "@/features/trading/hooks/orderBookFilterStore";
+import { useQueryClient } from "@tanstack/react-query";
 import { Radio } from "lucide-react";
+
+/**
+ * Check whether an enriched offer matches the current asset pair filter.
+ * Bidirectional: the pair can appear on either side of the offer.
+ */
+function offerMatchesPairFilter(
+  offer: DexieOffer,
+  buyAssets: string[],
+  sellAssets: string[],
+): boolean {
+  // No filter set → show all offers
+  if (buyAssets.length === 0 && sellAssets.length === 0) return true;
+  // Un-enriched stubs (no decoded assets) can never satisfy a filter
+  if (!offer.offered?.length && !offer.requested?.length) return false;
+
+  const norm = (s: string) => {
+    const u = s.toUpperCase();
+    return u === "TXCH" ? "XCH" : u;
+  };
+
+  const offeredCodes = new Set(
+    (offer.offered || []).map((a) => norm(a.code ?? "")),
+  );
+  const requestedCodes = new Set(
+    (offer.requested || []).map((a) => norm(a.code ?? "")),
+  );
+
+  const nBuy = buyAssets.map(norm);
+  const nSell = sellAssets.map(norm);
+
+  // Direction 1: buyAsset in requested, sellAsset in offered
+  const dir1 =
+    (nBuy.length === 0 || nBuy.some((b) => requestedCodes.has(b))) &&
+    (nSell.length === 0 || nSell.some((s) => offeredCodes.has(s)));
+  // Direction 2: buyAsset in offered, sellAsset in requested (reversed)
+  const dir2 =
+    (nBuy.length === 0 || nBuy.some((b) => offeredCodes.has(b))) &&
+    (nSell.length === 0 || nSell.some((s) => requestedCodes.has(s)));
+
+  return dir1 || dir2;
+}
 
 interface StreamContainerProps {
   onOfferClick?: (order: OrderBookOrder) => void;
@@ -31,6 +74,10 @@ export default function StreamContainer({ onOfferClick }: StreamContainerProps) 
   const [offers, setOffers] = useState<DexieOffer[]>([]);
   const [streamReceived, setStreamReceived] = useState(0);
   const [relayReachable, setRelayReachable] = useState<boolean | null>(null);
+
+  const queryClient = useQueryClient();
+  const buyAssets = useOrderBookFilterStore((s) => s.filters.buyAsset ?? []);
+  const sellAssets = useOrderBookFilterStore((s) => s.filters.sellAsset ?? []);
 
   const wasm = useSplashWasm();
   const { sortTrades, sortConfig, setSort } = useTradeHistorySorting();
@@ -72,7 +119,21 @@ export default function StreamContainer({ onOfferClick }: StreamContainerProps) 
       return Array.from(byKey.values());
     });
     setStreamReceived((n) => n + newOffers.length);
-  }, []);
+
+    // When an enriched stream offer matches the active pair filter, refresh the
+    // order book so it picks up the newly-indexed offer from Dexie.
+    const { buyAsset, sellAsset } = useOrderBookFilterStore.getState().filters;
+    const curBuy = buyAsset ?? [];
+    const curSell = sellAsset ?? [];
+    if (curBuy.length > 0 || curSell.length > 0) {
+      const hasMatch = newOffers.some(
+        (o) => o.id && o.offered?.length && offerMatchesPairFilter(o, curBuy, curSell),
+      );
+      if (hasMatch) {
+        queryClient.invalidateQueries({ queryKey: ["orderBook"] });
+      }
+    }
+  }, [queryClient]);
 
   useEffect(() => {
     wasm.onOffers(appendStreamOffers);
@@ -84,9 +145,15 @@ export default function StreamContainer({ onOfferClick }: StreamContainerProps) 
     // eslint-disable-next-line react-hooks/exhaustive-deps -- connect only when relay URL or network changes
   }, [relayUrl, network]);
 
+  // Only display offers matching the global asset pair filter
+  const filteredOffers = useMemo(
+    () => offers.filter((o) => offerMatchesPairFilter(o, buyAssets, sellAssets)),
+    [offers, buyAssets, sellAssets],
+  );
+
   const items: TradeHistoryOfferItem[] = useMemo(
-    () => offers.map(toTradeHistoryItem),
-    [offers],
+    () => filteredOffers.map(toTradeHistoryItem),
+    [filteredOffers],
   );
   const sortedOffers = useMemo(() => sortTrades(items), [items, sortTrades]);
 
@@ -127,7 +194,7 @@ export default function StreamContainer({ onOfferClick }: StreamContainerProps) 
                 {connectionLabel}
               </span>
               <span className={`text-[10px] sm:text-xs ${t.textSecondary}`}>
-                {streamReceived} offer{streamReceived !== 1 ? "s" : ""} received
+                {filteredOffers.length} of {streamReceived} offer{streamReceived !== 1 ? "s" : ""}
               </span>
             </>
           ) : (

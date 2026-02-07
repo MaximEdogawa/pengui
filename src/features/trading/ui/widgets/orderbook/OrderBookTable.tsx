@@ -5,7 +5,7 @@ import { useCatTokens } from "@/entities/asset";
 import { getNativeTokenTickerForNetwork } from "@/shared/lib/config/environment";
 import { useNetwork } from "@/shared/hooks/useNetwork";
 import { Loader2 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { OrderBookOrder } from "@/features/trading/lib/orderBookTypes";
 import {
   formatAmountForDisplay,
@@ -248,8 +248,64 @@ export default function OrderBookTable({
     [orders, getNumericPrice],
   );
 
+  // ── New-order highlight animation ────────────────────────────────────
+  // Track order IDs we've already seen so we can detect genuinely new rows
+  // (e.g. streamed in via WebSocket) and give them a brief fade-in highlight.
+  const hasSeenDataRef = useRef(false);
+  const prevOrderIdsRef = useRef<Set<string>>(new Set());
+  const [newOrderIds, setNewOrderIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const currentIds = new Set(orders.map((o) => o.id).filter(Boolean));
+
+    // First batch of data → record IDs without highlighting
+    if (!hasSeenDataRef.current) {
+      if (currentIds.size > 0) {
+        hasSeenDataRef.current = true;
+        prevOrderIdsRef.current = currentIds;
+      }
+      return;
+    }
+
+    // Detect IDs that weren't in the previous set
+    const freshIds: string[] = [];
+    for (const id of currentIds) {
+      if (id && !prevOrderIdsRef.current.has(id)) freshIds.push(id);
+    }
+    prevOrderIdsRef.current = currentIds;
+
+    if (freshIds.length > 0) {
+      setNewOrderIds((prev) => {
+        const merged = new Set(prev);
+        for (const id of freshIds) merged.add(id);
+        return merged;
+      });
+      // Remove the flag after the CSS animation finishes
+      const timer = setTimeout(() => {
+        setNewOrderIds((prev) => {
+          const next = new Set(prev);
+          for (const id of freshIds) next.delete(id);
+          return next;
+        });
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [orders]);
+
   return (
     <div className={`w-full ${className}`}>
+      {/* Keyframes for the new-order highlight animation (rendered once) */}
+      <style>{`
+        @keyframes obNewBuy {
+          from { background-color: rgba(34,197,94,0.28); }
+          to   { background-color: transparent; }
+        }
+        @keyframes obNewSell {
+          from { background-color: rgba(239,68,68,0.28); }
+          to   { background-color: transparent; }
+        }
+      `}</style>
+
       <div
         className={`${justifyEnd ? "flex flex-col justify-end min-h-full" : ""}`}
       >
@@ -329,6 +385,7 @@ export default function OrderBookTable({
                     bestPrice={bestPrice}
                     getNumericPrice={getNumericPrice}
                     priceCountMap={priceCountMap}
+                    isNew={newOrderIds.has(order.id)}
                   />
                 ))}
               </div>
@@ -424,6 +481,7 @@ interface OrderBookTableRowProps {
   bestPrice: number | null;
   getNumericPrice: (order: OrderBookOrder) => number;
   priceCountMap: Map<string, number>;
+  isNew?: boolean;
 }
 
 function OrderBookTableRow({
@@ -442,6 +500,7 @@ function OrderBookTableRow({
   bestPrice,
   getNumericPrice,
   priceCountMap,
+  isNew,
 }: OrderBookTableRowProps) {
   // Calculate price deviation percentage from best price
   const priceDeviationPercent = useMemo(() => {
@@ -506,6 +565,11 @@ function OrderBookTableRow({
     <div
       ref={rowRef}
       className="w-full group relative mb-0.5 cursor-pointer transition-all duration-200"
+      style={
+        isNew
+          ? { animation: `${orderType === "buy" ? "obNewBuy" : "obNewSell"} 1.5s ease-out` }
+          : undefined
+      }
       onClick={() => onClick(order)}
       onMouseMove={(e) => onHover(e, order, orderType)}
       onMouseLeave={onMouseLeave}
