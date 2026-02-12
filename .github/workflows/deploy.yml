@@ -24,6 +24,51 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
+  build-and-push-relay:
+    name: Build and Push Splash Relay Image
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract tag for relay
+        id: relay_meta
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ github.event.inputs.tag }}" ]; then
+            TAG="${{ github.event.inputs.tag }}"
+          elif [ "${{ github.event_name }}" = "release" ]; then
+            TAG="${{ github.ref_name }}"
+          else
+            TAG="latest"
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push splash-relay image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./deployment/splash-relay/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:splash-relay
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:splash-relay-${{ steps.relay_meta.outputs.tag }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
   build-and-push:
     name: Build and Push Docker Image
     runs-on: ubuntu-latest
@@ -94,7 +139,7 @@ jobs:
 
   deploy:
     name: Deploy to Production
-    needs: build-and-push
+    needs: [build-and-push, build-and-push-relay]
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: production
@@ -132,11 +177,14 @@ jobs:
         uses: appleboy/ssh-action@v1.2.5
         env:
           DOCKER_IMAGE: ${{ needs.build-and-push.outputs.full_image }}
+          SPLASH_RELAY_IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:splash-relay
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_ACTOR: ${{ github.actor }}
           DOMAIN: ${{ vars.DOMAIN }}
           EMAIL: ${{ vars.EMAIL }}
           STAGING: ${{ vars.STAGING }}
+          RELAY_MAINNET_SUBDOMAIN: ${{ vars.RELAY_MAINNET_SUBDOMAIN }}
+          RELAY_TESTNET_SUBDOMAIN: ${{ vars.RELAY_TESTNET_SUBDOMAIN }}
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
@@ -144,14 +192,17 @@ jobs:
           port: 22
           timeout: 10m
           command_timeout: 5m
-          envs: DOCKER_IMAGE,GITHUB_TOKEN,GITHUB_ACTOR,DOMAIN,EMAIL,STAGING
+          envs: DOCKER_IMAGE,SPLASH_RELAY_IMAGE,GITHUB_TOKEN,GITHUB_ACTOR,DOMAIN,EMAIL,STAGING,RELAY_MAINNET_SUBDOMAIN,RELAY_TESTNET_SUBDOMAIN
           script: |
             export DOCKER_IMAGE="$DOCKER_IMAGE"
+            export SPLASH_RELAY_IMAGE="$SPLASH_RELAY_IMAGE"
             export GITHUB_TOKEN="$GITHUB_TOKEN"
             export GITHUB_ACTOR="$GITHUB_ACTOR"
             export DOMAIN="$DOMAIN"
             export EMAIL="$EMAIL"
             export STAGING="${STAGING:-0}"
+            export RELAY_MAINNET_SUBDOMAIN="${RELAY_MAINNET_SUBDOMAIN:-}"
+            export RELAY_TESTNET_SUBDOMAIN="${RELAY_TESTNET_SUBDOMAIN:-}"
             chmod +x ~/pengui/deployment/scripts/deploy.sh
             ~/pengui/deployment/scripts/deploy.sh
 

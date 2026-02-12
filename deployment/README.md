@@ -133,6 +133,24 @@ To have the app **auto-connect** to these relays, set at **build time** (e.g. in
 
 If the app and relays are on the same host and you expose 9090/9091, you can use `ws://localhost:9090` and `ws://localhost:9091` for local testing. For production, put nginx in front and use `wss://splash-relay.yourdomain.com` (and add a WebSocket proxy to the relay container).
 
+## DNS for relays (penguinpool.space)
+
+DNS for your domain (e.g. penguinpool.space) is managed at your DNS provider, not in this repo. To expose the Splash relay so the app can connect via `wss://…`:
+
+1. **Add a subdomain** for the relay (e.g. `splash-relay.penguinpool.space`).
+2. **Create an A record** (or CNAME if you use a hostname) pointing that subdomain to the **relay server’s public IP** (the host where the relay container runs; it can be the same machine as the app or a different one).
+3. Use the same pattern to add more relays later:
+   - `splash-relay.penguinpool.space` → first relay (mainnet)
+   - `splash-relay-testnet.penguinpool.space` → testnet relay (optional)
+   - `splash-relay-2.penguinpool.space`, `splash-relay-3.penguinpool.space`, etc. for additional relays
+
+No zone file or DNS code is stored in this repository; configure these records in your DNS provider’s dashboard.
+
+To serve the relay over **wss://** (e.g. `wss://splash-relay.penguinpool.space`), set the optional variables so nginx and certbot include the relay subdomain(s):
+
+- **GitHub Actions variables** (optional): `RELAY_MAINNET_SUBDOMAIN` (e.g. `splash-relay.penguinpool.space`), `RELAY_TESTNET_SUBDOMAIN` (e.g. `splash-relay-testnet.penguinpool.space`). When set, the deploy script will request an SSL cert that includes these names and generate an nginx server block that proxies WebSocket to the relay containers.
+- **Templates**: `nginx/templates/relay-mainnet.conf.template` and `nginx/templates/relay-testnet.conf.template` are used to generate `nginx/conf.d/relay.conf` when the corresponding variable is set.
+
 ## Files
 
 | File | Description |
@@ -141,7 +159,7 @@ If the app and relays are on the same host and you expose 9090/9091, you can use
 | `docker-compose.yml` | Service orchestration (Next.js + nginx + certbot + splash-relay) |
 | `splash-relay/Dockerfile` | Build for splash-relay (Rust) |
 | `nginx/nginx.conf` | Base nginx configuration |
-| `nginx/templates/*.conf.template` | Domain-specific nginx configs |
+| `nginx/templates/*.conf.template` | Domain-specific nginx configs (including optional relay subdomain) |
 | `scripts/deploy.sh` | Automated deployment script |
 | `.env.example` | Environment variable template |
 

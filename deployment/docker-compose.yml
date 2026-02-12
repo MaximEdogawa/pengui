@@ -83,10 +83,7 @@ services:
 
   # Splash relay (mainnet) – libp2p bridge to Splash network; browsers connect via WebSocket
   splash-relay:
-    build:
-      context: ..
-      dockerfile: deployment/splash-relay/Dockerfile
-    image: pengui/splash-relay:latest
+    image: ${SPLASH_RELAY_IMAGE:-ghcr.io/maximedogawa/pengui:splash-relay}
     container_name: pengui-splash-relay
     hostname: splash-relay
     restart: unless-stopped
@@ -106,10 +103,7 @@ services:
 
   # Splash relay (testnet)
   splash-relay-testnet:
-    build:
-      context: ..
-      dockerfile: deployment/splash-relay/Dockerfile
-    image: pengui/splash-relay:latest
+    image: ${SPLASH_RELAY_IMAGE:-ghcr.io/maximedogawa/pengui:splash-relay}
     container_name: pengui-splash-relay-testnet
     hostname: splash-relay-testnet
     restart: unless-stopped
