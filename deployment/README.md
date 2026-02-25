@@ -127,29 +127,35 @@ The **splash-relay** services join the Splash network (libp2p) and expose WebSoc
 
 To have the app **auto-connect** to these relays, set at **build time** (e.g. in CI or when building the image):
 
-- `NEXT_PUBLIC_DEXIE_SPLASH_RELAY_WS_URL` – default relay (e.g. `wss://splash-relay.example.com`)
-- `NEXT_PUBLIC_DEXIE_SPLASH_RELAY_MAINNET_WS_URL` – mainnet relay
-- `NEXT_PUBLIC_DEXIE_SPLASH_RELAY_TESTNET_WS_URL` – testnet relay
+- `NEXT_PUBLIC_DEXIE_SPLASH_RELAY_WS_URL` – default relay (e.g. `wss://relay.penguinpool.space`)
+- `NEXT_PUBLIC_DEXIE_SPLASH_RELAY_MAINNET_WS_URL` – mainnet relay (e.g. `wss://relay.penguinpool.space`)
+- `NEXT_PUBLIC_DEXIE_SPLASH_RELAY_TESTNET_WS_URL` – testnet relay (e.g. `wss://testnet-relay.penguinpool.space`)
 
-If the app and relays are on the same host and you expose 9090/9091, you can use `ws://localhost:9090` and `ws://localhost:9091` for local testing. For production, put nginx in front and use `wss://splash-relay.yourdomain.com` (and add a WebSocket proxy to the relay container).
+For production with your own domain, set the relay subdomain in GitHub vars (see “DNS for relays” below) and use `wss://relay.yourdomain.com` in the app build vars. For local testing, use `ws://localhost:9090` and `ws://localhost:9091`.
 
 ## DNS for relays (penguinpool.space)
 
 DNS for your domain (e.g. penguinpool.space) is managed at your DNS provider, not in this repo. To expose the Splash relay so the app can connect via `wss://…`:
 
-1. **Add a subdomain** for the relay (e.g. `splash-relay.penguinpool.space`).
+1. **Add a subdomain** for the relay (e.g. `relay.penguinpool.space`).
 2. **Create an A record** (or CNAME if you use a hostname) pointing that subdomain to the **relay server’s public IP** (the host where the relay container runs; it can be the same machine as the app or a different one).
-3. Use the same pattern to add more relays later:
-   - `splash-relay.penguinpool.space` → first relay (mainnet)
-   - `splash-relay-testnet.penguinpool.space` → testnet relay (optional)
-   - `splash-relay-2.penguinpool.space`, `splash-relay-3.penguinpool.space`, etc. for additional relays
+3. For testnet relay, add `testnet-relay.penguinpool.space` (same A record → relay server IP). For more relays later: `relay-2.penguinpool.space`, etc.
 
 No zone file or DNS code is stored in this repository; configure these records in your DNS provider’s dashboard.
 
-To serve the relay over **wss://** (e.g. `wss://splash-relay.penguinpool.space`), set the optional variables so nginx and certbot include the relay subdomain(s):
+**To make `relay.penguinpool.space` work end-to-end:**
 
-- **GitHub Actions variables** (optional): `RELAY_MAINNET_SUBDOMAIN` (e.g. `splash-relay.penguinpool.space`), `RELAY_TESTNET_SUBDOMAIN` (e.g. `splash-relay-testnet.penguinpool.space`). When set, the deploy script will request an SSL cert that includes these names and generate an nginx server block that proxies WebSocket to the relay containers.
-- **Templates**: `nginx/templates/relay-mainnet.conf.template` and `nginx/templates/relay-testnet.conf.template` are used to generate `nginx/conf.d/relay.conf` when the corresponding variable is set.
+1. **DNS**: A record `relay.penguinpool.space` → your relay server’s public IP (you’ve done this).
+2. **GitHub Actions variable**: Set `NEXT_PUBLIC_DEXIE_SPLASH_RELAY_MAINNET_WS_URL=wss://relay.penguinpool.space` (and optionally `NEXT_PUBLIC_DEXIE_SPLASH_RELAY_WS_URL`). The app build uses this for the Stream tab. The workflow derives the relay subdomain from this URL and passes it to the deploy script, which requests an SSL cert that includes it and generates the nginx WebSocket proxy for the mainnet relay.
+
+If the server already has an SSL cert that does not include the relay subdomain, either run certbot once with `-d penguinpool.space -d relay.penguinpool.space` to expand the cert, or trigger a new certificate request (e.g. by removing the existing cert and redeploying).
+
+**To enable the testnet relay and `testnet-relay.penguinpool.space`:**
+
+1. **DNS**: A record `testnet-relay.penguinpool.space` → your relay server’s public IP (same as mainnet if both run on the same host).
+2. **GitHub Actions variable**: Set `NEXT_PUBLIC_DEXIE_SPLASH_RELAY_TESTNET_WS_URL=wss://testnet-relay.penguinpool.space`. Same as mainnet: the workflow derives the testnet relay subdomain from this URL for nginx and certbot; the app uses it for the Stream tab in testnet mode.
+
+The testnet relay container (`splash-relay-testnet`) is always started with the mainnet relay when `SPLASH_RELAY_IMAGE` is set; the subdomain config only exposes it over HTTPS. Nginx config is generated from `nginx/templates/relay-mainnet.conf.template` and `nginx/templates/relay-testnet.conf.template` when the corresponding WS URL vars are set (subdomains are derived from those URLs).
 
 ## Files
 

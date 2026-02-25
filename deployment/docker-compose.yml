@@ -88,7 +88,7 @@ services:
     hostname: splash-relay
     restart: unless-stopped
     ports:
-      - "9090:9090"   # WebSocket for app/browser connections
+      - "9090:9090" # WebSocket for app/browser connections
       - "11511:11511" # TCP for Splash network (optional)
     command: ["--tcp-port", "11511", "--ws-port", "9090"]
     networks:
