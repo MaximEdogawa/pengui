@@ -12,6 +12,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import type { ExtendedAsset as ExtendedOfferAsset } from "@/shared/ui";
 import { useOrderBook } from "@/features/trading/hooks/useOrderBook";
+import { broadcastOfferToSplash } from "@/features/splash-terminal";
 
 interface UseLimitOfferSubmissionProps {
   extendedMakerAssets: ExtendedOfferAsset[];
@@ -124,6 +125,9 @@ export function useLimitOfferSubmission({
         } catch (uploadError) {
           logger.error("Failed to upload to Dexie:", uploadError);
         }
+
+        // Broadcast to Splash p2p network (fire-and-forget)
+        void broadcastOfferToSplash(newOffer.offerString);
 
         refreshOrderBook();
         queryClient.invalidateQueries({ queryKey: ["orderBook"] });

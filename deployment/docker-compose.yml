@@ -81,6 +81,45 @@ services:
     profiles:
       - certbot
 
+  # Splash relay (mainnet) – libp2p bridge to Splash network; browsers connect via WebSocket
+  splash-relay:
+    image: ${SPLASH_RELAY_IMAGE:-ghcr.io/maximedogawa/pengui:splash-relay}
+    container_name: pengui-splash-relay
+    hostname: splash-relay
+    restart: unless-stopped
+    ports:
+      - "9090:9090" # WebSocket for app/browser connections
+      - "11511:11511" # TCP for Splash network (optional)
+    command: ["--tcp-port", "11511", "--ws-port", "9090"]
+    networks:
+      pengui-network:
+        aliases:
+          - splash-relay
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Splash relay (testnet)
+  splash-relay-testnet:
+    image: ${SPLASH_RELAY_IMAGE:-ghcr.io/maximedogawa/pengui:splash-relay}
+    container_name: pengui-splash-relay-testnet
+    hostname: splash-relay-testnet
+    restart: unless-stopped
+    ports:
+      - "9091:9090"
+    command: ["--tcp-port", "11512", "--ws-port", "9090", "--testnet"]
+    networks:
+      pengui-network:
+        aliases:
+          - splash-relay-testnet
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
 networks:
   pengui-network:
     driver: bridge

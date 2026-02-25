@@ -23,6 +23,10 @@ cleanup_and_start() {
         docker compose up -d pengui 2>/dev/null || true
     fi
     
+    # Start relay services if not running
+    if [ -n "${SPLASH_RELAY_IMAGE:-}" ]; then
+        docker compose up -d splash-relay splash-relay-testnet 2>/dev/null || true
+    fi
     # Start nginx if not running, or reload if it is
     if docker compose ps nginx 2>/dev/null | grep -q "Up\|running"; then
         docker compose exec -T nginx nginx -s reload 2>/dev/null || true
@@ -96,6 +100,11 @@ else
     NEED_CERT=true
 fi
 
+# Optional: extra -d for relay subdomains (so cert covers wss://relay subdomain)
+CERTBOT_RELAY_DOMAINS=""
+[ -n "${RELAY_MAINNET_SUBDOMAIN:-}" ] && CERTBOT_RELAY_DOMAINS="$CERTBOT_RELAY_DOMAINS -d $RELAY_MAINNET_SUBDOMAIN"
+[ -n "${RELAY_TESTNET_SUBDOMAIN:-}" ] && CERTBOT_RELAY_DOMAINS="$CERTBOT_RELAY_DOMAINS -d $RELAY_TESTNET_SUBDOMAIN"
+
 # Request SSL certificate if needed
 if [ "$NEED_CERT" = true ]; then
     log "Setting up SSL certificate..."
@@ -128,6 +137,9 @@ if [ "$NEED_CERT" = true ]; then
     # Determine staging flag
     STAGING_ARG=""
     [ "${STAGING:-0}" != "0" ] && STAGING_ARG="--staging" && warn "Using Let's Encrypt staging environment"
+    # When adding relay subdomains to an existing cert, expand it non-interactively
+    CERTBOT_EXPAND=""
+    [ -n "$CERTBOT_RELAY_DOMAINS" ] && CERTBOT_EXPAND="--expand"
     
     # Request certificate using docker run directly (more reliable output)
     log "Requesting SSL certificate from Let's Encrypt..."
@@ -138,8 +150,10 @@ if [ "$NEED_CERT" = true ]; then
         --webroot \
         -w /var/www/certbot \
         $STAGING_ARG \
+        $CERTBOT_EXPAND \
         --email "$EMAIL" \
         -d "$DOMAIN" \
+        $CERTBOT_RELAY_DOMAINS \
         --rsa-key-size 4096 \
         --agree-tos \
         --non-interactive || err "Failed to obtain SSL certificate"
@@ -151,6 +165,14 @@ fi
 log "Configuring nginx with HTTPS..."
 envsubst '${DOMAIN}' < nginx/templates/https.conf.template > nginx/conf.d/default.conf.tmp
 mv nginx/conf.d/default.conf.tmp nginx/conf.d/default.conf
+
+# Optional: relay subdomain WebSocket proxy (when RELAY_MAINNET_SUBDOMAIN or RELAY_TESTNET_SUBDOMAIN is set)
+rm -f nginx/conf.d/relay.conf
+if [ -n "${RELAY_MAINNET_SUBDOMAIN:-}" ] || [ -n "${RELAY_TESTNET_SUBDOMAIN:-}" ]; then
+    log "Configuring nginx relay subdomain(s)..."
+    [ -n "${RELAY_MAINNET_SUBDOMAIN:-}" ] && envsubst '${DOMAIN} ${RELAY_MAINNET_SUBDOMAIN}' < nginx/templates/relay-mainnet.conf.template >> nginx/conf.d/relay.conf
+    [ -n "${RELAY_TESTNET_SUBDOMAIN:-}" ] && envsubst '${DOMAIN} ${RELAY_TESTNET_SUBDOMAIN}' < nginx/templates/relay-testnet.conf.template >> nginx/conf.d/relay.conf
+fi
 
 # Pull latest Docker image
 if [ -n "$DOCKER_IMAGE" ]; then
@@ -164,9 +186,18 @@ log "Deploying with zero-downtime strategy..."
 # Pull new images first (while old containers still running)
 log "Pulling latest images..."
 docker compose pull pengui || warn "Failed to pull pengui image"
+if [ -n "${SPLASH_RELAY_IMAGE:-}" ]; then
+    docker compose pull splash-relay splash-relay-testnet || warn "Failed to pull splash-relay image(s)"
+fi
 
 log "Updating pengui application..."
 docker compose up -d --no-deps --wait pengui || warn "Pengui update had issues"
+
+# Start relay services when using registry image
+if [ -n "${SPLASH_RELAY_IMAGE:-}" ]; then
+    log "Starting splash-relay services..."
+    docker compose up -d splash-relay splash-relay-testnet || warn "Splash relay start had issues"
+fi
 
 # Check if pengui is healthy
 if docker compose ps pengui | grep -q "Up\|running\|healthy"; then

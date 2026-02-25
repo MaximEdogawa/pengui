@@ -104,6 +104,7 @@ Pengui provides a comprehensive suite of financial tools for the Chia ecosystem,
 - **Node.js** 20.19.0+ or 22.12.0+
 - **Bun** (recommended) or npm/yarn/pnpm
 - **Sage Wallet** or compatible WalletConnect wallet
+- **Rust** and **wasm-pack** (optional, for the Splash Stream tab): install from [rustup.rs](https://rustup.rs) and `cargo install wasm-pack`
 
 ### Installation
 
@@ -162,6 +163,13 @@ npm run build
 ```
 
 The production build will be in the `.next` directory.
+
+To include the **Splash Stream** terminal (libp2p WASM), build the WASM first, or run a full build:
+
+```bash
+bun run build:wasm   # Build splash-wasm → public/wasm/ (requires Rust + wasm-pack)
+bun run build:all    # build:wasm then build
+```
 
 ### Running Production Build
 
@@ -333,6 +341,8 @@ bun storybook        # Start Storybook component library
 
 # Building
 bun build            # Build for production
+bun run build:wasm   # Build Splash WASM (public/wasm/) — requires Rust + wasm-pack
+bun run build:all    # Build WASM then Next.js
 bun build-storybook  # Build Storybook for production
 bun start            # Start production server
 

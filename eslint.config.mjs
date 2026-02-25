@@ -22,6 +22,8 @@ export default [
       "**/tailwind.config.*",
       "**/storybook-static/**",
       "**/.storybook/**",
+      "**/public/wasm/**",
+      "**/crates/**",
     ],
   },
   eslint.configs.recommended,

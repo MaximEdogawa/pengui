@@ -5,7 +5,7 @@ import { useCatTokens } from "@/entities/asset";
 import { getNativeTokenTickerForNetwork } from "@/shared/lib/config/environment";
 import { useNetwork } from "@/shared/hooks/useNetwork";
 import { Loader2 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { OrderBookOrder } from "@/features/trading/lib/orderBookTypes";
 import {
   formatAmountForDisplay,
@@ -46,6 +46,7 @@ interface OrderBookTableProps {
   totalOrders?: number;
   justifyEnd?: boolean;
   showHeader?: boolean;
+  myOfferIds?: Set<string>;
 }
 
 const isSingleAssetPair = (order: OrderBookOrder): boolean => {
@@ -204,6 +205,7 @@ export default function OrderBookTable({
   totalOrders,
   justifyEnd = false,
   showHeader = true,
+  myOfferIds,
 }: OrderBookTableProps) {
   const { t } = useThemeClasses();
   const { getCatTokenInfo } = useCatTokens();
@@ -248,8 +250,68 @@ export default function OrderBookTable({
     [orders, getNumericPrice],
   );
 
+  // ── New-order highlight animation ────────────────────────────────────
+  // Track order IDs we've already seen so we can detect genuinely new rows
+  // (e.g. streamed in via WebSocket) and give them a brief fade-in highlight.
+  const hasSeenDataRef = useRef(false);
+  const prevOrderIdsRef = useRef<Set<string>>(new Set());
+  const [newOrderIds, setNewOrderIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    const currentIds = new Set(orders.map((o) => o.id).filter(Boolean));
+
+    // First batch of data → record IDs without highlighting
+    if (!hasSeenDataRef.current) {
+      if (currentIds.size > 0) {
+        hasSeenDataRef.current = true;
+        prevOrderIdsRef.current = currentIds;
+      }
+      return;
+    }
+
+    // Detect IDs that weren't in the previous set
+    const freshIds: string[] = [];
+    for (const id of currentIds) {
+      if (id && !prevOrderIdsRef.current.has(id)) freshIds.push(id);
+    }
+    prevOrderIdsRef.current = currentIds;
+
+    if (freshIds.length > 0) {
+      setNewOrderIds((prev) => {
+        const merged = new Set(prev);
+        for (const id of freshIds) merged.add(id);
+        return merged;
+      });
+      // Remove the flag after the CSS animation finishes (2s + small buffer)
+      const timer = setTimeout(() => {
+        setNewOrderIds((prev) => {
+          const next = new Set(prev);
+          for (const id of freshIds) next.delete(id);
+          return next;
+        });
+      }, 2200);
+      return () => clearTimeout(timer);
+    }
+  }, [orders]);
+
   return (
     <div className={`w-full ${className}`}>
+      {/* Keyframes for the new-order highlight animation (rendered once) */}
+      <style>{`
+        @keyframes obNewBuy {
+          0%   { background-color: rgba(34,197,94,0.35); box-shadow: inset 0 0 12px rgba(34,197,94,0.25), 0 0 8px rgba(34,197,94,0.15); opacity: 0; transform: translateX(-6px); }
+          15%  { opacity: 1; transform: translateX(0); }
+          40%  { background-color: rgba(34,197,94,0.18); box-shadow: inset 0 0 6px rgba(34,197,94,0.12), 0 0 4px rgba(34,197,94,0.08); }
+          100% { background-color: transparent; box-shadow: none; opacity: 1; transform: translateX(0); }
+        }
+        @keyframes obNewSell {
+          0%   { background-color: rgba(239,68,68,0.35); box-shadow: inset 0 0 12px rgba(239,68,68,0.25), 0 0 8px rgba(239,68,68,0.15); opacity: 0; transform: translateX(-6px); }
+          15%  { opacity: 1; transform: translateX(0); }
+          40%  { background-color: rgba(239,68,68,0.18); box-shadow: inset 0 0 6px rgba(239,68,68,0.12), 0 0 4px rgba(239,68,68,0.08); }
+          100% { background-color: transparent; box-shadow: none; opacity: 1; transform: translateX(0); }
+        }
+      `}</style>
+
       <div
         className={`${justifyEnd ? "flex flex-col justify-end min-h-full" : ""}`}
       >
@@ -329,6 +391,8 @@ export default function OrderBookTable({
                     bestPrice={bestPrice}
                     getNumericPrice={getNumericPrice}
                     priceCountMap={priceCountMap}
+                    isNew={newOrderIds.has(order.id)}
+                    isMine={myOfferIds?.has(order.id) ?? false}
                   />
                 ))}
               </div>
@@ -424,6 +488,8 @@ interface OrderBookTableRowProps {
   bestPrice: number | null;
   getNumericPrice: (order: OrderBookOrder) => number;
   priceCountMap: Map<string, number>;
+  isNew?: boolean;
+  isMine?: boolean;
 }
 
 function OrderBookTableRow({
@@ -442,6 +508,8 @@ function OrderBookTableRow({
   bestPrice,
   getNumericPrice,
   priceCountMap,
+  isNew,
+  isMine,
 }: OrderBookTableRowProps) {
   // Calculate price deviation percentage from best price
   const priceDeviationPercent = useMemo(() => {
@@ -505,11 +573,21 @@ function OrderBookTableRow({
   return (
     <div
       ref={rowRef}
-      className="w-full group relative mb-0.5 cursor-pointer transition-all duration-200"
+      className={`w-full group relative mb-0.5 cursor-pointer transition-all duration-200${isMine ? " ring-1 ring-inset ring-blue-400/40 dark:ring-blue-400/30" : ""}`}
+      style={{
+        ...(isNew
+          ? { animation: `${orderType === "buy" ? "obNewBuy" : "obNewSell"} 2s cubic-bezier(0.22, 1, 0.36, 1) forwards` }
+          : {}),
+      }}
       onClick={() => onClick(order)}
       onMouseMove={(e) => onHover(e, order, orderType)}
       onMouseLeave={onMouseLeave}
     >
+      {/* "Mine" left accent bar */}
+      {isMine && (
+        <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-blue-400 dark:bg-blue-400 rounded-full z-10" />
+      )}
+
       {/* Dynamic background based on price deviation - width scales from 0% to 100%, fills from right to left */}
       <div
         className={`absolute right-0 top-0 bottom-0 ${bgColorClass} transition-all duration-300`}
@@ -517,6 +595,11 @@ function OrderBookTableRow({
           width: backgroundWidth,
         }}
       />
+
+      {/* Mine background tint */}
+      {isMine && (
+        <div className="absolute inset-0 bg-blue-400/[0.06] dark:bg-blue-400/[0.08]" />
+      )}
 
       <div className="relative grid grid-cols-12 gap-1 sm:gap-2 px-1.5 sm:px-2 py-1.5 items-center">
         {/* Count - smallest, left aligned */}
@@ -577,7 +660,12 @@ function OrderBookTableRow({
 
         {/* Price - biggest, right aligned */}
         <div className="col-span-5 text-right text-gray-700 dark:text-gray-300 font-mono text-[9px] sm:text-[10px] overflow-hidden">
-          <div className="flex items-center justify-end min-w-0">
+          <div className="flex items-center justify-end min-w-0 gap-1">
+            {isMine && (
+              <span className="flex-shrink-0 inline-flex items-center px-1 py-[1px] rounded text-[7px] sm:text-[8px] font-semibold uppercase tracking-wider leading-none bg-blue-500/15 dark:bg-blue-400/15 text-blue-600 dark:text-blue-400 border border-blue-500/20 dark:border-blue-400/20">
+                Mine
+              </span>
+            )}
             {isLoadingDetails && !detailedData && (
               <Loader2 className="w-3 h-3 animate-spin text-gray-400 mr-1 flex-shrink-0" />
             )}

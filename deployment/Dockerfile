@@ -1,3 +1,13 @@
+# Build Splash WASM (required for /wasm/splash_wasm.js in production)
+FROM rust:1-bookworm AS wasm-builder
+WORKDIR /build
+RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates \
+    && curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+COPY crates/splash-wasm /build/crates/splash-wasm
+WORKDIR /build/crates/splash-wasm
+RUN wasm-pack build --target web --out-dir /out
+
 # Build stage
 FROM oven/bun:1.2.23-alpine AS builder
 
@@ -9,6 +19,8 @@ RUN bun install --frozen-lockfile
 
 # Copy source and build
 COPY . .
+# Override public/wasm with built WASM (not in repo due to .gitignore)
+COPY --from=wasm-builder /out ./public/wasm
 
 # Build arguments for environment variables at build time
 ARG NEXT_PUBLIC_APP_VERSION
@@ -19,6 +31,9 @@ ARG NEXT_PUBLIC_DEXIE_MAINNET_API_URL
 ARG NEXT_PUBLIC_DEXIE_TESTNET_API_URL
 ARG NEXT_PUBLIC_API_BASE_URL
 ARG NEXT_PUBLIC_APP_URL
+ARG NEXT_PUBLIC_DEXIE_SPLASH_RELAY_WS_URL
+ARG NEXT_PUBLIC_DEXIE_SPLASH_RELAY_MAINNET_WS_URL
+ARG NEXT_PUBLIC_DEXIE_SPLASH_RELAY_TESTNET_WS_URL
 
 # Set environment variables for build
 ENV NEXT_PUBLIC_APP_VERSION=$NEXT_PUBLIC_APP_VERSION
@@ -29,6 +44,9 @@ ENV NEXT_PUBLIC_DEXIE_MAINNET_API_URL=$NEXT_PUBLIC_DEXIE_MAINNET_API_URL
 ENV NEXT_PUBLIC_DEXIE_TESTNET_API_URL=$NEXT_PUBLIC_DEXIE_TESTNET_API_URL
 ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
 ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
+ENV NEXT_PUBLIC_DEXIE_SPLASH_RELAY_WS_URL=$NEXT_PUBLIC_DEXIE_SPLASH_RELAY_WS_URL
+ENV NEXT_PUBLIC_DEXIE_SPLASH_RELAY_MAINNET_WS_URL=$NEXT_PUBLIC_DEXIE_SPLASH_RELAY_MAINNET_WS_URL
+ENV NEXT_PUBLIC_DEXIE_SPLASH_RELAY_TESTNET_WS_URL=$NEXT_PUBLIC_DEXIE_SPLASH_RELAY_TESTNET_WS_URL
 
 RUN bun run build
 

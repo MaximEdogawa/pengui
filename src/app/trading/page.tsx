@@ -6,6 +6,7 @@ import {
   BookOpen,
   BarChart3,
   Activity,
+  Terminal,
   type LucideIcon,
 } from "lucide-react";
 import { useTheme } from "next-themes";
@@ -17,11 +18,12 @@ import {
   useOrderBookFilters,
 } from "@/features/trading/hooks/OrderBookFiltersProvider";
 import { SelectedOrderProvider } from "@/features/trading/hooks/SelectedOrderProvider";
+import { SplashConnectionProvider } from "@/features/splash-terminal";
 
 export default function TradingPage() {
   const [mounted, setMounted] = useState(false);
   const [activeView, setActiveView] = useState<
-    "orderbook" | "chart" | "depth" | "trades"
+    "orderbook" | "chart" | "depth" | "trades" | "terminal"
   >("orderbook");
   const { theme: currentTheme, systemTheme } = useTheme();
 
@@ -43,18 +45,21 @@ export default function TradingPage() {
     { id: "chart" as const, icon: BarChart3, label: "Chart" },
     { id: "depth" as const, icon: Activity, label: "Depth" },
     { id: "trades" as const, icon: TrendingUp, label: "Trades" },
+    { id: "terminal" as const, icon: Terminal, label: "Stream" },
   ];
 
   return (
     <OrderBookFiltersProvider>
       <SelectedOrderProvider>
-        <TradingPageContent
-          activeView={activeView}
-          setActiveView={setActiveView}
-          views={views}
-          isDark={isDark}
-          t={t}
-        />
+        <SplashConnectionProvider>
+          <TradingPageContent
+            activeView={activeView}
+            setActiveView={setActiveView}
+            views={views}
+            isDark={isDark}
+            t={t}
+          />
+        </SplashConnectionProvider>
       </SelectedOrderProvider>
     </OrderBookFiltersProvider>
   );
@@ -67,10 +72,12 @@ function TradingPageContent({
   isDark,
   t,
 }: {
-  activeView: "orderbook" | "chart" | "depth" | "trades";
-  setActiveView: (view: "orderbook" | "chart" | "depth" | "trades") => void;
+  activeView: "orderbook" | "chart" | "depth" | "trades" | "terminal";
+  setActiveView: (
+    view: "orderbook" | "chart" | "depth" | "trades" | "terminal",
+  ) => void;
   views: Array<{
-    id: "orderbook" | "chart" | "depth" | "trades";
+    id: "orderbook" | "chart" | "depth" | "trades" | "terminal";
     icon: LucideIcon;
     label: string;
   }>;
