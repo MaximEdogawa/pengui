@@ -24,13 +24,35 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
+  # Detect what changed so we only build the relay when relay source changes (saves time on app-only deploys)
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      relay: ${{ steps.filter.outputs.relay }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            relay:
+              - 'crates/splash-relay/**'
+              - 'deployment/splash-relay/**'
+
   build-and-push-relay:
     name: Build and Push Splash Relay Image
+    needs: changes
+    if: needs.changes.outputs.relay == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
       contents: read
       packages: write
+    outputs:
+      relay_image: ${{ steps.relay_meta.outputs.relay_image }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -56,6 +78,7 @@ jobs:
             TAG="latest"
           fi
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "relay_image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:splash-relay-$TAG" >> "$GITHUB_OUTPUT"
 
       - name: Build and push splash-relay image
         uses: docker/build-push-action@v5
@@ -71,6 +94,7 @@ jobs:
 
   build-and-push:
     name: Build and Push Docker Image
+    needs: changes
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -142,6 +166,7 @@ jobs:
   deploy:
     name: Deploy to Production
     needs: [build-and-push, build-and-push-relay]
+    # build-and-push-relay is skipped when relay paths unchanged; deploy still runs and uses existing relay image
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: production
@@ -179,7 +204,8 @@ jobs:
         uses: appleboy/ssh-action@v1.2.5
         env:
           DOCKER_IMAGE: ${{ needs.build-and-push.outputs.full_image }}
-          SPLASH_RELAY_IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:splash-relay
+          # Use versioned relay image when relay was built this run (e.g. :splash-relay-v1.2.3); else :splash-relay
+          SPLASH_RELAY_IMAGE: ${{ needs.build-and-push-relay.outputs.relay_image || format('{0}/{1}:splash-relay', env.REGISTRY, env.IMAGE_NAME) }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_ACTOR: ${{ github.actor }}
           DOMAIN: ${{ vars.DOMAIN }}

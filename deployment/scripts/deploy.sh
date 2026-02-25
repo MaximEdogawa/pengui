@@ -137,6 +137,9 @@ if [ "$NEED_CERT" = true ]; then
     # Determine staging flag
     STAGING_ARG=""
     [ "${STAGING:-0}" != "0" ] && STAGING_ARG="--staging" && warn "Using Let's Encrypt staging environment"
+    # When adding relay subdomains to an existing cert, expand it non-interactively
+    CERTBOT_EXPAND=""
+    [ -n "$CERTBOT_RELAY_DOMAINS" ] && CERTBOT_EXPAND="--expand"
     
     # Request certificate using docker run directly (more reliable output)
     log "Requesting SSL certificate from Let's Encrypt..."
@@ -147,6 +150,7 @@ if [ "$NEED_CERT" = true ]; then
         --webroot \
         -w /var/www/certbot \
         $STAGING_ARG \
+        $CERTBOT_EXPAND \
         --email "$EMAIL" \
         -d "$DOMAIN" \
         $CERTBOT_RELAY_DOMAINS \
