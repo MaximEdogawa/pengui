@@ -48,9 +48,13 @@ function isAbsoluteWsUrl(url: string): boolean {
   );
 }
 
-/** Development: connect to relay on localhost:9090 (mainnet) or :9091 (testnet). Run `bun run relay` / `bun run relay:testnet`. */
+/** Local relays (run `bun run relay` / `relay:testnet`). */
 export const DEFAULT_RELAY_MAINNET_WS = 'ws://localhost:9090';
 export const DEFAULT_RELAY_TESTNET_WS = 'ws://localhost:9091';
+
+/** Remote relays used when no env is set (dev and production fallback). */
+const DEFAULT_REMOTE_RELAY_MAINNET_WS = 'wss://relay.penguinpool.space';
+const DEFAULT_REMOTE_RELAY_TESTNET_WS = 'wss://testnet-relay.penguinpool.space';
 
 function isLocalhostForRelay(): boolean {
   if (typeof window === 'undefined') return false;
@@ -64,9 +68,8 @@ function isLocalhostForRelay(): boolean {
 
 /**
  * Splash relay WebSocket URL for the given network.
- * Set via env (e.g. NEXT_PUBLIC_DEXIE_SPLASH_RELAY_WS_URL); run splash-relay or another libp2p relay.
- * When running on localhost (dev or production build), defaults to local relay so the stream
- * auto-connects without configuring env.
+ * Set via env (e.g. NEXT_PUBLIC_DEXIE_SPLASH_RELAY_WS_URL).
+ * When unset, dev and production use remote relays (relay.penguinpool.space).
  *
  * @returns Relay URL (ws:// or wss://), or '' so the stream uses REST only.
  */
@@ -78,13 +81,12 @@ export function getDexieSplashRelayUrl(network: 'mainnet' | 'testnet'): string {
       : process.env.NEXT_PUBLIC_DEXIE_SPLASH_RELAY_TESTNET_WS_URL ||
         process.env.NEXT_PUBLIC_DEXIE_SPLASH_RELAY_WS_URL;
   if (isAbsoluteWsUrl(u ?? '')) return u!;
-  // In development, default to local relay so stream auto-connects (run `bun run relay` / `relay:testnet`)
+  // No env set: use remote relays (dev and production) so stream works without local relay
   if (process.env.NODE_ENV === 'development') {
-    return network === 'mainnet' ? DEFAULT_RELAY_MAINNET_WS : DEFAULT_RELAY_TESTNET_WS;
+    return network === 'mainnet' ? DEFAULT_REMOTE_RELAY_MAINNET_WS : DEFAULT_REMOTE_RELAY_TESTNET_WS;
   }
-  // Production build opened on localhost: use local relay when no env set (safe: window check is client-only)
   if (isLocalhostForRelay()) {
-    return network === 'mainnet' ? DEFAULT_RELAY_MAINNET_WS : DEFAULT_RELAY_TESTNET_WS;
+    return network === 'mainnet' ? DEFAULT_REMOTE_RELAY_MAINNET_WS : DEFAULT_REMOTE_RELAY_TESTNET_WS;
   }
   return '';
 }
@@ -101,7 +103,7 @@ export function isDefaultLocalRelayUrl(network: 'mainnet' | 'testnet'): boolean 
       : process.env.NEXT_PUBLIC_DEXIE_SPLASH_RELAY_TESTNET_WS_URL ||
         process.env.NEXT_PUBLIC_DEXIE_SPLASH_RELAY_WS_URL;
   if (isAbsoluteWsUrl(u ?? '')) return false;
-  return process.env.NODE_ENV === 'development' || isLocalhostForRelay();
+  return false;
 }
 
 /**

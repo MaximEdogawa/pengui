@@ -76,9 +76,16 @@ export interface UseSplashWasmResult {
  * Works from anywhere in the app — the WASM module is a global singleton,
  * so once the streaming hook has initialised and connected it is ready.
  */
+function getWasmBaseUrl(): string {
+  if (typeof window !== "undefined" && window.location?.origin) {
+    return window.location.origin;
+  }
+  return "";
+}
+
 export async function broadcastOfferToSplash(offer: string): Promise<void> {
   try {
-    const wasmPath = "/wasm/splash_wasm.js";
+    const wasmPath = `${getWasmBaseUrl()}/wasm/splash_wasm.js`;
     const wasmModule = await import(/* webpackIgnore: true */ wasmPath);
     const mod = wasmModule as unknown as SplashWasmModule;
     mod.broadcastOffer(offer);
@@ -130,14 +137,16 @@ export function useSplashWasm(): UseSplashWasmResult {
         /^(wss?:\/\/)localhost(\b)/i,
         (_, scheme, rest) => `${scheme}127.0.0.1${rest}`,
       );
+      const base = getWasmBaseUrl();
+      const wasmJsPath = `${base}/wasm/splash_wasm.js`;
+      const wasmBinaryPath = `${base}/wasm/splash_wasm_bg.wasm`;
       try {
-        const wasmPath = "/wasm/splash_wasm.js";
         // Load the WASM JS glue module (named exports = proper JS wrappers)
-        const wasmModule = await import(/* webpackIgnore: true */ wasmPath);
+        const wasmModule = await import(/* webpackIgnore: true */ wasmJsPath);
         // Initialize the WASM binary. default() returns raw InitOutput (low-level
         // pointers) — do NOT use it as the API; use the named exports instead.
         await (wasmModule.default as (opts?: { module_or_path?: string }) => Promise<unknown>)({
-          module_or_path: "/wasm/splash_wasm_bg.wasm",
+          module_or_path: wasmBinaryPath,
         });
         // Named exports (init, connect, setOnOffersCallback, …) are the JS wrappers
         // that properly marshal strings/objects to WASM memory.
