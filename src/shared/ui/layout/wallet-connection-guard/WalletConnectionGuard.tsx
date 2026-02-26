@@ -9,15 +9,14 @@ import {
   setSessions,
 } from '@maximedogawa/chia-wallet-connect-react'
 import { usePathname, useRouter } from 'next/navigation'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { logger } from '@/shared/lib/logger'
-import WalletDisconnectedModal from './WalletDisconnectedModal'
 
 /**
  * WalletConnectionGuard - Route guard that handles redirects based on wallet connection state
  * - If connected and on login page → redirect to dashboard (but wait for modal to close)
  * - If not connected and not on login page → redirect to login (protects all routes)
- * - If the wallet connection becomes stale/broken → show info modal and redirect to login
+ * - If the wallet connection becomes stale/broken → clear state and redirect to login (no modal)
  * Works on initial load and page refresh
  */
 export default function WalletConnectionGuard({ children }: { children: React.ReactNode }) {
@@ -25,45 +24,32 @@ export default function WalletConnectionGuard({ children }: { children: React.Re
   const pathname = usePathname()
   const { isConnected } = useWalletConnection()
   const { connectionLost } = useWalletConnectionHealthCheck()
-  const [showDisconnectedModal, setShowDisconnectedModal] = useState(false)
   const [isHydrated, setIsHydrated] = useState(false)
   const [wasConnected, setWasConnected] = useState(false)
   const redirectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const checkModalIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const hasRedirectedRef = useRef(false)
   const lastPathnameRef = useRef(pathname)
+  const connectionLostHandledRef = useRef(false)
 
-  // Show modal when health check detects a lost connection
+  // When health check detects lost connection: clear wallet state and redirect to login (no modal)
   useEffect(() => {
-    if (connectionLost && isConnected) {
-      setShowDisconnectedModal(true)
-    }
-  }, [connectionLost, isConnected])
-
-  /**
-   * Handle user confirming the disconnected modal.
-   * Clears the wallet state in Redux and redirects to login.
-   */
-  const handleDisconnectConfirm = useCallback(() => {
-    setShowDisconnectedModal(false)
-
+    if (!connectionLost || !isConnected || connectionLostHandledRef.current) return
+    connectionLostHandledRef.current = true
     try {
-      // Clear wallet connection state in Redux store
       store.dispatch(setConnectedWallet(null))
       store.dispatch(connectSession(null))
       store.dispatch(setSessions([]))
     } catch (error) {
       logger.error('Failed to clear wallet state:', error)
     }
-
-    // Force redirect to login
     hasRedirectedRef.current = true
     if (typeof window !== 'undefined') {
       window.location.href = '/login'
     } else {
       router.replace('/login')
     }
-  }, [router])
+  }, [connectionLost, isConnected, router])
 
   // Wait for Redux store to rehydrate from persistence
   useEffect(() => {
@@ -200,12 +186,5 @@ export default function WalletConnectionGuard({ children }: { children: React.Re
     )
   }
 
-  return (
-    <>
-      {children}
-      {showDisconnectedModal && (
-        <WalletDisconnectedModal onConfirm={handleDisconnectConfirm} />
-      )}
-    </>
-  )
+  return <>{children}</>
 }
