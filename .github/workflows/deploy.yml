@@ -48,7 +48,6 @@ jobs:
   build-and-push-relay:
     name: Build and Push Splash Relay Image
     needs: changes
-    if: needs.changes.outputs.relay == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
