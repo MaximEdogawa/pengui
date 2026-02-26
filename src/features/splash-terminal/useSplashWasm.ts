@@ -3,6 +3,7 @@
 import { useCallback, useRef, useState } from "react";
 import type { DexieOffer } from "@/entities/offer";
 import { getDexieApiUrl } from "@/shared/lib/utils/networkUtils";
+import { applyWebSocketBufferedAmountPatch } from "@/shared/lib/websocketBufferedAmountPatch";
 
 export type SplashConnectionStatus =
   | "disconnected"
@@ -59,7 +60,11 @@ export interface UseSplashWasmResult {
   status: SplashConnectionStatus;
   isReady: boolean;
   error: string | null;
-  initAndConnect: (relayUrl: string, network: "mainnet" | "testnet") => Promise<void>;
+  initAndConnect: (
+    relayUrl: string,
+    network: "mainnet" | "testnet",
+    signal?: AbortSignal,
+  ) => Promise<void>;
   disconnect: () => void;
   broadcastOffer: (offer: string) => void;
   setFilterAsset: (pair: string) => void;
@@ -89,15 +94,8 @@ export async function broadcastOfferToSplash(offer: string): Promise<void> {
     const wasmModule = await import(/* webpackIgnore: true */ wasmPath);
     const mod = wasmModule as unknown as SplashWasmModule;
     mod.broadcastOffer(offer);
-    if (process.env.NODE_ENV === "development") {
-      // eslint-disable-next-line no-console
-      console.log("[Splash] offer broadcast via global helper", `${offer.slice(0, 40)}…`);
-    }
-  } catch (e) {
-    if (process.env.NODE_ENV === "development") {
-      // eslint-disable-next-line no-console
-      console.warn("[Splash] broadcastOfferToSplash error:", e);
-    }
+  } catch {
+    // ignore
   }
 }
 
@@ -110,6 +108,8 @@ export function useSplashWasm(): UseSplashWasmResult {
   const bufferRef = useRef<DexieOffer[]>([]);
   const receivedCountRef = useRef(0);
   const networkRef = useRef<"mainnet" | "testnet">("mainnet");
+  /** When set, initAndConnect must wait this long since last disconnect so WASM swarm loop can exit (avoids memory OOB). */
+  const lastDisconnectTimeRef = useRef<number | null>(null);
 
   const onOffers = useCallback((callback: (offers: DexieOffer[]) => void) => {
     offersCallbacksRef.current.add(callback);
@@ -118,7 +118,11 @@ export function useSplashWasm(): UseSplashWasmResult {
   }, []);
 
   const initAndConnect = useCallback(
-    async (relayUrl: string, network: "mainnet" | "testnet") => {
+    async (
+      relayUrl: string,
+      network: "mainnet" | "testnet",
+      signal?: AbortSignal,
+    ) => {
       setError(null);
       if (!isValidRelayUrl(relayUrl)) {
         setError("No Splash relay URL configured");
@@ -127,10 +131,6 @@ export function useSplashWasm(): UseSplashWasmResult {
       }
       networkRef.current = network;
       setStatus("connecting");
-      if (process.env.NODE_ENV === "development") {
-        // eslint-disable-next-line no-console
-        console.log("[Splash] initAndConnect", relayUrl, network);
-      }
       const networkName = network === "testnet" ? "splash-testnet" : "splash";
       // Use 127.0.0.1 instead of localhost so WASM/browser can connect without DNS
       const urlForWasm = relayUrl.replace(
@@ -141,40 +141,71 @@ export function useSplashWasm(): UseSplashWasmResult {
       const wasmJsPath = `${base}/wasm/splash_wasm.js`;
       const wasmBinaryPath = `${base}/wasm/splash_wasm_bg.wasm`;
       try {
-        // Load the WASM JS glue module (named exports = proper JS wrappers)
+        // Wait after a recent disconnect so the WASM swarm loop can exit before we
+        // overwrite WRAPPER. Prevents "memory access out of bounds" from two nodes.
+        const lastDisconnect = lastDisconnectTimeRef.current;
+        if (lastDisconnect != null) {
+          const elapsed = Date.now() - lastDisconnect;
+          const waitMs = Math.max(0, 600 - elapsed);
+          if (waitMs > 0) {
+            await new Promise<void>((resolve) => {
+              const t = setTimeout(resolve, waitMs);
+              signal?.addEventListener(
+                "abort",
+                () => {
+                  clearTimeout(t);
+                  resolve();
+                },
+                { once: true },
+              );
+            });
+          }
+          lastDisconnectTimeRef.current = null;
+        }
+        if (signal?.aborted) return;
+
+        // If a connection already exists, disconnect and wait before reconnecting.
+        if (moduleRef.current) {
+          try {
+            moduleRef.current.disconnect();
+          } catch {
+            // ignore
+          }
+          moduleRef.current = null;
+          setIsReady(false);
+          setStatus("disconnected");
+          lastDisconnectTimeRef.current = Date.now();
+          await new Promise((r) => setTimeout(r, 400));
+        }
+        if (signal?.aborted) return;
+
+        applyWebSocketBufferedAmountPatch();
         const wasmModule = await import(/* webpackIgnore: true */ wasmJsPath);
-        // Initialize the WASM binary. default() returns raw InitOutput (low-level
-        // pointers) — do NOT use it as the API; use the named exports instead.
+        if (signal?.aborted) return;
+
         await (wasmModule.default as (opts?: { module_or_path?: string }) => Promise<unknown>)({
           module_or_path: wasmBinaryPath,
         });
-        // Named exports (init, connect, setOnOffersCallback, …) are the JS wrappers
-        // that properly marshal strings/objects to WASM memory.
+        if (signal?.aborted) return;
+
         const mod = wasmModule as unknown as SplashWasmModule;
         moduleRef.current = mod;
         bufferRef.current = [];
         receivedCountRef.current = 0;
 
-        // init() first so WRAPPER has relay_url/network; then set callbacks (init overwrites them)
         mod.init(urlForWasm, networkName);
 
         mod.setOnStatusCallback((obj: { status?: string; message?: string }) => {
           const s = (obj?.status as string) || "disconnected";
           setStatus(s as SplashConnectionStatus);
           setError(s === "error" && obj?.message ? String(obj.message) : null);
-          if (process.env.NODE_ENV === "development") {
-            // eslint-disable-next-line no-console
-            console.log("[Splash] status:", s, obj?.message ? `(${obj.message})` : "");
-          }
         });
 
         mod.setOnOffersCallback((raw: unknown) => {
-          // WASM calls with a single offer object; normalize to array
           const arr = Array.isArray(raw) ? raw : raw != null ? [raw] : [];
           for (const item of arr) {
             const p = item as SplashOfferPayload;
             if (p?.offer && typeof p.offer === "string") {
-              // Fire-and-forget: enrich via Dexie API then push to buffer
               void (async () => {
                 let enriched: DexieOffer;
                 try {
@@ -201,26 +232,24 @@ export function useSplashWasm(): UseSplashWasmResult {
                 if (buf.length >= MAX_BUFFER_LEN) buf.shift();
                 buf.push(enriched);
                 offersCallbacksRef.current.forEach((cb) => cb([enriched]));
-                if (process.env.NODE_ENV === "development") {
-                  // eslint-disable-next-line no-console
-                  console.log(
-                    "[Splash] offer",
-                    enriched.id || "(raw)",
-                    "offered:", enriched.offered?.length ?? 0,
-                    "requested:", enriched.requested?.length ?? 0,
-                  );
-                }
               })();
-            } else if (process.env.NODE_ENV === "development") {
-              // eslint-disable-next-line no-console
-              console.warn("[Splash] skipped item: missing or invalid offer string", p);
             }
           }
         });
 
         mod.connect();
+        if (signal?.aborted) {
+          try {
+            mod.disconnect();
+          } catch {
+            // ignore
+          }
+          moduleRef.current = null;
+          return;
+        }
         setIsReady(true);
       } catch (e) {
+        if (signal?.aborted) return;
         const msg = e instanceof Error ? e.message : String(e);
         setError(msg);
         setStatus("error");
@@ -237,6 +266,7 @@ export function useSplashWasm(): UseSplashWasmResult {
       // ignore
     }
     moduleRef.current = null;
+    lastDisconnectTimeRef.current = Date.now();
     setIsReady(false);
     setStatus("disconnected");
   }, []);
@@ -244,15 +274,8 @@ export function useSplashWasm(): UseSplashWasmResult {
   const broadcastOffer = useCallback((offer: string) => {
     try {
       moduleRef.current?.broadcastOffer(offer);
-      if (process.env.NODE_ENV === "development") {
-        // eslint-disable-next-line no-console
-        console.log("[Splash] offer broadcast queued", `${offer.slice(0, 40)}…`);
-      }
-    } catch (e) {
-      if (process.env.NODE_ENV === "development") {
-        // eslint-disable-next-line no-console
-        console.warn("[Splash] broadcastOffer error:", e);
-      }
+    } catch {
+      // ignore
     }
   }, []);
 

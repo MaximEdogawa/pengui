@@ -43,7 +43,8 @@ export function useDexieSearch() {
         };
       } catch (error) {
         logger.error("Failed to fetch all pairs:", error);
-        throw error;
+        // Return empty data on network/load failure so UI still renders (no blank screen)
+        return { success: false, data: [] };
       }
     },
     staleTime: 5 * 60 * 1000, // 5 minutes

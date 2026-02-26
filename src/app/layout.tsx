@@ -4,6 +4,7 @@ import ReactQueryProvider from "@/shared/providers/ReactQueryProvider";
 import { NetworkProvider } from "@/shared/providers/NetworkProvider";
 import { DashboardLayout } from "@/features/dashboard";
 import { WalletConnectionGuard, ErrorBoundary } from "@/shared/ui";
+import { applyWebSocketBufferedAmountPatch } from "@/shared/lib/websocketBufferedAmountPatch";
 import {
   WalletManager,
   persistor,
@@ -57,6 +58,11 @@ const getWalletConnectConfig = () => {
 };
 
 export default function UILayout({ children }: { children: React.ReactNode }) {
+  // Prevent "getObject(arg0).bufferedAmount" errors when Splash WASM uses a detached WebSocket (e.g. tab hidden)
+  useEffect(() => {
+    applyWebSocketBufferedAmountPatch();
+  }, []);
+
   // Initialize network preference to mainnet on mount (before any WalletConnect operations)
   useEffect(() => {
     if (typeof window !== "undefined" && !hasNetworkPreference()) {

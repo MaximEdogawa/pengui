@@ -54,9 +54,16 @@ export default function OrderBookContainer({
   const [myOfferIds, setMyOfferIds] = useState<Set<string>>(new Set());
   useEffect(() => {
     const addr = walletData?.address;
-    if (!addr) { setMyOfferIds(new Set()); return; }
-    offerStorageService.getMyOfferIds(addr, network).then(setMyOfferIds).catch(() => setMyOfferIds(new Set()));
-  }, [walletData?.address, network, orderBookData]);
+    if (!addr) {
+      setMyOfferIds(new Set());
+      return;
+    }
+    offerStorageService
+      .getMyOfferIds(addr, network)
+      .then(setMyOfferIds)
+      .catch(() => setMyOfferIds(new Set()));
+    // Only refetch when address or network changes; orderBookData is unstable and caused infinite loop
+  }, [walletData?.address, network]);
   const tickers = useMemo(() => tickersData?.data || [], [tickersData?.data]);
 
   // Get ticker ID for my trades
