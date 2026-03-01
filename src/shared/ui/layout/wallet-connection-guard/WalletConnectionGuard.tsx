@@ -5,11 +5,9 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 
 /**
- * WalletConnectionGuard - Route guard that handles redirects based on connection state.
- * - If connected and on login page → redirect to dashboard (after modal closes).
- * - If not connected and not on login page → redirect to login.
- * Redirect to login happens only when the user explicitly clicks Disconnect (or Reconnect) in the
- * wallet menu; we do NOT auto-redirect on session loss, health check failure, or wallet errors.
+ * WalletConnectionGuard - Only redirects when connected and on login page → to dashboard (after modal closes).
+ * We do NOT redirect to login from here; the app can be used while disconnected. The only way to
+ * reach the login screen is by clicking "Disconnect wallet and reload" on the loading screen.
  * Renders children always so errors never cause a blank screen.
  */
 export default function WalletConnectionGuard({ children }: { children: React.ReactNode }) {
@@ -78,10 +76,10 @@ export default function WalletConnectionGuard({ children }: { children: React.Re
       setWasConnected(true)
     } else if (!isConnected && wasConnected) {
       setWasConnected(false)
-      hasRedirectedRef.current = false // Reset on disconnect
+      hasRedirectedRef.current = false
     }
 
-    // If connected → redirect to dashboard (but wait for modal to close if on login page)
+    // If connected and on login page → redirect to dashboard (but wait for modal to close)
     if (isConnected) {
       // If on login page, wait for modal to close before redirecting
       if (isLoginPage && !hasRedirectedRef.current) {
@@ -121,18 +119,6 @@ export default function WalletConnectionGuard({ children }: { children: React.Re
             router.replace('/dashboard')
           }
         }, 500)
-      }
-      return
-    }
-
-    // If not connected and not on login page → redirect to login (protect all routes)
-    if (!isConnected && !isLoginPage && !hasRedirectedRef.current) {
-      hasRedirectedRef.current = true
-      // Use window.location for more forceful redirect if router doesn't work
-      if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
-        window.location.href = '/login'
-      } else {
-        router.replace('/login')
       }
     }
   }, [isConnected, isHydrated, pathname, wasConnected, router])

@@ -22,16 +22,16 @@ export function PersistGateLoadingFallback() {
       if (typeof window === "undefined") return;
       localStorage.removeItem("walletconnect");
       // Redux-persist typically uses "persist:root" or similar
-      const keysToRemove: string[] = [];
-      for (let i = 0; i < window.localStorage.length; i++) {
-        const key = window.localStorage.key(i);
-        if (key && key.startsWith("persist:")) keysToRemove.push(key);
-      }
+      const keysToRemove = Array.from(
+        { length: window.localStorage.length },
+        (_, i) => window.localStorage.key(i)
+      ).filter((key): key is string => key !== null && key.startsWith("persist:"));
       keysToRemove.forEach((key) => localStorage.removeItem(key));
     } catch {
       // ignore
     }
-    window.location.reload();
+    // Only the loading screen disconnect sends user to login
+    window.location.href = "/login";
   };
 
   return (
