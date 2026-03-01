@@ -1,8 +1,9 @@
 'use client'
 
 import { logger } from '@/shared/lib/logger'
-import type SignClient from '@walletconnect/sign-client'
 import { useEffect } from 'react'
+import toast from 'react-hot-toast'
+import type SignClient from '@walletconnect/sign-client'
 
 // Use a WeakMap to track SignClient instances that have listeners registered
 // This persists across page refreshes better than a regular Map
@@ -46,14 +47,16 @@ export function registerWalletConnectListeners(signClient: SignClient | undefine
     return
   }
 
+  // Notify only; do NOT auto-clear state — user must click Disconnect to go to login
+  const onSessionEnd = () => {
+    toast.error('Wallet session ended. Use Disconnect in the wallet menu to reconnect.')
+    logger.info('Wallet session ended; user can disconnect from wallet menu to reconnect')
+  }
+
   // Create event handlers
   const eventHandlers: EventHandlers = {
-    session_delete: () => {
-      // Session deleted
-    },
-    session_expire: () => {
-      // Session expired
-    },
+    session_delete: onSessionEnd,
+    session_expire: onSessionEnd,
     session_request: (args: unknown) => {
       try {
         const event = args as { topic: string; id: number }

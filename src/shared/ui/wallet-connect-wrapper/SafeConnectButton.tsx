@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useTheme } from 'next-themes'
-import { Wallet, ChevronDown, LogOut } from 'lucide-react'
+import { Wallet, ChevronDown, LogOut, RefreshCw } from 'lucide-react'
 import {
   WalletConnect,
   store,
@@ -219,6 +219,28 @@ export function SafeConnectButton() {
     }
   }, [getConfig])
 
+  // ── reconnect (disconnect then redirect to login so user can connect again) ──
+
+  const handleReconnect = useCallback(async () => {
+    setIsDropdownOpen(false)
+    try {
+      const { penguiIcon, metadata } = getConfig()
+      const wc = new WalletConnect(penguiIcon, metadata)
+
+      const state = store.getState()
+      const sessions = state.walletConnect?.sessions ?? []
+      for (const s of sessions) {
+        try { await wc.disconnectSession(s.topic) } catch { /* ok */ }
+      }
+
+      store.dispatch(setConnectedWallet(null))
+      store.dispatch(connectSessionAction(null))
+      toast.success('Redirecting to login. Reconnect your wallet there.')
+    } catch {
+      toast.error('Failed to disconnect')
+    }
+  }, [getConfig])
+
   // ── clipboard ──────────────────────────────────────────
 
   const copyUri = async () => {
@@ -327,6 +349,18 @@ export function SafeConnectButton() {
                 </div>
               </div>
 
+              {/* Reconnect — disconnect and go to login to connect again */}
+              <button
+                type="button"
+                onClick={handleReconnect}
+                className={`
+                  w-full px-2.5 py-1.5 text-left flex items-center gap-1.5 transition-all duration-150
+                  ${isDark ? 'text-cyan-400/90 hover:bg-cyan-500/10 hover:text-cyan-400' : 'text-cyan-600 hover:bg-cyan-500/10 hover:text-cyan-700'}
+                `}
+              >
+                <RefreshCw className="w-3 h-3" />
+                <span className="text-[10px] font-medium tracking-tight">Reconnect</span>
+              </button>
               {/* Disconnect */}
               <button
                 type="button"

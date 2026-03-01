@@ -5,11 +5,12 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 
 /**
- * WalletConnectionGuard - Route guard that handles redirects only based on explicit connection state.
+ * WalletConnectionGuard - Route guard that handles redirects based on connection state.
  * - If connected and on login page → redirect to dashboard (after modal closes).
- * - If not connected and not on login page → redirect to login (e.g. after user disconnects via "Manage wallet").
- * Does NOT redirect on wallet/relay errors or health-check failures; only when Redux state says disconnected
- * (user chose "Disconnect"). Renders children always so errors never cause a blank screen.
+ * - If not connected and not on login page → redirect to login.
+ * Redirect to login happens only when the user explicitly clicks Disconnect (or Reconnect) in the
+ * wallet menu; we do NOT auto-redirect on session loss, health check failure, or wallet errors.
+ * Renders children always so errors never cause a blank screen.
  */
 export default function WalletConnectionGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter()

@@ -1,9 +1,10 @@
 'use client'
 
+import { logger } from '@/shared/lib/logger'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import toast from 'react-hot-toast'
 import { useSignClient } from './useSignClient'
 import { useWalletSession } from './useWalletSession'
-import { logger } from '@/shared/lib/logger'
 
 const HEALTH_CHECK_INTERVAL = 30_000
 const PING_TIMEOUT = 15_000
@@ -68,6 +69,24 @@ export function useWalletConnectionHealthCheck() {
       failCountRef.current = 0
     }
   }, [session.isConnected])
+
+  // When health check detects connection lost, only notify; do NOT auto-redirect (user must click Disconnect)
+  useEffect(() => {
+    if (!connectionLost) return
+    toast.error('Wallet connection lost. Use Disconnect in the wallet menu to reconnect.')
+    logger.info('Wallet connection lost; user can disconnect from wallet menu to reconnect')
+  }, [connectionLost])
+
+  // Run health checks shortly after mount when connected (detect "Sage closed" within ~6s)
+  useEffect(() => {
+    if (!session.isConnected) return
+    const t1 = setTimeout(() => runHealthCheck(), 2000)
+    const t2 = setTimeout(() => runHealthCheck(), 5000)
+    return () => {
+      clearTimeout(t1)
+      clearTimeout(t2)
+    }
+  }, [session.isConnected, runHealthCheck])
 
   useEffect(() => {
     if (!session.isConnected) return

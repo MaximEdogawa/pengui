@@ -163,9 +163,10 @@ export function handleWalletRequestError(
     return { success: false, error: 'Connection error. Please try again.' }
   }
 
-  // Handle session deletion
+  // Handle session deletion — do NOT auto-clear; user must click Disconnect to go to login
   if (isSessionDeletedError(errorMessage)) {
-    return { success: false, error: 'Wallet session expired. Please reconnect your wallet.' }
+    logger.info('Wallet session expired; user can disconnect from wallet menu to reconnect')
+    return { success: false, error: 'Wallet session expired. Use Disconnect in the wallet menu to reconnect.' }
   }
 
   // Return user-friendly error message

@@ -1,5 +1,6 @@
 "use client";
 
+import { useWalletConnectionHealthCheck } from "@/features/wallet/hooks/useWalletConnectionHealthCheck";
 import { getThemeClasses } from "@/shared/lib/theme";
 import { InfoBanner, VersionDisplay } from "@/shared/ui";
 import { useTheme } from "next-themes";
@@ -25,6 +26,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const { theme: currentTheme, systemTheme, setTheme } = useTheme();
   const pathname = usePathname();
   const router = useRouter();
+
+  // Detect when wallet (e.g. Sage) is closed or session invalid; clears state and redirects to login so no blank screen
+  useWalletConnectionHealthCheck();
 
   const isDark =
     currentTheme === "dark" ||
@@ -56,7 +60,16 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   };
 
   if (!mounted) {
-    return null;
+    return (
+      <div
+        className={`flex fixed inset-0 w-screen max-w-screen h-screen items-center justify-center m-0 p-0 ${t.bg}`}
+      >
+        <div
+          className="h-8 w-8 animate-spin rounded-full border-2 border-current border-t-transparent opacity-60"
+          aria-hidden
+        />
+      </div>
+    );
   }
 
   return (
