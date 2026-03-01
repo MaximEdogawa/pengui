@@ -5,7 +5,7 @@ use futures::{FutureExt, StreamExt};
 use gloo_timers::future::TimeoutFuture;
 use libp2p::gossipsub::{self, MessageAcceptance};
 use libp2p::multiaddr::Protocol;
-use libp2p::swarm::{Config as SwarmConfig, NetworkBehaviour};
+use libp2p::swarm::NetworkBehaviour;
 use libp2p::{
     identify, identity, kad, noise, swarm::SwarmEvent, yamux, Multiaddr, PeerId, StreamProtocol,
     Transport,
@@ -237,7 +237,7 @@ impl SplashNode {
                 })
             })
             .map_err(|e| JsValue::from_str(&format!("Behaviour error: {}", e)))?
-            .with_swarm_config(|c: SwarmConfig| {
+            .with_swarm_config(|c: libp2p::swarm::Config| {
                 c.with_idle_connection_timeout(Duration::from_secs(60))
             })
             .build();
@@ -271,12 +271,19 @@ impl SplashNode {
         let peer_callback = self.peer_callback.clone();
         let error_callback = self.error_callback.clone();
 
+        let mut shutdown_rx = SHUTDOWN_RX.with(|c| c.borrow_mut().take())
+            .ok_or_else(|| JsValue::from_str("Shutdown receiver not set (internal error)"))?;
+
         wasm_bindgen_futures::spawn_local(async move {
             let mut browser_peers: HashSet<PeerId> = HashSet::new();
             let mut pending_webrtc_dials: HashSet<PeerId> = HashSet::new();
 
             loop {
                 futures::select! {
+                    _ = shutdown_rx.next().fuse() => {
+                        log("[Splash] Shutdown signal received, exiting swarm loop");
+                        break;
+                    }
                     offer = offer_rx.next() => {
                         if let Some(offer_data) = offer {
                             if let Err(e) = swarm.behaviour_mut().gossipsub.publish(topic.clone(), offer_data.as_bytes()) {
@@ -321,7 +328,6 @@ impl SplashNode {
                                 gossipsub::Event::Message { propagation_source, message_id, message }
                             )) => {
                                 let offer_str = String::from_utf8_lossy(&message.data).to_string();
-                                log(&format!("[Splash] Gossipsub message received ({} bytes from {})", offer_str.len(), propagation_source));
                                 if offer_str.len() <= MAX_OFFER_SIZE {
                                     let _ = swarm.behaviour_mut().gossipsub.report_message_validation_result(
                                         &message_id,
@@ -338,7 +344,6 @@ impl SplashNode {
                                             match serde_wasm_bindgen::to_value(&offer) {
                                                 Ok(js_offer) => {
                                                     let _ = cb.call1(&JsValue::NULL, &js_offer);
-                                                    log("[Splash] Offer callback invoked");
                                                 }
                                                 Err(e) => {
                                                     log(&format!("[Splash] to_value error: {:?}", e));
@@ -540,10 +545,14 @@ struct WrapperState {
     on_offers: Option<js_sys::Function>,
     on_status: Option<js_sys::Function>,
     offer_sender: Option<futures::channel::mpsc::UnboundedSender<String>>,
+    /// When sent, the swarm loop in start() exits so it stops touching the WebSocket (avoids bufferedAmount errors when tab is hidden).
+    stop_tx: Option<futures::channel::mpsc::UnboundedSender<()>>,
 }
 
 thread_local! {
     static WRAPPER: RefCell<Option<WrapperState>> = RefCell::new(None);
+    /// Set by connect() before calling node.start(); consumed by start() so the swarm loop can exit on disconnect().
+    static SHUTDOWN_RX: RefCell<Option<futures::channel::mpsc::UnboundedReceiver<()>>> = RefCell::new(None);
 }
 
 impl WrapperState {
@@ -556,6 +565,7 @@ impl WrapperState {
                 on_offers: None,
                 on_status: None,
                 offer_sender: None,
+                stop_tx: None,
             });
         });
         Ok(())
@@ -617,6 +627,14 @@ impl WrapperState {
         let multiaddr_str = multiaddr.to_string();
 
         WrapperState::set_status("connecting");
+
+        let (stop_tx, stop_rx) = futures::channel::mpsc::unbounded::<()>();
+        WRAPPER.with(|cell| {
+            if let Some(ref mut s) = *cell.borrow_mut() {
+                s.stop_tx = Some(stop_tx);
+            }
+        });
+        SHUTDOWN_RX.with(|c| *c.borrow_mut() = Some(stop_rx));
 
         if let Some(ref on_status) = WRAPPER.with(|cell| {
             cell.borrow().as_ref().and_then(|s| s.on_status.clone())
@@ -765,11 +783,17 @@ impl WrapperState {
     }
 
     fn disconnect() -> Result<(), JsValue> {
-        WRAPPER.with(|cell| {
+        let stop_tx = WRAPPER.with(|cell| {
             if let Some(ref mut s) = *cell.borrow_mut() {
                 s.offer_sender = None;
+                s.stop_tx.take()
+            } else {
+                None
             }
         });
+        if let Some(tx) = stop_tx {
+            let _ = tx.unbounded_send(());
+        }
         WrapperState::set_status("disconnected");
         Ok(())
     }

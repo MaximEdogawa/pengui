@@ -1,31 +1,20 @@
 'use client'
 
 import { useWalletConnection } from '@/shared/hooks/useWalletConnection'
-import { useWalletConnectionHealthCheck } from '@/features/wallet/hooks/useWalletConnectionHealthCheck'
-import {
-  store,
-  setConnectedWallet,
-  connectSession,
-  setSessions,
-} from '@maximedogawa/chia-wallet-connect-react'
 import { usePathname, useRouter } from 'next/navigation'
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { logger } from '@/shared/lib/logger'
-import WalletDisconnectedModal from './WalletDisconnectedModal'
+import { useEffect, useRef, useState } from 'react'
 
 /**
- * WalletConnectionGuard - Route guard that handles redirects based on wallet connection state
- * - If connected and on login page → redirect to dashboard (but wait for modal to close)
- * - If not connected and not on login page → redirect to login (protects all routes)
- * - If the wallet connection becomes stale/broken → show info modal and redirect to login
- * Works on initial load and page refresh
+ * WalletConnectionGuard - Route guard that handles redirects only based on explicit connection state.
+ * - If connected and on login page → redirect to dashboard (after modal closes).
+ * - If not connected and not on login page → redirect to login (e.g. after user disconnects via "Manage wallet").
+ * Does NOT redirect on wallet/relay errors or health-check failures; only when Redux state says disconnected
+ * (user chose "Disconnect"). Renders children always so errors never cause a blank screen.
  */
 export default function WalletConnectionGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
   const { isConnected } = useWalletConnection()
-  const { connectionLost } = useWalletConnectionHealthCheck()
-  const [showDisconnectedModal, setShowDisconnectedModal] = useState(false)
   const [isHydrated, setIsHydrated] = useState(false)
   const [wasConnected, setWasConnected] = useState(false)
   const redirectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
@@ -33,41 +22,9 @@ export default function WalletConnectionGuard({ children }: { children: React.Re
   const hasRedirectedRef = useRef(false)
   const lastPathnameRef = useRef(pathname)
 
-  // Show modal when health check detects a lost connection
+  // Wait for Redux store to rehydrate from persistence (short delay so we don't block the UI)
   useEffect(() => {
-    if (connectionLost && isConnected) {
-      setShowDisconnectedModal(true)
-    }
-  }, [connectionLost, isConnected])
-
-  /**
-   * Handle user confirming the disconnected modal.
-   * Clears the wallet state in Redux and redirects to login.
-   */
-  const handleDisconnectConfirm = useCallback(() => {
-    setShowDisconnectedModal(false)
-
-    try {
-      // Clear wallet connection state in Redux store
-      store.dispatch(setConnectedWallet(null))
-      store.dispatch(connectSession(null))
-      store.dispatch(setSessions([]))
-    } catch (error) {
-      logger.error('Failed to clear wallet state:', error)
-    }
-
-    // Force redirect to login
-    hasRedirectedRef.current = true
-    if (typeof window !== 'undefined') {
-      window.location.href = '/login'
-    } else {
-      router.replace('/login')
-    }
-  }, [router])
-
-  // Wait for Redux store to rehydrate from persistence
-  useEffect(() => {
-    const timer = setTimeout(() => setIsHydrated(true), 200)
+    const timer = setTimeout(() => setIsHydrated(true), 100)
     return () => clearTimeout(timer)
   }, [])
 
@@ -191,21 +148,7 @@ export default function WalletConnectionGuard({ children }: { children: React.Re
     }
   }, [])
 
-  // Show loading state while checking connection (prevents flash of wrong page)
-  if (!isHydrated) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-950 via-sky-950 to-slate-950">
-        <div className="text-white">Loading...</div>
-      </div>
-    )
-  }
-
-  return (
-    <>
-      {children}
-      {showDisconnectedModal && (
-        <WalletDisconnectedModal onConfirm={handleDisconnectConfirm} />
-      )}
-    </>
-  )
+  // Always render children so connection/hydration issues never cause a blank screen (especially on mobile).
+  // Redirect logic runs once isHydrated is true; a brief flash of content before redirect is acceptable.
+  return <>{children}</>
 }

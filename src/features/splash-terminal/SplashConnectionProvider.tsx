@@ -70,14 +70,36 @@ export function SplashConnectionProvider({
   queryClientRef.current = queryClient;
 
   // ── connect once when relay URL / network changes ──────────────────
+  // Use AbortController so when the effect cleans up (e.g. React Strict Mode remount),
+  // the in-flight initAndConnect is abandoned and we don't end up with two WASM nodes
+  // (which causes "memory access out of bounds").
   useEffect(() => {
     if (!relayUrl) return;
-    wasm.initAndConnect(relayUrl, network).catch(() => {});
+    const abort = new AbortController();
+    wasm.initAndConnect(relayUrl, network, abort.signal).catch(() => {});
     return () => {
+      abort.abort();
       wasm.disconnect();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only reconnect on URL/network change
   }, [relayUrl, network]);
+
+  // ── disconnect when tab is hidden to avoid WASM touching a suspended WebSocket ──
+  // (iOS/safari invalidates the WebSocket when the tab is backgrounded; libp2p then
+  // accesses .bufferedAmount on a dead object. We do NOT reconnect on visible: doing so
+  // can trigger "FnOnce called more than once" and out-of-bounds memory access because
+  // the WASM state is not safe to re-init while teardown may still be in progress.)
+  const wasmRef = useRef(wasm);
+  wasmRef.current = wasm;
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === "hidden") {
+        wasmRef.current.disconnect();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, []);
 
   // ── auto-invalidate order book when matching stream offers arrive ──
   useEffect(() => {
