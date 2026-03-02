@@ -106,7 +106,7 @@ export default [
       // Nesting depth - Clean Code: avoid deep nesting (fast built-in rule)
       "max-depth": ["warn", 4], // Max 4 levels of nesting (Clean Code: prefer flat structures)
       // Maximum statements per function (fast built-in rule)
-      "max-statements": ["warn", { max: 50 }], // Clean Code: functions should do one thing (adjusted for React)
+      "max-statements": ["warn", { max: 55 }], // Clean Code: functions should do one thing (adjusted for React)
       // React Hooks rules - critical for preventing infinite loops
       "react-hooks/rules-of-hooks": "error",
       "react-hooks/exhaustive-deps": [

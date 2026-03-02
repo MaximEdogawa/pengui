@@ -5,23 +5,39 @@
 
 import { logger } from '@/shared/lib/logger'
 
+export type StoredTransactionType =
+  | 'send'
+  | 'receive'
+  | 'trade'
+  | 'swap'
+  | 'loan'
+  | 'options'
+
 export interface StoredTransaction {
   id: string
   transactionId: string
   timestamp: number
-  type: 'send' | 'receive'
+  type: StoredTransactionType
   amount: string
   fee: string
   recipientAddress?: string
   senderAddress?: string
   memo?: string
   status: 'pending' | 'confirmed' | 'failed'
+  /** Asset ID (empty or 'xch' for native XCH). Optional for backward compatibility. */
+  assetId?: string
+  /** USD value at time of transaction, for display. */
+  usdValueAtTime?: number
+  /** Asset ticker/symbol for display (e.g. 'XCH', 'USDT'). */
+  amountAsset?: string
 }
 
 const STORAGE_KEY = 'wallet_transactions'
 const MAX_TRANSACTIONS = 50
 
-export function saveTransaction(transaction: Omit<StoredTransaction, 'id' | 'timestamp'>): void {
+export function saveTransaction(
+  transaction: Omit<StoredTransaction, 'id' | 'timestamp'>
+): void {
   if (typeof window === 'undefined') return
 
   try {
@@ -53,6 +69,23 @@ export function getTransactions(): StoredTransaction[] {
     logger.error('Failed to get transactions:', error)
     return []
   }
+}
+
+/** Normalize asset id for comparison: XCH native is '' or 'xch'. */
+export function normalizeAssetIdForFilter(assetId: string | undefined): string {
+  if (assetId == null || assetId === '') return 'xch'
+  return assetId
+}
+
+/**
+ * Returns transactions that match the given asset (XCH slug or asset ID).
+ */
+export function getTransactionsByAsset(
+  transactions: StoredTransaction[],
+  assetIdOrSlug: string
+): StoredTransaction[] {
+  const normalized = normalizeAssetIdForFilter(assetIdOrSlug === 'xch' ? '' : assetIdOrSlug)
+  return transactions.filter((tx) => normalizeAssetIdForFilter(tx.assetId) === normalized)
 }
 
 export function clearTransactions(): void {

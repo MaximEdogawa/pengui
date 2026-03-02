@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import type { DexieOffer } from "@/entities/offer";
 import { getDexieApiUrl } from "@/shared/lib/utils/networkUtils";
 import { applyWebSocketBufferedAmountPatch } from "@/shared/lib/websocketBufferedAmountPatch";
@@ -99,6 +99,85 @@ export async function broadcastOfferToSplash(offer: string): Promise<void> {
   }
 }
 
+/** Wait after a recent disconnect so WASM swarm loop can exit before reconnecting. */
+async function waitAfterDisconnectIfNeeded(
+  lastDisconnectTimeRef: React.MutableRefObject<number | null>,
+  signal?: AbortSignal,
+): Promise<void> {
+  const lastDisconnect = lastDisconnectTimeRef.current;
+  if (lastDisconnect == null) return;
+  const elapsed = Date.now() - lastDisconnect;
+  const waitMs = Math.max(0, 600 - elapsed);
+  if (waitMs > 0) {
+    await new Promise<void>((resolve) => {
+      const t = setTimeout(resolve, waitMs);
+      signal?.addEventListener("abort", () => { clearTimeout(t); resolve(); }, { once: true });
+    });
+  }
+  lastDisconnectTimeRef.current = null;
+}
+
+/** Disconnect existing module and wait so WASM can clean up. */
+async function disconnectExistingAndWait(
+  moduleRef: React.MutableRefObject<SplashWasmModule | null>,
+  lastDisconnectTimeRef: React.MutableRefObject<number | null>,
+): Promise<void> {
+  if (!moduleRef.current) return;
+  try {
+    moduleRef.current.disconnect();
+  } catch {
+    // ignore
+  }
+  moduleRef.current = null;
+  lastDisconnectTimeRef.current = Date.now();
+  await new Promise((r) => setTimeout(r, 400));
+}
+
+async function enrichOfferFromDexie(
+  p: SplashOfferPayload,
+  network: "mainnet" | "testnet",
+): Promise<DexieOffer> {
+  try {
+    const apiUrl = getDexieApiUrl(network);
+    const resp = await fetch(`${apiUrl}/v1/offers`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ offer: p.offer }),
+    });
+    const data = (await resp.json()) as { success?: boolean; offer?: DexieOffer };
+    if (data.success && data.offer) {
+      return { ...data.offer, offer: p.offer };
+    }
+  } catch {
+    // ignore
+  }
+  return toMinimalDexieOffer(p);
+}
+
+function createOffersCallback(
+  networkRef: React.MutableRefObject<"mainnet" | "testnet">,
+  bufferRef: React.MutableRefObject<DexieOffer[]>,
+  receivedCountRef: React.MutableRefObject<number>,
+  offersCallbacksRef: React.MutableRefObject<Set<(offers: DexieOffer[]) => void>>,
+): (raw: unknown) => void {
+  return (raw: unknown) => {
+    const arr = Array.isArray(raw) ? raw : raw != null ? [raw] : [];
+    for (const item of arr) {
+      const p = item as SplashOfferPayload;
+      if (p?.offer && typeof p.offer === "string") {
+        void (async () => {
+          const enriched = await enrichOfferFromDexie(p, networkRef.current);
+          receivedCountRef.current += 1;
+          const buf = bufferRef.current;
+          if (buf.length >= MAX_BUFFER_LEN) buf.shift();
+          buf.push(enriched);
+          offersCallbacksRef.current.forEach((cb) => cb([enriched]));
+        })();
+      }
+    }
+  };
+}
+
 export function useSplashWasm(): UseSplashWasmResult {
   const [status, setStatus] = useState<SplashConnectionStatus>("disconnected");
   const [isReady, setIsReady] = useState(false);
@@ -132,7 +211,6 @@ export function useSplashWasm(): UseSplashWasmResult {
       networkRef.current = network;
       setStatus("connecting");
       const networkName = network === "testnet" ? "splash-testnet" : "splash";
-      // Use 127.0.0.1 instead of localhost so WASM/browser can connect without DNS
       const urlForWasm = relayUrl.replace(
         /^(wss?:\/\/)localhost(\b)/i,
         (_, scheme, rest) => `${scheme}127.0.0.1${rest}`,
@@ -141,41 +219,13 @@ export function useSplashWasm(): UseSplashWasmResult {
       const wasmJsPath = `${base}/wasm/splash_wasm.js`;
       const wasmBinaryPath = `${base}/wasm/splash_wasm_bg.wasm`;
       try {
-        // Wait after a recent disconnect so the WASM swarm loop can exit before we
-        // overwrite WRAPPER. Prevents "memory access out of bounds" from two nodes.
-        const lastDisconnect = lastDisconnectTimeRef.current;
-        if (lastDisconnect != null) {
-          const elapsed = Date.now() - lastDisconnect;
-          const waitMs = Math.max(0, 600 - elapsed);
-          if (waitMs > 0) {
-            await new Promise<void>((resolve) => {
-              const t = setTimeout(resolve, waitMs);
-              signal?.addEventListener(
-                "abort",
-                () => {
-                  clearTimeout(t);
-                  resolve();
-                },
-                { once: true },
-              );
-            });
-          }
-          lastDisconnectTimeRef.current = null;
-        }
+        await waitAfterDisconnectIfNeeded(lastDisconnectTimeRef, signal);
         if (signal?.aborted) return;
 
-        // If a connection already exists, disconnect and wait before reconnecting.
         if (moduleRef.current) {
-          try {
-            moduleRef.current.disconnect();
-          } catch {
-            // ignore
-          }
-          moduleRef.current = null;
           setIsReady(false);
           setStatus("disconnected");
-          lastDisconnectTimeRef.current = Date.now();
-          await new Promise((r) => setTimeout(r, 400));
+          await disconnectExistingAndWait(moduleRef, lastDisconnectTimeRef);
         }
         if (signal?.aborted) return;
 
@@ -192,7 +242,6 @@ export function useSplashWasm(): UseSplashWasmResult {
         moduleRef.current = mod;
         bufferRef.current = [];
         receivedCountRef.current = 0;
-
         mod.init(urlForWasm, networkName);
 
         mod.setOnStatusCallback((obj: { status?: string; message?: string }) => {
@@ -200,42 +249,9 @@ export function useSplashWasm(): UseSplashWasmResult {
           setStatus(s as SplashConnectionStatus);
           setError(s === "error" && obj?.message ? String(obj.message) : null);
         });
-
-        mod.setOnOffersCallback((raw: unknown) => {
-          const arr = Array.isArray(raw) ? raw : raw != null ? [raw] : [];
-          for (const item of arr) {
-            const p = item as SplashOfferPayload;
-            if (p?.offer && typeof p.offer === "string") {
-              void (async () => {
-                let enriched: DexieOffer;
-                try {
-                  const apiUrl = getDexieApiUrl(networkRef.current);
-                  const resp = await fetch(`${apiUrl}/v1/offers`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ offer: p.offer }),
-                  });
-                  const data = (await resp.json()) as {
-                    success?: boolean;
-                    offer?: DexieOffer;
-                  };
-                  if (data.success && data.offer) {
-                    enriched = { ...data.offer, offer: p.offer };
-                  } else {
-                    enriched = toMinimalDexieOffer(p);
-                  }
-                } catch {
-                  enriched = toMinimalDexieOffer(p);
-                }
-                receivedCountRef.current += 1;
-                const buf = bufferRef.current;
-                if (buf.length >= MAX_BUFFER_LEN) buf.shift();
-                buf.push(enriched);
-                offersCallbacksRef.current.forEach((cb) => cb([enriched]));
-              })();
-            }
-          }
-        });
+        mod.setOnOffersCallback(
+          createOffersCallback(networkRef, bufferRef, receivedCountRef, offersCallbacksRef),
+        );
 
         mod.connect();
         if (signal?.aborted) {
