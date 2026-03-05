@@ -21,6 +21,7 @@ import {
 } from '@/shared/lib/utils/networkStorage'
 import { networkToChainId } from '@/shared/lib/utils/networkUtils'
 import { getRequiredNamespaces } from '@/shared/lib/walletConnect/constants/wallet-connect'
+import { disconnectWallet } from '@/shared/lib/walletConnect/disconnectWallet'
 import { ConnectWalletModal } from './ConnectWalletModal'
 import toast from 'react-hot-toast'
 import type { SessionTypes } from '@walletconnect/types'
@@ -202,22 +203,13 @@ export function SafeConnectButton() {
   const handleDisconnect = useCallback(async () => {
     setIsDropdownOpen(false)
     try {
-      const { penguiIcon, metadata } = getConfig()
-      const wc = new WalletConnect(penguiIcon, metadata)
-
-      const state = store.getState()
-      const sessions = state.walletConnect?.sessions ?? []
-      for (const s of sessions) {
-        try { await wc.disconnectSession(s.topic) } catch { /* ok */ }
-      }
-
-      store.dispatch(setConnectedWallet(null))
-      store.dispatch(connectSessionAction(null))
+      await disconnectWallet()
+      queryClient.invalidateQueries({ queryKey: ['walletConnect'] })
       toast.success('Wallet disconnected')
     } catch {
       toast.error('Failed to disconnect')
     }
-  }, [getConfig])
+  }, [queryClient])
 
   // ── reconnect (disconnect then redirect to login so user can connect again) ──
 
