@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState, type MutableRefObject } from "react";
 import type { DexieOffer } from "@/entities/offer";
 import { getDexieApiUrl } from "@/shared/lib/utils/networkUtils";
 import { applyWebSocketBufferedAmountPatch } from "@/shared/lib/websocketBufferedAmountPatch";
@@ -37,6 +37,102 @@ function toMinimalDexieOffer(p: SplashOfferPayload): DexieOffer {
     offered: [],
     requested: [],
     fees: 0,
+  };
+}
+
+async function waitAfterDisconnectIfNeeded(
+  signal: AbortSignal | undefined,
+  lastDisconnectTimeRef: MutableRefObject<number | null>,
+): Promise<void> {
+  const lastDisconnect = lastDisconnectTimeRef.current;
+  if (lastDisconnect == null) return;
+  const elapsed = Date.now() - lastDisconnect;
+  const waitMs = Math.max(0, 600 - elapsed);
+  if (waitMs <= 0) {
+    lastDisconnectTimeRef.current = null;
+    return;
+  }
+  await new Promise<void>((resolve) => {
+    const t = setTimeout(resolve, waitMs);
+    signal?.addEventListener("abort", () => { clearTimeout(t); resolve(); }, { once: true });
+  });
+  lastDisconnectTimeRef.current = null;
+}
+
+async function disconnectExistingAndWait(
+  moduleRef: MutableRefObject<SplashWasmModule | null>,
+  lastDisconnectTimeRef: MutableRefObject<number | null>,
+  setIsReady: (v: boolean) => void,
+  setStatus: (s: SplashConnectionStatus) => void,
+): Promise<void> {
+  if (!moduleRef.current) return;
+  try {
+    moduleRef.current.disconnect();
+  } catch {
+    // ignore
+  }
+  moduleRef.current = null;
+  setIsReady(false);
+  setStatus("disconnected");
+  lastDisconnectTimeRef.current = Date.now();
+  await new Promise((r) => setTimeout(r, 400));
+}
+
+async function loadWasmModule(
+  wasmJsPath: string,
+  wasmBinaryPath: string,
+  signal: AbortSignal | undefined,
+): Promise<SplashWasmModule> {
+  const wasmModule = await import(/* webpackIgnore: true */ wasmJsPath);
+  if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
+  await (wasmModule.default as (opts?: { module_or_path?: string }) => Promise<unknown>)({
+    module_or_path: wasmBinaryPath,
+  });
+  if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
+  return wasmModule as unknown as SplashWasmModule;
+}
+
+async function enrichOfferPayload(
+  p: SplashOfferPayload,
+  network: "mainnet" | "testnet",
+): Promise<DexieOffer> {
+  try {
+    const apiUrl = getDexieApiUrl(network);
+    const resp = await fetch(`${apiUrl}/v1/offers`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ offer: p.offer }),
+    });
+    const data = (await resp.json()) as { success?: boolean; offer?: DexieOffer };
+    if (data.success && data.offer) {
+      return { ...data.offer, offer: p.offer };
+    }
+  } catch {
+    // fall through to minimal
+  }
+  return toMinimalDexieOffer(p);
+}
+
+function createOffersCallback(
+  networkRef: MutableRefObject<"mainnet" | "testnet">,
+  bufferRef: MutableRefObject<DexieOffer[]>,
+  receivedCountRef: MutableRefObject<number>,
+  offersCallbacksRef: MutableRefObject<Set<(offers: DexieOffer[]) => void>>,
+): (raw: unknown) => void {
+  return (raw: unknown) => {
+    const arr = Array.isArray(raw) ? raw : raw != null ? [raw] : [];
+    arr.forEach((item: unknown) => {
+      const p = item as SplashOfferPayload;
+      if (!p?.offer || typeof p.offer !== "string") return;
+      void (async () => {
+        const enriched = await enrichOfferPayload(p, networkRef.current);
+        receivedCountRef.current += 1;
+        const buf = bufferRef.current;
+        if (buf.length >= MAX_BUFFER_LEN) buf.shift();
+        buf.push(enriched);
+        offersCallbacksRef.current.forEach((cb) => cb([enriched]));
+      })();
+    });
   };
 }
 
@@ -141,58 +237,24 @@ export function useSplashWasm(): UseSplashWasmResult {
       const wasmJsPath = `${base}/wasm/splash_wasm.js`;
       const wasmBinaryPath = `${base}/wasm/splash_wasm_bg.wasm`;
       try {
-        // Wait after a recent disconnect so the WASM swarm loop can exit before we
-        // overwrite WRAPPER. Prevents "memory access out of bounds" from two nodes.
-        const lastDisconnect = lastDisconnectTimeRef.current;
-        if (lastDisconnect != null) {
-          const elapsed = Date.now() - lastDisconnect;
-          const waitMs = Math.max(0, 600 - elapsed);
-          if (waitMs > 0) {
-            await new Promise<void>((resolve) => {
-              const t = setTimeout(resolve, waitMs);
-              signal?.addEventListener(
-                "abort",
-                () => {
-                  clearTimeout(t);
-                  resolve();
-                },
-                { once: true },
-              );
-            });
-          }
-          lastDisconnectTimeRef.current = null;
-        }
+        await waitAfterDisconnectIfNeeded(signal, lastDisconnectTimeRef);
         if (signal?.aborted) return;
 
-        // If a connection already exists, disconnect and wait before reconnecting.
-        if (moduleRef.current) {
-          try {
-            moduleRef.current.disconnect();
-          } catch {
-            // ignore
-          }
-          moduleRef.current = null;
-          setIsReady(false);
-          setStatus("disconnected");
-          lastDisconnectTimeRef.current = Date.now();
-          await new Promise((r) => setTimeout(r, 400));
-        }
+        await disconnectExistingAndWait(
+          moduleRef,
+          lastDisconnectTimeRef,
+          setIsReady,
+          setStatus,
+        );
         if (signal?.aborted) return;
 
         applyWebSocketBufferedAmountPatch();
-        const wasmModule = await import(/* webpackIgnore: true */ wasmJsPath);
+        const mod = await loadWasmModule(wasmJsPath, wasmBinaryPath, signal);
         if (signal?.aborted) return;
 
-        await (wasmModule.default as (opts?: { module_or_path?: string }) => Promise<unknown>)({
-          module_or_path: wasmBinaryPath,
-        });
-        if (signal?.aborted) return;
-
-        const mod = wasmModule as unknown as SplashWasmModule;
         moduleRef.current = mod;
         bufferRef.current = [];
         receivedCountRef.current = 0;
-
         mod.init(urlForWasm, networkName);
 
         mod.setOnStatusCallback((obj: { status?: string; message?: string }) => {
@@ -200,42 +262,14 @@ export function useSplashWasm(): UseSplashWasmResult {
           setStatus(s as SplashConnectionStatus);
           setError(s === "error" && obj?.message ? String(obj.message) : null);
         });
-
-        mod.setOnOffersCallback((raw: unknown) => {
-          const arr = Array.isArray(raw) ? raw : raw != null ? [raw] : [];
-          for (const item of arr) {
-            const p = item as SplashOfferPayload;
-            if (p?.offer && typeof p.offer === "string") {
-              void (async () => {
-                let enriched: DexieOffer;
-                try {
-                  const apiUrl = getDexieApiUrl(networkRef.current);
-                  const resp = await fetch(`${apiUrl}/v1/offers`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ offer: p.offer }),
-                  });
-                  const data = (await resp.json()) as {
-                    success?: boolean;
-                    offer?: DexieOffer;
-                  };
-                  if (data.success && data.offer) {
-                    enriched = { ...data.offer, offer: p.offer };
-                  } else {
-                    enriched = toMinimalDexieOffer(p);
-                  }
-                } catch {
-                  enriched = toMinimalDexieOffer(p);
-                }
-                receivedCountRef.current += 1;
-                const buf = bufferRef.current;
-                if (buf.length >= MAX_BUFFER_LEN) buf.shift();
-                buf.push(enriched);
-                offersCallbacksRef.current.forEach((cb) => cb([enriched]));
-              })();
-            }
-          }
-        });
+        mod.setOnOffersCallback(
+          createOffersCallback(
+            networkRef,
+            bufferRef,
+            receivedCountRef,
+            offersCallbacksRef,
+          ),
+        );
 
         mod.connect();
         if (signal?.aborted) {

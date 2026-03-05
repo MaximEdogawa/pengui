@@ -1,17 +1,36 @@
-import { environment } from '@/shared/lib/config/environment'
-import { SageMethods } from './sage-methods'
-import { networkToChainId, CHIA_MAINNET_CHAIN_ID, CHIA_TESTNET_CHAIN_ID } from '@/shared/lib/utils/networkUtils'
+import { environment } from "@/shared/lib/config/environment";
+import { SageMethods } from "./sage-methods";
+import {
+  networkToChainId,
+  CHIA_MAINNET_CHAIN_ID,
+  CHIA_TESTNET_CHAIN_ID,
+} from "@/shared/lib/utils/networkUtils";
 
-export const WALLET_CONNECT_STORAGE_KEY = 'walletconnect'
+export const WALLET_CONNECT_STORAGE_KEY = "walletconnect";
 // Re-export chain IDs for backward compatibility
-export { CHIA_MAINNET_CHAIN_ID, CHIA_TESTNET_CHAIN_ID }
-
+export { CHIA_MAINNET_CHAIN_ID, CHIA_TESTNET_CHAIN_ID };
 
 export const CHIA_METADATA = {
   name: environment.wallet.walletConnect.metadata.name,
   description: environment.wallet.walletConnect.metadata.description,
   url: environment.wallet.walletConnect.metadata.url,
   icons: [...environment.wallet.walletConnect.metadata.icons],
+};
+
+/** Config for WalletConnect class (penguiIcon + metadata). Used by disconnect and connect flows. */
+export function getWalletConnectAppConfig() {
+  const origin =
+    typeof window !== "undefined" ? window.location.origin : "https://penguinpool.space";
+  const penguiIcon = `${origin}/pengui-logo.png`;
+  return {
+    penguiIcon,
+    metadata: {
+      name: CHIA_METADATA.name,
+      description: CHIA_METADATA.description,
+      url: origin,
+      icons: [penguiIcon],
+    },
+  };
 }
 
 /**
@@ -19,8 +38,8 @@ export const CHIA_METADATA = {
  * @param network - The network type ('mainnet' | 'testnet')
  * @returns The chain ID
  */
-export function getChiaChainId(network: 'mainnet' | 'testnet'): string {
-  return networkToChainId(network)
+export function getChiaChainId(network: "mainnet" | "testnet"): string {
+  return networkToChainId(network);
 }
 
 /**
@@ -28,7 +47,7 @@ export function getChiaChainId(network: 'mainnet' | 'testnet'): string {
  * @param network - The network type ('mainnet' | 'testnet')
  * @returns The required namespaces configuration
  */
-export function getRequiredNamespaces(network: 'mainnet' | 'testnet') {
+export function getRequiredNamespaces(network: "mainnet" | "testnet") {
   return {
     chia: {
       methods: [
@@ -53,11 +72,10 @@ export function getRequiredNamespaces(network: 'mainnet' | 'testnet') {
         SageMethods.CHIA_BULK_MINT_NFTS,
       ],
       chains: [getChiaChainId(network)],
-      events: ['chainChanged', 'accountsChanged'],
+      events: ["chainChanged", "accountsChanged"],
     },
-  }
+  };
 }
-
 
 /**
  * Get SIGN_CLIENT_CONFIG
@@ -65,13 +83,15 @@ export function getRequiredNamespaces(network: 'mainnet' | 'testnet') {
  */
 export function getSignClientConfig() {
   return {
-    projectId: process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID || '',
-    relayUrl: process.env.NEXT_PUBLIC_WALLET_CONNECT_RELAY_URL || 'wss://relay.walletconnect.com',
+    projectId: process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID || "",
+    relayUrl:
+      process.env.NEXT_PUBLIC_WALLET_CONNECT_RELAY_URL ||
+      "wss://relay.walletconnect.com",
     metadata: {
       name: environment.wallet.walletConnect.metadata.name,
       description: environment.wallet.walletConnect.metadata.description,
       url: environment.wallet.walletConnect.metadata.url,
       icons: [...environment.wallet.walletConnect.metadata.icons],
     },
-  }
+  };
 }
