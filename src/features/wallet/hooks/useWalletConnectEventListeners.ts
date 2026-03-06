@@ -1,7 +1,6 @@
 "use client";
 
 import { logger } from "@/shared/lib/logger";
-import { useEffect } from "react";
 import toast from "react-hot-toast";
 import type SignClient from "@walletconnect/sign-client";
 
@@ -122,35 +121,4 @@ export function registerWalletConnectListeners(
   });
 
   listenerRegistry.set(signClient, registeredEvents);
-}
-
-/**
- * Hook to manage WalletConnect event listeners
- * Registers event listeners when SignClient is available
- * Re-registers listeners after page refresh to handle session pings
- *
- * NOTE: This hook now primarily serves as a backup registration mechanism.
- * The main registration happens synchronously in useSignClient to prevent race conditions.
- */
-export function useWalletConnectEventListeners(
-  signClient: SignClient | undefined,
-) {
-  useEffect(() => {
-    if (!signClient) {
-      return;
-    }
-
-    registerWalletConnectListeners(signClient);
-
-    // Cleanup function
-    // NOTE: We intentionally do NOT remove listeners here because:
-    // 1. Listeners are shared across all components using the SignClient
-    // 2. Removing listeners during component unmount can cause "no listeners" errors
-    //    when WalletConnect emits session_ping during active wallet operations
-    // 3. Listeners should persist for the lifetime of the SignClient instance
-    // The listeners will be cleaned up when the SignClient is destroyed/recreated
-    return () => {
-      // Keep listeners active - they're shared across components
-    };
-  }, [signClient]);
 }
