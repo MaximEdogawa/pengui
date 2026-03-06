@@ -147,7 +147,7 @@ export function SafeConnectButton() {
       setIsModalOpen(false)
       // SignClient invalidation is handled once by NetworkProvider when isConnected/session updates (avoids duplicate invalidate + relay loop)
     },
-    [queryClient],
+    [],
   )
 
   // ── initiate connection (generates URI + waits for approval) ──

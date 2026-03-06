@@ -128,12 +128,15 @@ export async function fetchTokenInfo(assetId: string): Promise<SpaceScanTokenInf
 }
 
 /**
- * Fetch all CAT tokens from Space Scan API
+ * Fetch all CAT tokens from Space Scan API.
+ * In the browser we use the app's API proxy to avoid CORS (Space Scan does not send Access-Control-Allow-Origin for /tokens).
  * @returns Array of all CAT tokens with their metadata
  */
 export async function fetchAllTokens(): Promise<SpaceScanCatToken[]> {
-  const baseUrl = getSpaceScanApiUrl()
-  const url = `${baseUrl}/tokens`
+  const url =
+    typeof window !== 'undefined'
+      ? '/api/spacescan/tokens'
+      : `${getSpaceScanApiUrl()}/tokens`
   const { signal, clear } = createAbortTimeout()
 
   try {

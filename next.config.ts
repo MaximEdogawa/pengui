@@ -39,8 +39,21 @@ const nextConfig: NextConfig = {
           { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
         ],
       },
-      // Cache only; do not set Content-Type for /wasm/* so .js is served as application/javascript
-      // and .wasm as application/wasm (browser would reject JS executed as application/wasm).
+      // Splash WASM: .js must be application/javascript for dynamic import; .wasm gets application/wasm.
+      {
+        source: '/wasm/splash_wasm.js',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+          { key: 'Content-Type', value: 'application/javascript' },
+        ],
+      },
+      {
+        source: '/wasm/splash_wasm_bg.wasm',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+          { key: 'Content-Type', value: 'application/wasm' },
+        ],
+      },
       {
         source: '/wasm/:path*',
         headers: [

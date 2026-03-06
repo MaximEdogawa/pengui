@@ -198,9 +198,18 @@ function getWasmBaseUrl(): string {
   return "";
 }
 
+/** Use API route so response has correct Content-Type (application/javascript) regardless of reverse proxy. */
+function getWasmPaths(): { js: string; wasm: string } {
+  const base = getWasmBaseUrl();
+  return {
+    js: `${base}/api/wasm/splash_wasm.js`,
+    wasm: `${base}/api/wasm/splash_wasm_bg.wasm`,
+  };
+}
+
 export async function broadcastOfferToSplash(offer: string): Promise<void> {
   try {
-    const wasmPath = `${getWasmBaseUrl()}/wasm/splash_wasm.js`;
+    const { js: wasmPath } = getWasmPaths();
     const wasmModule = await import(/* webpackIgnore: true */ wasmPath);
     const mod = wasmModule as unknown as SplashWasmModule;
     mod.broadcastOffer(offer);
@@ -250,9 +259,7 @@ export function useSplashWasm(): UseSplashWasmResult {
         /^(wss?:\/\/)localhost(\b)/i,
         (_, scheme, rest) => `${scheme}127.0.0.1${rest}`,
       );
-      const base = getWasmBaseUrl();
-      const wasmJsPath = `${base}/wasm/splash_wasm.js`;
-      const wasmBinaryPath = `${base}/wasm/splash_wasm_bg.wasm`;
+      const { js: wasmJsPath, wasm: wasmBinaryPath } = getWasmPaths();
       try {
         await waitAfterDisconnectIfNeeded(signal, lastDisconnectTimeRef);
         if (signal?.aborted) return;
