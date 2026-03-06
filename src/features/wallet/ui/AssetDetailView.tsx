@@ -24,6 +24,7 @@ import SectionHeader from './shared/SectionHeader'
 import EmptyState from './shared/EmptyState'
 import { Modal } from '@/shared/ui'
 import SendTransactionForm from './SendTransactionForm'
+import AssetPriceChart from './AssetPriceChart'
 import { ReceiveModal } from '@/features/dashboard/ui/components/ReceiveModal'
 import { useWalletConnectionState } from '@maximedogawa/chia-wallet-connect-react'
 import {
@@ -131,80 +132,80 @@ export default function AssetDetailView({ assetIdSlug }: AssetDetailViewProps) {
       </button>
 
       <Card className="mb-4">
-        <div className="flex items-center gap-3 mb-4">
-          {isXch ? (
-            <XchIcon size={40} isTestnet={network === 'testnet'} />
-          ) : (
-            <TickerIcon assetId={assetId} ticker={ticker} size={40} />
-          )}
-          <div>
-            <h1 className={`text-xl font-semibold ${t.text}`}>{displayName}</h1>
-            <p className={`${t.textSecondary} tabular-nums`}>
-              {ticker}
-              {priceUsd != null && priceUsd > 0 && (
-                <span className="ml-1">· {formatPrice(priceUsd)}</span>
-              )}
-            </p>
+        {/* Header: icon + name left, action buttons right */}
+        <div className="flex items-center justify-between gap-3 mb-3">
+          <div className="flex items-center gap-3 min-w-0">
+            {isXch ? (
+              <XchIcon size={36} isTestnet={network === 'testnet'} />
+            ) : (
+              <TickerIcon assetId={assetId} ticker={ticker} size={36} />
+            )}
+            <div className="min-w-0">
+              <h1 className={`text-lg font-semibold ${t.text} leading-tight truncate`}>{displayName}</h1>
+              <p className={`text-xs ${t.textSecondary} tabular-nums`}>
+                {ticker}
+                {priceUsd != null && priceUsd > 0 && (
+                  <span className="ml-1">· {formatPrice(priceUsd)}</span>
+                )}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            {isXch && (
+              <button
+                type="button"
+                onClick={() => setShowSendModal(true)}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                  isDark ? 'bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30' : 'bg-cyan-100 text-cyan-700 hover:bg-cyan-200'
+                }`}
+              >
+                <Send size={14} />
+                Send
+              </button>
+            )}
+            {address && (
+              <button
+                type="button"
+                onClick={() => setShowReceiveModal(true)}
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                  isDark ? 'bg-white/10 text-gray-300 hover:bg-white/15' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                <Download size={14} />
+                Receive
+              </button>
+            )}
+            <Link
+              href="/trading"
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                isDark ? 'bg-white/10 text-gray-300 hover:bg-white/15' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              <TrendingUp size={14} />
+              Trade
+            </Link>
           </div>
         </div>
-        <div className="mb-4">
+
+        {/* Balance */}
+        <div className="mb-3">
           {isLoadingBalance ? (
             <div className="flex items-center gap-2">
               <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-cyan-500 dark:border-gray-600 dark:border-t-cyan-400" />
               <span className={`${t.textSecondary} text-sm`}>Loading balance…</span>
             </div>
           ) : (
-            <>
-              <p className={`text-2xl font-semibold ${t.text} tabular-nums`}>
+            <div className="flex items-baseline gap-2 flex-wrap">
+              <p className={`text-xl font-semibold ${t.text} tabular-nums`}>
                 {formatBalance(balance, ticker)} {ticker}
               </p>
-              <p className={`${t.textSecondary} tabular-nums`}>{formatUsd(balanceUsd)}</p>
-            </>
+              <p className={`text-sm ${t.textSecondary} tabular-nums`}>{formatUsd(balanceUsd)}</p>
+            </div>
           )}
         </div>
 
-        <div
-          className={`h-16 rounded-lg flex items-center justify-center mb-4 ${isDark ? 'bg-white/5' : 'bg-gray-100'}`}
-        >
-          <TrendingUp className={t.textSecondary} size={24} />
-          <span className={`ml-2 text-xs ${t.textSecondary}`}>Price chart</span>
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-          {isXch && (
-            <button
-              type="button"
-              onClick={() => setShowSendModal(true)}
-              className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium ${
-                isDark ? 'bg-cyan-500/20 text-cyan-400' : 'bg-cyan-100 text-cyan-700'
-              }`}
-            >
-              <Send size={16} />
-              Send
-            </button>
-          )}
-          {address && (
-            <button
-              type="button"
-              onClick={() => setShowReceiveModal(true)}
-              className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium ${
-                isDark ? 'bg-white/10 text-gray-300 hover:bg-white/15' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              <Download size={16} />
-              Receive
-            </button>
-          )}
-          <Link
-            href="/trading"
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium ${
-              isDark ? 'bg-white/10 text-gray-300' : 'bg-gray-200 text-gray-700'
-            }`}
-          >
-            <TrendingUp size={16} />
-            Trade
-          </Link>
-        </div>
+        {/* Chart */}
+        <AssetPriceChart assetId={assetId} ticker={ticker} />
       </Card>
 
       {showSendModal && isXch && (
