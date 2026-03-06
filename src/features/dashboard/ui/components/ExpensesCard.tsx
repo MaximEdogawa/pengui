@@ -6,6 +6,8 @@ import type { ThemeClasses } from '@/shared/lib/theme'
 import { useTransactionHistory, useWalletAssets } from '@/features/wallet'
 import { TickerIcon, XchIcon } from '@/entities/asset'
 import { isChiaNativeToken } from '@/shared/lib/constants/chia-assets'
+import { formatAmountFromMojos } from '@/shared/lib/utils/amountUtils'
+import { convertFromSmallestUnit } from '@/shared/lib/utils/chia-units'
 import type { StoredTransaction } from '@/shared/lib/walletConnect/utils/transactionStorage'
 import { useMemo } from 'react'
 import { CardSkeleton } from './CardSkeleton'
@@ -63,6 +65,12 @@ function TxIcon({ type, isDark }: { type: StoredTransaction['type']; isDark: boo
         ? <TrendingUp size={size} strokeWidth={stroke} className={cls} />
         : <TrendingDown size={size} strokeWidth={stroke} className={cls} />
   }
+}
+
+function formatTxAmount(tx: StoredTransaction): string {
+  const asset = tx.amountAsset ?? 'XCH'
+  if (asset === 'XCH' || asset === 'TXCH') return formatAmountFromMojos(tx.amount)
+  return convertFromSmallestUnit(Number(tx.amount), 'cat').toString()
 }
 
 function computePnl(transactions: StoredTransaction[]): number {
@@ -186,7 +194,7 @@ export function ExpensesCard({ isDark, t }: ExpensesCardProps) {
                   ? isDark ? 'text-emerald-400' : 'text-emerald-600'
                   : isDark ? 'text-rose-400' : 'text-rose-600'
               }`}>
-                {tx.type === 'receive' ? '+' : '-'}{tx.amount}{tx.amountAsset ? ` ${tx.amountAsset}` : ''}
+                {tx.type === 'receive' ? '+' : '-'}{formatTxAmount(tx)} {tx.amountAsset ?? 'XCH'}
               </p>
             </div>
           ))}

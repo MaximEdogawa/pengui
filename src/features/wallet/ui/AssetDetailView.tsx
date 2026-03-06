@@ -308,7 +308,7 @@ function TransactionRow({ transaction: tx }: { transaction: StoredTransaction })
   const amountDisplay =
     assetLabel === 'XCH' || assetLabel === 'TXCH'
       ? formatAmountFromMojos(tx.amount)
-      : tx.amount
+      : convertFromSmallestUnit(Number(tx.amount), 'cat').toString()
 
   return (
     <div

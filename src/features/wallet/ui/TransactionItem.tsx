@@ -3,6 +3,7 @@
 import { formatAddress } from '@/shared/lib/utils/addressUtils'
 import { formatRelativeTime } from '@/shared/lib/utils/dateUtils'
 import { formatAmountFromMojos } from '@/shared/lib/utils/amountUtils'
+import { convertFromSmallestUnit } from '@/shared/lib/utils/chia-units'
 import { useThemeClasses } from '@/shared/hooks'
 import type { StoredTransaction } from '@/shared/lib/walletConnect/utils/transactionStorage'
 import { ArrowUpRight, ArrowDownLeft, Clock, CheckCircle2, XCircle } from 'lucide-react'
@@ -96,7 +97,7 @@ export default function TransactionItem({ transaction: tx }: TransactionItemProp
             {isSend ? '-' : '+'}
             {tx.amountAsset === 'XCH' || tx.amountAsset === 'TXCH' || !tx.amountAsset
               ? `${formatAmountFromMojos(tx.amount)} ${tx.amountAsset ?? 'XCH'}`
-              : `${tx.amount} ${tx.amountAsset}`}
+              : `${convertFromSmallestUnit(Number(tx.amount), 'cat')} ${tx.amountAsset}`}
           </p>
           <p className={`${t.textSecondary} text-xs`}>{formatRelativeTime(tx.timestamp)}</p>
           {tx.fee && parseFloat(tx.fee) > 0 && (
