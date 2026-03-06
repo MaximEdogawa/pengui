@@ -6,7 +6,32 @@
 import { logger } from '@/shared/lib/logger'
 import { getSpaceScanApiUrl } from '@/shared/lib/utils/networkUtils'
 
-// Response types from Space Scan API
+// --- Address balance response types ---
+
+export interface SpaceScanXchBalanceResponse {
+  status: 'success' | 'error'
+  xch: number
+  mojo: number
+}
+
+export interface SpaceScanTokenBalance {
+  asset_id: string
+  name: string | null
+  symbol: string | null
+  preview_url: string | null
+  balance: number
+  price_xch: number | null
+  price: number | null
+  total_value: number | null
+}
+
+export interface SpaceScanTokenBalanceResponse {
+  status: 'success' | 'error'
+  data: SpaceScanTokenBalance[]
+}
+
+// --- Token metadata response types ---
+
 export interface SpaceScanTokenInfo {
   asset_id: string
   token_id: string
@@ -159,4 +184,86 @@ export async function fetchTokenImage(previewUrl: string): Promise<{ blob: Blob;
 export async function getTokenPreviewUrl(assetId: string): Promise<string | null> {
   const tokenInfo = await fetchTokenInfo(assetId)
   return tokenInfo?.preview_url || null
+}
+
+// ---------------------------------------------------------------------------
+// Address-balance endpoints (SpaceScan v1)
+// ---------------------------------------------------------------------------
+
+/**
+ * Fetch XCH balance for a wallet address.
+ * Endpoint: GET /address/xch-balance/{address}
+ */
+export async function fetchXchBalance(
+  address: string,
+  network: 'mainnet' | 'testnet' = 'mainnet',
+): Promise<SpaceScanXchBalanceResponse | null> {
+  const baseUrl = getSpaceScanApiUrl(network)
+  const url = `${baseUrl}/address/xch-balance/${address}`
+
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+    })
+
+    if (!response.ok) {
+      logger.warn(`SpaceScan xch-balance error for ${address}:`, {
+        status: response.status,
+        statusText: response.statusText,
+      })
+      return null
+    }
+
+    const data: SpaceScanXchBalanceResponse = await response.json()
+    if (data.status !== 'success') {
+      logger.warn(`SpaceScan xch-balance returned non-success for ${address}`)
+      return null
+    }
+
+    return data
+  } catch (error) {
+    logger.error(`Failed to fetch XCH balance for ${address}:`, error)
+    return null
+  }
+}
+
+/**
+ * Fetch all CAT token balances for a wallet address.
+ * Endpoint: GET /address/token-balance/{address}
+ *
+ * Returns every token the address holds with its asset_id, balance, name and symbol.
+ */
+export async function fetchWalletTokenBalances(
+  address: string,
+  network: 'mainnet' | 'testnet' = 'mainnet',
+): Promise<SpaceScanTokenBalance[]> {
+  const baseUrl = getSpaceScanApiUrl(network)
+  const url = `${baseUrl}/address/token-balance/${address}`
+
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
+    })
+
+    if (!response.ok) {
+      logger.warn(`SpaceScan token-balance error for ${address}:`, {
+        status: response.status,
+        statusText: response.statusText,
+      })
+      return []
+    }
+
+    const data: SpaceScanTokenBalanceResponse = await response.json()
+    if (data.status !== 'success' || !data.data) {
+      logger.warn(`SpaceScan token-balance returned non-success for ${address}`)
+      return []
+    }
+
+    return data.data
+  } catch (error) {
+    logger.error(`Failed to fetch token balances for ${address}:`, error)
+    return []
+  }
 }

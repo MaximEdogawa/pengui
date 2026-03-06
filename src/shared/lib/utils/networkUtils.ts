@@ -115,10 +115,16 @@ export function isDefaultLocalRelayUrl(
 
 /**
  * Get Space Scan API URL
- * Note: Space Scan uses the same API for both mainnet and testnet tokens
+ * @param network - Optional network type. Testnet uses api-testnet.spacescan.io.
  * @returns The Space Scan API base URL
  */
-export function getSpaceScanApiUrl(): string {
+export function getSpaceScanApiUrl(network?: "mainnet" | "testnet"): string {
+  if (network === "testnet") {
+    return (
+      process.env.NEXT_PUBLIC_SPACESCAN_TESTNET_API_URL ||
+      "https://api-testnet.spacescan.io"
+    );
+  }
   return (
     process.env.NEXT_PUBLIC_SPACESCAN_API_URL || "https://api.spacescan.io"
   );

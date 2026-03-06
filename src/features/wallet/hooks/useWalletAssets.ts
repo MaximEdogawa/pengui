@@ -1,13 +1,15 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { useQueries } from '@tanstack/react-query'
+import { useQuery, useQueries } from '@tanstack/react-query'
+import { useWalletConnectionState } from '@maximedogawa/chia-wallet-connect-react'
 import { CHIA_ASSET_IDS } from '@/shared/lib/constants/chia-assets'
 import { convertFromSmallestUnit } from '@/shared/lib/utils/chia-units'
 import { useNetwork } from '@/shared/hooks/useNetwork'
 import { useXchUsdPrice } from '@/shared/hooks/useXchUsdPrice'
 import { useCatTokens, type DexieTicker } from '@/entities/asset'
 import { getAssetBalance } from '@/shared/lib/walletConnect/repositories/walletQueries.repository'
+import { fetchWalletTokenBalances } from '@/shared/lib/services/spaceScanService'
 import { useSignClient } from './useSignClient'
 import { useWalletSession } from './useWalletSession'
 import { useWalletBalance } from './useWalletQueries'
@@ -24,9 +26,9 @@ export interface WalletAssetItem {
   type: WalletAssetType
 }
 
-const MAX_CATS_TO_CHECK = 50
 const BATCH_SIZE = 5
 const BATCH_DELAY_MS = 1500
+const MAX_CATS_TO_CHECK = 50
 
 function buildVolumeMap(rawTickers: DexieTicker[]): Map<string, number> {
   return rawTickers
@@ -39,9 +41,11 @@ function buildVolumeMap(rawTickers: DexieTicker[]): Map<string, number> {
 }
 
 /**
- * Queries XCH balance + top CAT balances via WalletConnect.
- * CATs are queried in small batches to avoid flooding the relay.
- * Only assets with a non-zero balance appear in the returned list.
+ * Queries XCH balance + CAT balances via WalletConnect.
+ *
+ * Uses SpaceScan's token-balance endpoint to discover which CATs the wallet
+ * actually holds, then only queries WalletConnect for those specific assets.
+ * Falls back to the top-volume approach when SpaceScan is unavailable.
  */
 export function useWalletAssets(): {
   assets: WalletAssetItem[]
@@ -51,26 +55,53 @@ export function useWalletAssets(): {
   const { network } = useNetwork()
   const { signClient } = useSignClient()
   const session = useWalletSession()
+  const { address } = useWalletConnectionState()
   const { data: xchBalance, refetch: refetchXch } = useWalletBalance(null, null)
   const { priceUsd: xchUsdPrice, isLoading: isLoadingPrice } = useXchUsdPrice()
   const { availableAssets, tickers, isLoading: isLoadingTickers } = useCatTokens()
 
   const isWalletReady = !!signClient && session.isConnected
 
+  // ---- SpaceScan discovery: get all asset IDs the wallet holds ----
+  const {
+    data: spaceScanTokens,
+    isLoading: isLoadingSpaceScan,
+  } = useQuery({
+    queryKey: ['spacescan', 'token-balance', address, network],
+    queryFn: () => fetchWalletTokenBalances(address!, network),
+    enabled: isWalletReady && !!address,
+    staleTime: 60_000,
+    retry: 1,
+  })
+
+  const spaceScanReady = !isLoadingSpaceScan && spaceScanTokens !== undefined
+  const spaceScanHasData = (spaceScanTokens?.length ?? 0) > 0
+
+  // ---- Determine which CATs to query via WalletConnect ----
   const catAssetsToCheck = useMemo(() => {
+    if (spaceScanReady && spaceScanHasData) {
+      return spaceScanTokens!.map((t) => ({
+        assetId: t.asset_id,
+        name: t.name ?? t.symbol ?? t.asset_id,
+        ticker: t.symbol ?? '',
+      }))
+    }
+
+    // Fallback: top-volume CATs from Dexie when SpaceScan returned nothing
     const rawTickers = (tickers ?? []) as DexieTicker[]
     const volumeMap = buildVolumeMap(rawTickers)
     return availableAssets
       .filter((a) => a.assetId !== CHIA_ASSET_IDS.XCH && a.assetId !== '')
       .sort((a, b) => (volumeMap.get(b.assetId) ?? 0) - (volumeMap.get(a.assetId) ?? 0))
       .slice(0, MAX_CATS_TO_CHECK)
-  }, [availableAssets, tickers])
+  }, [spaceScanReady, spaceScanHasData, spaceScanTokens, availableAssets, tickers])
 
+  // ---- Batch-enable WalletConnect queries to avoid relay flooding ----
   const [enabledCount, setEnabledCount] = useState(0)
 
   useEffect(() => {
     setEnabledCount(0)
-  }, [isWalletReady, network])
+  }, [isWalletReady, network, spaceScanReady])
 
   useEffect(() => {
     if (!isWalletReady || catAssetsToCheck.length === 0) return
@@ -102,6 +133,15 @@ export function useWalletAssets(): {
     }),
   })
 
+  // ---- Build the final asset list ----
+  const spaceScanMap = useMemo(() => {
+    const map = new Map<string, (typeof spaceScanTokens extends (infer T)[] | undefined ? T : never)>()
+    for (const t of spaceScanTokens ?? []) {
+      map.set(t.asset_id, t)
+    }
+    return map
+  }, [spaceScanTokens])
+
   const assets = useMemo(() => {
     const list: WalletAssetItem[] = []
 
@@ -126,21 +166,23 @@ export function useWalletAssets(): {
       const spendable = Number(data.spendable)
       if (spendable <= 0) return
       const bal = convertFromSmallestUnit(spendable, 'cat')
+
+      const ssToken = spaceScanMap.get(asset.assetId)
       list.push({
         assetId: asset.assetId,
-        name: asset.name ?? asset.ticker,
-        ticker: asset.ticker,
+        name: ssToken?.name ?? asset.name ?? asset.ticker,
+        ticker: ssToken?.symbol ?? asset.ticker,
         balance: bal,
         spendableRaw: data.spendable,
-        balanceUsd: null,
+        balanceUsd: ssToken?.total_value ?? null,
         type: 'cat',
       })
     })
 
     return list
-  }, [isWalletReady, xchBalance, xchUsdPrice, network, catAssetsToCheck, catBalances])
+  }, [isWalletReady, xchBalance, xchUsdPrice, network, catAssetsToCheck, catBalances, spaceScanMap])
 
-  const isLoading = isLoadingPrice || isLoadingTickers || isCatLoading
+  const isLoading = isLoadingPrice || isLoadingTickers || isLoadingSpaceScan || isCatLoading
 
   return { assets, isLoading, refetch: refetchXch }
 }
