@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { useWalletAssets } from '../hooks/useWalletAssets'
 import { useWalletBalance } from '../hooks/useWalletQueries'
 import { useTransactionHistory } from '../hooks/useTransactionHistory'
 import {
@@ -12,11 +11,13 @@ import {
 } from '@/shared/lib/walletConnect/utils/transactionStorage'
 import { CHIA_ASSET_IDS } from '@/shared/lib/constants/chia-assets'
 import TickerIcon, { XchIcon } from '@/entities/asset/ui/TickerIcon'
+import { useCatTokens } from '@/entities/asset'
 import { useNetwork } from '@/shared/hooks/useNetwork'
 import { useThemeClasses } from '@/shared/hooks'
+import { useXchUsdPrice } from '@/shared/hooks/useXchUsdPrice'
 import { formatRelativeTime } from '@/shared/lib/utils/dateUtils'
 import { formatAmountFromMojos } from '@/shared/lib/utils/amountUtils'
-import { mojosToXch } from '@/shared/lib/utils/chia-units'
+import { convertFromSmallestUnit } from '@/shared/lib/utils/chia-units'
 import Card from './shared/Card'
 import SectionHeader from './shared/SectionHeader'
 import EmptyState from './shared/EmptyState'
@@ -50,7 +51,6 @@ function formatUsd(value: number | null): string {
 }
 
 interface AssetDetailViewProps {
-  /** URL slug: 'xch' or asset ID */
   assetIdSlug: string
 }
 
@@ -58,38 +58,29 @@ export default function AssetDetailView({ assetIdSlug }: AssetDetailViewProps) {
   const router = useRouter()
   const { isDark, t } = useThemeClasses()
   const { network } = useNetwork()
-  const { assets } = useWalletAssets()
-  const { data: xchBalance } = useWalletBalance(null, null)
+  const { priceUsd: xchUsdPrice } = useXchUsdPrice()
+  const { getAsset } = useCatTokens()
   const [showSendModal, setShowSendModal] = useState(false)
 
   const assetId = assetIdSlug === 'xch' ? CHIA_ASSET_IDS.XCH : decodeURIComponent(assetIdSlug)
   const isXch = assetId === CHIA_ASSET_IDS.XCH || assetId === ''
 
-  const asset = assets.find((a) => a.assetId === assetId)
-  const availableBalance = xchBalance?.spendable != null ? mojosToXch(Number(xchBalance.spendable)) : 0
+  // Single WalletConnect RPC for this specific asset's balance.
+  const { data: balanceData, isLoading: isLoadingBalance } = useWalletBalance(
+    isXch ? null : 'cat',
+    isXch ? null : assetId
+  )
 
-  if (!asset && assets.length > 0) {
-    return (
-      <div className="w-full relative z-10">
-        <button
-          type="button"
-          onClick={() => router.push('/wallet')}
-          className={`flex items-center gap-2 mb-4 ${t.textSecondary} hover:underline`}
-        >
-          <ArrowLeft size={18} />
-          Back to Wallet
-        </button>
-        <Card>
-          <p className={t.textSecondary}>Asset not found.</p>
-        </Card>
-      </div>
-    )
-  }
+  const catalogAsset = !isXch ? getAsset(assetId) : undefined
+  const displayName = isXch ? 'Chia' : (catalogAsset?.name ?? assetIdSlug.slice(0, 8))
+  const ticker = isXch
+    ? (network === 'testnet' ? 'TXCH' : 'XCH')
+    : (catalogAsset?.ticker ?? assetIdSlug.slice(0, 8))
 
-  const displayName = asset?.name ?? (isXch ? 'Chia' : assetIdSlug)
-  const ticker = asset?.ticker ?? (isXch ? (network === 'testnet' ? 'TXCH' : 'XCH') : assetIdSlug.slice(0, 8))
-  const balance = asset?.balance ?? 0
-  const balanceUsd = asset?.balanceUsd ?? null
+  const spendable = balanceData?.spendable != null ? Number(balanceData.spendable) : 0
+  const balance = convertFromSmallestUnit(spendable, isXch ? 'xch' : 'cat')
+  const balanceUsd = isXch && xchUsdPrice != null && balance > 0 ? balance * xchUsdPrice : null
+  const availableBalance = isXch ? balance : 0
 
   return (
     <div className="w-full relative z-10">
@@ -115,13 +106,21 @@ export default function AssetDetailView({ assetIdSlug }: AssetDetailViewProps) {
           </div>
         </div>
         <div className="mb-4">
-          <p className={`text-2xl font-semibold ${t.text} tabular-nums`}>
-            {formatBalance(balance, ticker)} {ticker}
-          </p>
-          <p className={`${t.textSecondary} tabular-nums`}>{formatUsd(balanceUsd)}</p>
+          {isLoadingBalance ? (
+            <div className="flex items-center gap-2">
+              <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-cyan-500 dark:border-gray-600 dark:border-t-cyan-400" />
+              <span className={`${t.textSecondary} text-sm`}>Loading balance…</span>
+            </div>
+          ) : (
+            <>
+              <p className={`text-2xl font-semibold ${t.text} tabular-nums`}>
+                {formatBalance(balance, ticker)} {ticker}
+              </p>
+              <p className={`${t.textSecondary} tabular-nums`}>{formatUsd(balanceUsd)}</p>
+            </>
+          )}
         </div>
 
-        {/* Sparkline placeholder - reuse trading chart in future */}
         <div
           className={`h-16 rounded-lg flex items-center justify-center mb-4 ${isDark ? 'bg-white/5' : 'bg-gray-100'}`}
         >

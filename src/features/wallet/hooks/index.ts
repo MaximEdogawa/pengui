@@ -3,11 +3,9 @@
 export {
   useWalletBalance,
   useWalletAddress,
-  useAssetCoins,
   useSignCoinSpends,
   useSignMessage,
   useSendTransaction,
-  useGetBalance,
   useCreateOffer,
   useCancelOffer,
   useTakeOffer,

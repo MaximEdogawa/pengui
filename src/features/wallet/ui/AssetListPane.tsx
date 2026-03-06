@@ -12,7 +12,7 @@ import { Wallet } from 'lucide-react'
 
 export default function AssetListPane() {
   const router = useRouter()
-  const { assets, isLoading, isError } = useWalletAssets()
+  const { assets, isLoading } = useWalletAssets()
   const {
     category,
     setCategory,
@@ -24,16 +24,6 @@ export default function AssetListPane() {
   const handleAssetClick = (assetId: string) => {
     const slug = assetId === CHIA_ASSET_IDS.XCH || assetId === '' ? 'xch' : assetId
     router.push(`/wallet/${encodeURIComponent(slug)}`)
-  }
-
-  if (isError) {
-    return (
-      <Card>
-        <p className="text-red-500 dark:text-red-400 text-sm py-4">
-          Failed to load assets. Please try again.
-        </p>
-      </Card>
-    )
   }
 
   return (

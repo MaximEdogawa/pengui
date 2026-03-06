@@ -140,35 +140,7 @@ export function useWalletConnectEventListeners(
       return;
     }
 
-    // Use the synchronous registration function as backup
-    // This ensures listeners are registered even if they weren't registered during initialization
     registerWalletConnectListeners(signClient);
-
-    // Handle pending session requests
-    const handlePendingSessionRequests = async () => {
-      try {
-        const sessions = signClient.session.getAll();
-        for (const session of sessions) {
-          try {
-            await signClient.ping({ topic: session.topic });
-          } catch (error) {
-            // Suppress "No matching key" errors - these are non-critical
-            const errorMessage =
-              error instanceof Error ? error.message : String(error);
-            if (
-              !errorMessage.includes("No matching key") &&
-              process.env.NODE_ENV === "development"
-            ) {
-              logger.debug(`Session ${session.topic} ping failed:`, error);
-            }
-          }
-        }
-      } catch {
-        // Silently handle errors
-      }
-    };
-
-    handlePendingSessionRequests();
 
     // Cleanup function
     // NOTE: We intentionally do NOT remove listeners here because:

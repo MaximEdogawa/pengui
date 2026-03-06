@@ -11,13 +11,11 @@ interface AssetPaneProps {
   onClick: () => void
 }
 
-function formatBalance(asset: WalletAssetItem): string {
-  if (asset.type === 'xch') {
-    return asset.balance.toFixed(6)
-  }
-  if (asset.balance >= 1e9) return asset.balance.toLocaleString(undefined, { maximumFractionDigits: 0 })
-  if (asset.balance >= 1) return asset.balance.toFixed(2)
-  return asset.balance.toFixed(6)
+function formatBalance(balance: number, type: string): string {
+  if (type === 'xch') return balance.toFixed(6)
+  if (balance >= 1e9) return balance.toLocaleString(undefined, { maximumFractionDigits: 0 })
+  if (balance >= 1) return balance.toFixed(2)
+  return balance.toFixed(6)
 }
 
 function formatUsd(value: number | null): string {
@@ -31,7 +29,6 @@ export default function AssetPane({ asset, onClick }: AssetPaneProps) {
   const { isDark, t } = useThemeClasses()
   const { network } = useNetwork()
   const isXch = asset.assetId === CHIA_ASSET_IDS.XCH || asset.assetId === ''
-
   return (
     <button
       type="button"
@@ -55,7 +52,7 @@ export default function AssetPane({ asset, onClick }: AssetPaneProps) {
       </div>
       <div className="flex flex-col items-end flex-shrink-0">
         <p className={`${t.text} text-sm font-semibold tabular-nums`}>
-          {formatBalance(asset)} {asset.ticker}
+          {formatBalance(asset.balance, asset.type)} {asset.ticker}
         </p>
         <p className={`${t.textSecondary} text-xs tabular-nums`}>
           {formatUsd(asset.balanceUsd)}
