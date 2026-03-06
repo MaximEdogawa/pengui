@@ -5,6 +5,19 @@
 
 import { logger } from '@/shared/lib/logger'
 import { getSpaceScanApiUrl } from '@/shared/lib/utils/networkUtils'
+import { getAdaptiveConfig } from '@/shared/lib/utils/networkQuality'
+
+function createAbortTimeout(): { signal: AbortSignal; clear: () => void } {
+  const cfg = getAdaptiveConfig()
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), cfg.fetchTimeoutMs)
+  return { signal: controller.signal, clear: () => clearTimeout(timer) }
+}
+
+const COMPRESSED_HEADERS: HeadersInit = {
+  Accept: 'application/json',
+  'Accept-Encoding': 'gzip, deflate, br',
+}
 
 // --- Address balance response types ---
 
@@ -77,13 +90,13 @@ export interface SpaceScanTokensResponse {
 export async function fetchTokenInfo(assetId: string): Promise<SpaceScanTokenInfo | null> {
   const baseUrl = getSpaceScanApiUrl()
   const url = `${baseUrl}/token/info/${assetId}`
+  const { signal, clear } = createAbortTimeout()
 
   try {
     const response = await fetch(url, {
       method: 'GET',
-      headers: {
-        Accept: 'application/json',
-      },
+      headers: COMPRESSED_HEADERS,
+      signal,
     })
 
     if (!response.ok) {
@@ -103,8 +116,14 @@ export async function fetchTokenInfo(assetId: string): Promise<SpaceScanTokenInf
 
     return data.info
   } catch (error) {
+    if ((error as Error).name === 'AbortError') {
+      logger.warn(`Space Scan request timed out for asset ${assetId}`)
+      return null
+    }
     logger.error(`Failed to fetch token info for asset ${assetId} from Space Scan:`, error)
     return null
+  } finally {
+    clear()
   }
 }
 
@@ -115,13 +134,13 @@ export async function fetchTokenInfo(assetId: string): Promise<SpaceScanTokenInf
 export async function fetchAllTokens(): Promise<SpaceScanCatToken[]> {
   const baseUrl = getSpaceScanApiUrl()
   const url = `${baseUrl}/tokens`
+  const { signal, clear } = createAbortTimeout()
 
   try {
     const response = await fetch(url, {
       method: 'GET',
-      headers: {
-        Accept: 'application/json',
-      },
+      headers: COMPRESSED_HEADERS,
+      signal,
     })
 
     if (!response.ok) {
@@ -141,8 +160,14 @@ export async function fetchAllTokens(): Promise<SpaceScanCatToken[]> {
 
     return data.cats
   } catch (error) {
+    if ((error as Error).name === 'AbortError') {
+      logger.warn('Space Scan all-tokens request timed out')
+      return []
+    }
     logger.error('Failed to fetch all tokens from Space Scan:', error)
     return []
+  } finally {
+    clear()
   }
 }
 
@@ -200,11 +225,13 @@ export async function fetchXchBalance(
 ): Promise<SpaceScanXchBalanceResponse | null> {
   const baseUrl = getSpaceScanApiUrl(network)
   const url = `${baseUrl}/address/xch-balance/${address}`
+  const { signal, clear } = createAbortTimeout()
 
   try {
     const response = await fetch(url, {
       method: 'GET',
-      headers: { Accept: 'application/json' },
+      headers: COMPRESSED_HEADERS,
+      signal,
     })
 
     if (!response.ok) {
@@ -223,8 +250,14 @@ export async function fetchXchBalance(
 
     return data
   } catch (error) {
+    if ((error as Error).name === 'AbortError') {
+      logger.warn(`SpaceScan xch-balance request timed out for ${address}`)
+      return null
+    }
     logger.error(`Failed to fetch XCH balance for ${address}:`, error)
     return null
+  } finally {
+    clear()
   }
 }
 
@@ -240,11 +273,13 @@ export async function fetchWalletTokenBalances(
 ): Promise<SpaceScanTokenBalance[]> {
   const baseUrl = getSpaceScanApiUrl(network)
   const url = `${baseUrl}/address/token-balance/${address}`
+  const { signal, clear } = createAbortTimeout()
 
   try {
     const response = await fetch(url, {
       method: 'GET',
-      headers: { Accept: 'application/json' },
+      headers: COMPRESSED_HEADERS,
+      signal,
     })
 
     if (!response.ok) {
@@ -263,7 +298,13 @@ export async function fetchWalletTokenBalances(
 
     return data.data
   } catch (error) {
+    if ((error as Error).name === 'AbortError') {
+      logger.warn(`SpaceScan token-balance request timed out for ${address}`)
+      return []
+    }
     logger.error(`Failed to fetch token balances for ${address}:`, error)
     return []
+  } finally {
+    clear()
   }
 }

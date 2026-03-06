@@ -2,20 +2,20 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
+import { useOrderBookFilterStore } from '@/features/trading/hooks/orderBookFilterStore'
 import { useWalletBalance } from '../hooks/useWalletQueries'
 import { useTransactionHistory } from '../hooks/useTransactionHistory'
 import {
   getTransactionsByAsset,
   type StoredTransaction,
 } from '@/shared/lib/walletConnect/utils/transactionStorage'
-import { CHIA_ASSET_IDS } from '@/shared/lib/constants/chia-assets'
+import { CHIA_ASSET_IDS, XCH_BASE_CURRENCIES } from '@/shared/lib/constants/chia-assets'
 import TickerIcon, { XchIcon } from '@/entities/asset/ui/TickerIcon'
 import { useCatTokens, type DexieTicker } from '@/entities/asset'
 import { useNetwork } from '@/shared/hooks/useNetwork'
 import { useThemeClasses } from '@/shared/hooks'
+import { useNavigationProgress } from '@/shared/providers/NavigationProgressProvider'
 import { useXchUsdPrice } from '@/shared/hooks/useXchUsdPrice'
-import { XCH_BASE_CURRENCIES } from '@/shared/lib/constants/chia-assets'
 import { formatRelativeTime } from '@/shared/lib/utils/dateUtils'
 import { formatAmountFromMojos } from '@/shared/lib/utils/amountUtils'
 import { convertFromSmallestUnit } from '@/shared/lib/utils/chia-units'
@@ -24,6 +24,9 @@ import SectionHeader from './shared/SectionHeader'
 import EmptyState from './shared/EmptyState'
 import { Modal } from '@/shared/ui'
 import SendTransactionForm from './SendTransactionForm'
+import AssetPriceChart from './AssetPriceChart'
+import { ReceiveModal } from '@/features/dashboard/ui/components/ReceiveModal'
+import { useWalletConnectionState } from '@maximedogawa/chia-wallet-connect-react'
 import {
   ArrowLeft,
   Send,
@@ -65,11 +68,16 @@ interface AssetDetailViewProps {
 
 export default function AssetDetailView({ assetIdSlug }: AssetDetailViewProps) {
   const router = useRouter()
+  const { startNavigation } = useNavigationProgress()
   const { isDark, t } = useThemeClasses()
   const { network } = useNetwork()
   const { priceUsd: xchUsdPrice } = useXchUsdPrice()
   const { getAsset, tickers } = useCatTokens()
   const [showSendModal, setShowSendModal] = useState(false)
+  const [showReceiveModal, setShowReceiveModal] = useState(false)
+  const { address } = useWalletConnectionState()
+  const setTradingFilters = useOrderBookFilterStore((s) => s.setFilters)
+  const clearTradingFilters = useOrderBookFilterStore((s) => s.clearAllFilters)
 
   const assetId = assetIdSlug === 'xch' ? CHIA_ASSET_IDS.XCH : decodeURIComponent(assetIdSlug)
   const isXch = assetId === CHIA_ASSET_IDS.XCH || assetId === ''
@@ -113,13 +121,16 @@ export default function AssetDetailView({ assetIdSlug }: AssetDetailViewProps) {
     priceXch != null && xchUsdPrice != null ? priceXch * xchUsdPrice : null
   const balanceUsd =
     priceUsd != null && balance > 0 ? balance * priceUsd : null
-  const availableBalance = isXch ? balance : 0
+  const availableBalance = balance
 
   return (
     <div className="w-full relative z-10">
       <button
         type="button"
-        onClick={() => router.push('/wallet')}
+        onClick={() => {
+          startNavigation()
+          router.push('/wallet')
+        }}
         className={`flex items-center gap-2 mb-4 ${t.textSecondary} hover:underline`}
       >
         <ArrowLeft size={18} />
@@ -127,86 +138,114 @@ export default function AssetDetailView({ assetIdSlug }: AssetDetailViewProps) {
       </button>
 
       <Card className="mb-4">
-        <div className="flex items-center gap-3 mb-4">
-          {isXch ? (
-            <XchIcon size={40} isTestnet={network === 'testnet'} />
-          ) : (
-            <TickerIcon assetId={assetId} ticker={ticker} size={40} />
-          )}
-          <div>
-            <h1 className={`text-xl font-semibold ${t.text}`}>{displayName}</h1>
-            <p className={`${t.textSecondary} tabular-nums`}>
-              {ticker}
-              {priceUsd != null && priceUsd > 0 && (
-                <span className="ml-1">· {formatPrice(priceUsd)}</span>
-              )}
-            </p>
+        {/* Header row */}
+        <div className="flex items-start justify-between gap-2 mb-3">
+          {/* Icon + name + price */}
+          <div className="flex items-center gap-2.5 min-w-0">
+            {isXch ? (
+              <XchIcon size={32} isTestnet={network === 'testnet'} />
+            ) : (
+              <TickerIcon assetId={assetId} ticker={ticker} size={32} />
+            )}
+            <div className="min-w-0">
+              <h1 className={`text-base font-semibold ${t.text} leading-tight truncate`}>{displayName}</h1>
+              <p className={`text-[11px] ${t.textSecondary} tabular-nums leading-tight`}>
+                {ticker}
+                {priceUsd != null && priceUsd > 0 && (
+                  <span className="ml-1">· {formatPrice(priceUsd)}</span>
+                )}
+              </p>
+            </div>
+          </div>
+          {/* Action buttons */}
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <button
+              type="button"
+              onClick={() => setShowSendModal(true)}
+              className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-colors ${
+                isDark ? 'bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30' : 'bg-cyan-100 text-cyan-700 hover:bg-cyan-200'
+              }`}
+            >
+              <Send size={12} />
+              <span className="hidden sm:inline">Send</span>
+            </button>
+            {address && (
+              <button
+                type="button"
+                onClick={() => setShowReceiveModal(true)}
+                className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-colors ${
+                  isDark ? 'bg-white/10 text-gray-300 hover:bg-white/15' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                <Download size={12} />
+                <span className="hidden sm:inline">Receive</span>
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                const nativeTicker = network === 'testnet' ? 'TXCH' : 'XCH'
+                clearTradingFilters()
+                if (isXch) {
+                  setTradingFilters({ buyAsset: [], sellAsset: [nativeTicker], status: [], pagination: 50 })
+                } else {
+                  setTradingFilters({ buyAsset: [ticker], sellAsset: [nativeTicker], status: [], pagination: 50 })
+                }
+                startNavigation()
+                router.push('/trading')
+              }}
+              className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-colors ${
+                isDark ? 'bg-white/10 text-gray-300 hover:bg-white/15' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              <TrendingUp size={12} />
+              <span className="hidden sm:inline">Trade</span>
+            </button>
           </div>
         </div>
-        <div className="mb-4">
+
+        {/* Balance */}
+        <div className="mb-3">
           {isLoadingBalance ? (
             <div className="flex items-center gap-2">
               <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-cyan-500 dark:border-gray-600 dark:border-t-cyan-400" />
               <span className={`${t.textSecondary} text-sm`}>Loading balance…</span>
             </div>
           ) : (
-            <>
-              <p className={`text-2xl font-semibold ${t.text} tabular-nums`}>
+            <div className="flex items-baseline gap-2 flex-wrap">
+              <p className={`text-xl font-semibold ${t.text} tabular-nums`}>
                 {formatBalance(balance, ticker)} {ticker}
               </p>
-              <p className={`${t.textSecondary} tabular-nums`}>{formatUsd(balanceUsd)}</p>
-            </>
+              <p className={`text-sm ${t.textSecondary} tabular-nums`}>{formatUsd(balanceUsd)}</p>
+            </div>
           )}
         </div>
 
-        <div
-          className={`h-16 rounded-lg flex items-center justify-center mb-4 ${isDark ? 'bg-white/5' : 'bg-gray-100'}`}
-        >
-          <TrendingUp className={t.textSecondary} size={24} />
-          <span className={`ml-2 text-xs ${t.textSecondary}`}>Price chart</span>
-        </div>
-
-        <div className="flex flex-wrap gap-2">
-          {isXch && (
-            <button
-              type="button"
-              onClick={() => setShowSendModal(true)}
-              className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium ${
-                isDark ? 'bg-cyan-500/20 text-cyan-400' : 'bg-cyan-100 text-cyan-700'
-              }`}
-            >
-              <Send size={16} />
-              Send
-            </button>
-          )}
-          <Link
-            href="/wallet"
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium ${
-              isDark ? 'bg-white/10 text-gray-300' : 'bg-gray-200 text-gray-700'
-            }`}
-          >
-            <Download size={16} />
-            Receive
-          </Link>
-          <Link
-            href="/trading"
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium ${
-              isDark ? 'bg-white/10 text-gray-300' : 'bg-gray-200 text-gray-700'
-            }`}
-          >
-            <TrendingUp size={16} />
-            Trade
-          </Link>
-        </div>
+        {/* Chart */}
+        <AssetPriceChart assetId={assetId} ticker={ticker} />
       </Card>
 
-      {showSendModal && isXch && (
+      {showSendModal && (
         <Modal onClose={() => setShowSendModal(false)} maxWidth="max-w-md">
           <div className="p-4">
-            <h2 className={`text-lg font-semibold ${t.text} mb-3`}>Send XCH</h2>
-            <SendTransactionForm availableBalance={availableBalance} />
+            <h2 className={`text-lg font-semibold ${t.text} mb-3`}>Send {ticker}</h2>
+            <SendTransactionForm
+              availableBalance={availableBalance}
+              assetId={isXch ? undefined : assetId}
+              ticker={ticker}
+              isXch={isXch}
+            />
           </div>
         </Modal>
+      )}
+
+      {showReceiveModal && address && (
+        <ReceiveModal
+          address={address}
+          isDark={isDark}
+          t={t}
+          onClose={() => setShowReceiveModal(false)}
+        />
       )}
 
       <Card>
@@ -269,7 +308,7 @@ function TransactionRow({ transaction: tx }: { transaction: StoredTransaction })
   const amountDisplay =
     assetLabel === 'XCH' || assetLabel === 'TXCH'
       ? formatAmountFromMojos(tx.amount)
-      : tx.amount
+      : convertFromSmallestUnit(Number(tx.amount), 'cat').toString()
 
   return (
     <div

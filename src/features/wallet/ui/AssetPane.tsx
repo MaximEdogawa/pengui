@@ -1,5 +1,6 @@
 'use client'
 
+import { AppLink } from '@/shared/ui/AppLink'
 import { useThemeClasses } from '@/shared/hooks'
 import { useNetwork } from '@/shared/hooks/useNetwork'
 import TickerIcon, { XchIcon } from '@/entities/asset/ui/TickerIcon'
@@ -8,7 +9,8 @@ import type { WalletAssetItem } from '../hooks/useWalletAssets'
 
 interface AssetPaneProps {
   asset: WalletAssetItem
-  onClick: () => void
+  /** Detail page href so one tap opens details (works on mobile) */
+  href: string
 }
 
 function formatBalance(balance: number, type: string): string {
@@ -33,19 +35,20 @@ function formatPrice(value: number | null): string {
   return `$${value.toPrecision(3)}`
 }
 
-export default function AssetPane({ asset, onClick }: AssetPaneProps) {
+export default function AssetPane({ asset, href }: AssetPaneProps) {
   const { isDark, t } = useThemeClasses()
   const { network } = useNetwork()
   const isXch = asset.assetId === CHIA_ASSET_IDS.XCH || asset.assetId === ''
+  const linkClass = `w-full flex items-center gap-3 p-3 rounded-xl border transition-all text-left block cursor-pointer touch-manipulation ${
+    isDark
+      ? 'bg-white/[0.03] border-white/5 hover:bg-white/5'
+      : 'bg-white/50 border-cyan-200/30 hover:bg-white/60'
+  } ${t.cardHover ?? ''}`
+
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`w-full flex items-center gap-3 p-3 rounded-xl border transition-all text-left ${
-        isDark
-          ? 'bg-white/[0.03] border-white/5 hover:bg-white/5'
-          : 'bg-white/50 border-cyan-200/30 hover:bg-white/60'
-      } ${t.cardHover ?? ''}`}
+    <AppLink
+      href={href}
+      className={linkClass}
     >
       <div className="flex-shrink-0">
         {isXch ? (
@@ -71,6 +74,6 @@ export default function AssetPane({ asset, onClick }: AssetPaneProps) {
           {formatUsd(asset.balanceUsd)}
         </p>
       </div>
-    </button>
+    </AppLink>
   )
 }

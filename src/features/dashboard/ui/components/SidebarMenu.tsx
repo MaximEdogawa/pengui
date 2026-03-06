@@ -1,3 +1,4 @@
+import { AppLink } from '@/shared/ui'
 import type { ThemeClasses } from '@/shared/lib/theme'
 
 interface SidebarMenuProps {
@@ -5,7 +6,7 @@ interface SidebarMenuProps {
   activeItem: string
   sidebarCollapsed: boolean
   t: ThemeClasses
-  onNavigation: (path: string) => void
+  onCloseSidebar?: () => void
 }
 
 export function SidebarMenu({
@@ -13,7 +14,7 @@ export function SidebarMenu({
   activeItem,
   sidebarCollapsed,
   t,
-  onNavigation,
+  onCloseSidebar,
 }: SidebarMenuProps) {
   return (
     <nav
@@ -25,14 +26,16 @@ export function SidebarMenu({
         const Icon = item.icon
         const isActive = activeItem === item.id
         return (
-          <button
+          <AppLink
             key={item.id}
-            onClick={() => onNavigation(item.path)}
+            href={item.path}
+            onClick={onCloseSidebar}
+            scroll={false}
             className={`flex items-center justify-center w-8 h-8 mx-auto rounded-lg ${
               sidebarCollapsed
                 ? 'lg:w-8 lg:h-8 lg:rounded-full'
                 : 'lg:w-full lg:h-auto lg:justify-start lg:px-3 lg:py-2 lg:gap-2.5 lg:rounded-lg'
-            } transition-all duration-200 group relative overflow-hidden ${
+            } transition-all duration-200 group relative overflow-hidden touch-manipulation ${
               isActive ? `${t.text}` : `${t.textSecondary} ${t.cardHover}`
             }`}
             title={item.label}
@@ -62,7 +65,7 @@ export function SidebarMenu({
                 {item.label}
               </span>
             )}
-          </button>
+          </AppLink>
         )
       })}
     </nav>

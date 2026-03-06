@@ -3,6 +3,7 @@
 import { CHIA_ASSET_IDS, XCH_BASE_CURRENCIES } from '@/shared/lib/constants/chia-assets'
 import { getDexieApiUrl } from '@/shared/lib/utils/networkUtils'
 import { useNetwork } from '@/shared/hooks/useNetwork'
+import { getAdaptiveConfig } from '@/shared/lib/utils/networkQuality'
 import { tickerToAsset, type Asset, type Ticker, type DexieTicker } from '../types'
 import { useQuery } from '@tanstack/react-query'
 import { useMemo } from 'react'
@@ -132,30 +133,41 @@ export function useTickers() {
   return useQuery({
     queryKey: [DEXIE_KEY, TICKERS_KEY, network],
     queryFn: async () => {
-      const response = await fetch(`${dexieApiBaseUrl}/v3/prices/tickers`)
+      const cfg = getAdaptiveConfig()
+      const controller = new AbortController()
+      const timer = setTimeout(() => controller.abort(), cfg.fetchTimeoutMs)
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
+      try {
+        const response = await fetch(`${dexieApiBaseUrl}/v3/prices/tickers`, {
+          headers: { Accept: 'application/json', 'Accept-Encoding': 'gzip, deflate, br' },
+          signal: controller.signal,
+        })
 
-      const data = await response.json()
-      const tickersArray = Array.isArray(data.json)
-        ? data.json
-        : Array.isArray(data.tickers)
-          ? data.tickers
-          : Array.isArray(data.data)
-            ? data.data
-            : Array.isArray(data)
-              ? data
-              : []
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
 
-      return {
-        success: true,
-        data: tickersArray,
+        const data = await response.json()
+        const tickersArray = Array.isArray(data.json)
+          ? data.json
+          : Array.isArray(data.tickers)
+            ? data.tickers
+            : Array.isArray(data.data)
+              ? data.data
+              : Array.isArray(data)
+                ? data
+                : []
+
+        return {
+          success: true,
+          data: tickersArray,
+        }
+      } finally {
+        clearTimeout(timer)
       }
     },
-    staleTime: 24 * 60 * 60 * 1000, // 24 hours
-    gcTime: 24 * 60 * 60 * 1000, // 24 hours
+    staleTime: 24 * 60 * 60 * 1000,
+    gcTime: 24 * 60 * 60 * 1000,
     retry: 3,
     refetchOnWindowFocus: false,
     refetchOnMount: false,

@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
-import { useQuery, useQueries } from '@tanstack/react-query'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useQuery, useQueries, useQueryClient } from '@tanstack/react-query'
 import { useWalletConnectionState } from '@maximedogawa/chia-wallet-connect-react'
 import { CHIA_ASSET_IDS, XCH_BASE_CURRENCIES } from '@/shared/lib/constants/chia-assets'
 import { convertFromSmallestUnit } from '@/shared/lib/utils/chia-units'
@@ -10,6 +10,7 @@ import { useXchUsdPrice } from '@/shared/hooks/useXchUsdPrice'
 import { useCatTokens, type DexieTicker } from '@/entities/asset'
 import { getAssetBalance } from '@/shared/lib/walletConnect/repositories/walletQueries.repository'
 import { fetchWalletTokenBalances } from '@/shared/lib/services/spaceScanService'
+import { getAdaptiveConfig } from '@/shared/lib/utils/networkQuality'
 import { useSignClient } from './useSignClient'
 import { useWalletSession } from './useWalletSession'
 import { useWalletBalance } from './useWalletQueries'
@@ -27,10 +28,6 @@ export interface WalletAssetItem {
   balanceUsd: number | null
   type: WalletAssetType
 }
-
-const BATCH_SIZE = 5
-const BATCH_DELAY_MS = 1500
-const MAX_CATS_TO_CHECK = 50
 
 function buildVolumeMap(rawTickers: DexieTicker[]): Map<string, number> {
   return rawTickers
@@ -82,10 +79,12 @@ export function useWalletAssets(): {
   const { signClient } = useSignClient()
   const session = useWalletSession()
   const { address } = useWalletConnectionState()
-  const { data: xchBalance, refetch: refetchXch } = useWalletBalance(null, null)
+  const queryClient = useQueryClient()
+  const { data: xchBalance } = useWalletBalance(null, null)
   const { priceUsd: xchUsdPrice, isLoading: isLoadingPrice } = useXchUsdPrice()
   const { availableAssets, tickers, getAsset, isLoading: isLoadingTickers } = useCatTokens()
 
+  const netCfg = useMemo(() => getAdaptiveConfig(), [])
   const isWalletReady = !!signClient && session.isConnected
 
   // ---- SpaceScan discovery: get all asset IDs the wallet holds ----
@@ -96,8 +95,9 @@ export function useWalletAssets(): {
     queryKey: ['spacescan', 'token-balance', address, network],
     queryFn: () => fetchWalletTokenBalances(address!, network),
     enabled: isWalletReady && !!address,
-    staleTime: 60_000,
-    retry: 1,
+    staleTime: netCfg.staleTimeMs,
+    gcTime: netCfg.gcTimeMs,
+    retry: netCfg.retryCount,
   })
 
   const spaceScanReady = !isLoadingSpaceScan && spaceScanTokens !== undefined
@@ -116,14 +116,13 @@ export function useWalletAssets(): {
       })
     }
 
-    // Fallback: top-volume CATs from Dexie when SpaceScan returned nothing
     const rawTickers = (tickers ?? []) as DexieTicker[]
     const volumeMap = buildVolumeMap(rawTickers)
     return availableAssets
       .filter((a) => a.assetId !== CHIA_ASSET_IDS.XCH && a.assetId !== '')
       .sort((a, b) => (volumeMap.get(b.assetId) ?? 0) - (volumeMap.get(a.assetId) ?? 0))
-      .slice(0, MAX_CATS_TO_CHECK)
-  }, [spaceScanReady, spaceScanHasData, spaceScanTokens, availableAssets, tickers])
+      .slice(0, netCfg.maxCatsToCheck)
+  }, [spaceScanReady, spaceScanHasData, spaceScanTokens, availableAssets, tickers, netCfg.maxCatsToCheck])
 
   // ---- Batch-enable WalletConnect queries to avoid relay flooding ----
   const [enabledCount, setEnabledCount] = useState(0)
@@ -136,13 +135,13 @@ export function useWalletAssets(): {
     if (!isWalletReady || catAssetsToCheck.length === 0) return
     if (enabledCount >= catAssetsToCheck.length) return
 
-    const delay = enabledCount === 0 ? 500 : BATCH_DELAY_MS
+    const delay = enabledCount === 0 ? 500 : netCfg.batchDelayMs
     const timer = setTimeout(() => {
-      setEnabledCount((prev) => Math.min(prev + BATCH_SIZE, catAssetsToCheck.length))
+      setEnabledCount((prev) => Math.min(prev + netCfg.batchSize, catAssetsToCheck.length))
     }, delay)
 
     return () => clearTimeout(timer)
-  }, [isWalletReady, enabledCount, catAssetsToCheck.length])
+  }, [isWalletReady, enabledCount, catAssetsToCheck.length, netCfg.batchSize, netCfg.batchDelayMs])
 
   const { catBalances, isCatLoading } = useQueries({
     queries: catAssetsToCheck.map((asset, index) => ({
@@ -154,7 +153,8 @@ export function useWalletAssets(): {
       },
       enabled: isWalletReady && index < enabledCount,
       staleTime: Infinity,
-      retry: 1,
+      gcTime: netCfg.gcTimeMs,
+      retry: netCfg.retryCount,
     })),
     combine: (results) => ({
       catBalances: results.map((r) => r.data ?? null),
@@ -218,5 +218,10 @@ export function useWalletAssets(): {
 
   const isLoading = isLoadingPrice || isLoadingTickers || isLoadingSpaceScan || isCatLoading
 
-  return { assets, isLoading, refetch: refetchXch }
+  const refetch = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: ['spacescan', 'token-balance'] })
+    await queryClient.invalidateQueries({ queryKey: ['walletConnect', 'balance'] })
+  }, [queryClient])
+
+  return { assets, isLoading, refetch }
 }

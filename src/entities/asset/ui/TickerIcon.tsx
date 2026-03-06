@@ -7,19 +7,18 @@ export interface TickerIconProps {
   ticker?: string;
   size?: number;
   className?: string;
-  showLoadingSkeleton?: boolean;
 }
 
 /**
  * TickerIcon - Smart component that fetches and caches token icons
- * Uses the useTickerIcon hook for automatic image fetching with TanStack Query caching
+ * Uses the useTickerIcon hook for automatic image fetching with TanStack Query caching.
+ * Shows nothing (reserved space) while loading; shows initials placeholder only when the request fails or no icon is available.
  */
 export default function TickerIcon({
   assetId,
   ticker = "",
   size = 28,
   className = "",
-  showLoadingSkeleton = true,
 }: TickerIconProps) {
   const { imageUrl, isLoading } = useTickerIcon(assetId);
 
@@ -33,7 +32,7 @@ export default function TickerIcon({
       ticker={ticker}
       size={size}
       className={className}
-      isLoading={isLoading && showLoadingSkeleton}
+      isLoading={isLoading}
     />
   );
 }

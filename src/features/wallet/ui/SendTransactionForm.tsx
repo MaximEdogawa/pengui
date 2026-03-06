@@ -25,6 +25,9 @@ import { useTransactionForm } from "../hooks/useTransactionForm";
 
 interface SendTransactionFormProps {
   availableBalance: number;
+  assetId?: string;
+  ticker?: string;
+  isXch?: boolean;
 }
 
 const getButtonClasses = (
@@ -42,6 +45,9 @@ const getButtonClasses = (
 
 export default function SendTransactionForm({
   availableBalance,
+  assetId,
+  ticker = 'XCH',
+  isXch = true,
 }: SendTransactionFormProps) {
   const { isDark, t } = useThemeClasses();
   const { isConnected, address } = useWalletConnectionState();
@@ -66,7 +72,8 @@ export default function SendTransactionForm({
     isFormValid,
     resetForm,
     getTransactionParams,
-  } = useTransactionForm({ availableBalance });
+    assetType,
+  } = useTransactionForm({ availableBalance, assetId, ticker, isXch });
 
   const [amountInput, setAmountInput] = useState<string | undefined>(undefined);
   const [feeInput, setFeeInput] = useState<string | undefined>(undefined);
@@ -100,14 +107,14 @@ export default function SendTransactionForm({
       saveTransaction({
         transactionId,
         type: "send",
-        amount: params.amount.toString(),
-        fee: params.fee.toString(),
+        amount: String(params.amount),
+        fee: String(params.fee),
         recipientAddress: params.address,
         senderAddress: address || undefined,
         memo: params.memos?.[0],
         status: "pending",
-        assetId: "",
-        amountAsset: "XCH",
+        assetId: assetId || "",
+        amountAsset: ticker,
       });
       const successMsg = `Transaction sent successfully!${transactionId !== "N/A" ? ` Transaction ID: ${transactionId}` : ""}`;
       setTransactionStatus({ type: "success", message: successMsg });
@@ -151,7 +158,7 @@ export default function SendTransactionForm({
         error={addressError}
       />
       <FormInput
-        label="Amount (XCH)"
+        label={`Amount (${ticker})`}
         type="text"
         inputMode="decimal"
         pattern="[0-9]*\.?[0-9]*"
@@ -159,33 +166,33 @@ export default function SendTransactionForm({
           amountInput !== undefined
             ? amountInput
             : amount && parseFloat(amount) > 0
-              ? formatXchAmount(parseFloat(amount))
+              ? formatAssetAmountForInput(parseFloat(amount), assetType)
               : ""
         }
         onChange={(e) => {
           const inputValue = e.target.value;
-          if (!assetInputAmounts.isValid(inputValue, "xch")) return;
+          if (!assetInputAmounts.isValid(inputValue, assetType)) return;
           setAmountInput(inputValue);
-          const parsed = assetInputAmounts.parse(inputValue, "xch");
+          const parsed = assetInputAmounts.parse(inputValue, assetType);
           setAmount(parsed > 0 ? parsed.toString() : "");
           if (amountError) validateAmount();
         }}
         onBlur={() => {
           const inputValue =
             amountInput !== undefined ? amountInput : amount || "";
-          const parsed = assetInputAmounts.parse(inputValue, "xch");
+          const parsed = assetInputAmounts.parse(inputValue, assetType);
           setAmount(parsed > 0 ? parsed.toString() : "");
-          const formatted = formatAssetAmountForInput(parsed, "xch");
+          const formatted = formatAssetAmountForInput(parsed, assetType);
           const shouldPreserveInput =
             inputValue.includes(".") && inputValue !== formatted;
           setAmountInput(shouldPreserveInput ? inputValue : undefined);
           validateAmount();
         }}
-        placeholder={getAmountPlaceholder("xch")}
+        placeholder={getAmountPlaceholder(assetType)}
         error={amountError}
         helperText={
           availableBalance > 0 ? (
-            <span>Available: {formatXchAmount(availableBalance)} XCH</span>
+            <span>Available: {formatAssetAmountForInput(availableBalance, assetType)} {ticker}</span>
           ) : undefined
         }
       />

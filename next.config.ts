@@ -2,9 +2,9 @@ import type { NextConfig } from 'next'
 import packageJson from './package.json'
 
 const nextConfig: NextConfig = {
-  /* config options here */
-  // Enable standalone output for optimized Docker deployment
   output: 'standalone',
+  compress: true,
+  poweredByHeader: false,
   transpilePackages: ['@maximedogawa/chia-wallet-connect-react', 'lightweight-charts'],
   turbopack: {
     root: __dirname,
@@ -20,14 +20,39 @@ const nextConfig: NextConfig = {
       'dexie',
       'clsx',
       'tailwind-merge',
+      'recharts',
+      'react-redux',
+      'zustand',
     ],
     serverActions: {
       bodySizeLimit: '2mb',
     },
   },
-  // Expose app version from package.json
   env: {
     NEXT_PUBLIC_APP_VERSION: packageJson.version,
+  },
+  async headers() {
+    return [
+      {
+        source: '/:all*(svg|jpg|png|webp|avif|ico|woff|woff2)',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+        ],
+      },
+      {
+        source: '/wasm/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+          { key: 'Content-Type', value: 'application/wasm' },
+        ],
+      },
+      {
+        source: '/_next/static/:path*',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+        ],
+      },
+    ]
   },
 }
 

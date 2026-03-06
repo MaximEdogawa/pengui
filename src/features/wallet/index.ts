@@ -19,6 +19,7 @@ export { useTransactionHistory } from "./hooks/useTransactionHistory";
 export { useBalanceLoading } from "./hooks/useBalanceLoading";
 export { useWalletAssets, type WalletAssetItem, type WalletAssetType } from "./hooks/useWalletAssets";
 export { useAssetFilter, type AssetFilterCategory } from "./hooks/useAssetFilter";
+export { useAssetPriceChart } from "./hooks/useAssetPriceChart";
 
 // UI Components
 export { default as RecentTransactions } from "./ui/RecentTransactions";
