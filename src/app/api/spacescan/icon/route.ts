@@ -1,27 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { logger } from '@/shared/lib/logger'
-
-const ALLOWED_HOSTS = ['assets.spacescan.io', 'images.spacescan.io']
-
-function isAllowedIconUrl(url: string): boolean {
-  try {
-    const parsed = new URL(url)
-    return (
-      (parsed.protocol === 'https:' || parsed.protocol === 'http:') &&
-      ALLOWED_HOSTS.includes(parsed.host)
-    )
-  } catch {
-    return false
-  }
-}
+import { isSpaceScanIconOrigin } from '@/shared/lib/constants/apiProxy'
 
 /**
- * Proxy Space Scan token icon images so they load when the CDN blocks
- * cross-origin or referrer (e.g. from penguinpool.space).
+ * Proxy Space Scan token icons. Browser requests this to avoid CDN referrer/CORS blocking.
+ * Server fetches from allowed Space Scan hosts only (SSRF protection) and streams the image.
  */
 export async function GET(request: NextRequest) {
   const url = request.nextUrl.searchParams.get('url')
-  if (!url || !isAllowedIconUrl(url)) {
+  if (!url || !isSpaceScanIconOrigin(url)) {
     return NextResponse.json({ error: 'Invalid or disallowed url' }, { status: 400 })
   }
   try {

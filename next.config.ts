@@ -39,27 +39,6 @@ const nextConfig: NextConfig = {
           { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
         ],
       },
-      // Splash WASM: .js must be application/javascript for dynamic import; .wasm gets application/wasm.
-      {
-        source: '/wasm/splash_wasm.js',
-        headers: [
-          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
-          { key: 'Content-Type', value: 'application/javascript' },
-        ],
-      },
-      {
-        source: '/wasm/splash_wasm_bg.wasm',
-        headers: [
-          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
-          { key: 'Content-Type', value: 'application/wasm' },
-        ],
-      },
-      {
-        source: '/wasm/:path*',
-        headers: [
-          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
-        ],
-      },
       {
         source: '/_next/static/:path*',
         headers: [

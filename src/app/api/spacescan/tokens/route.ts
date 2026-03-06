@@ -1,19 +1,22 @@
 import { NextResponse } from 'next/server'
 import { logger } from '@/shared/lib/logger'
-
-const SPACESCAN_TOKENS_URL = 'https://api.spacescan.io/tokens'
+import { SPACESCAN_API_TOKENS_URL } from '@/shared/lib/constants/apiProxy'
 
 /**
- * Proxy Space Scan /tokens to avoid CORS when called from the browser.
- * The Space Scan API does not send Access-Control-Allow-Origin for this endpoint.
+ * Proxy Space Scan /tokens. Browser calls this to avoid CORS (Space Scan does not send
+ * Access-Control-Allow-Origin for this endpoint). Server fetches and returns JSON.
  */
 export async function GET() {
   try {
-    const res = await fetch(SPACESCAN_TOKENS_URL, {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 15_000)
+    const res = await fetch(SPACESCAN_API_TOKENS_URL, {
       method: 'GET',
       headers: { Accept: 'application/json' },
+      signal: controller.signal,
       next: { revalidate: 3600 },
     })
+    clearTimeout(timeout)
     if (!res.ok) {
       return NextResponse.json(
         { status: 'error', message: res.statusText },

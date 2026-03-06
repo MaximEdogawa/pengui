@@ -4,6 +4,7 @@ import { type RefObject, useCallback, useRef, useState } from "react";
 import type { DexieOffer } from "@/entities/offer";
 import { getDexieApiUrl } from "@/shared/lib/utils/networkUtils";
 import { applyWebSocketBufferedAmountPatch } from "@/shared/lib/websocketBufferedAmountPatch";
+import { WASM_FILES, WASM_PATH_PREFIX } from "@/shared/lib/constants/apiProxy";
 
 export type SplashConnectionStatus =
   | "disconnected"
@@ -198,12 +199,12 @@ function getWasmBaseUrl(): string {
   return "";
 }
 
-/** Use API route so response has correct Content-Type (application/javascript) regardless of reverse proxy. */
+/** WASM via API route so Content-Type is correct in production (no reverse-proxy MIME issues). */
 function getWasmPaths(): { js: string; wasm: string } {
   const base = getWasmBaseUrl();
   return {
-    js: `${base}/api/wasm/splash_wasm.js`,
-    wasm: `${base}/api/wasm/splash_wasm_bg.wasm`,
+    js: `${base}${WASM_PATH_PREFIX}/${WASM_FILES[0]}`,
+    wasm: `${base}${WASM_PATH_PREFIX}/${WASM_FILES[1]}`,
   };
 }
 
