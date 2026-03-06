@@ -14,8 +14,6 @@ export default function AssetListPane() {
   const router = useRouter()
   const { assets, isLoading } = useWalletAssets()
   const {
-    category,
-    setCategory,
     searchQuery,
     setSearchQuery,
     filteredAssets,
@@ -29,8 +27,6 @@ export default function AssetListPane() {
   return (
     <Card>
       <WalletFilterBar
-        category={category}
-        onCategoryChange={setCategory}
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
       />
