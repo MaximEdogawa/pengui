@@ -1,13 +1,17 @@
 'use client'
 
-import { getMinimumFeeInXch, isValidChiaAddress, xchToMojos } from '@/shared/lib/utils/chia-units'
+import { convertToSmallestUnit, getMinimumFeeInXch, isValidChiaAddress, xchToMojos } from '@/shared/lib/utils/chia-units'
+import type { AssetType } from '@/entities/offer'
 import { useMemo, useState } from 'react'
 
 interface UseTransactionFormProps {
   availableBalance: number
+  assetId?: string
+  ticker?: string
+  isXch?: boolean
 }
 
-export function useTransactionForm({ availableBalance }: UseTransactionFormProps) {
+export function useTransactionForm({ availableBalance, assetId, ticker = 'XCH', isXch = true }: UseTransactionFormProps) {
   const [recipientAddress, setRecipientAddress] = useState('')
   const [amount, setAmount] = useState('')
   const [fee, setFee] = useState('0.000001')
@@ -15,6 +19,8 @@ export function useTransactionForm({ availableBalance }: UseTransactionFormProps
   const [addressError, setAddressError] = useState('')
   const [amountError, setAmountError] = useState('')
   const [feeError, setFeeError] = useState('')
+
+  const assetType: AssetType = isXch ? 'xch' : 'cat'
 
   const validateAddress = () => {
     const trimmed = recipientAddress.trim()
@@ -32,19 +38,28 @@ export function useTransactionForm({ availableBalance }: UseTransactionFormProps
 
   const validateAmount = () => {
     const amountNum = parseFloat(amount)
-    const feeNum = parseFloat(fee || '0')
-    const total = amountNum + feeNum
 
     if (!amount || amountNum <= 0) {
       setAmountError('Amount must be greater than 0')
       return false
     }
 
-    if (total > availableBalance) {
-      setAmountError(
-        `Insufficient balance. Total (${total.toFixed(6)}) exceeds available (${availableBalance.toFixed(6)} XCH)`
-      )
-      return false
+    if (isXch) {
+      const feeNum = parseFloat(fee || '0')
+      const total = amountNum + feeNum
+      if (total > availableBalance) {
+        setAmountError(
+          `Insufficient balance. Total (${total.toFixed(6)}) exceeds available (${availableBalance.toFixed(6)} ${ticker})`
+        )
+        return false
+      }
+    } else {
+      if (amountNum > availableBalance) {
+        setAmountError(
+          `Insufficient balance. ${amountNum} exceeds available ${availableBalance} ${ticker}`
+        )
+        return false
+      }
     }
 
     setAmountError('')
@@ -96,14 +111,14 @@ export function useTransactionForm({ availableBalance }: UseTransactionFormProps
     return {
       walletId: 1,
       address: recipientAddress.trim(),
-      amount: xchToMojos(parseFloat(amount)),
+      amount: convertToSmallestUnit(parseFloat(amount), assetType),
       fee: xchToMojos(parseFloat(fee)),
       memos: memo.trim() ? [memo.trim()] : undefined,
+      ...(!isXch && assetId ? { assetId } : {}),
     }
   }
 
   return {
-    // Form values
     recipientAddress,
     setRecipientAddress,
     amount,
@@ -112,17 +127,15 @@ export function useTransactionForm({ availableBalance }: UseTransactionFormProps
     setFee,
     memo,
     setMemo,
-    // Errors
     addressError,
     amountError,
     feeError,
-    // Validation
     validateAddress,
     validateAmount,
     validateFee,
     isFormValid,
-    // Utilities
     resetForm,
     getTransactionParams,
+    assetType,
   }
 }

@@ -117,7 +117,7 @@ export default function AssetDetailView({ assetIdSlug }: AssetDetailViewProps) {
     priceXch != null && xchUsdPrice != null ? priceXch * xchUsdPrice : null
   const balanceUsd =
     priceUsd != null && balance > 0 ? balance * priceUsd : null
-  const availableBalance = isXch ? balance : 0
+  const availableBalance = balance
 
   return (
     <div className="w-full relative z-10">
@@ -131,17 +131,18 @@ export default function AssetDetailView({ assetIdSlug }: AssetDetailViewProps) {
       </button>
 
       <Card className="mb-4">
-        {/* Header: icon + name left, action buttons right */}
-        <div className="flex items-center justify-between gap-3 mb-3">
-          <div className="flex items-center gap-3 min-w-0">
+        {/* Header row */}
+        <div className="flex items-start justify-between gap-2 mb-3">
+          {/* Icon + name + price */}
+          <div className="flex items-center gap-2.5 min-w-0">
             {isXch ? (
-              <XchIcon size={36} isTestnet={network === 'testnet'} />
+              <XchIcon size={32} isTestnet={network === 'testnet'} />
             ) : (
-              <TickerIcon assetId={assetId} ticker={ticker} size={36} />
+              <TickerIcon assetId={assetId} ticker={ticker} size={32} />
             )}
             <div className="min-w-0">
-              <h1 className={`text-lg font-semibold ${t.text} leading-tight truncate`}>{displayName}</h1>
-              <p className={`text-xs ${t.textSecondary} tabular-nums`}>
+              <h1 className={`text-base font-semibold ${t.text} leading-tight truncate`}>{displayName}</h1>
+              <p className={`text-[11px] ${t.textSecondary} tabular-nums leading-tight`}>
                 {ticker}
                 {priceUsd != null && priceUsd > 0 && (
                   <span className="ml-1">· {formatPrice(priceUsd)}</span>
@@ -149,39 +150,38 @@ export default function AssetDetailView({ assetIdSlug }: AssetDetailViewProps) {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-1.5 flex-shrink-0">
-            {isXch && (
-              <button
-                type="button"
-                onClick={() => setShowSendModal(true)}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                  isDark ? 'bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30' : 'bg-cyan-100 text-cyan-700 hover:bg-cyan-200'
-                }`}
-              >
-                <Send size={14} />
-                Send
-              </button>
-            )}
+          {/* Action buttons */}
+          <div className="flex items-center gap-1 flex-shrink-0">
+            <button
+              type="button"
+              onClick={() => setShowSendModal(true)}
+              className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-colors ${
+                isDark ? 'bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30' : 'bg-cyan-100 text-cyan-700 hover:bg-cyan-200'
+              }`}
+            >
+              <Send size={12} />
+              <span className="hidden sm:inline">Send</span>
+            </button>
             {address && (
               <button
                 type="button"
                 onClick={() => setShowReceiveModal(true)}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-colors ${
                   isDark ? 'bg-white/10 text-gray-300 hover:bg-white/15' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
                 }`}
               >
-                <Download size={14} />
-                Receive
+                <Download size={12} />
+                <span className="hidden sm:inline">Receive</span>
               </button>
             )}
             <Link
               href="/trading"
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+              className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-colors ${
                 isDark ? 'bg-white/10 text-gray-300 hover:bg-white/15' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
               }`}
             >
-              <TrendingUp size={14} />
-              Trade
+              <TrendingUp size={12} />
+              <span className="hidden sm:inline">Trade</span>
             </Link>
           </div>
         </div>
@@ -207,11 +207,16 @@ export default function AssetDetailView({ assetIdSlug }: AssetDetailViewProps) {
         <AssetPriceChart assetId={assetId} ticker={ticker} />
       </Card>
 
-      {showSendModal && isXch && (
+      {showSendModal && (
         <Modal onClose={() => setShowSendModal(false)} maxWidth="max-w-md">
           <div className="p-4">
-            <h2 className={`text-lg font-semibold ${t.text} mb-3`}>Send XCH</h2>
-            <SendTransactionForm availableBalance={availableBalance} />
+            <h2 className={`text-lg font-semibold ${t.text} mb-3`}>Send {ticker}</h2>
+            <SendTransactionForm
+              availableBalance={availableBalance}
+              assetId={isXch ? undefined : assetId}
+              ticker={ticker}
+              isXch={isXch}
+            />
           </div>
         </Modal>
       )}
