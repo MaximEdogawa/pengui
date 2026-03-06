@@ -25,6 +25,14 @@ function formatUsd(value: number | null): string {
   return `$${value.toFixed(2)}`
 }
 
+function formatPrice(value: number | null): string {
+  if (value == null || value <= 0) return ''
+  if (value >= 1_000) return `$${value.toLocaleString(undefined, { maximumFractionDigits: 2 })}`
+  if (value >= 1) return `$${value.toFixed(2)}`
+  if (value >= 0.01) return `$${value.toFixed(4)}`
+  return `$${value.toPrecision(3)}`
+}
+
 export default function AssetPane({ asset, onClick }: AssetPaneProps) {
   const { isDark, t } = useThemeClasses()
   const { network } = useNetwork()
@@ -48,7 +56,12 @@ export default function AssetPane({ asset, onClick }: AssetPaneProps) {
       </div>
       <div className="flex-1 min-w-0">
         <p className={`${t.text} text-sm font-medium truncate`}>{asset.name}</p>
-        <p className={`${t.textSecondary} text-xs`}>{asset.ticker}</p>
+        <p className={`${t.textSecondary} text-xs tabular-nums`}>
+          {asset.ticker}
+          {asset.priceUsd != null && asset.priceUsd > 0 && (
+            <span className="ml-1">· {formatPrice(asset.priceUsd)}</span>
+          )}
+        </p>
       </div>
       <div className="flex flex-col items-end flex-shrink-0">
         <p className={`${t.text} text-sm font-semibold tabular-nums`}>

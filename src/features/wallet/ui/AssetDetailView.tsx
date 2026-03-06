@@ -11,10 +11,11 @@ import {
 } from '@/shared/lib/walletConnect/utils/transactionStorage'
 import { CHIA_ASSET_IDS } from '@/shared/lib/constants/chia-assets'
 import TickerIcon, { XchIcon } from '@/entities/asset/ui/TickerIcon'
-import { useCatTokens } from '@/entities/asset'
+import { useCatTokens, type DexieTicker } from '@/entities/asset'
 import { useNetwork } from '@/shared/hooks/useNetwork'
 import { useThemeClasses } from '@/shared/hooks'
 import { useXchUsdPrice } from '@/shared/hooks/useXchUsdPrice'
+import { XCH_BASE_CURRENCIES } from '@/shared/lib/constants/chia-assets'
 import { formatRelativeTime } from '@/shared/lib/utils/dateUtils'
 import { formatAmountFromMojos } from '@/shared/lib/utils/amountUtils'
 import { convertFromSmallestUnit } from '@/shared/lib/utils/chia-units'
@@ -50,6 +51,14 @@ function formatUsd(value: number | null): string {
   return `$${value.toFixed(2)}`
 }
 
+function formatPrice(value: number | null): string {
+  if (value == null || value <= 0) return '—'
+  if (value >= 1_000) return `$${value.toLocaleString(undefined, { maximumFractionDigits: 2 })}`
+  if (value >= 1) return `$${value.toFixed(2)}`
+  if (value >= 0.01) return `$${value.toFixed(4)}`
+  return `$${value.toPrecision(3)}`
+}
+
 interface AssetDetailViewProps {
   assetIdSlug: string
 }
@@ -59,7 +68,7 @@ export default function AssetDetailView({ assetIdSlug }: AssetDetailViewProps) {
   const { isDark, t } = useThemeClasses()
   const { network } = useNetwork()
   const { priceUsd: xchUsdPrice } = useXchUsdPrice()
-  const { getAsset } = useCatTokens()
+  const { getAsset, tickers } = useCatTokens()
   const [showSendModal, setShowSendModal] = useState(false)
 
   const assetId = assetIdSlug === 'xch' ? CHIA_ASSET_IDS.XCH : decodeURIComponent(assetIdSlug)
@@ -79,7 +88,31 @@ export default function AssetDetailView({ assetIdSlug }: AssetDetailViewProps) {
 
   const spendable = balanceData?.spendable != null ? Number(balanceData.spendable) : 0
   const balance = convertFromSmallestUnit(spendable, isXch ? 'xch' : 'cat')
-  const balanceUsd = isXch && xchUsdPrice != null && balance > 0 ? balance * xchUsdPrice : null
+
+  const priceXch = isXch
+    ? 1
+    : (() => {
+        const rawTickers = (tickers ?? []) as DexieTicker[]
+        let best: number | null = null
+        let bestVol = -1
+        for (const t of rawTickers) {
+          if (t.base_currency === assetId && XCH_BASE_CURRENCIES.has(t.target_currency)) {
+            const price = Number(t.last_price)
+            if (!price || isNaN(price)) continue
+            const vol = Number(t.target_volume) || 0
+            if (best == null || vol > bestVol) {
+              best = price
+              bestVol = vol
+            }
+          }
+        }
+        return best
+      })()
+
+  const priceUsd =
+    priceXch != null && xchUsdPrice != null ? priceXch * xchUsdPrice : null
+  const balanceUsd =
+    priceUsd != null && balance > 0 ? balance * priceUsd : null
   const availableBalance = isXch ? balance : 0
 
   return (
@@ -102,7 +135,12 @@ export default function AssetDetailView({ assetIdSlug }: AssetDetailViewProps) {
           )}
           <div>
             <h1 className={`text-xl font-semibold ${t.text}`}>{displayName}</h1>
-            <p className={t.textSecondary}>{ticker}</p>
+            <p className={`${t.textSecondary} tabular-nums`}>
+              {ticker}
+              {priceUsd != null && priceUsd > 0 && (
+                <span className="ml-1">· {formatPrice(priceUsd)}</span>
+              )}
+            </p>
           </div>
         </div>
         <div className="mb-4">

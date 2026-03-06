@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useQuery, useQueries } from '@tanstack/react-query'
 import { useWalletConnectionState } from '@maximedogawa/chia-wallet-connect-react'
-import { CHIA_ASSET_IDS } from '@/shared/lib/constants/chia-assets'
+import { CHIA_ASSET_IDS, XCH_BASE_CURRENCIES } from '@/shared/lib/constants/chia-assets'
 import { convertFromSmallestUnit } from '@/shared/lib/utils/chia-units'
 import { useNetwork } from '@/shared/hooks/useNetwork'
 import { useXchUsdPrice } from '@/shared/hooks/useXchUsdPrice'
@@ -22,6 +22,8 @@ export interface WalletAssetItem {
   ticker: string
   balance: number
   spendableRaw: string
+  priceXch: number | null
+  priceUsd: number | null
   balanceUsd: number | null
   type: WalletAssetType
 }
@@ -38,6 +40,30 @@ function buildVolumeMap(rawTickers: DexieTicker[]): Map<string, number> {
       map.set(t.base_currency, existing + (t.target_volume ?? 0))
       return map
     }, new Map<string, number>())
+}
+
+/**
+ * Build a map of asset_id -> last_price (in XCH) from Dexie tickers.
+ * Only considers pairs where the target currency is XCH/TXCH.
+ * When multiple pools exist for the same asset, the highest-volume one wins.
+ */
+function buildPriceXchMap(rawTickers: DexieTicker[]): Map<string, number> {
+  const map = new Map<string, number>()
+  const volumeMap = new Map<string, number>()
+
+  for (const t of rawTickers) {
+    if (!t.base_currency || !XCH_BASE_CURRENCIES.has(t.target_currency)) continue
+    const price = Number(t.last_price)
+    if (!price || isNaN(price)) continue
+    const prevVol = volumeMap.get(t.base_currency) ?? 0
+    const vol = Number(t.target_volume) || 0
+    if (!map.has(t.base_currency) || vol > prevVol) {
+      map.set(t.base_currency, price)
+      volumeMap.set(t.base_currency, vol)
+    }
+  }
+
+  return map
 }
 
 /**
@@ -58,7 +84,7 @@ export function useWalletAssets(): {
   const { address } = useWalletConnectionState()
   const { data: xchBalance, refetch: refetchXch } = useWalletBalance(null, null)
   const { priceUsd: xchUsdPrice, isLoading: isLoadingPrice } = useXchUsdPrice()
-  const { availableAssets, tickers, isLoading: isLoadingTickers } = useCatTokens()
+  const { availableAssets, tickers, getAsset, isLoading: isLoadingTickers } = useCatTokens()
 
   const isWalletReady = !!signClient && session.isConnected
 
@@ -80,11 +106,14 @@ export function useWalletAssets(): {
   // ---- Determine which CATs to query via WalletConnect ----
   const catAssetsToCheck = useMemo(() => {
     if (spaceScanReady && spaceScanHasData) {
-      return spaceScanTokens!.map((t) => ({
-        assetId: t.asset_id,
-        name: t.name ?? t.symbol ?? t.asset_id,
-        ticker: t.symbol ?? '',
-      }))
+      return spaceScanTokens!.map((t) => {
+        const dexieAsset = getAsset(t.asset_id)
+        return {
+          assetId: t.asset_id,
+          name: dexieAsset?.name ?? t.name ?? t.symbol ?? t.asset_id,
+          ticker: dexieAsset?.ticker ?? t.symbol ?? '',
+        }
+      })
     }
 
     // Fallback: top-volume CATs from Dexie when SpaceScan returned nothing
@@ -133,15 +162,13 @@ export function useWalletAssets(): {
     }),
   })
 
-  // ---- Build the final asset list ----
-  const spaceScanMap = useMemo(() => {
-    const map = new Map<string, (typeof spaceScanTokens extends (infer T)[] | undefined ? T : never)>()
-    for (const t of spaceScanTokens ?? []) {
-      map.set(t.asset_id, t)
-    }
-    return map
-  }, [spaceScanTokens])
+  // ---- Build price map ----
+  const priceXchMap = useMemo(
+    () => buildPriceXchMap((tickers ?? []) as DexieTicker[]),
+    [tickers],
+  )
 
+  // ---- Build the final asset list ----
   const assets = useMemo(() => {
     const list: WalletAssetItem[] = []
 
@@ -154,6 +181,8 @@ export function useWalletAssets(): {
           ticker: network === 'testnet' ? 'TXCH' : 'XCH',
           balance: bal,
           spendableRaw: xchBalance.spendable,
+          priceXch: 1,
+          priceUsd: xchUsdPrice,
           balanceUsd: xchUsdPrice != null ? bal * xchUsdPrice : null,
           type: 'xch',
         })
@@ -167,20 +196,25 @@ export function useWalletAssets(): {
       if (spendable <= 0) return
       const bal = convertFromSmallestUnit(spendable, 'cat')
 
-      const ssToken = spaceScanMap.get(asset.assetId)
+      const dexieAsset = getAsset(asset.assetId)
+      const priceXch = priceXchMap.get(asset.assetId) ?? null
+      const priceUsd =
+        priceXch != null && xchUsdPrice != null ? priceXch * xchUsdPrice : null
       list.push({
         assetId: asset.assetId,
-        name: ssToken?.name ?? asset.name ?? asset.ticker,
-        ticker: ssToken?.symbol ?? asset.ticker,
+        name: dexieAsset?.name ?? asset.name ?? asset.ticker,
+        ticker: dexieAsset?.ticker ?? asset.ticker,
         balance: bal,
         spendableRaw: data.spendable,
-        balanceUsd: ssToken?.total_value ?? null,
+        priceXch,
+        priceUsd,
+        balanceUsd: priceUsd != null ? bal * priceUsd : null,
         type: 'cat',
       })
     })
 
     return list
-  }, [isWalletReady, xchBalance, xchUsdPrice, network, catAssetsToCheck, catBalances, spaceScanMap])
+  }, [isWalletReady, xchBalance, xchUsdPrice, network, catAssetsToCheck, catBalances, priceXchMap, getAsset])
 
   const isLoading = isLoadingPrice || isLoadingTickers || isLoadingSpaceScan || isCatLoading
 

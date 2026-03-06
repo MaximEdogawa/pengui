@@ -5,8 +5,10 @@ import { useNetwork } from '@/shared/hooks/useNetwork'
 import { useMemo } from 'react'
 
 /**
- * XCH/USD price from Dexie tickers (e.g. XCH-USDT or TXCH-USDT).
- * Shared by dashboard and wallet for consistent USD values.
+ * XCH/USD price derived from the BYC (Bytecash) / XCH pair on Dexie.
+ *
+ * BYC is dollar-pegged (~$1). Its Dexie `last_price` = how much XCH one BYC
+ * is worth.  Inverting it gives the XCH price in USD: `1 / last_price`.
  */
 export function useXchUsdPrice(): {
   priceUsd: number | null
@@ -18,26 +20,18 @@ export function useXchUsdPrice(): {
 
   const priceUsd = useMemo(() => {
     if (!data?.success || !Array.isArray(data.data)) return null
-    const tickers = data.data as Array<{
-      base_code?: string
-      target_code?: string
-      last_price?: number
-    }>
-    // Mainnet: XCH/USDT; testnet: TXCH/USDT or similar
-    const xchCode = network === 'testnet' ? 'TXCH' : 'XCH'
-    const usdQuote = ['USDT', 'USD'].find((q) =>
-      tickers.some(
-        (t) =>
-          (t.base_code === xchCode || t.base_code === 'XCH') &&
-          (t.target_code === q || t.target_code === 'USDT')
-      )
-    )
-    const pair = tickers.find(
-      (t) =>
-        (t.base_code === xchCode || t.base_code === 'XCH') &&
-        (t.target_code === usdQuote || t.target_code === 'USDT' || t.target_code === 'USD')
-    )
-    return pair && typeof pair.last_price === 'number' ? pair.last_price : null
+
+    const xchTarget = network === 'testnet' ? 'TXCH' : 'XCH'
+
+    for (const t of data.data) {
+      if (t.base_code !== 'BYC') continue
+      if (t.target_code !== xchTarget && t.target_code !== 'XCH') continue
+
+      const price = Number(t.last_price)
+      if (price > 0 && !isNaN(price)) return 1 / price
+    }
+
+    return null
   }, [data, network])
 
   return { priceUsd, isLoading, isError }
