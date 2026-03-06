@@ -9,13 +9,12 @@ import {
   getTransactionsByAsset,
   type StoredTransaction,
 } from '@/shared/lib/walletConnect/utils/transactionStorage'
-import { CHIA_ASSET_IDS } from '@/shared/lib/constants/chia-assets'
+import { CHIA_ASSET_IDS, XCH_BASE_CURRENCIES } from '@/shared/lib/constants/chia-assets'
 import TickerIcon, { XchIcon } from '@/entities/asset/ui/TickerIcon'
 import { useCatTokens, type DexieTicker } from '@/entities/asset'
 import { useNetwork } from '@/shared/hooks/useNetwork'
 import { useThemeClasses } from '@/shared/hooks'
 import { useXchUsdPrice } from '@/shared/hooks/useXchUsdPrice'
-import { XCH_BASE_CURRENCIES } from '@/shared/lib/constants/chia-assets'
 import { formatRelativeTime } from '@/shared/lib/utils/dateUtils'
 import { formatAmountFromMojos } from '@/shared/lib/utils/amountUtils'
 import { convertFromSmallestUnit } from '@/shared/lib/utils/chia-units'

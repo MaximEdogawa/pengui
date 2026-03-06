@@ -57,7 +57,7 @@ function ErrorState({ error }: { error?: unknown }) {
 
 export default function AssetPriceChart({ assetId }: AssetPriceChartProps) {
   const [config, setConfig] = useState<ChartConfig>(DEFAULT_CONFIG)
-  const [isUserScrolling, setIsUserScrolling] = useState(false)
+  const [_isUserScrolling, setIsUserScrolling] = useState(false)
 
   const {
     ohlcData,
