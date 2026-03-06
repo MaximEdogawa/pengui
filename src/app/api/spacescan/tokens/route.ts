@@ -18,9 +18,14 @@ export async function GET() {
     })
     clearTimeout(timeout)
     if (!res.ok) {
+      const status = res.status === 403 ? 502 : res.status
+      const message =
+        res.status === 403
+          ? 'Upstream tokens unavailable'
+          : res.statusText
       return NextResponse.json(
-        { status: 'error', message: res.statusText },
-        { status: res.status }
+        { status: 'error', message },
+        { status }
       )
     }
     const data = await res.json()
