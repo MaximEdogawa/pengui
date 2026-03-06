@@ -46,7 +46,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const menuItems = useMenuItems();
 
   const getActiveItem = () => {
-    return menuItems.find((item) => pathname === item.path)?.id || "dashboard";
+    return menuItems.find((item) => pathname === item.path || pathname.startsWith(`${item.path}/`))?.id || "dashboard";
   };
 
   const activeItem = getActiveItem();

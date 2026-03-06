@@ -173,16 +173,19 @@ export function useTakeOffer() {
 }
 
 /**
- * Refresh only the XCH balance query — not every balance entry in the cache.
+ * Refresh all wallet data: first re-fetch asset list from SpaceScan,
+ * then reload all balances from WalletConnect.
  */
 export function useRefreshBalance() {
   const queryClient = useQueryClient()
-  const { network } = useNetwork()
 
   return {
     refreshBalance: async () => {
       await queryClient.invalidateQueries({
-        queryKey: [WALLET_CONNECT_KEY, BALANCE_KEY, null, null, network],
+        queryKey: ['spacescan', 'token-balance'],
+      })
+      await queryClient.invalidateQueries({
+        queryKey: [WALLET_CONNECT_KEY, BALANCE_KEY],
       })
     },
   }

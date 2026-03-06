@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
-import { useQuery, useQueries } from '@tanstack/react-query'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useQuery, useQueries, useQueryClient } from '@tanstack/react-query'
 import { useWalletConnectionState } from '@maximedogawa/chia-wallet-connect-react'
 import { CHIA_ASSET_IDS, XCH_BASE_CURRENCIES } from '@/shared/lib/constants/chia-assets'
 import { convertFromSmallestUnit } from '@/shared/lib/utils/chia-units'
@@ -79,7 +79,8 @@ export function useWalletAssets(): {
   const { signClient } = useSignClient()
   const session = useWalletSession()
   const { address } = useWalletConnectionState()
-  const { data: xchBalance, refetch: refetchXch } = useWalletBalance(null, null)
+  const queryClient = useQueryClient()
+  const { data: xchBalance } = useWalletBalance(null, null)
   const { priceUsd: xchUsdPrice, isLoading: isLoadingPrice } = useXchUsdPrice()
   const { availableAssets, tickers, getAsset, isLoading: isLoadingTickers } = useCatTokens()
 
@@ -217,5 +218,10 @@ export function useWalletAssets(): {
 
   const isLoading = isLoadingPrice || isLoadingTickers || isLoadingSpaceScan || isCatLoading
 
-  return { assets, isLoading, refetch: refetchXch }
+  const refetch = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: ['spacescan', 'token-balance'] })
+    await queryClient.invalidateQueries({ queryKey: ['walletConnect', 'balance'] })
+  }, [queryClient])
+
+  return { assets, isLoading, refetch }
 }

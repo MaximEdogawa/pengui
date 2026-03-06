@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { AppLink } from '@/shared/ui'
+import { useOrderBookFilterStore } from '@/features/trading/hooks/orderBookFilterStore'
 import { useWalletBalance } from '../hooks/useWalletQueries'
 import { useTransactionHistory } from '../hooks/useTransactionHistory'
 import {
@@ -76,6 +76,8 @@ export default function AssetDetailView({ assetIdSlug }: AssetDetailViewProps) {
   const [showSendModal, setShowSendModal] = useState(false)
   const [showReceiveModal, setShowReceiveModal] = useState(false)
   const { address } = useWalletConnectionState()
+  const setTradingFilters = useOrderBookFilterStore((s) => s.setFilters)
+  const clearTradingFilters = useOrderBookFilterStore((s) => s.clearAllFilters)
 
   const assetId = assetIdSlug === 'xch' ? CHIA_ASSET_IDS.XCH : decodeURIComponent(assetIdSlug)
   const isXch = assetId === CHIA_ASSET_IDS.XCH || assetId === ''
@@ -179,15 +181,26 @@ export default function AssetDetailView({ assetIdSlug }: AssetDetailViewProps) {
                 <span className="hidden sm:inline">Receive</span>
               </button>
             )}
-            <AppLink
-              href="/trading"
+            <button
+              type="button"
+              onClick={() => {
+                const nativeTicker = network === 'testnet' ? 'TXCH' : 'XCH'
+                clearTradingFilters()
+                if (isXch) {
+                  setTradingFilters({ buyAsset: [], sellAsset: [nativeTicker], status: [], pagination: 50 })
+                } else {
+                  setTradingFilters({ buyAsset: [ticker], sellAsset: [nativeTicker], status: [], pagination: 50 })
+                }
+                startNavigation()
+                router.push('/trading')
+              }}
               className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-colors ${
                 isDark ? 'bg-white/10 text-gray-300 hover:bg-white/15' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
               }`}
             >
               <TrendingUp size={12} />
               <span className="hidden sm:inline">Trade</span>
-            </AppLink>
+            </button>
           </div>
         </div>
 

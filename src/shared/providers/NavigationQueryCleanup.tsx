@@ -5,11 +5,15 @@ import { useEffect, useRef } from 'react'
 import { useNavigationProgress } from './NavigationProgressProvider'
 
 /**
- * Cancels in-flight wallet/API queries the moment a navigation starts.
+ * Cancels in-flight wallet/API queries shortly after a navigation starts.
  * On 3G networks, the ongoing WalletConnect relay traffic (batch CAT
  * balance queries) saturates the connection and prevents Next.js from
- * fetching the new route's JS chunk. Cancelling these queries immediately
- * frees bandwidth so the page transition can complete.
+ * fetching the new route's JS chunk. Cancelling these queries frees
+ * bandwidth so the page transition can complete.
+ *
+ * A short delay is used so the synchronous React Query store updates
+ * from cancellation don't interrupt the Next.js navigation transition
+ * (which runs inside startTransition at a lower priority).
  *
  * Must be rendered inside both NavigationProgressProvider and ReactQueryProvider.
  */
@@ -20,9 +24,13 @@ export function NavigationQueryCleanup() {
 
   useEffect(() => {
     if (isNavigating && !prevNavigatingRef.current) {
-      queryClient.cancelQueries({ queryKey: ['walletConnect', 'balance'] })
-      queryClient.cancelQueries({ queryKey: ['spacescan'] })
-      queryClient.cancelQueries({ queryKey: ['spacescan', 'all-tokens'] })
+      const timer = setTimeout(() => {
+        queryClient.cancelQueries({ queryKey: ['walletConnect', 'balance'] })
+        queryClient.cancelQueries({ queryKey: ['spacescan'] })
+        queryClient.cancelQueries({ queryKey: ['spacescan', 'all-tokens'] })
+      }, 150)
+      prevNavigatingRef.current = isNavigating
+      return () => clearTimeout(timer)
     }
     prevNavigatingRef.current = isNavigating
   }, [isNavigating, queryClient])
