@@ -1,6 +1,7 @@
 "use client";
 
 import { useThemeClasses } from "@/shared/hooks";
+import { useResponsive } from "@/shared/hooks/useResponsive";
 import type { DexieOffer } from "@/entities/offer";
 import {
   formatAmountForDisplay,
@@ -44,17 +45,22 @@ function formatOfferDateShort(offer: DexieOffer): string {
 function formatAssetAmount(
   amount: number | undefined | null,
   code: string,
+  maxDecimals?: number,
 ): string {
   if (amount == null || typeof amount !== "number" || Number.isNaN(amount))
     return "—";
-  return `${formatAmountForDisplay(amount)} ${code || ""}`.trim();
+  return `${formatAmountForDisplay(amount, maxDecimals)} ${code || ""}`.trim();
 }
+
+const MOBILE_DECIMALS = 4;
 
 export default function TradeHistoryRow({
   item,
   onClick,
 }: TradeHistoryRowProps) {
   const { t, isDark } = useThemeClasses();
+  const { isMobile } = useResponsive();
+  const maxDecimals = isMobile ? MOBILE_DECIMALS : undefined;
   const { offer, offerState, isMyOffer } = item;
 
   const requested = offer.requested?.[0];
@@ -97,18 +103,18 @@ export default function TradeHistoryRow({
           <div className="flex items-center gap-1 min-w-0 flex-1">
             <span className={`text-[10px] font-mono ${t.text} truncate`}>
               {requested
-                ? formatAssetAmount(requested.amount, requested.code ?? "")
+                ? formatAssetAmount(requested.amount, requested.code ?? "", maxDecimals)
                 : "—"}
             </span>
             <span className={`text-[9px] ${t.textSecondary} flex-shrink-0`}>→</span>
             <span className={`text-[10px] font-mono ${t.text} truncate`}>
               {offered
-                ? formatAssetAmount(offered.amount, offered.code ?? "")
+                ? formatAssetAmount(offered.amount, offered.code ?? "", maxDecimals)
                 : "—"}
             </span>
           </div>
           <span className={`text-[10px] font-mono ${t.text} flex-shrink-0 tabular-nums`}>
-            {formatPriceForDisplay(price)}
+            {formatPriceForDisplay(price, maxDecimals)}
           </span>
         </div>
         {/* Row 2: Date + Status + Mine badge */}
@@ -132,16 +138,16 @@ export default function TradeHistoryRow({
       >
         <div className={`text-xs font-mono ${t.text} col-span-2 truncate`}>
           {requested
-            ? formatAssetAmount(requested.amount, requested.code ?? "")
+            ? formatAssetAmount(requested.amount, requested.code ?? "", maxDecimals)
             : "—"}
         </div>
         <div className={`text-xs font-mono ${t.text} col-span-2 truncate`}>
           {offered
-            ? formatAssetAmount(offered.amount, offered.code ?? "")
+            ? formatAssetAmount(offered.amount, offered.code ?? "", maxDecimals)
             : "—"}
         </div>
         <div className={`text-xs font-mono ${t.text} truncate`}>
-          {formatPriceForDisplay(price)}
+          {formatPriceForDisplay(price, maxDecimals)}
         </div>
         <div className={`text-xs ${t.text} col-span-2 truncate`}>
           {formatOfferDate(offer)}

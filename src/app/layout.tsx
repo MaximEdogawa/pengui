@@ -66,6 +66,33 @@ export default function UILayout({ children }: { children: React.ReactNode }) {
     applyWebSocketBufferedAmountPatch();
   }, []);
 
+  // Suppress WalletConnect relay timing errors (relay sends session_request/session_ping after UI moved on)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const isWcRelayNoListeners = (err: unknown) => {
+      const msg = err instanceof Error ? err.message : String(err);
+      return msg.includes("without any listeners") && msg.includes("session_");
+    };
+    const prevOnError = window.onerror;
+    window.onerror = (message, source, lineno, colno, error) => {
+      if (isWcRelayNoListeners(error ?? message)) return true;
+      return prevOnError
+        ? prevOnError(message, source ?? "", lineno ?? 0, colno ?? 0, error ?? undefined)
+        : false;
+    };
+    const onRejection = (event: PromiseRejectionEvent) => {
+      if (isWcRelayNoListeners(event.reason)) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+    };
+    window.addEventListener("unhandledrejection", onRejection);
+    return () => {
+      window.onerror = prevOnError;
+      window.removeEventListener("unhandledrejection", onRejection);
+    };
+  }, []);
+
   // Initialize network preference to mainnet on mount (before any WalletConnect operations)
   useEffect(() => {
     if (typeof window !== "undefined" && !hasNetworkPreference()) {

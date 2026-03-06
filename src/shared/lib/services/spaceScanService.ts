@@ -1,10 +1,11 @@
 /**
  * Space Scan API Service
- * Provides functions to fetch token metadata and icons from Space Scan API
+ * Fetches token metadata and icons. In the browser, token list uses the app proxy to avoid CORS.
  */
 
 import { logger } from '@/shared/lib/logger'
 import { getSpaceScanApiUrl } from '@/shared/lib/utils/networkUtils'
+import { SPACESCAN_TOKENS_PATH } from '@/shared/lib/constants/apiProxy'
 import { getAdaptiveConfig } from '@/shared/lib/utils/networkQuality'
 
 function createAbortTimeout(): { signal: AbortSignal; clear: () => void } {
@@ -128,12 +129,13 @@ export async function fetchTokenInfo(assetId: string): Promise<SpaceScanTokenInf
 }
 
 /**
- * Fetch all CAT tokens from Space Scan API
- * @returns Array of all CAT tokens with their metadata
+ * Fetch all CAT tokens. In the browser uses app proxy (CORS-safe); on server hits Space Scan directly.
  */
 export async function fetchAllTokens(): Promise<SpaceScanCatToken[]> {
-  const baseUrl = getSpaceScanApiUrl()
-  const url = `${baseUrl}/tokens`
+  const url =
+    typeof window !== 'undefined'
+      ? SPACESCAN_TOKENS_PATH
+      : `${getSpaceScanApiUrl()}/tokens`
   const { signal, clear } = createAbortTimeout()
 
   try {
