@@ -26,33 +26,33 @@ export function SidebarProfile({
       }`}
     >
       {/* Mobile: Icon only */}
-      <div className="flex flex-col items-center gap-1 lg:hidden">
+      <div className="flex flex-col items-center gap-1.5 lg:hidden">
         <AppLink
           href="/profile"
           onClick={onCloseSidebar}
           scroll={false}
-          className={`w-8 h-8 rounded-lg ${profileLinkClass}`}
+          className={`w-14 h-14 rounded-xl ${profileLinkClass}`}
           title="Profile"
         >
           <div
-            className={`absolute inset-0 backdrop-blur-xl bg-white/10 rounded-lg border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200`}
+            className={`absolute inset-0 backdrop-blur-xl bg-white/10 rounded-xl border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200`}
           />
           <div
-            className={`w-5 h-5 rounded bg-gradient-to-br ${t.accent} flex items-center justify-center flex-shrink-0 shadow-sm backdrop-blur-xl relative`}
+            className={`w-9 h-9 rounded bg-gradient-to-br ${t.accent} flex items-center justify-center flex-shrink-0 shadow-sm backdrop-blur-xl relative`}
           >
-            <User className="w-3 h-3 text-white" />
+            <User className="w-5 h-5 text-white" />
           </div>
         </AppLink>
         {/* Theme toggle for mobile */}
         <button
           onClick={onToggleTheme}
-          className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${t.cardHover}`}
+          className={`w-14 h-14 rounded-xl flex items-center justify-center transition-all ${t.cardHover}`}
           title={isDark ? 'Switch to Light' : 'Switch to Dark'}
         >
           {isDark ? (
-            <Sun className="w-4 h-4 text-amber-400" strokeWidth={2} />
+            <Sun className="w-8 h-8 text-amber-400" strokeWidth={2} />
           ) : (
-            <Moon className="w-4 h-4 text-slate-600" strokeWidth={2} />
+            <Moon className="w-8 h-8 text-slate-600" strokeWidth={2} />
           )}
         </button>
       </div>

@@ -97,21 +97,21 @@ export function BalanceCard({ isDark, t }: BalanceCardProps) {
             <button
               type="button"
               onClick={() => setShowReceive(true)}
-              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all duration-200 ${
+              className={`inline-flex items-center gap-1.5 px-3.5 py-2 sm:px-3 sm:py-1.5 rounded-lg text-xs sm:text-[11px] font-semibold transition-all duration-200 touch-manipulation ${
                 isDark
-                  ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-400/20 hover:bg-cyan-500/25'
-                  : 'bg-cyan-100 text-cyan-700 border border-cyan-600/20 hover:bg-cyan-200'
+                  ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-400/20 hover:bg-cyan-500/25 active:bg-cyan-500/35'
+                  : 'bg-cyan-100 text-cyan-700 border border-cyan-600/20 hover:bg-cyan-200 active:bg-cyan-300'
               }`}
             >
-              <Download size={12} strokeWidth={2.5} />
+              <Download size={14} className="sm:w-3 sm:h-3" strokeWidth={2.5} />
               Receive
             </button>
           )}
           <AppLink
             href="/wallet"
-            className={`inline-flex items-center gap-1 text-[10px] font-medium ${t.textTertiary} hover:opacity-80 transition-opacity ml-auto`}
+            className={`inline-flex items-center gap-1 text-xs sm:text-[10px] font-medium ${t.textTertiary} hover:opacity-80 transition-opacity ml-auto touch-manipulation py-1`}
           >
-            View details <ArrowRight size={10} />
+            View details <ArrowRight size={12} className="sm:w-2.5 sm:h-2.5" />
           </AppLink>
         </div>
       </div>

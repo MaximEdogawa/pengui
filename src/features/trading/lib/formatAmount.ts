@@ -12,45 +12,41 @@ function addThousandSeparators(intStr: string): string {
 
 /**
  * Format amount for display - preserves full precision, only truncates if decimals are excessive (>12)
- * CSS truncate class handles responsive visual truncation based on available space
+ * When maxDecimals is set (e.g. 4 for mobile), caps decimal places to that.
  */
-export function formatAmountForDisplay(amount: number): string {
+export function formatAmountForDisplay(amount: number, maxDecimals?: number): string {
   const n = amount == null || typeof amount !== 'number' || Number.isNaN(amount) ? 0 : Number(amount)
   if (n === 0) return '0'
   if (n < 0.000001) return n.toExponential(2)
 
   const str = n.toString()
   const [int, dec] = str.split('.')
+  const cap = maxDecimals ?? 12
 
-  // Only programmatically truncate if decimals are excessive (>12)
-  // Otherwise show full value - CSS will handle responsive truncation
-  if (dec && dec.length > 12) {
-    // Only truncate if decimals exceed 12 places
-    const truncated = dec.slice(0, 12)
-    // Remove trailing zeros from truncated part
+  // Truncate decimals to cap (e.g. 4 on mobile, 12 by default)
+  if (dec && dec.length > cap) {
+    const truncated = dec.slice(0, cap)
     const trimmedTruncated = truncated.replace(/0+$/, '')
     const formattedInt = addThousandSeparators(int)
-    return trimmedTruncated ? `${formattedInt}.${trimmedTruncated}…` : `${formattedInt}…`
+    return trimmedTruncated ? `${formattedInt}.${trimmedTruncated}` : formattedInt
   }
 
-  // Show full value without truncation - preserve original precision
-  // Remove trailing zeros for cleaner display, but keep all significant digits
+  // Show full value up to cap
   const formattedInt = addThousandSeparators(int)
   if (!dec) {
     return formattedInt
   }
 
-  // Remove trailing zeros but keep all significant decimal places
   const trimmedDecimal = dec.replace(/0+$/, '')
   return trimmedDecimal ? `${formattedInt}.${trimmedDecimal}` : formattedInt
 }
 
 /**
  * Format price for display - cuts decimals without rounding or truncation indicator
- * For prices < 1: 7 decimals
- * For prices >= 1: 2 decimals
+ * When maxDecimals is set (e.g. 4 for mobile), caps to that. Otherwise:
+ * For prices < 1: 7 decimals. For prices >= 1: 2 decimals.
  */
-export function formatPriceForDisplay(price: number): string {
+export function formatPriceForDisplay(price: number, maxDecimals?: number): string {
   const p = price == null || typeof price !== 'number' || Number.isNaN(price) ? 0 : Number(price)
   if (p === 0) return '0'
   if (p < 0.000001) return p.toExponential(2)
@@ -59,18 +55,21 @@ export function formatPriceForDisplay(price: number): string {
   const [int, dec] = str.split('.')
   const formattedInt = addThousandSeparators(int)
 
+  if (maxDecimals != null) {
+    if (!dec) return formattedInt
+    const cutDecimals = dec.slice(0, maxDecimals)
+    const trimmedDecimals = cutDecimals.replace(/0+$/, '')
+    return trimmedDecimals ? `${formattedInt}.${trimmedDecimals}` : formattedInt
+  }
+
   if (p < 1) {
-    // For prices < 1: cut to 7 decimals (no rounding, no truncation indicator)
     if (!dec) return formattedInt
     const cutDecimals = dec.slice(0, 7)
-    // Remove trailing zeros for cleaner display
     const trimmedDecimals = cutDecimals.replace(/0+$/, '')
     return trimmedDecimals ? `${formattedInt}.${trimmedDecimals}` : formattedInt
   } else {
-    // For prices >= 1: cut to 2 decimals (no rounding, no truncation indicator)
     if (!dec) return formattedInt
     const cutDecimals = dec.slice(0, 2)
-    // Remove trailing zeros for cleaner display
     const trimmedDecimals = cutDecimals.replace(/0+$/, '')
     return trimmedDecimals ? `${formattedInt}.${trimmedDecimals}` : formattedInt
   }

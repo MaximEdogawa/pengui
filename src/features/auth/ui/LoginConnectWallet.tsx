@@ -207,7 +207,7 @@ export function LoginConnectWallet() {
           setIsModalOpen(true)
         }}
         disabled={isInitializing && !uri}
-        className="group relative w-full max-w-xs mx-auto overflow-hidden rounded-2xl transition-all duration-300 active:scale-[0.98]"
+        className="group relative w-full max-w-xs mx-auto overflow-hidden rounded-2xl transition-all duration-300 active:scale-[0.98] touch-manipulation"
       >
         {/* animated gradient border */}
         <span
@@ -218,13 +218,13 @@ export function LoginConnectWallet() {
         </span>
 
         {/* button surface */}
-        <span className="relative flex items-center justify-center gap-2.5 px-6 py-3.5 sm:py-4 rounded-2xl bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 group-hover:from-slate-900 group-hover:via-slate-800 group-hover:to-slate-900 transition-all duration-300">
+        <span className="relative flex items-center justify-center gap-2.5 px-6 py-4 sm:py-4 rounded-2xl bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 group-hover:from-slate-900 group-hover:via-slate-800 group-hover:to-slate-900 transition-all duration-300">
           {isInitializing && !uri ? (
-            <Loader2 className="w-[18px] h-[18px] text-cyan-400/60 animate-spin" />
+            <Loader2 className="w-5 h-5 sm:w-[18px] sm:h-[18px] text-cyan-400/60 animate-spin" />
           ) : (
-            <Wallet className="w-[18px] h-[18px] text-cyan-400 group-hover:text-cyan-300 transition-colors duration-200" />
+            <Wallet className="w-5 h-5 sm:w-[18px] sm:h-[18px] text-cyan-400 group-hover:text-cyan-300 transition-colors duration-200" />
           )}
-          <span className="text-sm sm:text-[15px] font-semibold tracking-wide bg-gradient-to-r from-cyan-200 via-sky-100 to-cyan-200 bg-clip-text text-transparent group-hover:from-white group-hover:via-cyan-100 group-hover:to-white transition-all duration-200">
+          <span className="text-[15px] sm:text-[15px] font-semibold tracking-wide bg-gradient-to-r from-cyan-200 via-sky-100 to-cyan-200 bg-clip-text text-transparent group-hover:from-white group-hover:via-cyan-100 group-hover:to-white transition-all duration-200">
             Connect Wallet
           </span>
         </span>

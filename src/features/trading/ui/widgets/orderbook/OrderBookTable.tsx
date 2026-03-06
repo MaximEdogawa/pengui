@@ -1,6 +1,7 @@
 "use client";
 
 import { useThemeClasses } from "@/shared/hooks";
+import { useResponsive } from "@/shared/hooks/useResponsive";
 import { useCatTokens } from "@/entities/asset";
 import { getNativeTokenTickerForNetwork } from "@/shared/lib/config/environment";
 import { useNetwork } from "@/shared/hooks/useNetwork";
@@ -71,6 +72,7 @@ const getPriceHeaderTicker = (
 const createCalculateOrderPrice = (
   getTickerSymbol: (assetId: string, code?: string) => string,
   filters?: { buyAsset?: string[]; sellAsset?: string[] },
+  maxDecimals?: number,
 ) => {
   return (order: OrderBookOrder): string => {
     if (isSingleAssetPair(order)) {
@@ -122,10 +124,10 @@ const createCalculateOrderPrice = (
             price = offeringAsset.amount / requestingAsset.amount;
           }
 
-          return formatPriceForDisplay(price);
+          return formatPriceForDisplay(price, maxDecimals);
         } else {
           price = offeringAsset.amount / requestingAsset.amount;
-          return formatPriceForDisplay(price);
+          return formatPriceForDisplay(price, maxDecimals);
         }
       }
     }
@@ -208,8 +210,10 @@ export default function OrderBookTable({
   myOfferIds,
 }: OrderBookTableProps) {
   const { t } = useThemeClasses();
+  const { isMobile } = useResponsive();
   const { getCatTokenInfo } = useCatTokens();
   const { network } = useNetwork();
+  const maxDecimals = isMobile ? 4 : undefined;
 
   const getTickerSymbol = useCallback(
     (assetId: string, code?: string): string => {
@@ -223,8 +227,8 @@ export default function OrderBookTable({
 
   const calculateOrderPrice = useCallback(
     (order: OrderBookOrder) =>
-      createCalculateOrderPrice(getTickerSymbol, filters)(order),
-    [filters, getTickerSymbol],
+      createCalculateOrderPrice(getTickerSymbol, filters, maxDecimals)(order),
+    [filters, getTickerSymbol, maxDecimals],
   );
 
   const textColorClass =
@@ -334,7 +338,7 @@ export default function OrderBookTable({
           <>
             {showHeader && (
               <div
-                className={`grid grid-cols-12 gap-1 sm:gap-2 px-1.5 sm:px-2 py-1 backdrop-blur-xl ${t.card} border-b ${t.border} text-[9px] sm:text-[10px] font-medium ${t.textSecondary} ${
+                className={`grid grid-cols-12 gap-1 sm:gap-2 px-2 sm:px-2 py-1.5 sm:py-1 backdrop-blur-xl ${t.card} border-b ${t.border} text-[10px] sm:text-[10px] font-medium ${t.textSecondary} ${
                   stickyHeader ? "sticky top-0 z-10 shadow-sm" : ""
                 }`}
                 style={
@@ -393,6 +397,7 @@ export default function OrderBookTable({
                     priceCountMap={priceCountMap}
                     isNew={newOrderIds.has(order.id)}
                     isMine={myOfferIds?.has(order.id) ?? false}
+                    maxDecimals={maxDecimals}
                   />
                 ))}
               </div>
@@ -431,29 +436,29 @@ export function OrderBookTableHeader({ filters }: OrderBookTableHeaderProps) {
   };
 
   return (
-    <div className="grid grid-cols-12 gap-1 sm:gap-2 px-1.5 sm:px-2 py-1.5 sm:py-2 backdrop-blur-xl bg-gradient-to-b from-white/5 to-transparent dark:from-black/5 dark:to-transparent border-b border-white/10 dark:border-white/5">
+    <div className="grid grid-cols-12 gap-1 sm:gap-2 px-2 sm:px-2 py-1.5 sm:py-2 backdrop-blur-xl bg-gradient-to-b from-white/5 to-transparent dark:from-black/5 dark:to-transparent border-b border-white/10 dark:border-white/5">
       {/* Count */}
-      <div className="col-span-1 text-left flex items-center font-medium text-[9px] sm:text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400">
+      <div className="col-span-1 text-left flex items-center font-medium text-[10px] sm:text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400">
         Count
       </div>
 
       {/* Buy */}
-      <div className="col-span-3 text-right flex items-center justify-end font-medium text-[9px] sm:text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400 pr-0 sm:pr-[17px]">
+      <div className="col-span-3 text-right flex items-center justify-end font-medium text-[10px] sm:text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400 pr-0 sm:pr-[17px]">
         Buy
       </div>
 
       {/* Sell */}
-      <div className="col-span-3 text-right flex items-center justify-end font-medium text-[9px] sm:text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400 pr-0 sm:pr-[17px]">
+      <div className="col-span-3 text-right flex items-center justify-end font-medium text-[10px] sm:text-[10px] uppercase tracking-wider text-gray-500 dark:text-gray-400 pr-0 sm:pr-[17px]">
         Sell
       </div>
 
       {/* Price */}
-      <div className="col-span-5 text-right flex items-center justify-end pr-0 sm:pr-[17px]">
-        <div className="flex items-center gap-1 sm:gap-1.5">
-          <span className="text-[8px] sm:text-[9px] opacity-40 font-normal text-gray-500 dark:text-gray-400 uppercase tracking-wide truncate max-w-[60px] sm:max-w-none">
+      <div className="col-span-5 text-right flex items-center justify-end pr-0 sm:pr-[17px] min-w-0">
+        <div className="flex items-center gap-1 sm:gap-1.5 min-w-0 justify-end">
+          <span className="text-[9px] sm:text-[9px] opacity-40 font-normal text-gray-500 dark:text-gray-400 uppercase tracking-wide truncate max-w-[70px] sm:max-w-none">
             ({getPriceHeaderTicker()})
           </span>
-          <span className="font-medium text-[9px] sm:text-[10px] uppercase tracking-wider text-gray-600 dark:text-gray-300">
+          <span className="font-medium text-[10px] sm:text-[10px] uppercase tracking-wider text-gray-600 dark:text-gray-300 flex-shrink-0">
             Price
           </span>
         </div>
@@ -490,6 +495,7 @@ interface OrderBookTableRowProps {
   priceCountMap: Map<string, number>;
   isNew?: boolean;
   isMine?: boolean;
+  maxDecimals?: number;
 }
 
 function OrderBookTableRow({
@@ -510,6 +516,7 @@ function OrderBookTableRow({
   priceCountMap,
   isNew,
   isMine,
+  maxDecimals,
 }: OrderBookTableRowProps) {
   // Calculate price deviation percentage from best price
   const priceDeviationPercent = useMemo(() => {
@@ -601,9 +608,9 @@ function OrderBookTableRow({
         <div className="absolute inset-0 bg-blue-400/[0.06] dark:bg-blue-400/[0.08]" />
       )}
 
-      <div className="relative grid grid-cols-12 gap-1 sm:gap-2 px-1.5 sm:px-2 py-1.5 items-center">
+      <div className="relative grid grid-cols-12 gap-1 sm:gap-2 px-2 sm:px-2 py-2 sm:py-1.5 items-center">
         {/* Count - smallest, left aligned */}
-        <div className="col-span-1 text-left text-gray-600 dark:text-gray-400 font-mono text-[9px] sm:text-[10px]">
+        <div className="col-span-1 text-left text-gray-600 dark:text-gray-400 font-mono text-[10px] sm:text-[10px] min-w-0">
           {(() => {
             const numericPrice = getNumericPrice(order);
             // Normalize price for lookup (round to 8 decimal places)
@@ -619,16 +626,16 @@ function OrderBookTableRow({
         </div>
 
         {/* Buy */}
-        <div className="col-span-3 text-right flex items-center justify-end overflow-hidden">
+        <div className="col-span-3 text-right flex items-center justify-end overflow-hidden min-w-0">
           <div className="flex flex-col gap-0.5 min-w-0 w-full">
             {order.offering.map((item, idx) => (
               <div
                 key={idx}
-                className={`${textColorClass} font-mono text-[9px] sm:text-[10px] flex items-center justify-end gap-0.5 sm:gap-1 min-w-0`}
+                className={`${textColorClass} font-mono text-[10px] sm:text-[10px] flex items-center justify-end gap-0.5 sm:gap-1 min-w-0 truncate`}
                 title={`${formatAmountForTooltip(item.amount || 0)} ${item.code || getTickerSymbol(item.id)}`}
               >
                 <span className="text-right tabular-nums truncate">
-                  {formatAmountForDisplay(item.amount || 0)}
+                  {formatAmountForDisplay(item.amount || 0, maxDecimals)}
                 </span>
                 <span className="flex-shrink-0">
                   {item.code || getTickerSymbol(item.id)}
@@ -639,16 +646,16 @@ function OrderBookTableRow({
         </div>
 
         {/* Sell */}
-        <div className="col-span-3 text-right flex items-center justify-end overflow-hidden">
+        <div className="col-span-3 text-right flex items-center justify-end overflow-hidden min-w-0">
           <div className="flex flex-col gap-0.5 min-w-0 w-full">
             {order.requesting.map((item, idx) => (
               <div
                 key={idx}
-                className="text-[9px] sm:text-[10px] font-mono text-gray-600 dark:text-gray-300 flex items-center justify-end gap-0.5 sm:gap-1 min-w-0"
+                className="text-[10px] sm:text-[10px] font-mono text-gray-600 dark:text-gray-300 flex items-center justify-end gap-0.5 sm:gap-1 min-w-0 truncate"
                 title={`${formatAmountForTooltip(item.amount || 0)} ${item.code || getTickerSymbol(item.id)}`}
               >
                 <span className="text-right tabular-nums truncate">
-                  {formatAmountForDisplay(item.amount || 0)}
+                  {formatAmountForDisplay(item.amount || 0, maxDecimals)}
                 </span>
                 <span className="flex-shrink-0">
                   {item.code || getTickerSymbol(item.id)}
@@ -659,7 +666,7 @@ function OrderBookTableRow({
         </div>
 
         {/* Price - biggest, right aligned */}
-        <div className="col-span-5 text-right text-gray-700 dark:text-gray-300 font-mono text-[9px] sm:text-[10px] overflow-hidden">
+        <div className="col-span-5 text-right text-gray-700 dark:text-gray-300 font-mono text-[10px] sm:text-[10px] overflow-hidden min-w-0">
           <div className="flex items-center justify-end min-w-0 gap-1">
             {isMine && (
               <span className="flex-shrink-0 inline-flex items-center px-1 py-[1px] rounded text-[7px] sm:text-[8px] font-semibold uppercase tracking-wider leading-none bg-blue-500/15 dark:bg-blue-400/15 text-blue-600 dark:text-blue-400 border border-blue-500/20 dark:border-blue-400/20">
