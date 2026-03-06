@@ -3,11 +3,9 @@
 export {
   useWalletBalance,
   useWalletAddress,
-  useAssetCoins,
   useSignCoinSpends,
   useSignMessage,
   useSendTransaction,
-  useGetBalance,
   useCreateOffer,
   useCancelOffer,
   useTakeOffer,
@@ -15,7 +13,6 @@ export {
 } from './useWalletQueries'
 export { useWalletSession } from './useWalletSession'
 export { useWalletFingerprint } from './useWalletFingerprint'
-export { useWalletConnectEventListeners } from './useWalletConnectEventListeners'
 export { useSignClient } from './useSignClient'
 export { useTransactionForm } from './useTransactionForm'
 export { useTransactionHistory } from './useTransactionHistory'

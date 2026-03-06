@@ -106,6 +106,8 @@ export default function SendTransactionForm({
         senderAddress: address || undefined,
         memo: params.memos?.[0],
         status: "pending",
+        assetId: "",
+        amountAsset: "XCH",
       });
       const successMsg = `Transaction sent successfully!${transactionId !== "N/A" ? ` Transaction ID: ${transactionId}` : ""}`;
       setTransactionStatus({ type: "success", message: successMsg });

@@ -59,7 +59,7 @@ const getWalletConnectConfig = () => {
 };
 
 export default function UILayout({ children }: { children: React.ReactNode }) {
-  // Prevent "getObject(arg0).bufferedAmount" errors when Splash WASM uses a detached WebSocket (e.g. tab hidden)
+  // Run client-only patches as early as possible
   useEffect(() => {
     applyWebSocketBufferedAmountPatch();
   }, []);

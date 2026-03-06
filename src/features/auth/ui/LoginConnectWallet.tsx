@@ -93,9 +93,7 @@ export function LoginConnectWallet() {
 
       toast.success('Wallet connected!')
       setIsModalOpen(false)
-      // So balance and other wallet queries use a SignClient that has the new session
-      queryClient.invalidateQueries({ queryKey: ['walletConnect', 'instance'] })
-      queryClient.invalidateQueries({ queryKey: ['walletConnect'] })
+      // SignClient invalidation is handled once by NetworkProvider when isConnected/session updates (avoids duplicate invalidate + relay loop)
     },
     [queryClient],
   )

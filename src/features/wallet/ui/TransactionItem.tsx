@@ -94,7 +94,9 @@ export default function TransactionItem({ transaction: tx }: TransactionItemProp
             }`}
           >
             {isSend ? '-' : '+'}
-            {formatAmountFromMojos(tx.amount)} XCH
+            {tx.amountAsset === 'XCH' || tx.amountAsset === 'TXCH' || !tx.amountAsset
+              ? `${formatAmountFromMojos(tx.amount)} ${tx.amountAsset ?? 'XCH'}`
+              : `${tx.amount} ${tx.amountAsset}`}
           </p>
           <p className={`${t.textSecondary} text-xs`}>{formatRelativeTime(tx.timestamp)}</p>
           {tx.fee && parseFloat(tx.fee) > 0 && (

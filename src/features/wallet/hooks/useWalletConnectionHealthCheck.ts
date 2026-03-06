@@ -6,7 +6,7 @@ import toast from "react-hot-toast";
 import { useSignClient } from "./useSignClient";
 import { useWalletSession } from "./useWalletSession";
 
-const HEALTH_CHECK_INTERVAL = 30_000;
+const HEALTH_CHECK_INTERVAL = 60_000;
 const PING_TIMEOUT = 15_000;
 
 /**
@@ -83,25 +83,20 @@ export function useWalletConnectionHealthCheck() {
     );
   }, [connectionLost]);
 
-  // Run health checks shortly after mount when connected (detect "Sage closed" within ~6s)
   useEffect(() => {
     if (!session.isConnected) return;
-    const t1 = setTimeout(() => runHealthCheck(), 2000);
-    const t2 = setTimeout(() => runHealthCheck(), 5000);
-    return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
-    };
+    const t = setTimeout(() => runHealthCheck(), 15_000);
+    return () => clearTimeout(t);
   }, [session.isConnected, runHealthCheck]);
 
   useEffect(() => {
     if (!session.isConnected) return;
     const onVisible = () => {
       if (document.visibilityState === "visible") {
-        setTimeout(runHealthCheck, 2000);
+        setTimeout(runHealthCheck, 5000);
       }
     };
-    const onOnline = () => setTimeout(runHealthCheck, 3000);
+    const onOnline = () => setTimeout(runHealthCheck, 5000);
     document.addEventListener("visibilitychange", onVisible);
     window.addEventListener("online", onOnline);
     return () => {

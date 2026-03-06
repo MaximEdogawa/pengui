@@ -55,10 +55,14 @@ export function NetworkProvider({ children }: { children: React.ReactNode }) {
   const lastWalletChainIdRef = useRef<string | null>(null);
   const testRequestTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const wasConnectedRef = useRef(false);
+  /** Cooldown to prevent infinite loop: only invalidate SignClient once per N ms. */
+  const lastSignClientInvalidateRef = useRef<number>(0);
+  const SIGN_CLIENT_INVALIDATE_COOLDOWN_MS = 3000;
 
   // When user just connected (e.g. new connection from login or manage wallet), the in-memory
   // SignClient was created before the session existed. Invalidate so it re-initializes and
   // picks up the new session from storage, fixing "Error loading balance".
+  // Cooldown prevents repeated invalidation when session/relay updates cause re-renders (infinite loop).
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (!isConnected) {
@@ -67,6 +71,11 @@ export function NetworkProvider({ children }: { children: React.ReactNode }) {
     }
     if (!walletConnectSession && !selectedSession) return;
     if (wasConnectedRef.current) return; // already was connected, avoid re-invalidating
+    const now = Date.now();
+    if (now - lastSignClientInvalidateRef.current < SIGN_CLIENT_INVALIDATE_COOLDOWN_MS) {
+      return; // cooldown: prevent repeated invalidation / relay spam
+    }
+    lastSignClientInvalidateRef.current = now;
     wasConnectedRef.current = true;
     queryClient.invalidateQueries({ queryKey: ["walletConnect", "instance"] });
     queryClient.invalidateQueries({ queryKey: ["walletConnect"] });

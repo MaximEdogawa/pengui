@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState, type MutableRefObject } from "react";
+import { type RefObject, useCallback, useRef, useState } from "react";
 import type { DexieOffer } from "@/entities/offer";
 import { getDexieApiUrl } from "@/shared/lib/utils/networkUtils";
 import { applyWebSocketBufferedAmountPatch } from "@/shared/lib/websocketBufferedAmountPatch";
@@ -42,7 +42,7 @@ function toMinimalDexieOffer(p: SplashOfferPayload): DexieOffer {
 
 async function waitAfterDisconnectIfNeeded(
   signal: AbortSignal | undefined,
-  lastDisconnectTimeRef: MutableRefObject<number | null>,
+  lastDisconnectTimeRef: RefObject<number | null>,
 ): Promise<void> {
   const lastDisconnect = lastDisconnectTimeRef.current;
   if (lastDisconnect == null) return;
@@ -54,14 +54,21 @@ async function waitAfterDisconnectIfNeeded(
   }
   await new Promise<void>((resolve) => {
     const t = setTimeout(resolve, waitMs);
-    signal?.addEventListener("abort", () => { clearTimeout(t); resolve(); }, { once: true });
+    signal?.addEventListener(
+      "abort",
+      () => {
+        clearTimeout(t);
+        resolve();
+      },
+      { once: true },
+    );
   });
   lastDisconnectTimeRef.current = null;
 }
 
 async function disconnectExistingAndWait(
-  moduleRef: MutableRefObject<SplashWasmModule | null>,
-  lastDisconnectTimeRef: MutableRefObject<number | null>,
+  moduleRef: RefObject<SplashWasmModule | null>,
+  lastDisconnectTimeRef: RefObject<number | null>,
   setIsReady: (v: boolean) => void,
   setStatus: (s: SplashConnectionStatus) => void,
 ): Promise<void> {
@@ -85,7 +92,11 @@ async function loadWasmModule(
 ): Promise<SplashWasmModule> {
   const wasmModule = await import(/* webpackIgnore: true */ wasmJsPath);
   if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
-  await (wasmModule.default as (opts?: { module_or_path?: string }) => Promise<unknown>)({
+  await (
+    wasmModule.default as (opts?: {
+      module_or_path?: string;
+    }) => Promise<unknown>
+  )({
     module_or_path: wasmBinaryPath,
   });
   if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
@@ -103,7 +114,10 @@ async function enrichOfferPayload(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ offer: p.offer }),
     });
-    const data = (await resp.json()) as { success?: boolean; offer?: DexieOffer };
+    const data = (await resp.json()) as {
+      success?: boolean;
+      offer?: DexieOffer;
+    };
     if (data.success && data.offer) {
       return { ...data.offer, offer: p.offer };
     }
@@ -114,10 +128,10 @@ async function enrichOfferPayload(
 }
 
 function createOffersCallback(
-  networkRef: MutableRefObject<"mainnet" | "testnet">,
-  bufferRef: MutableRefObject<DexieOffer[]>,
-  receivedCountRef: MutableRefObject<number>,
-  offersCallbacksRef: MutableRefObject<Set<(offers: DexieOffer[]) => void>>,
+  networkRef: RefObject<"mainnet" | "testnet">,
+  bufferRef: RefObject<DexieOffer[]>,
+  receivedCountRef: RefObject<number>,
+  offersCallbacksRef: RefObject<Set<(offers: DexieOffer[]) => void>>,
 ): (raw: unknown) => void {
   return (raw: unknown) => {
     const arr = Array.isArray(raw) ? raw : raw != null ? [raw] : [];
@@ -200,7 +214,9 @@ export function useSplashWasm(): UseSplashWasmResult {
   const [isReady, setIsReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const moduleRef = useRef<SplashWasmModule | null>(null);
-  const offersCallbacksRef = useRef<Set<(offers: DexieOffer[]) => void>>(new Set());
+  const offersCallbacksRef = useRef<Set<(offers: DexieOffer[]) => void>>(
+    new Set(),
+  );
   const bufferRef = useRef<DexieOffer[]>([]);
   const receivedCountRef = useRef(0);
   const networkRef = useRef<"mainnet" | "testnet">("mainnet");
@@ -210,7 +226,9 @@ export function useSplashWasm(): UseSplashWasmResult {
   const onOffers = useCallback((callback: (offers: DexieOffer[]) => void) => {
     offersCallbacksRef.current.add(callback);
     // Return cleanup function to remove this specific listener
-    return () => { offersCallbacksRef.current.delete(callback); };
+    return () => {
+      offersCallbacksRef.current.delete(callback);
+    };
   }, []);
 
   const initAndConnect = useCallback(
@@ -228,7 +246,6 @@ export function useSplashWasm(): UseSplashWasmResult {
       networkRef.current = network;
       setStatus("connecting");
       const networkName = network === "testnet" ? "splash-testnet" : "splash";
-      // Use 127.0.0.1 instead of localhost so WASM/browser can connect without DNS
       const urlForWasm = relayUrl.replace(
         /^(wss?:\/\/)localhost(\b)/i,
         (_, scheme, rest) => `${scheme}127.0.0.1${rest}`,
@@ -257,11 +274,15 @@ export function useSplashWasm(): UseSplashWasmResult {
         receivedCountRef.current = 0;
         mod.init(urlForWasm, networkName);
 
-        mod.setOnStatusCallback((obj: { status?: string; message?: string }) => {
-          const s = (obj?.status as string) || "disconnected";
-          setStatus(s as SplashConnectionStatus);
-          setError(s === "error" && obj?.message ? String(obj.message) : null);
-        });
+        mod.setOnStatusCallback(
+          (obj: { status?: string; message?: string }) => {
+            const s = (obj?.status as string) || "disconnected";
+            setStatus(s as SplashConnectionStatus);
+            setError(
+              s === "error" && obj?.message ? String(obj.message) : null,
+            );
+          },
+        );
         mod.setOnOffersCallback(
           createOffersCallback(
             networkRef,

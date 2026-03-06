@@ -39,8 +39,8 @@ export function PersistGateLoadingFallback() {
       {showEscape && (
         <div className="flex flex-col items-center gap-3 text-center">
           <p className="text-sm text-white/70">
-            Taking longer than usual? You can disconnect the wallet, reload and
-            try reopen the wallet.
+            Taking longer than usual? You can disconnect the wallet, reload, and
+            try opening the wallet again.
           </p>
           <button
             type="button"
@@ -48,7 +48,7 @@ export function PersistGateLoadingFallback() {
             disabled={isDisconnecting}
             className="rounded-lg border border-white/20 bg-white/10 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/20 disabled:opacity-50"
           >
-            Disconnect wallet, reload and try reopen the wallet
+            Disconnect wallet and reload
           </button>
         </div>
       )}

@@ -15,7 +15,6 @@ import {
   cancelOffer,
   createOffer,
   getAssetBalance,
-  getAssetCoins,
   getWalletAddress,
   sendTransaction,
   signCoinSpends,
@@ -28,28 +27,29 @@ import { useWalletSession } from './useWalletSession'
 const WALLET_CONNECT_KEY = 'walletConnect'
 const BALANCE_KEY = 'balance'
 const ADDRESS_KEY = 'address'
-const ASSET_COINS_KEY = 'assetCoins'
 
 /**
- * Hook to get wallet balance
+ * Hook to get wallet balance.
+ * Query keys normalise undefined → null so every call-site shares one cache entry.
  */
 export function useWalletBalance(type?: AssetType | null, assetId?: string | null) {
   const { signClient } = useSignClient()
   const session = useWalletSession()
   const { network } = useNetwork()
 
-  const queryFn = async () => {
-    const result = await getAssetBalance(signClient, session, type ?? null, assetId ?? null)
-    if (!result.success) throw new Error(result.error)
-    return result.data
-  }
+  const normalType = type ?? null
+  const normalAssetId = assetId ?? null
 
   return useQuery({
-    queryKey: [WALLET_CONNECT_KEY, BALANCE_KEY, type, assetId, network],
-    queryFn,
+    queryKey: [WALLET_CONNECT_KEY, BALANCE_KEY, normalType, normalAssetId, network],
+    queryFn: async () => {
+      const result = await getAssetBalance(signClient, session, normalType, normalAssetId)
+      if (!result.success) throw new Error(result.error)
+      return result.data
+    },
     enabled: signClient != null && session.isConnected,
-    retry: 3,
     staleTime: Infinity,
+    retry: 1,
   })
 }
 
@@ -61,222 +61,129 @@ export function useWalletAddress() {
   const session = useWalletSession()
   const { network } = useNetwork()
 
-  const queryFn = async () => {
-    const result = await getWalletAddress(signClient, session)
-    if (!result.success) throw new Error(result.error)
-    return result.data
-  }
-
   return useQuery({
     queryKey: [WALLET_CONNECT_KEY, ADDRESS_KEY, network],
-    queryFn,
+    queryFn: async () => {
+      const result = await getWalletAddress(signClient, session)
+      if (!result.success) throw new Error(result.error)
+      return result.data
+    },
     enabled: signClient != null && session.isConnected,
-    retry: 3,
     staleTime: Infinity,
+    retry: 1,
   })
 }
 
-/**
- * Hook to get asset coins
- */
-export function useAssetCoins(type?: AssetType | null, assetId?: string | null) {
-  const { signClient } = useSignClient()
-  const session = useWalletSession()
-  const { network } = useNetwork()
-
-  const queryFn = async () => {
-    const result = await getAssetCoins(signClient, session, type ?? null, assetId ?? null)
-    if (!result.success) throw new Error(result.error)
-    return result.data
-  }
-
-  return useQuery({
-    queryKey: [WALLET_CONNECT_KEY, ASSET_COINS_KEY, type, assetId, network],
-    queryFn,
-    enabled: signClient != null && session.isConnected,
-    retry: 3,
-    staleTime: Infinity,
-  })
-}
-
-/**
- * Hook to sign coin spends
- */
 export function useSignCoinSpends() {
   const { signClient } = useSignClient()
   const session = useWalletSession()
   const queryClient = useQueryClient()
 
-  const mutationFn = async (params: { walletId: number; coinSpends: CoinSpend[] }) => {
-    const result = await signCoinSpends(params, signClient, session)
-    if (!result.success) throw new Error(result.error)
-    return result.data
-  }
-
   return useMutation({
-    mutationFn,
+    mutationFn: async (params: { walletId: number; coinSpends: CoinSpend[] }) => {
+      const result = await signCoinSpends(params, signClient, session)
+      if (!result.success) throw new Error(result.error)
+      return result.data
+    },
     onSuccess: () => {
-      // Invalidate related queries if needed
-      queryClient.invalidateQueries({ queryKey: [WALLET_CONNECT_KEY] })
+      queryClient.invalidateQueries({ queryKey: [WALLET_CONNECT_KEY, BALANCE_KEY] })
     },
   })
 }
 
-/**
- * Hook to sign a message
- */
 export function useSignMessage() {
   const { signClient } = useSignClient()
   const session = useWalletSession()
-  const queryClient = useQueryClient()
-
-  const mutationFn = async (data: SignMessageRequest) => {
-    const result = await signMessage(data, signClient, session)
-    if (!result.success) throw new Error(result.error)
-    return result.data
-  }
 
   return useMutation({
-    mutationFn,
-    onSuccess: () => {
-      // Invalidate related queries if needed
-      queryClient.invalidateQueries({ queryKey: [WALLET_CONNECT_KEY] })
+    mutationFn: async (data: SignMessageRequest) => {
+      const result = await signMessage(data, signClient, session)
+      if (!result.success) throw new Error(result.error)
+      return result.data
     },
   })
 }
 
-/**
- * Hook to send a transaction
- */
 export function useSendTransaction() {
   const { signClient } = useSignClient()
   const session = useWalletSession()
   const queryClient = useQueryClient()
 
-  const mutationFn = async (data: TransactionRequest) => {
-    const result = await sendTransaction(data, signClient, session)
-    if (!result.success) throw new Error(result.error)
-    return result.data
-  }
-
   return useMutation({
-    mutationFn,
+    mutationFn: async (data: TransactionRequest) => {
+      const result = await sendTransaction(data, signClient, session)
+      if (!result.success) throw new Error(result.error)
+      return result.data
+    },
     onSuccess: () => {
-      // Invalidate balance and coins queries after transaction
       queryClient.invalidateQueries({ queryKey: [WALLET_CONNECT_KEY, BALANCE_KEY] })
-      queryClient.invalidateQueries({ queryKey: [WALLET_CONNECT_KEY, ASSET_COINS_KEY] })
     },
   })
 }
 
-/**
- * Hook to get balance with mutation (for manual refresh)
- */
-export function useGetBalance() {
-  const { signClient } = useSignClient()
-  const session = useWalletSession()
-  const queryClient = useQueryClient()
-
-  const mutationFn = async (data?: { type?: AssetType | null; assetId?: string | null }) => {
-    const type = data?.type ?? null
-    const assetId = data?.assetId ?? null
-    const result = await getAssetBalance(signClient, session, type, assetId)
-    if (!result.success) throw new Error(result.error)
-    return result.data
-  }
-
-  return useMutation({
-    mutationFn,
-    onSuccess: (_, variables) => {
-      // Invalidate the balance query
-      queryClient.invalidateQueries({
-        queryKey: [WALLET_CONNECT_KEY, BALANCE_KEY, variables?.type, variables?.assetId],
-      })
-    },
-  })
-}
-
-/**
- * Hook to create an offer
- */
 export function useCreateOffer() {
   const { signClient } = useSignClient()
   const session = useWalletSession()
   const queryClient = useQueryClient()
 
-  const mutationFn = async (data: OfferRequest) => {
-    const result = await createOffer(data, signClient, session)
-    if (!result.success) throw new Error(result.error)
-    return result.data
-  }
-
   return useMutation({
-    mutationFn,
+    mutationFn: async (data: OfferRequest) => {
+      const result = await createOffer(data, signClient, session)
+      if (!result.success) throw new Error(result.error)
+      return result.data
+    },
     onSuccess: () => {
-      // Invalidate balance and coins queries after creating offer
       queryClient.invalidateQueries({ queryKey: [WALLET_CONNECT_KEY, BALANCE_KEY] })
-      queryClient.invalidateQueries({ queryKey: [WALLET_CONNECT_KEY, ASSET_COINS_KEY] })
     },
   })
 }
 
-/**
- * Hook to cancel an offer
- */
 export function useCancelOffer() {
   const { signClient } = useSignClient()
   const session = useWalletSession()
   const queryClient = useQueryClient()
 
-  const mutationFn = async (data: CancelOfferRequest) => {
-    const result = await cancelOffer(data, signClient, session)
-    if (!result.success) throw new Error(result.error)
-    return result.data
-  }
-
   return useMutation({
-    mutationFn,
+    mutationFn: async (data: CancelOfferRequest) => {
+      const result = await cancelOffer(data, signClient, session)
+      if (!result.success) throw new Error(result.error)
+      return result.data
+    },
     onSuccess: () => {
-      // Invalidate balance and coins queries after canceling offer
       queryClient.invalidateQueries({ queryKey: [WALLET_CONNECT_KEY, BALANCE_KEY] })
-      queryClient.invalidateQueries({ queryKey: [WALLET_CONNECT_KEY, ASSET_COINS_KEY] })
     },
   })
 }
 
-/**
- * Hook to take an offer
- */
 export function useTakeOffer() {
   const { signClient } = useSignClient()
   const session = useWalletSession()
   const queryClient = useQueryClient()
 
-  const mutationFn = async (data: TakeOfferRequest) => {
-    const result = await takeOffer(data, signClient, session)
-    if (!result.success) throw new Error(result.error)
-    return result.data
-  }
-
   return useMutation({
-    mutationFn,
+    mutationFn: async (data: TakeOfferRequest) => {
+      const result = await takeOffer(data, signClient, session)
+      if (!result.success) throw new Error(result.error)
+      return result.data
+    },
     onSuccess: () => {
-      // Invalidate balance and coins queries after taking offer
       queryClient.invalidateQueries({ queryKey: [WALLET_CONNECT_KEY, BALANCE_KEY] })
-      queryClient.invalidateQueries({ queryKey: [WALLET_CONNECT_KEY, ASSET_COINS_KEY] })
     },
   })
 }
 
 /**
- * Helper hook to refresh wallet balance
+ * Refresh only the XCH balance query — not every balance entry in the cache.
  */
 export function useRefreshBalance() {
   const queryClient = useQueryClient()
+  const { network } = useNetwork()
 
   return {
     refreshBalance: async () => {
-      await queryClient.invalidateQueries({ queryKey: [WALLET_CONNECT_KEY, BALANCE_KEY] })
+      await queryClient.invalidateQueries({
+        queryKey: [WALLET_CONNECT_KEY, BALANCE_KEY, null, null, network],
+      })
     },
   }
 }

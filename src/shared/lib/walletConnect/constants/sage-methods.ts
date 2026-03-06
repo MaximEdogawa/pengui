@@ -7,25 +7,25 @@
 
 export enum SageMethods {
   // CHIP-0002 Commands
-  CHIP0002_CONNECT = 'chip0002_connect',
-  CHIP0002_CHAIN_ID = 'chip0002_chainId',
-  CHIP0002_GET_PUBLIC_KEYS = 'chip0002_getPublicKeys',
-  CHIP0002_FILTER_UNLOCKED_COINS = 'chip0002_filterUnlockedCoins',
-  CHIP0002_GET_ASSET_COINS = 'chip0002_getAssetCoins',
-  CHIP0002_GET_ASSET_BALANCE = 'chip0002_getAssetBalance',
-  CHIP0002_SIGN_COIN_SPENDS = 'chip0002_signCoinSpends',
-  CHIP0002_SIGN_MESSAGE = 'chip0002_signMessage',
-  CHIP0002_SEND_TRANSACTION = 'chip0002_sendTransaction',
+  CHIP0002_CONNECT = "chip0002_connect",
+  CHIP0002_CHAIN_ID = "chip0002_chainId",
+  CHIP0002_GET_PUBLIC_KEYS = "chip0002_getPublicKeys",
+  CHIP0002_FILTER_UNLOCKED_COINS = "chip0002_filterUnlockedCoins",
+  CHIP0002_GET_ASSET_COINS = "chip0002_getAssetCoins",
+  CHIP0002_GET_ASSET_BALANCE = "chip0002_getAssetBalance",
+  CHIP0002_SIGN_COIN_SPENDS = "chip0002_signCoinSpends",
+  CHIP0002_SIGN_MESSAGE = "chip0002_signMessage",
+  CHIP0002_SEND_TRANSACTION = "chip0002_sendTransaction",
 
   // Chia-specific Commands
-  CHIA_CREATE_OFFER = 'chia_createOffer',
-  CHIA_TAKE_OFFER = 'chia_takeOffer',
-  CHIA_CANCEL_OFFER = 'chia_cancelOffer',
-  CHIA_GET_NFTS = 'chia_getNfts',
-  CHIA_SEND = 'chia_send',
-  CHIA_GET_ADDRESS = 'chia_getAddress',
-  CHIA_SIGN_MESSAGE_BY_ADDRESS = 'chia_signMessageByAddress',
-  CHIA_BULK_MINT_NFTS = 'chia_bulkMintNfts',
+  CHIA_CREATE_OFFER = "chia_createOffer",
+  CHIA_TAKE_OFFER = "chia_takeOffer",
+  CHIA_CANCEL_OFFER = "chia_cancelOffer",
+  CHIA_GET_NFTS = "chia_getNfts",
+  CHIA_SEND = "chia_send",
+  CHIA_GET_ADDRESS = "chia_getAddress",
+  CHIA_SIGN_MESSAGE_BY_ADDRESS = "chia_signMessageByAddress",
+  CHIA_BULK_MINT_NFTS = "chia_bulkMintNfts",
 }
 
 /**
@@ -35,13 +35,13 @@ export enum AssetIds {
   XCH = 0,
 }
 
-export type SageMethodName = `${SageMethods}`
+export type SageMethodName = `${SageMethods}`;
 
 /**
  * Helper function to check if a string is a valid Sage method
  */
 export function isSageMethod(method: string): method is SageMethodName {
-  return Object.values(SageMethods).includes(method as SageMethods)
+  return Object.values(SageMethods).includes(method as SageMethods);
 }
 
 /**
@@ -66,5 +66,5 @@ export function getAllSageMethods(): SageMethodName[] {
     SageMethods.CHIA_GET_ADDRESS,
     SageMethods.CHIA_SIGN_MESSAGE_BY_ADDRESS,
     SageMethods.CHIA_BULK_MINT_NFTS,
-  ]
+  ];
 }
