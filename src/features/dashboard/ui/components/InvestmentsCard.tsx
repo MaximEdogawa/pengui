@@ -1,6 +1,6 @@
 'use client'
 
-import Link from 'next/link'
+import { AppLink } from '@/shared/ui'
 import { Briefcase, ArrowRight, FileText, FileCheck } from 'lucide-react'
 import type { ThemeClasses } from '@/shared/lib/theme'
 import type { LoanOffer, LoanAgreement } from '@/entities/loan'
@@ -99,12 +99,12 @@ export function InvestmentsCard({ isDark, t, loans = [], agreements = [] }: Inve
             Investments
           </p>
         </div>
-        <Link
+        <AppLink
           href="/loans"
           className={`flex items-center gap-1 text-[10px] font-medium ${t.textTertiary} hover:opacity-80 transition-opacity`}
         >
           View details <ArrowRight size={10} />
-        </Link>
+        </AppLink>
       </div>
 
       {isEmpty ? (
@@ -124,7 +124,7 @@ export function InvestmentsCard({ isDark, t, loans = [], agreements = [] }: Inve
 
           <div className="space-y-1">
             {rows.map((row) => (
-              <Link
+              <AppLink
                 key={`${row.investmentType}-${row.id}`}
                 href={row.href}
                 className={`grid grid-cols-12 gap-2 items-center rounded-xl px-2.5 py-2 border transition-all duration-200 ${
@@ -159,7 +159,7 @@ export function InvestmentsCard({ isDark, t, loans = [], agreements = [] }: Inve
                 <span className={`col-span-2 text-right ${t.textTertiary} text-[10px] tabular-nums`}>
                   {row.date}
                 </span>
-              </Link>
+              </AppLink>
             ))}
           </div>
         </>

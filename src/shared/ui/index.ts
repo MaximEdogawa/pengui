@@ -51,6 +51,7 @@ export { EmptyState, type EmptyStateProps } from './utilities/empty-state'
 
 // Shared asset list component
 export { AssetList, type AssetListProps } from './components/asset-list/AssetList'
+export { AppLink } from './AppLink'
 
 // ============================================================================
 // LAYOUT COMPONENTS

@@ -1,6 +1,6 @@
 'use client'
 
-import Link from 'next/link'
+import { AppLink } from '@/shared/ui'
 import { useState } from 'react'
 import { TrendingUp, ArrowRight, Wallet, Download } from 'lucide-react'
 import type { ThemeClasses } from '@/shared/lib/theme'
@@ -107,12 +107,12 @@ export function BalanceCard({ isDark, t }: BalanceCardProps) {
               Receive
             </button>
           )}
-          <Link
+          <AppLink
             href="/wallet"
             className={`inline-flex items-center gap-1 text-[10px] font-medium ${t.textTertiary} hover:opacity-80 transition-opacity ml-auto`}
           >
             View details <ArrowRight size={10} />
-          </Link>
+          </AppLink>
         </div>
       </div>
 

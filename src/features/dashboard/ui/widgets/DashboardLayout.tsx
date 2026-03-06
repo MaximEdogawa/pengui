@@ -2,10 +2,9 @@
 
 import { useWalletConnectionHealthCheck } from "@/features/wallet/hooks/useWalletConnectionHealthCheck";
 import { getThemeClasses } from "@/shared/lib/theme";
-import { useNavigationProgress } from "@/shared/providers/NavigationProgressProvider";
 import { InfoBanner, VersionDisplay } from "@/shared/ui";
 import { useTheme } from "next-themes";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { BackgroundGradient } from "../components/BackgroundGradient";
 import { useMenuItems } from "../../hooks/use-menu-items";
@@ -26,8 +25,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [mounted, setMounted] = useState(false);
   const { theme: currentTheme, systemTheme, setTheme } = useTheme();
   const pathname = usePathname();
-  const router = useRouter();
-  const { startNavigation } = useNavigationProgress();
 
   // Detect when wallet (e.g. Sage) is closed or session invalid; clears state and redirects to login so no blank screen
   useWalletConnectionHealthCheck();
@@ -53,14 +50,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   };
 
   const activeItem = getActiveItem();
-
-  const handleNavigation = (path: string) => {
-    if (pathname !== path) {
-      startNavigation();
-      router.push(path, { scroll: false });
-    }
-    setSidebarOpen(false);
-  };
 
   if (!mounted) {
     return (
@@ -97,7 +86,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         t={t}
         menuItems={menuItems}
         activeItem={activeItem}
-        onNavigation={handleNavigation}
+        onCloseSidebar={() => setSidebarOpen(false)}
         onToggleTheme={toggleTheme}
         onToggleSidebar={() => {
           if (typeof window !== "undefined" && window.innerWidth >= 1024) {

@@ -1,6 +1,6 @@
 'use client'
 
-import Link from 'next/link'
+import { AppLink } from '@/shared/ui'
 import { DollarSign, ArrowRight, TrendingUp, TrendingDown, ArrowRightLeft, Repeat } from 'lucide-react'
 import type { ThemeClasses } from '@/shared/lib/theme'
 import { useTransactionHistory, useWalletAssets } from '@/features/wallet'
@@ -118,12 +118,12 @@ export function ExpensesCard({ isDark, t }: ExpensesCardProps) {
             Expenses
           </p>
         </div>
-        <Link
+        <AppLink
           href="/wallet"
           className={`flex items-center gap-1 text-[10px] font-medium ${t.textTertiary} hover:opacity-80 transition-opacity`}
         >
           View details <ArrowRight size={10} />
-        </Link>
+        </AppLink>
       </div>
 
       {/* P&L summary */}

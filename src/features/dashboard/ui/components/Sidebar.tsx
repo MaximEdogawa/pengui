@@ -1,6 +1,4 @@
-import { useRouter } from 'next/navigation'
 import type { ThemeClasses } from '@/shared/lib/theme'
-import { useNavigationProgress } from '@/shared/providers/NavigationProgressProvider'
 import { PenguinLogo } from '@/shared/ui'
 import { SidebarMenu } from './SidebarMenu'
 import { SidebarProfile } from './SidebarProfile'
@@ -11,7 +9,7 @@ interface SidebarProps {
   t: ThemeClasses
   menuItems: Array<{ id: string; icon: React.ComponentType<{ className?: string; size?: number }>; label: string; path: string }>
   activeItem: string
-  onNavigation: (path: string) => void
+  onCloseSidebar?: () => void
   onToggleTheme: () => void
   onToggleSidebar: () => void
   isDark: boolean
@@ -23,14 +21,11 @@ export function Sidebar({
   t,
   menuItems,
   activeItem,
-  onNavigation,
+  onCloseSidebar,
   onToggleTheme,
   onToggleSidebar,
   isDark,
 }: SidebarProps) {
-  const router = useRouter()
-  const { startNavigation } = useNavigationProgress()
-
   return (
     <aside
       className={`${
@@ -73,18 +68,14 @@ export function Sidebar({
         activeItem={activeItem}
         sidebarCollapsed={sidebarCollapsed}
         t={t}
-        onNavigation={onNavigation}
+        onCloseSidebar={onCloseSidebar}
       />
 
       {/* User Profile - Fixed at bottom */}
       <SidebarProfile
         sidebarCollapsed={sidebarCollapsed}
         t={t}
-        onProfileClick={() => {
-          startNavigation()
-          router.push('/profile')
-          onNavigation('/profile')
-        }}
+        onCloseSidebar={onCloseSidebar}
         onToggleTheme={onToggleTheme}
         isDark={isDark}
       />

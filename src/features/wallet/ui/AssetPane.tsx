@@ -1,6 +1,6 @@
 'use client'
 
-import Link from 'next/link'
+import { AppLink } from '@/shared/ui/AppLink'
 import { useThemeClasses } from '@/shared/hooks'
 import { useNetwork } from '@/shared/hooks/useNetwork'
 import TickerIcon, { XchIcon } from '@/entities/asset/ui/TickerIcon'
@@ -46,10 +46,9 @@ export default function AssetPane({ asset, href }: AssetPaneProps) {
   } ${t.cardHover ?? ''}`
 
   return (
-    <Link
+    <AppLink
       href={href}
       className={linkClass}
-      prefetch={true}
     >
       <div className="flex-shrink-0">
         {isXch ? (
@@ -75,6 +74,6 @@ export default function AssetPane({ asset, href }: AssetPaneProps) {
           {formatUsd(asset.balanceUsd)}
         </p>
       </div>
-    </Link>
+    </AppLink>
   )
 }

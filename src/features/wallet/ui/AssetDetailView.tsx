@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
+import { AppLink } from '@/shared/ui'
 import { useWalletBalance } from '../hooks/useWalletQueries'
 import { useTransactionHistory } from '../hooks/useTransactionHistory'
 import {
@@ -179,7 +179,7 @@ export default function AssetDetailView({ assetIdSlug }: AssetDetailViewProps) {
                 <span className="hidden sm:inline">Receive</span>
               </button>
             )}
-            <Link
+            <AppLink
               href="/trading"
               className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-colors ${
                 isDark ? 'bg-white/10 text-gray-300 hover:bg-white/15' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
@@ -187,7 +187,7 @@ export default function AssetDetailView({ assetIdSlug }: AssetDetailViewProps) {
             >
               <TrendingUp size={12} />
               <span className="hidden sm:inline">Trade</span>
-            </Link>
+            </AppLink>
           </div>
         </div>
 

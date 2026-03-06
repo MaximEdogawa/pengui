@@ -1,10 +1,11 @@
 import { User, Moon, Sun } from 'lucide-react'
 import type { ThemeClasses } from '@/shared/lib/theme'
+import { AppLink } from '@/shared/ui'
 
 interface SidebarProfileProps {
   sidebarCollapsed: boolean
   t: ThemeClasses
-  onProfileClick: () => void
+  onCloseSidebar?: () => void
   onToggleTheme: () => void
   isDark: boolean
 }
@@ -12,10 +13,12 @@ interface SidebarProfileProps {
 export function SidebarProfile({
   sidebarCollapsed,
   t,
-  onProfileClick,
+  onCloseSidebar,
   onToggleTheme,
   isDark,
 }: SidebarProfileProps) {
+  const profileLinkClass = `${t.cardHover} flex items-center justify-center transition-all cursor-pointer group relative overflow-hidden touch-manipulation`
+
   return (
     <div
       className={`flex-shrink-0 border-t ${t.border} transition-all duration-300 mb-4 mobile-landscape-profile p-1 ${
@@ -24,9 +27,11 @@ export function SidebarProfile({
     >
       {/* Mobile: Icon only */}
       <div className="flex flex-col items-center gap-1 lg:hidden">
-        <button
-          onClick={onProfileClick}
-          className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all cursor-pointer group relative overflow-hidden ${t.cardHover}`}
+        <AppLink
+          href="/profile"
+          onClick={onCloseSidebar}
+          scroll={false}
+          className={`w-8 h-8 rounded-lg ${profileLinkClass}`}
           title="Profile"
         >
           <div
@@ -37,7 +42,7 @@ export function SidebarProfile({
           >
             <User className="w-3 h-3 text-white" />
           </div>
-        </button>
+        </AppLink>
         {/* Theme toggle for mobile */}
         <button
           onClick={onToggleTheme}
@@ -53,15 +58,17 @@ export function SidebarProfile({
       </div>
 
       {/* Desktop: Full profile */}
-      <div
-        onClick={onProfileClick}
+      <AppLink
+        href="/profile"
+        onClick={onCloseSidebar}
+        scroll={false}
         className={`hidden lg:flex items-center ${
           sidebarCollapsed
             ? 'w-8 h-8 mx-auto justify-center items-center'
             : 'justify-start px-2.5 gap-3'
         } py-2 ${
           sidebarCollapsed ? 'rounded-full' : 'rounded-lg'
-        } transition-all cursor-pointer group relative overflow-hidden ${t.cardHover}`}
+        } transition-all group relative overflow-hidden ${profileLinkClass}`}
         title={sidebarCollapsed ? 'User' : 'Profile'}
       >
         {/* Glass effect overlay */}
@@ -126,7 +133,7 @@ export function SidebarProfile({
             </button>
           </div>
         )}
-      </div>
+      </AppLink>
     </div>
   )
 }
