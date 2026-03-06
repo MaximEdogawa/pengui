@@ -1,7 +1,17 @@
 # Build splash-relay (libp2p Splash network relay)
+# Layer order: deps cached first so we only rebuild the binary when source changes
 FROM rust:1-bookworm AS builder
 WORKDIR /app
-COPY crates/splash-relay /app
+
+# Copy manifest and lockfile first for better layer caching
+COPY crates/splash-relay/Cargo.toml crates/splash-relay/Cargo.lock ./
+
+# Dummy source so we can build and cache dependencies without our code
+RUN mkdir -p src && echo 'fn main() {}' > src/main.rs
+RUN cargo build --release
+
+# Copy real source; only this layer and the final build step change when relay code changes
+COPY crates/splash-relay/src ./src
 RUN cargo build --release
 
 FROM debian:bookworm-slim

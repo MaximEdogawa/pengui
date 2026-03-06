@@ -45,9 +45,11 @@ jobs:
               - 'crates/splash-relay/**'
               - 'deployment/splash-relay/**'
 
+  # Only build relay image when relay code or its Dockerfile changed (manual runs and releases both skip when unchanged)
   build-and-push-relay:
     name: Build and Push Splash Relay Image
     needs: changes
+    if: needs.changes.outputs.relay == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     permissions:
@@ -168,7 +170,8 @@ jobs:
   deploy:
     name: Deploy to Production
     needs: [build-and-push, build-and-push-relay]
-    if: always() && !cancelled() && needs.build-and-push.result == 'success'
+    # Run when app image built; relay job may be skipped when relay unchanged (we use :splash-relay then)
+    if: always() && !cancelled() && needs.build-and-push.result == 'success' && (needs.build-and-push-relay.result == 'success' || needs.build-and-push-relay.result == 'skipped')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     environment: production
