@@ -12,7 +12,7 @@ function addThousandSeparators(intStr: string): string {
 
 /**
  * Format amount for display - preserves full precision, only truncates if decimals are excessive (>12)
- * When maxDecimals is set (e.g. 4 for mobile), caps decimal places to that.
+ * or when maxDecimals is provided (e.g. for mobile). CSS truncate class handles responsive visual truncation.
  */
 export function formatAmountForDisplay(amount: number, maxDecimals?: number): string {
   const n = amount == null || typeof amount !== 'number' || Number.isNaN(amount) ? 0 : Number(amount)
@@ -22,8 +22,7 @@ export function formatAmountForDisplay(amount: number, maxDecimals?: number): st
   const str = n.toString()
   const [int, dec] = str.split('.')
   const cap = maxDecimals ?? 12
-
-  // Truncate decimals to cap (e.g. 4 on mobile, 12 by default)
+  // Truncate if decimals exceed cap (either >12 by default or maxDecimals when provided)
   if (dec && dec.length > cap) {
     const truncated = dec.slice(0, cap)
     const trimmedTruncated = truncated.replace(/0+$/, '')
@@ -31,7 +30,7 @@ export function formatAmountForDisplay(amount: number, maxDecimals?: number): st
     return trimmedTruncated ? `${formattedInt}.${trimmedTruncated}` : formattedInt
   }
 
-  // Show full value up to cap
+  // Show full value without truncation - preserve original precision
   const formattedInt = addThousandSeparators(int)
   if (!dec) {
     return formattedInt
@@ -43,8 +42,8 @@ export function formatAmountForDisplay(amount: number, maxDecimals?: number): st
 
 /**
  * Format price for display - cuts decimals without rounding or truncation indicator
- * When maxDecimals is set (e.g. 4 for mobile), caps to that. Otherwise:
- * For prices < 1: 7 decimals. For prices >= 1: 2 decimals.
+ * For prices < 1: 7 decimals (or maxDecimals if provided)
+ * For prices >= 1: 2 decimals (or maxDecimals if provided)
  */
 export function formatPriceForDisplay(price: number, maxDecimals?: number): string {
   const p = price == null || typeof price !== 'number' || Number.isNaN(price) ? 0 : Number(price)
@@ -54,25 +53,11 @@ export function formatPriceForDisplay(price: number, maxDecimals?: number): stri
   const str = p.toString()
   const [int, dec] = str.split('.')
   const formattedInt = addThousandSeparators(int)
-
-  if (maxDecimals != null) {
-    if (!dec) return formattedInt
-    const cutDecimals = dec.slice(0, maxDecimals)
-    const trimmedDecimals = cutDecimals.replace(/0+$/, '')
-    return trimmedDecimals ? `${formattedInt}.${trimmedDecimals}` : formattedInt
-  }
-
-  if (p < 1) {
-    if (!dec) return formattedInt
-    const cutDecimals = dec.slice(0, 7)
-    const trimmedDecimals = cutDecimals.replace(/0+$/, '')
-    return trimmedDecimals ? `${formattedInt}.${trimmedDecimals}` : formattedInt
-  } else {
-    if (!dec) return formattedInt
-    const cutDecimals = dec.slice(0, 2)
-    const trimmedDecimals = cutDecimals.replace(/0+$/, '')
-    return trimmedDecimals ? `${formattedInt}.${trimmedDecimals}` : formattedInt
-  }
+  const decimalsForPrice = maxDecimals ?? (p < 1 ? 7 : 2)
+  if (!dec) return formattedInt
+  const cutDecimals = dec.slice(0, decimalsForPrice)
+  const trimmedDecimals = cutDecimals.replace(/0+$/, '')
+  return trimmedDecimals ? `${formattedInt}.${trimmedDecimals}` : formattedInt
 }
 
 /**

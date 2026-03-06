@@ -122,7 +122,7 @@ export function useWalletAssets(): {
       .filter((a) => a.assetId !== CHIA_ASSET_IDS.XCH && a.assetId !== '')
       .sort((a, b) => (volumeMap.get(b.assetId) ?? 0) - (volumeMap.get(a.assetId) ?? 0))
       .slice(0, netCfg.maxCatsToCheck)
-  }, [spaceScanReady, spaceScanHasData, spaceScanTokens, availableAssets, tickers, netCfg.maxCatsToCheck])
+  }, [spaceScanReady, spaceScanHasData, spaceScanTokens, availableAssets, tickers, netCfg.maxCatsToCheck, getAsset])
 
   // ---- Batch-enable WalletConnect queries to avoid relay flooding ----
   const [enabledCount, setEnabledCount] = useState(0)

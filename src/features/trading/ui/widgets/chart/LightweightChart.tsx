@@ -16,6 +16,7 @@ import {
   type Time,
 } from "lightweight-charts";
 import { useEffect, useRef, useState } from "react";
+import { useResponsive } from "@/shared/hooks/useResponsive";
 import { logger } from "@/shared/lib/logger";
 import { ChartConfig, OHLCData } from "@/features/trading/lib/chartTypes";
 import {
@@ -623,64 +624,73 @@ function applyDefaultZoomLevel(
   }
 }
 
+function formatChartValue(value: number, decimals: number): string {
+  if (!Number.isFinite(value)) return "—";
+  if (value >= 1e9) return value.toLocaleString(undefined, { maximumFractionDigits: 0 });
+  return value.toFixed(decimals);
+}
+
 function OHLCDataPanel({
   data,
   change,
+  priceDecimals = 6,
 }: {
   data: OHLCData | null;
   change: { value: number; percent: number } | null;
+  priceDecimals?: number;
 }) {
   if (!data) return null;
 
   return (
-    <div className="absolute top-2 left-2 z-10 px-1.5 sm:px-2 py-1 sm:py-1.5 bg-[#1e222d]/70 backdrop-blur-sm rounded-md border border-[#2a2e39]/50 shadow-md max-w-[calc(50%-1rem)]">
-      <div className="flex flex-col gap-0.5 sm:gap-1 text-[9px] sm:text-[10px]">
+    <div className="absolute top-2 left-2 z-10 px-2 sm:px-2.5 py-1.5 sm:py-2 bg-[#1e222d]/85 backdrop-blur-sm rounded-lg border border-[#2a2e39]/50 shadow-md max-w-[calc(100%-1rem)] sm:max-w-[calc(50%-1rem)]">
+      <div className="flex flex-col gap-1 sm:gap-1.5 text-[10px] sm:text-[11px]">
         {/* Line 1: O, H */}
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="text-[#868993] whitespace-nowrap">O:</span>
-            <span className="text-[#d1d4dc] font-medium truncate">
-              {data.open.toFixed(6)}
+        <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
+          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+            <span className="text-[#868993] whitespace-nowrap shrink-0">O:</span>
+            <span className="text-[#d1d4dc] font-medium tabular-nums truncate" title={String(data.open)}>
+              {formatChartValue(data.open, priceDecimals)}
             </span>
           </div>
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="text-[#868993] whitespace-nowrap">H:</span>
-            <span className="text-[#d1d4dc] font-medium truncate">
-              {data.high.toFixed(6)}
+          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+            <span className="text-[#868993] whitespace-nowrap shrink-0">H:</span>
+            <span className="text-[#d1d4dc] font-medium tabular-nums truncate" title={String(data.high)}>
+              {formatChartValue(data.high, priceDecimals)}
             </span>
           </div>
         </div>
         {/* Line 2: L, C */}
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="text-[#868993] whitespace-nowrap">L:</span>
-            <span className="text-[#d1d4dc] font-medium truncate">
-              {data.low.toFixed(6)}
+        <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
+          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+            <span className="text-[#868993] whitespace-nowrap shrink-0">L:</span>
+            <span className="text-[#d1d4dc] font-medium tabular-nums truncate" title={String(data.low)}>
+              {formatChartValue(data.low, priceDecimals)}
             </span>
           </div>
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="text-[#868993] whitespace-nowrap">C:</span>
-            <span className="text-[#d1d4dc] font-medium truncate">
-              {data.close.toFixed(6)}
+          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+            <span className="text-[#868993] whitespace-nowrap shrink-0">C:</span>
+            <span className="text-[#d1d4dc] font-medium tabular-nums truncate" title={String(data.close)}>
+              {formatChartValue(data.close, priceDecimals)}
             </span>
           </div>
         </div>
         {/* Line 3: Volume, Chg */}
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="text-[#868993] whitespace-nowrap">Volume:</span>
-            <span className="text-[#d1d4dc] font-medium truncate">
+        <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
+          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+            <span className="text-[#868993] whitespace-nowrap shrink-0">Vol:</span>
+            <span className="text-[#d1d4dc] font-medium tabular-nums truncate">
               {data.volume.toLocaleString()}
             </span>
           </div>
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="text-[#868993] whitespace-nowrap">Chg:</span>
+          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+            <span className="text-[#868993] whitespace-nowrap shrink-0">Chg:</span>
             {change ? (
               <span
-                className={`font-medium truncate ${change.value >= 0 ? "text-[#26a69a]" : "text-[#ef5350]"}`}
+                className={`font-medium tabular-nums truncate ${change.value >= 0 ? "text-[#26a69a]" : "text-[#ef5350]"}`}
+                title={`${change.value} (${change.percent}%)`}
               >
                 {change.value >= 0 ? "+" : ""}
-                {change.value.toFixed(6)} ({change.percent >= 0 ? "+" : ""}
+                {formatChartValue(change.value, priceDecimals)} ({change.percent >= 0 ? "+" : ""}
                 {change.percent.toFixed(2)}%)
               </span>
             ) : (
@@ -815,6 +825,9 @@ function setupResizeObserver(
   return { resizeObserver, handleResize };
 }
 
+const MOBILE_PRICE_DECIMALS = 4;
+const DESKTOP_PRICE_DECIMALS = 6;
+
 export function LightweightChart({
   ohlcData,
   config,
@@ -822,6 +835,9 @@ export function LightweightChart({
   isUsingSyntheticData,
   onScrollingChange,
 }: LightweightChartProps) {
+  const { isMobile } = useResponsive();
+  const priceDecimals = isMobile ? MOBILE_PRICE_DECIMALS : DESKTOP_PRICE_DECIMALS;
+
   const chartContainerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<"Candlestick" | "Line"> | null>(null);
@@ -913,6 +929,18 @@ export function LightweightChart({
       chartRef.current = null;
     };
   }, [onScrollingChange]);
+
+  // Update chart price scale decimals when mobile/desktop changes
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart) return;
+    chart.applyOptions({
+      localization: {
+        priceFormatter: (p: number) =>
+          Number.isFinite(p) ? p.toFixed(priceDecimals) : "—",
+      },
+    });
+  }, [priceDecimals]);
 
   useEffect(() => {
     if (!chartRef.current) return;
@@ -1009,7 +1037,7 @@ export function LightweightChart({
       )}
 
       {/* OHLC Data Panel */}
-      <OHLCDataPanel data={displayData} change={change} />
+      <OHLCDataPanel data={displayData} change={change} priceDecimals={priceDecimals} />
 
       <div className="flex-1 relative min-h-[300px] sm:min-h-[400px]">
         <div ref={chartContainerRef} className="w-full h-full min-h-[300px] sm:min-h-[400px] touch-manipulation" style={{ touchAction: 'none' }} />

@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
 import { Loader2, Wallet } from 'lucide-react'
 import {
   WalletConnect,
@@ -27,7 +26,6 @@ import { ConnectWalletModal } from '@/shared/ui/wallet-connect-wrapper/ConnectWa
  * Same experience on desktop and mobile — no native WC modal.
  */
 export function LoginConnectWallet() {
-  const queryClient = useQueryClient()
   const [uri, setUri] = useState<string | null>(null)
   const [isInitializing, setIsInitializing] = useState(true)
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -95,7 +93,7 @@ export function LoginConnectWallet() {
       setIsModalOpen(false)
       // SignClient invalidation is handled once by NetworkProvider when isConnected/session updates (avoids duplicate invalidate + relay loop)
     },
-    [queryClient],
+    [],
   )
 
   const initConnection = useCallback(async () => {

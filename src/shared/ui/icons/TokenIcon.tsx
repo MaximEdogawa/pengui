@@ -59,12 +59,10 @@ export default function TokenIcon({
 }: TokenIconProps) {
   const [hasError, setHasError] = useState(false);
 
-  // Reset error state when imageUrl changes
   useEffect(() => {
     setHasError(false);
   }, [imageUrl]);
 
-  // While loading, reserve space but show nothing (no skeleton). Placeholder only on failure.
   if (isLoading) {
     return <div className={className} style={iconStyle(size)} aria-hidden />;
   }
@@ -95,6 +93,7 @@ export default function TokenIcon({
         width={size}
         height={size}
         loading="lazy"
+        referrerPolicy="no-referrer"
         style={{ width: "100%", height: "100%", objectFit: "cover" }}
         onError={() => setHasError(true)}
       />

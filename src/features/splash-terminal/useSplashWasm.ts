@@ -4,6 +4,7 @@ import { type RefObject, useCallback, useRef, useState } from "react";
 import type { DexieOffer } from "@/entities/offer";
 import { getDexieApiUrl } from "@/shared/lib/utils/networkUtils";
 import { applyWebSocketBufferedAmountPatch } from "@/shared/lib/websocketBufferedAmountPatch";
+import { WASM_FILES, WASM_PATH_PREFIX } from "@/shared/lib/constants/apiProxy";
 
 export type SplashConnectionStatus =
   | "disconnected"
@@ -198,9 +199,18 @@ function getWasmBaseUrl(): string {
   return "";
 }
 
+/** WASM via API route so Content-Type is correct in production (no reverse-proxy MIME issues). */
+function getWasmPaths(): { js: string; wasm: string } {
+  const base = getWasmBaseUrl();
+  return {
+    js: `${base}${WASM_PATH_PREFIX}/${WASM_FILES[0]}`,
+    wasm: `${base}${WASM_PATH_PREFIX}/${WASM_FILES[1]}`,
+  };
+}
+
 export async function broadcastOfferToSplash(offer: string): Promise<void> {
   try {
-    const wasmPath = `${getWasmBaseUrl()}/wasm/splash_wasm.js`;
+    const { js: wasmPath } = getWasmPaths();
     const wasmModule = await import(/* webpackIgnore: true */ wasmPath);
     const mod = wasmModule as unknown as SplashWasmModule;
     mod.broadcastOffer(offer);
@@ -250,9 +260,7 @@ export function useSplashWasm(): UseSplashWasmResult {
         /^(wss?:\/\/)localhost(\b)/i,
         (_, scheme, rest) => `${scheme}127.0.0.1${rest}`,
       );
-      const base = getWasmBaseUrl();
-      const wasmJsPath = `${base}/wasm/splash_wasm.js`;
-      const wasmBinaryPath = `${base}/wasm/splash_wasm_bg.wasm`;
+      const { js: wasmJsPath, wasm: wasmBinaryPath } = getWasmPaths();
       try {
         await waitAfterDisconnectIfNeeded(signal, lastDisconnectTimeRef);
         if (signal?.aborted) return;
