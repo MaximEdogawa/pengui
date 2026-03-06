@@ -14,19 +14,6 @@ const ALL_TOKENS_KEY = "all-tokens";
 // Cache duration: 24 hours
 const ICON_CACHE_TIME = 24 * 60 * 60 * 1000;
 
-/** Use our proxy so Space Scan CDN images load (avoids referrer/CORS blocking). */
-function toIconUrl(previewUrl: string): string {
-  if (typeof window === "undefined") return previewUrl;
-  const u = previewUrl.trim();
-  if (
-    u.startsWith("https://assets.spacescan.io/") ||
-    u.startsWith("https://images.spacescan.io/")
-  ) {
-    return `/api/spacescan/icon?url=${encodeURIComponent(u)}`;
-  }
-  return u;
-}
-
 export interface UseTickerIconResult {
   /** The image URL from Space Scan */
   imageUrl: string | null;
@@ -47,7 +34,7 @@ function useAllTokenIcons() {
       const iconMap = new Map<string, string>();
       tokens.forEach((token) => {
         if (token.asset_id && token.preview_url) {
-          iconMap.set(token.asset_id, toIconUrl(token.preview_url));
+          iconMap.set(token.asset_id, token.preview_url);
         }
       });
       return iconMap;

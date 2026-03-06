@@ -50,6 +50,17 @@ export interface TokenIconAutoProps {
 /**
  * TokenIcon - Presentational component for token icons
  */
+/** Space Scan icon proxy – use when direct load fails (referrer/CORS). */
+function proxyIconUrl(url: string): string {
+  if (
+    url.startsWith("https://assets.spacescan.io/") ||
+    url.startsWith("https://images.spacescan.io/")
+  ) {
+    return `/api/spacescan/icon?url=${encodeURIComponent(url)}`;
+  }
+  return url;
+}
+
 export default function TokenIcon({
   imageUrl,
   ticker = "",
@@ -58,18 +69,23 @@ export default function TokenIcon({
   isLoading = false,
 }: TokenIconProps) {
   const [hasError, setHasError] = useState(false);
+  const [useProxy, setUseProxy] = useState(false);
 
-  // Reset error state when imageUrl changes
+  // Reset error and proxy state when imageUrl changes
   useEffect(() => {
     setHasError(false);
+    setUseProxy(false);
   }, [imageUrl]);
+
+  const src =
+    imageUrl && useProxy ? proxyIconUrl(imageUrl) : imageUrl ?? null;
 
   // While loading, reserve space but show nothing (no skeleton). Placeholder only on failure.
   if (isLoading) {
     return <div className={className} style={iconStyle(size)} aria-hidden />;
   }
 
-  if (!imageUrl || hasError) {
+  if (!src || hasError) {
     const initials = ticker ? ticker.slice(0, 2).toUpperCase() : "?";
     return (
       <div
@@ -90,13 +106,20 @@ export default function TokenIcon({
   return (
     <div className={className} style={iconStyle(size)}>
       <img
-        src={imageUrl}
+        src={src}
         alt={ticker ? `${ticker} icon` : "Token icon"}
         width={size}
         height={size}
         loading="lazy"
+        referrerPolicy="no-referrer"
         style={{ width: "100%", height: "100%", objectFit: "cover" }}
-        onError={() => setHasError(true)}
+        onError={() => {
+          if (!useProxy && imageUrl && proxyIconUrl(imageUrl) !== imageUrl) {
+            setUseProxy(true);
+          } else {
+            setHasError(true);
+          }
+        }}
       />
     </div>
   );
