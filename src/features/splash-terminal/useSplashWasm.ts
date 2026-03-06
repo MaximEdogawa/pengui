@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useRef, useState } from "react";
+import { type RefObject, useCallback, useRef, useState } from "react";
 import type { DexieOffer } from "@/entities/offer";
 import { getDexieApiUrl } from "@/shared/lib/utils/networkUtils";
 import { applyWebSocketBufferedAmountPatch } from "@/shared/lib/websocketBufferedAmountPatch";
@@ -37,6 +37,116 @@ function toMinimalDexieOffer(p: SplashOfferPayload): DexieOffer {
     offered: [],
     requested: [],
     fees: 0,
+  };
+}
+
+async function waitAfterDisconnectIfNeeded(
+  signal: AbortSignal | undefined,
+  lastDisconnectTimeRef: RefObject<number | null>,
+): Promise<void> {
+  const lastDisconnect = lastDisconnectTimeRef.current;
+  if (lastDisconnect == null) return;
+  const elapsed = Date.now() - lastDisconnect;
+  const waitMs = Math.max(0, 600 - elapsed);
+  if (waitMs <= 0) {
+    lastDisconnectTimeRef.current = null;
+    return;
+  }
+  await new Promise<void>((resolve) => {
+    const t = setTimeout(resolve, waitMs);
+    signal?.addEventListener(
+      "abort",
+      () => {
+        clearTimeout(t);
+        resolve();
+      },
+      { once: true },
+    );
+  });
+  lastDisconnectTimeRef.current = null;
+}
+
+async function disconnectExistingAndWait(
+  moduleRef: RefObject<SplashWasmModule | null>,
+  lastDisconnectTimeRef: RefObject<number | null>,
+  setIsReady: (v: boolean) => void,
+  setStatus: (s: SplashConnectionStatus) => void,
+): Promise<void> {
+  if (!moduleRef.current) return;
+  try {
+    moduleRef.current.disconnect();
+  } catch {
+    // ignore
+  }
+  moduleRef.current = null;
+  setIsReady(false);
+  setStatus("disconnected");
+  lastDisconnectTimeRef.current = Date.now();
+  await new Promise((r) => setTimeout(r, 400));
+}
+
+async function loadWasmModule(
+  wasmJsPath: string,
+  wasmBinaryPath: string,
+  signal: AbortSignal | undefined,
+): Promise<SplashWasmModule> {
+  const wasmModule = await import(/* webpackIgnore: true */ wasmJsPath);
+  if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
+  await (
+    wasmModule.default as (opts?: {
+      module_or_path?: string;
+    }) => Promise<unknown>
+  )({
+    module_or_path: wasmBinaryPath,
+  });
+  if (signal?.aborted) throw new DOMException("Aborted", "AbortError");
+  return wasmModule as unknown as SplashWasmModule;
+}
+
+async function enrichOfferPayload(
+  p: SplashOfferPayload,
+  network: "mainnet" | "testnet",
+): Promise<DexieOffer> {
+  try {
+    const apiUrl = getDexieApiUrl(network);
+    const resp = await fetch(`${apiUrl}/v1/offers`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ offer: p.offer }),
+    });
+    const data = (await resp.json()) as {
+      success?: boolean;
+      offer?: DexieOffer;
+    };
+    if (data.success && data.offer) {
+      return { ...data.offer, offer: p.offer };
+    }
+  } catch {
+    // fall through to minimal
+  }
+  return toMinimalDexieOffer(p);
+}
+
+function createOffersCallback(
+  networkRef: RefObject<"mainnet" | "testnet">,
+  bufferRef: RefObject<DexieOffer[]>,
+  receivedCountRef: RefObject<number>,
+  offersCallbacksRef: RefObject<Set<(offers: DexieOffer[]) => void>>,
+): (raw: unknown) => void {
+  return (raw: unknown) => {
+    const arr = Array.isArray(raw) ? raw : raw != null ? [raw] : [];
+    arr.forEach((item: unknown) => {
+      const p = item as SplashOfferPayload;
+      if (!p?.offer || typeof p.offer !== "string") return;
+      void (async () => {
+        const enriched = await enrichOfferPayload(p, networkRef.current);
+        receivedCountRef.current += 1;
+        const buf = bufferRef.current;
+        if (buf.length >= MAX_BUFFER_LEN) buf.shift();
+        buf.push(enriched);
+        offersCallbacksRef.current.forEach((cb) => cb([enriched]));
+      })();
+    });
   };
 }
 
@@ -99,91 +209,14 @@ export async function broadcastOfferToSplash(offer: string): Promise<void> {
   }
 }
 
-/** Wait after a recent disconnect so WASM swarm loop can exit before reconnecting. */
-async function waitAfterDisconnectIfNeeded(
-  lastDisconnectTimeRef: React.MutableRefObject<number | null>,
-  signal?: AbortSignal,
-): Promise<void> {
-  const lastDisconnect = lastDisconnectTimeRef.current;
-  if (lastDisconnect == null) return;
-  const elapsed = Date.now() - lastDisconnect;
-  const waitMs = Math.max(0, 600 - elapsed);
-  if (waitMs > 0) {
-    await new Promise<void>((resolve) => {
-      const t = setTimeout(resolve, waitMs);
-      signal?.addEventListener("abort", () => { clearTimeout(t); resolve(); }, { once: true });
-    });
-  }
-  lastDisconnectTimeRef.current = null;
-}
-
-/** Disconnect existing module and wait so WASM can clean up. */
-async function disconnectExistingAndWait(
-  moduleRef: React.MutableRefObject<SplashWasmModule | null>,
-  lastDisconnectTimeRef: React.MutableRefObject<number | null>,
-): Promise<void> {
-  if (!moduleRef.current) return;
-  try {
-    moduleRef.current.disconnect();
-  } catch {
-    // ignore
-  }
-  moduleRef.current = null;
-  lastDisconnectTimeRef.current = Date.now();
-  await new Promise((r) => setTimeout(r, 400));
-}
-
-async function enrichOfferFromDexie(
-  p: SplashOfferPayload,
-  network: "mainnet" | "testnet",
-): Promise<DexieOffer> {
-  try {
-    const apiUrl = getDexieApiUrl(network);
-    const resp = await fetch(`${apiUrl}/v1/offers`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ offer: p.offer }),
-    });
-    const data = (await resp.json()) as { success?: boolean; offer?: DexieOffer };
-    if (data.success && data.offer) {
-      return { ...data.offer, offer: p.offer };
-    }
-  } catch {
-    // ignore
-  }
-  return toMinimalDexieOffer(p);
-}
-
-function createOffersCallback(
-  networkRef: React.MutableRefObject<"mainnet" | "testnet">,
-  bufferRef: React.MutableRefObject<DexieOffer[]>,
-  receivedCountRef: React.MutableRefObject<number>,
-  offersCallbacksRef: React.MutableRefObject<Set<(offers: DexieOffer[]) => void>>,
-): (raw: unknown) => void {
-  return (raw: unknown) => {
-    const arr = Array.isArray(raw) ? raw : raw != null ? [raw] : [];
-    for (const item of arr) {
-      const p = item as SplashOfferPayload;
-      if (p?.offer && typeof p.offer === "string") {
-        void (async () => {
-          const enriched = await enrichOfferFromDexie(p, networkRef.current);
-          receivedCountRef.current += 1;
-          const buf = bufferRef.current;
-          if (buf.length >= MAX_BUFFER_LEN) buf.shift();
-          buf.push(enriched);
-          offersCallbacksRef.current.forEach((cb) => cb([enriched]));
-        })();
-      }
-    }
-  };
-}
-
 export function useSplashWasm(): UseSplashWasmResult {
   const [status, setStatus] = useState<SplashConnectionStatus>("disconnected");
   const [isReady, setIsReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const moduleRef = useRef<SplashWasmModule | null>(null);
-  const offersCallbacksRef = useRef<Set<(offers: DexieOffer[]) => void>>(new Set());
+  const offersCallbacksRef = useRef<Set<(offers: DexieOffer[]) => void>>(
+    new Set(),
+  );
   const bufferRef = useRef<DexieOffer[]>([]);
   const receivedCountRef = useRef(0);
   const networkRef = useRef<"mainnet" | "testnet">("mainnet");
@@ -193,7 +226,9 @@ export function useSplashWasm(): UseSplashWasmResult {
   const onOffers = useCallback((callback: (offers: DexieOffer[]) => void) => {
     offersCallbacksRef.current.add(callback);
     // Return cleanup function to remove this specific listener
-    return () => { offersCallbacksRef.current.delete(callback); };
+    return () => {
+      offersCallbacksRef.current.delete(callback);
+    };
   }, []);
 
   const initAndConnect = useCallback(
@@ -219,38 +254,42 @@ export function useSplashWasm(): UseSplashWasmResult {
       const wasmJsPath = `${base}/wasm/splash_wasm.js`;
       const wasmBinaryPath = `${base}/wasm/splash_wasm_bg.wasm`;
       try {
-        await waitAfterDisconnectIfNeeded(lastDisconnectTimeRef, signal);
+        await waitAfterDisconnectIfNeeded(signal, lastDisconnectTimeRef);
         if (signal?.aborted) return;
 
-        if (moduleRef.current) {
-          setIsReady(false);
-          setStatus("disconnected");
-          await disconnectExistingAndWait(moduleRef, lastDisconnectTimeRef);
-        }
+        await disconnectExistingAndWait(
+          moduleRef,
+          lastDisconnectTimeRef,
+          setIsReady,
+          setStatus,
+        );
         if (signal?.aborted) return;
 
         applyWebSocketBufferedAmountPatch();
-        const wasmModule = await import(/* webpackIgnore: true */ wasmJsPath);
+        const mod = await loadWasmModule(wasmJsPath, wasmBinaryPath, signal);
         if (signal?.aborted) return;
 
-        await (wasmModule.default as (opts?: { module_or_path?: string }) => Promise<unknown>)({
-          module_or_path: wasmBinaryPath,
-        });
-        if (signal?.aborted) return;
-
-        const mod = wasmModule as unknown as SplashWasmModule;
         moduleRef.current = mod;
         bufferRef.current = [];
         receivedCountRef.current = 0;
         mod.init(urlForWasm, networkName);
 
-        mod.setOnStatusCallback((obj: { status?: string; message?: string }) => {
-          const s = (obj?.status as string) || "disconnected";
-          setStatus(s as SplashConnectionStatus);
-          setError(s === "error" && obj?.message ? String(obj.message) : null);
-        });
+        mod.setOnStatusCallback(
+          (obj: { status?: string; message?: string }) => {
+            const s = (obj?.status as string) || "disconnected";
+            setStatus(s as SplashConnectionStatus);
+            setError(
+              s === "error" && obj?.message ? String(obj.message) : null,
+            );
+          },
+        );
         mod.setOnOffersCallback(
-          createOffersCallback(networkRef, bufferRef, receivedCountRef, offersCallbacksRef),
+          createOffersCallback(
+            networkRef,
+            bufferRef,
+            receivedCountRef,
+            offersCallbacksRef,
+          ),
         );
 
         mod.connect();

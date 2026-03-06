@@ -129,7 +129,7 @@ export default function SendTransactionForm({
     return (
       <div className="flex flex-col items-center justify-center py-6">
         <p className={`${t.textSecondary} text-sm mb-4 text-center`}>
-          Connect your wallet to send transactions
+          Connect your wallet to send transactions. Reopen the wallet to continue.
         </p>
         <SafeConnectButton />
       </div>

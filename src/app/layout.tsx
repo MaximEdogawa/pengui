@@ -28,6 +28,7 @@ import {
 } from "@/shared/lib/utils/networkStorage";
 import { networkToChainId } from "@/shared/lib/utils/networkUtils";
 import { NetworkFilterSync } from "./NetworkFilterSync";
+import { PersistGateLoadingFallback } from "./PersistGateLoadingFallback";
 import "@maximedogawa/chia-wallet-connect-react/styles";
 import "./wallet-connect.css";
 
@@ -174,7 +175,7 @@ export default function UILayout({ children }: { children: React.ReactNode }) {
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
           <Provider store={store}>
             <PersistGate
-              loading={null}
+              loading={<PersistGateLoadingFallback />}
               persistor={persistor}
               onBeforeLift={async () => {
                 // Ensure network preference is set to mainnet by default
@@ -228,14 +229,43 @@ export default function UILayout({ children }: { children: React.ReactNode }) {
                   }
                 }
 
+                const PERSIST_LIFT_TIMEOUT_MS = 10_000;
+
                 try {
-                  await restoreConnectionStateImmediate({
-                    walletConnectIcon: penguiIcon,
-                    walletConnectMetadata: metadata,
+                  const restorePromise = (async () => {
+                    await restoreConnectionStateImmediate({
+                      walletConnectIcon: penguiIcon,
+                      walletConnectMetadata: metadata,
+                    });
+                    const walletManager = new WalletManager(penguiIcon, metadata);
+                    await walletManager.detectEvents();
+                  })();
+
+                  const timeoutPromise = new Promise<"timeout">((resolve) => {
+                    setTimeout(() => resolve("timeout"), PERSIST_LIFT_TIMEOUT_MS);
                   });
 
-                  const walletManager = new WalletManager(penguiIcon, metadata);
-                  await walletManager.detectEvents();
+                  const result = await Promise.race([
+                    restorePromise.then(() => "done" as const),
+                    timeoutPromise,
+                  ]).catch((error) => {
+                    const errorMessage =
+                      error instanceof Error ? error.message : String(error);
+                    if (
+                      errorMessage.includes("chainId") ||
+                      errorMessage.includes("isValidRequest")
+                    ) {
+                      return "done";
+                    }
+                    logger.warn("Wallet restoration failed:", errorMessage);
+                    return "done";
+                  });
+
+                  if (result === "timeout") {
+                    logger.warn(
+                      "Wallet restoration timed out; user can disconnect from wallet menu if needed."
+                    );
+                  }
                 } catch (error) {
                   // Only re-throw non-chainId errors
                   const errorMessage =
