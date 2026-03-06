@@ -28,6 +28,7 @@ import {
 } from "@/shared/lib/utils/networkStorage";
 import { networkToChainId } from "@/shared/lib/utils/networkUtils";
 import { NetworkFilterSync } from "./NetworkFilterSync";
+import { NavigationProgressProvider } from "@/shared/providers/NavigationProgressProvider";
 import { PersistGateLoadingFallback } from "./PersistGateLoadingFallback";
 import "@maximedogawa/chia-wallet-connect-react/styles";
 import "./wallet-connect.css";
@@ -281,16 +282,18 @@ export default function UILayout({ children }: { children: React.ReactNode }) {
             >
               <ErrorBoundary>
                 <div className="wallet-connect-scope">
-                  <ReactQueryProvider>
-                    <NetworkProvider>
-                      <NetworkFilterSync />
-                      <WalletConnectionGuard>
-                        <DashboardLayoutWrapper>
-                          {children}
-                        </DashboardLayoutWrapper>
-                      </WalletConnectionGuard>
-                    </NetworkProvider>
-                  </ReactQueryProvider>
+                  <NavigationProgressProvider>
+                    <ReactQueryProvider>
+                      <NetworkProvider>
+                        <NetworkFilterSync />
+                        <WalletConnectionGuard>
+                          <DashboardLayoutWrapper>
+                            {children}
+                          </DashboardLayoutWrapper>
+                        </WalletConnectionGuard>
+                      </NetworkProvider>
+                    </ReactQueryProvider>
+                  </NavigationProgressProvider>
                 </div>
               </ErrorBoundary>
             </PersistGate>

@@ -77,12 +77,17 @@ const config = {
           '0%': { opacity: '0' },
           '100%': { opacity: '1' },
         },
+        'navigation-progress': {
+          '0%': { transform: 'translateX(-100%)' },
+          '100%': { transform: 'translateX(400%)' },
+        },
       },
       animation: {
         gradient: 'gradient 3s ease infinite',
         shimmer: 'shimmer 2s linear infinite',
         // Package animation for chia-wallet-connect-react components
         fadeIn: 'fadeIn .3s ease-in-out',
+        'navigation-progress': 'navigation-progress 1.5s ease-in-out infinite',
       },
     },
   },

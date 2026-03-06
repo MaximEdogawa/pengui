@@ -14,6 +14,7 @@ import TickerIcon, { XchIcon } from '@/entities/asset/ui/TickerIcon'
 import { useCatTokens, type DexieTicker } from '@/entities/asset'
 import { useNetwork } from '@/shared/hooks/useNetwork'
 import { useThemeClasses } from '@/shared/hooks'
+import { useNavigationProgress } from '@/shared/providers/NavigationProgressProvider'
 import { useXchUsdPrice } from '@/shared/hooks/useXchUsdPrice'
 import { formatRelativeTime } from '@/shared/lib/utils/dateUtils'
 import { formatAmountFromMojos } from '@/shared/lib/utils/amountUtils'
@@ -67,6 +68,7 @@ interface AssetDetailViewProps {
 
 export default function AssetDetailView({ assetIdSlug }: AssetDetailViewProps) {
   const router = useRouter()
+  const { startNavigation } = useNavigationProgress()
   const { isDark, t } = useThemeClasses()
   const { network } = useNetwork()
   const { priceUsd: xchUsdPrice } = useXchUsdPrice()
@@ -123,7 +125,10 @@ export default function AssetDetailView({ assetIdSlug }: AssetDetailViewProps) {
     <div className="w-full relative z-10">
       <button
         type="button"
-        onClick={() => router.push('/wallet')}
+        onClick={() => {
+          startNavigation()
+          router.push('/wallet')
+        }}
         className={`flex items-center gap-2 mb-4 ${t.textSecondary} hover:underline`}
       >
         <ArrowLeft size={18} />

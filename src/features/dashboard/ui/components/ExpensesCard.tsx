@@ -168,7 +168,7 @@ export function ExpensesCard({ isDark, t }: ExpensesCardProps) {
                   {!tx.assetId || isChiaNativeToken(tx.assetId) ? (
                     <XchIcon size={14} />
                   ) : (
-                    <TickerIcon assetId={tx.assetId} ticker={tx.amountAsset ?? ''} size={14} showLoadingSkeleton={false} />
+                    <TickerIcon assetId={tx.assetId} ticker={tx.amountAsset ?? ''} size={14} />
                   )}
                   <TxIcon type={tx.type} isDark={isDark} />
                 </div>

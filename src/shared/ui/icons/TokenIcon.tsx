@@ -64,13 +64,9 @@ export default function TokenIcon({
     setHasError(false);
   }, [imageUrl]);
 
+  // While loading, reserve space but show nothing (no skeleton). Placeholder only on failure.
   if (isLoading) {
-    return (
-      <div
-        className={`animate-pulse bg-gray-300 dark:bg-gray-600 ${className}`}
-        style={iconStyle(size)}
-      />
-    );
+    return <div className={className} style={iconStyle(size)} aria-hidden />;
   }
 
   if (!imageUrl || hasError) {

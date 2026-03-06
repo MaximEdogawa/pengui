@@ -11,9 +11,12 @@ function ReactQueryProvider({ children }: { children: React.ReactNode }) {
           queries: {
             staleTime: 60 * 1000,
             retry: 0,
+            // Avoid online/offline detection so slow networks don't trigger paused/network-error logging
+            networkMode: "always",
           },
           mutations: {
             retry: 0,
+            networkMode: "always",
           },
         },
       }),

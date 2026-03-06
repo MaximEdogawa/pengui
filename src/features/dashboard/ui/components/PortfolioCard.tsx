@@ -194,7 +194,7 @@ export function PortfolioCard({ isDark, t }: PortfolioCardProps) {
                   {isChiaNativeToken(slice.assetId) ? (
                     <XchIcon size={16} />
                   ) : (
-                    <TickerIcon assetId={slice.assetId} ticker={slice.ticker} size={16} showLoadingSkeleton={false} />
+                    <TickerIcon assetId={slice.assetId} ticker={slice.ticker} size={16} />
                   )}
                   <span className={`text-[11px] font-medium ${t.text} truncate`}>
                     {slice.ticker}

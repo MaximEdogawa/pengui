@@ -1,5 +1,6 @@
 import { useRouter } from 'next/navigation'
 import type { ThemeClasses } from '@/shared/lib/theme'
+import { useNavigationProgress } from '@/shared/providers/NavigationProgressProvider'
 import { PenguinLogo } from '@/shared/ui'
 import { SidebarMenu } from './SidebarMenu'
 import { SidebarProfile } from './SidebarProfile'
@@ -28,6 +29,7 @@ export function Sidebar({
   isDark,
 }: SidebarProps) {
   const router = useRouter()
+  const { startNavigation } = useNavigationProgress()
 
   return (
     <aside
@@ -79,6 +81,7 @@ export function Sidebar({
         sidebarCollapsed={sidebarCollapsed}
         t={t}
         onProfileClick={() => {
+          startNavigation()
           router.push('/profile')
           onNavigation('/profile')
         }}

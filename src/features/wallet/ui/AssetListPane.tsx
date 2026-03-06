@@ -1,6 +1,5 @@
 'use client'
 
-import { useRouter } from 'next/navigation'
 import { useWalletAssets } from '../hooks/useWalletAssets'
 import { useAssetFilter } from '../hooks/useAssetFilter'
 import { CHIA_ASSET_IDS } from '@/shared/lib/constants/chia-assets'
@@ -10,19 +9,18 @@ import WalletFilterBar from './WalletFilterBar'
 import AssetPane from './AssetPane'
 import { Wallet } from 'lucide-react'
 
+function assetDetailHref(assetId: string): string {
+  const slug = assetId === CHIA_ASSET_IDS.XCH || assetId === '' ? 'xch' : assetId
+  return `/wallet/${encodeURIComponent(slug)}`
+}
+
 export default function AssetListPane() {
-  const router = useRouter()
   const { assets, isLoading } = useWalletAssets()
   const {
     searchQuery,
     setSearchQuery,
     filteredAssets,
   } = useAssetFilter(assets)
-
-  const handleAssetClick = (assetId: string) => {
-    const slug = assetId === CHIA_ASSET_IDS.XCH || assetId === '' ? 'xch' : assetId
-    router.push(`/wallet/${encodeURIComponent(slug)}`)
-  }
 
   return (
     <Card>
@@ -50,7 +48,7 @@ export default function AssetListPane() {
             <AssetPane
               key={asset.assetId || 'xch'}
               asset={asset}
-              onClick={() => handleAssetClick(asset.assetId)}
+              href={assetDetailHref(asset.assetId)}
             />
           ))
         )}

@@ -2,6 +2,7 @@
 
 import { useWalletConnectionHealthCheck } from "@/features/wallet/hooks/useWalletConnectionHealthCheck";
 import { getThemeClasses } from "@/shared/lib/theme";
+import { useNavigationProgress } from "@/shared/providers/NavigationProgressProvider";
 import { InfoBanner, VersionDisplay } from "@/shared/ui";
 import { useTheme } from "next-themes";
 import { usePathname, useRouter } from "next/navigation";
@@ -26,6 +27,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const { theme: currentTheme, systemTheme, setTheme } = useTheme();
   const pathname = usePathname();
   const router = useRouter();
+  const { startNavigation } = useNavigationProgress();
 
   // Detect when wallet (e.g. Sage) is closed or session invalid; clears state and redirects to login so no blank screen
   useWalletConnectionHealthCheck();
@@ -54,6 +56,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   const handleNavigation = (path: string) => {
     if (pathname !== path) {
+      startNavigation();
       router.push(path, { scroll: false });
     }
     setSidebarOpen(false);
