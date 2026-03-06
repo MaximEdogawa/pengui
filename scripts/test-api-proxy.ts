@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+/* eslint-disable no-console -- CLI script; console is the intended output */
 /**
  * Smoke test for API proxy routes (Space Scan, WASM).
  * Run against a running app (e.g. bun run dev) or production:
