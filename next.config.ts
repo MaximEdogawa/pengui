@@ -39,11 +39,12 @@ const nextConfig: NextConfig = {
           { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
         ],
       },
+      // Cache only; do not set Content-Type for /wasm/* so .js is served as application/javascript
+      // and .wasm as application/wasm (browser would reject JS executed as application/wasm).
       {
         source: '/wasm/:path*',
         headers: [
           { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
-          { key: 'Content-Type', value: 'application/wasm' },
         ],
       },
       {
