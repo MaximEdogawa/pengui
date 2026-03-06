@@ -25,11 +25,18 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid or disallowed url' }, { status: 400 })
   }
   try {
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 15_000)
     const res = await fetch(url, {
       method: 'GET',
-      headers: { Accept: 'image/*' },
+      headers: {
+        Accept: 'image/*',
+        'User-Agent': 'PenguinPool/1.0 (Token Icon Proxy)',
+      },
+      signal: controller.signal,
       next: { revalidate: 86400 },
     })
+    clearTimeout(timeout)
     if (!res.ok) {
       return new NextResponse(null, { status: res.status })
     }
