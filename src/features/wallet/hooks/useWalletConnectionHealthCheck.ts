@@ -1,17 +1,16 @@
 "use client";
 
 import { logger } from "@/shared/lib/logger";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { getAdaptiveConfig } from "@/shared/lib/utils/networkQuality";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
 import { useSignClient } from "./useSignClient";
 import { useWalletSession } from "./useWalletSession";
 
-const HEALTH_CHECK_INTERVAL = 60_000;
-const PING_TIMEOUT = 15_000;
-
 /**
  * Monitors wallet connection health. Shows "connection lost" only after 2 consecutive
  * failed pings so transient blips (suspend, relay lag) don't trigger the modal.
+ * Adapts ping frequency and timeout to network quality.
  */
 export function useWalletConnectionHealthCheck() {
   const { signClient } = useSignClient();
@@ -20,6 +19,8 @@ export function useWalletConnectionHealthCheck() {
   const isCheckingRef = useRef(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const failCountRef = useRef(0);
+
+  const netCfg = useMemo(() => getAdaptiveConfig(), []);
 
   const checkConnection = useCallback(async (): Promise<boolean> => {
     if (!signClient || !session.isConnected || !session.topic) return true;
@@ -36,7 +37,10 @@ export function useWalletConnectionHealthCheck() {
       }
       const pingPromise = signClient.ping({ topic: session.topic });
       const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("Ping timeout")), PING_TIMEOUT),
+        setTimeout(
+          () => reject(new Error("Ping timeout")),
+          netCfg.healthCheckPingTimeoutMs,
+        ),
       );
       await Promise.race([pingPromise, timeoutPromise]);
       return true;
@@ -52,7 +56,7 @@ export function useWalletConnectionHealthCheck() {
     } finally {
       isCheckingRef.current = false;
     }
-  }, [signClient, session.isConnected, session.topic]);
+  }, [signClient, session.isConnected, session.topic, netCfg.healthCheckPingTimeoutMs]);
 
   const runHealthCheck = useCallback(async () => {
     if (!session.isConnected) return;
@@ -113,12 +117,12 @@ export function useWalletConnectionHealthCheck() {
     }
     intervalRef.current = setInterval(() => {
       if (document.visibilityState === "visible") runHealthCheck();
-    }, HEALTH_CHECK_INTERVAL);
+    }, netCfg.healthCheckIntervalMs);
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
       intervalRef.current = null;
     };
-  }, [session.isConnected, runHealthCheck]);
+  }, [session.isConnected, runHealthCheck, netCfg.healthCheckIntervalMs]);
 
   return { connectionLost };
 }

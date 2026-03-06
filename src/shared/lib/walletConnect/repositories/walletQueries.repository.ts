@@ -1,4 +1,5 @@
 import { logger } from '@/shared/lib/logger'
+import { getAdaptiveConfig } from '@/shared/lib/utils/networkQuality'
 import { SageMethods } from '../constants/sage-methods'
 import { handleWalletRequestError } from './walletErrorHandler'
 import { validateSessionConnection, validateChainId } from './walletSessionValidator'
@@ -20,16 +21,15 @@ import type {
 import type { AssetBalance, AssetCoins, WalletConnectSession } from '../types/walletConnect.types'
 import type SignClient from '@walletconnect/sign-client'
 
-const REQUEST_TIMEOUT = 30000
-
 /**
- * Create a timeout promise for wallet requests
+ * Create a timeout promise for wallet requests, adaptive to network quality.
  */
 function createTimeoutPromise(): Promise<never> {
+  const timeout = getAdaptiveConfig().fetchTimeoutMs
   return new Promise<never>((_, reject) => {
     setTimeout(() => {
-      reject(new Error('Request timeout after 30 seconds'))
-    }, REQUEST_TIMEOUT)
+      reject(new Error(`Request timeout after ${Math.round(timeout / 1000)} seconds`))
+    }, timeout)
   })
 }
 

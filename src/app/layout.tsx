@@ -29,6 +29,7 @@ import {
 import { networkToChainId } from "@/shared/lib/utils/networkUtils";
 import { NetworkFilterSync } from "./NetworkFilterSync";
 import { NavigationProgressProvider } from "@/shared/providers/NavigationProgressProvider";
+import { NavigationQueryCleanup } from "@/shared/providers/NavigationQueryCleanup";
 import { PersistGateLoadingFallback } from "./PersistGateLoadingFallback";
 import "@maximedogawa/chia-wallet-connect-react/styles";
 import "./wallet-connect.css";
@@ -284,6 +285,7 @@ export default function UILayout({ children }: { children: React.ReactNode }) {
                 <div className="wallet-connect-scope">
                   <NavigationProgressProvider>
                     <ReactQueryProvider>
+                      <NavigationQueryCleanup />
                       <NetworkProvider>
                         <NetworkFilterSync />
                         <WalletConnectionGuard>
