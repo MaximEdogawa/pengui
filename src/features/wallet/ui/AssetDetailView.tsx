@@ -24,6 +24,8 @@ import SectionHeader from './shared/SectionHeader'
 import EmptyState from './shared/EmptyState'
 import { Modal } from '@/shared/ui'
 import SendTransactionForm from './SendTransactionForm'
+import { ReceiveModal } from '@/features/dashboard/ui/components/ReceiveModal'
+import { useWalletConnectionState } from '@maximedogawa/chia-wallet-connect-react'
 import {
   ArrowLeft,
   Send,
@@ -70,6 +72,8 @@ export default function AssetDetailView({ assetIdSlug }: AssetDetailViewProps) {
   const { priceUsd: xchUsdPrice } = useXchUsdPrice()
   const { getAsset, tickers } = useCatTokens()
   const [showSendModal, setShowSendModal] = useState(false)
+  const [showReceiveModal, setShowReceiveModal] = useState(false)
+  const { address } = useWalletConnectionState()
 
   const assetId = assetIdSlug === 'xch' ? CHIA_ASSET_IDS.XCH : decodeURIComponent(assetIdSlug)
   const isXch = assetId === CHIA_ASSET_IDS.XCH || assetId === ''
@@ -179,15 +183,18 @@ export default function AssetDetailView({ assetIdSlug }: AssetDetailViewProps) {
               Send
             </button>
           )}
-          <Link
-            href="/wallet"
-            className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium ${
-              isDark ? 'bg-white/10 text-gray-300' : 'bg-gray-200 text-gray-700'
-            }`}
-          >
-            <Download size={16} />
-            Receive
-          </Link>
+          {address && (
+            <button
+              type="button"
+              onClick={() => setShowReceiveModal(true)}
+              className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium ${
+                isDark ? 'bg-white/10 text-gray-300 hover:bg-white/15' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              }`}
+            >
+              <Download size={16} />
+              Receive
+            </button>
+          )}
           <Link
             href="/trading"
             className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium ${
@@ -207,6 +214,15 @@ export default function AssetDetailView({ assetIdSlug }: AssetDetailViewProps) {
             <SendTransactionForm availableBalance={availableBalance} />
           </div>
         </Modal>
+      )}
+
+      {showReceiveModal && address && (
+        <ReceiveModal
+          address={address}
+          isDark={isDark}
+          t={t}
+          onClose={() => setShowReceiveModal(false)}
+        />
       )}
 
       <Card>

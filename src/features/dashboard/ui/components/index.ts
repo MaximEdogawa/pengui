@@ -9,3 +9,4 @@ export { PortfolioCard } from "./PortfolioCard";
 export { ExpensesCard } from "./ExpensesCard";
 export { InvestmentsCard } from "./InvestmentsCard";
 export { CardSkeleton } from "./CardSkeleton";
+export { ReceiveModal } from "./ReceiveModal";
