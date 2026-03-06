@@ -65,19 +65,21 @@ export function registerWalletConnectListeners(
     session_delete: onSessionEnd,
     session_expire: onSessionEnd,
     session_request: (args: unknown) => {
-      try {
-        const event = args as { topic: string; id: number };
-        signClient.respond({
-          topic: event.topic,
-          response: {
-            id: event.id,
-            jsonrpc: "2.0",
-            result: { acknowledged: true },
-          },
-        });
-      } catch {
-        // Silently handle response errors
-      }
+      const event = args as { topic: string; id: number };
+      void (async () => {
+        try {
+          await signClient.respond({
+            topic: event.topic,
+            response: {
+              id: event.id,
+              jsonrpc: "2.0",
+              result: { acknowledged: true },
+            },
+          });
+        } catch {
+          // Silently handle response errors
+        }
+      })();
     },
     session_proposal: () => {
       // Session proposal received
@@ -86,29 +88,30 @@ export function registerWalletConnectListeners(
       // Session updated
     },
     session_ping: (args: unknown) => {
-      try {
-        const event = args as { topic: string; id?: number };
-        if (event.id !== undefined) {
-          signClient.respond({
+      const event = args as { topic: string; id?: number };
+      const pingId = event.id;
+      if (pingId === undefined) return;
+      void (async () => {
+        try {
+          await signClient.respond({
             topic: event.topic,
             response: {
-              id: event.id,
+              id: pingId,
               jsonrpc: "2.0",
               result: { acknowledged: true },
             },
           });
-        }
-      } catch (error) {
-        // Suppress "No matching key" errors - these are non-critical
-        const errorMessage =
-          error instanceof Error ? error.message : String(error);
-        if (!errorMessage.includes("No matching key")) {
-          // Only log non-expected errors in development
-          if (process.env.NODE_ENV === "development") {
-            logger.debug("Session ping error:", error);
+        } catch (error) {
+          // Suppress "No matching key" errors - these are non-critical
+          const errorMessage =
+            error instanceof Error ? error.message : String(error);
+          if (!errorMessage.includes("No matching key")) {
+            if (process.env.NODE_ENV === "development") {
+              logger.debug("Session ping error:", error);
+            }
           }
         }
-      }
+      })();
     },
   };
 

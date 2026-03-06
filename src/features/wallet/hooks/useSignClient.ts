@@ -4,7 +4,7 @@ import { logger } from '@/shared/lib/logger'
 import { getSignClientConfig } from '@/shared/lib/walletConnect/constants/wallet-connect'
 import type { WalletConnectInstance } from '@/shared/lib/walletConnect/types/walletConnect.types'
 import { useQuery } from '@tanstack/react-query'
-import { useEffect } from 'react'
+import { useLayoutEffect } from 'react'
 import SignClient from '@walletconnect/sign-client'
 import { registerWalletConnectListeners } from './useWalletConnectEventListeners'
 import { useNetwork } from '@/shared/hooks/useNetwork'
@@ -41,9 +41,9 @@ export function useSignClient() {
     refetchOnReconnect: false,
   })
 
-  // Register listeners as backup via useEffect (in case SignClient was cached)
-  // This ensures listeners are registered even if the query returns cached data
-  useEffect(() => {
+  // Register listeners as early as possible via useLayoutEffect (in case SignClient was cached)
+  // Runs before paint so relay session_request messages are less likely to arrive before we listen
+  useLayoutEffect(() => {
     if (instanceQuery.data?.signClient) {
       registerWalletConnectListeners(instanceQuery.data.signClient)
     }
