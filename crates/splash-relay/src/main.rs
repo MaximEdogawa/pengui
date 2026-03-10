@@ -60,6 +60,9 @@ struct RelayBehaviour {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    // Early stderr so we see output even if logging or DNS fails (e.g. in Docker)
+    eprintln!("splash-relay starting...");
+
     // Default info shows one startup line only; warn/error for issues. Set RUST_LOG=debug for verbose.
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
@@ -70,6 +73,15 @@ async fn main() -> Result<()> {
         default_hook(panic_info);
     }));
 
+    if let Err(e) = run().await {
+        error!("splash-relay failed: {}", e);
+        eprintln!("splash-relay failed: {}", e);
+        std::process::exit(1);
+    }
+    Ok(())
+}
+
+async fn run() -> Result<()> {
     let args = Args::parse();
     let network_name = if args.testnet {
         "splash-testnet"
@@ -319,6 +331,12 @@ async fn main() -> Result<()> {
                 }
             }
         }
+    }
+    // Unreachable: main loop never exits unless process is killed or panics.
+    #[allow(unreachable_code)]
+    {
+        error!("main loop exited unexpectedly");
+        anyhow::bail!("main loop exited unexpectedly");
     }
 }
 

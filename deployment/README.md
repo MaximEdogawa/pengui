@@ -270,22 +270,28 @@ The relay is a lightweight service: it logs only warnings by default and does no
 
 - **Service names**: `splash-relay` (mainnet), `splash-relay-testnet`
 - **Container names**: `pengui-splash-relay`, `pengui-splash-relay-testnet`
-- Relay containers use the **`none`** logging driver: **no logs are stored**. After a container reboot/restart there are no logs on disk. For live troubleshooting, attach to the running container (see below) or temporarily switch the service to `driver: "json-file"` in `docker-compose.yml`.
+- Relay uses **json-file** with **max-size 5m, max-file 1**: `docker compose logs` works; only the latest 5MB is kept. After a container restart the log file is new, so no long-term log storage.
 
 #### View relay logs on the server
 
-With the default `none` driver, `docker compose logs splash-relay` returns nothing. To see output while the container is running:
-
 ```bash
-# Attach to the running container (live stdout only; no history)
-docker attach pengui-splash-relay
-# Detach with Ctrl+P, Ctrl+Q (do not use Ctrl+C or the container will stop)
+# From the deployment directory
+cd /path/to/deployment
 
-# Or run a one-off with logs captured (e.g. for debugging)
-docker compose run --rm -e RUST_LOG=info splash-relay
+# Follow mainnet relay logs (live)
+docker compose logs -f splash-relay
+
+# Last 200 lines
+docker compose logs splash-relay --tail 200
+
+# Testnet relay
+docker compose logs -f splash-relay-testnet
+docker compose logs splash-relay-testnet --tail 200
+
+# By container name
+docker logs -f pengui-splash-relay
+docker logs pengui-splash-relay --tail 200
 ```
-
-To persist logs temporarily (e.g. to inspect after an issue), edit `docker-compose.yml` and set the relay service to `driver: "json-file"` with `max-size: "5m"` and `max-file: "1"`, then `docker compose up -d splash-relay` and use `docker compose logs -f splash-relay` as usual.
 
 #### Enable verbose logging (troubleshooting only)
 
@@ -338,16 +344,17 @@ docker compose logs splash-relay 2>&1 | grep -iE 'warn|error'
 
 | Issue | What to do |
 |-------|------------|
-| Container exits immediately | Run `docker compose logs splash-relay --tail 100` and check for bind/port errors (e.g. 9090 or 11511 in use). Ensure ports are free or change `command`/port mapping. |
+| **Relay in restart loop** (e.g. `Restarting (0)`) | The relay exits and Docker keeps restarting it. Run it in the foreground to see the real error: `docker compose run --rm splash-relay` (or `docker run --rm -it <SPLASH_RELAY_IMAGE> splash-relay --tcp-port 11511 --ws-port 9090`). You should see `splash-relay starting...` then either the ready line or an error (e.g. bind failure, DNS, or panic). Fix the cause (ports, image platform, DNS) and redeploy. |
+| Container exits immediately | Run `docker compose logs splash-relay --tail 100` and check for bind/port errors (e.g. 9090 or 11511 in use). Or run the container in the foreground (see "Relay in restart loop" above). Ensure ports are free or change `command`/port mapping. |
 | "No peers connected" | Check DNS from the host (`nslookup _dnsaddr.splash.dexie.space` or similar). If using `--known-peer`, ensure addresses are correct. Restart relay after fixing network. |
 | Stream tab in app not updating | Confirm app is using the correct relay URL (e.g. `wss://relay.yourdomain.com`). Check nginx is proxying to `splash-relay:9090` and that `docker compose logs splash-relay` shows no repeated errors. |
 | Too many WS connections | Increase `--max-ws-connections` in the relay `command` in docker-compose (e.g. `--max-ws-connections 1000`) and redeploy. |
 | Need to see what the relay is doing | Set `RUST_LOG=info` or `RUST_LOG=debug` (see above), reproduce, then turn verbose logging off. |
 
-#### Log retention (no storage after reboot)
+#### Log retention (minimal; no long-term storage)
 
-- Relay containers use the **`none`** logging driver: Docker does **not** store any logs. After a container restart/reboot there are no logs.
-- For live debugging, attach to the container or run with `docker compose run` as above. For longer-term auditing or metrics, use a log aggregator and configure the relay service with a different logging driver (e.g. `json-file` or a driver that ships to your stack).
+- Relay uses **json-file** with one 5MB file. After a container restart the log file is new, so no logs are kept from previous runs.
+- For longer-term auditing or metrics, use a log aggregator and point it at Docker log files or configure a logging driver that ships to your stack.
 
 ### Rollback
 
