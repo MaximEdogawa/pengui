@@ -10,12 +10,21 @@ use libp2p::swarm::{Config as SwarmConfig, SwarmEvent};
 use libp2p::{identify, identity, kad, noise, tcp, yamux, Multiaddr, PeerId, StreamProtocol};
 use log::{debug, info, warn};
 use std::collections::hash_map::DefaultHasher;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 use std::time::Duration;
 
 const NETWORK_NAME: &str = "splash";
 const MAX_OFFER_SIZE: usize = 300 * 1024;
+
+/// Returns true if this connection is an inbound WebSocket (browser/app peer).
+fn is_inbound_ws(endpoint: &libp2p::core::ConnectedPoint) -> bool {
+    if let libp2p::core::ConnectedPoint::Listener { local_addr, .. } = endpoint {
+        local_addr.iter().any(|p| matches!(p, Protocol::Ws(_)))
+    } else {
+        false
+    }
+}
 
 #[derive(Parser, Debug)]
 #[command(name = "splash-relay")]
@@ -36,6 +45,10 @@ struct Args {
     /// Use testnet (splash-testnet)
     #[arg(long)]
     testnet: bool,
+
+    /// Maximum concurrent WebSocket (browser/app) connections. Incoming WS over this limit are disconnected.
+    #[arg(long, default_value = "500")]
+    max_ws_connections: u32,
 }
 
 #[derive(libp2p::swarm::NetworkBehaviour)]
@@ -60,6 +73,7 @@ async fn main() -> Result<()> {
     info!("Network: {}", network_name);
     info!("TCP port: {}", args.tcp_port);
     info!("WebSocket port: {}", args.ws_port);
+    info!("Max WebSocket connections: {}", args.max_ws_connections);
 
     let local_key = identity::Keypair::generate_ed25519();
     let local_peer_id = PeerId::from(local_key.public());
@@ -170,12 +184,15 @@ async fn main() -> Result<()> {
         }
     }
 
+    let max_ws_connections = args.max_ws_connections;
     let mut peer_discovery_interval = tokio::time::interval(Duration::from_secs(30));
     let mut stats_interval = tokio::time::interval(Duration::from_secs(30));
     let mut reconnect_interval = tokio::time::interval(Duration::from_secs(120));
     let mut connected_peers: usize = 0;
+    let mut ws_connections: usize = 0;
     let mut offers_relayed: usize = 0;
     let mut peer_agents: HashMap<PeerId, String> = HashMap::new();
+    let mut rejected_ws_peers: HashSet<PeerId> = HashSet::new();
     let bootstrap_addrs: Vec<Multiaddr> = bootstrap_peers
         .iter()
         .filter_map(|s| s.parse().ok())
@@ -192,7 +209,7 @@ async fn main() -> Result<()> {
                 swarm.behaviour_mut().kademlia.get_closest_peers(PeerId::random());
             }
             _ = stats_interval.tick() => {
-                info!("Stats: {} connected peers, {} offers relayed", connected_peers, offers_relayed);
+                info!("Stats: {} connected peers ({} WS), {} offers relayed", connected_peers, ws_connections, offers_relayed);
                 if connected_peers == 0 {
                     warn!("No peers connected yet. Retrying bootstrap peers...");
                 }
@@ -230,14 +247,32 @@ async fn main() -> Result<()> {
                     }
                     SwarmEvent::ConnectionEstablished { peer_id, endpoint, .. } => {
                         connected_peers += 1;
-                        info!("Connected to {} via {:?} (total: {})", peer_id, endpoint, connected_peers);
+                        if is_inbound_ws(&endpoint) {
+                            if ws_connections >= max_ws_connections as usize {
+                                warn!(
+                                    "WebSocket connection limit reached ({}), rejecting {}",
+                                    max_ws_connections, peer_id
+                                );
+                                rejected_ws_peers.insert(peer_id);
+                                let _ = swarm.disconnect_peer_id(peer_id);
+                                connected_peers = connected_peers.saturating_sub(1);
+                            } else {
+                                ws_connections += 1;
+                                info!("Connected to {} via {:?} (total: {}, WS: {})", peer_id, endpoint, connected_peers, ws_connections);
+                            }
+                        } else {
+                            info!("Connected to {} via {:?} (total: {})", peer_id, endpoint, connected_peers);
+                        }
                     }
-                    SwarmEvent::ConnectionClosed { peer_id, cause, .. } => {
+                    SwarmEvent::ConnectionClosed { peer_id, endpoint, cause, .. } => {
+                        if is_inbound_ws(&endpoint) && !rejected_ws_peers.remove(&peer_id) {
+                            ws_connections = ws_connections.saturating_sub(1);
+                        }
                         connected_peers = connected_peers.saturating_sub(1);
                         if let Some(ref c) = cause {
                             debug!("Disconnected from {} cause: {:?} (total: {})", peer_id, c, connected_peers);
                         }
-                        info!("Disconnected from {} (total: {})", peer_id, connected_peers);
+                        info!("Disconnected from {} (total: {}, WS: {})", peer_id, connected_peers, ws_connections);
                     }
                     SwarmEvent::OutgoingConnectionError { peer_id, error, .. } => {
                         debug!("Connection error to {:?}: {}", peer_id, error);
