@@ -95,11 +95,12 @@ services:
       pengui-network:
         aliases:
           - splash-relay
+    # Minimal log retention: one 5MB file so "docker compose logs" works; new container = new file after reboot
     logging:
       driver: "json-file"
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: "5m"
+        max-file: "1"
 
   # Splash relay (testnet)
   splash-relay-testnet:
@@ -117,8 +118,8 @@ services:
     logging:
       driver: "json-file"
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: "5m"
+        max-file: "1"
 
 networks:
   pengui-network:

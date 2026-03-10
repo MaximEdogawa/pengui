@@ -2,7 +2,6 @@
 
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
-import { getNativeTokenTickerForNetwork } from '@/shared/lib/config/environment'
 import type { OrderBookFilters, OrderBookPagination, SuggestionItem } from '../lib/orderBookTypes'
 
 const DEFAULT_PAGINATION: OrderBookPagination = 50
@@ -50,11 +49,10 @@ interface OrderBookFilterActions {
 
 type OrderBookFilterStore = OrderBookFilterState & OrderBookFilterActions
 
-const createDefaultFilters = (network: 'mainnet' | 'testnet' = 'mainnet'): OrderBookFilters => {
-  const nativeTicker = getNativeTokenTickerForNetwork(network)
+const createDefaultFilters = (_network: 'mainnet' | 'testnet' = 'mainnet'): OrderBookFilters => {
   return {
-    buyAsset: [nativeTicker],
-    sellAsset: ['TBYC'],
+    buyAsset: [],
+    sellAsset: [],
     status: [],
     pagination: DEFAULT_PAGINATION,
   }
