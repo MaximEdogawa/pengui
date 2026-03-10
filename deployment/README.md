@@ -207,6 +207,8 @@ docker compose logs -f
 # Specific service
 docker compose logs -f pengui
 docker compose logs -f nginx
+docker compose logs -f splash-relay
+docker compose logs -f splash-relay-testnet
 ```
 
 ### Check Health
@@ -259,6 +261,93 @@ docker compose exec nginx nginx -t
 # Reload nginx
 docker compose exec nginx nginx -s reload
 ```
+
+### Splash relay (Docker)
+
+The relay is a lightweight service: it logs only warnings by default and does not keep logs long-term. Use the steps below to troubleshoot on the server.
+
+#### Where the logs are
+
+- **Service names**: `splash-relay` (mainnet), `splash-relay-testnet`
+- **Container names**: `pengui-splash-relay`, `pengui-splash-relay-testnet`
+- Relay containers use the **`none`** logging driver: **no logs are stored**. After a container reboot/restart there are no logs on disk. For live troubleshooting, attach to the running container (see below) or temporarily switch the service to `driver: "json-file"` in `docker-compose.yml`.
+
+#### View relay logs on the server
+
+With the default `none` driver, `docker compose logs splash-relay` returns nothing. To see output while the container is running:
+
+```bash
+# Attach to the running container (live stdout only; no history)
+docker attach pengui-splash-relay
+# Detach with Ctrl+P, Ctrl+Q (do not use Ctrl+C or the container will stop)
+
+# Or run a one-off with logs captured (e.g. for debugging)
+docker compose run --rm -e RUST_LOG=info splash-relay
+```
+
+To persist logs temporarily (e.g. to inspect after an issue), edit `docker-compose.yml` and set the relay service to `driver: "json-file"` with `max-size: "5m"` and `max-file: "1"`, then `docker compose up -d splash-relay` and use `docker compose logs -f splash-relay` as usual.
+
+#### Enable verbose logging (troubleshooting only)
+
+By default the relay logs at **warn** level. To see connections, stats, and startup details, set `RUST_LOG` when starting the container:
+
+```bash
+# One-off run with verbose logs (mainnet)
+docker compose run --rm -e RUST_LOG=info splash-relay
+
+# Or add to docker-compose.yml under splash-relay (and splash-relay-testnet):
+#   environment:
+#     - RUST_LOG=info
+# Then: docker compose up -d splash-relay
+```
+
+Use `RUST_LOG=debug` for maximum detail (connections, every offer, etc.); turn it off when done to avoid log volume and extra I/O.
+
+#### Check relay status and restart
+
+```bash
+# Container status (running / exit code)
+docker compose ps splash-relay splash-relay-testnet
+
+# Restart mainnet relay
+docker compose restart splash-relay
+
+# Restart both relays
+docker compose restart splash-relay splash-relay-testnet
+
+# View last log lines after restart
+docker compose logs splash-relay --tail 50
+```
+
+#### Look for errors in logs
+
+```bash
+# Lines containing "warn" or "error" (case-insensitive)
+docker compose logs splash-relay 2>&1 | grep -iE 'warn|error'
+
+# Common messages:
+# - "Failed to resolve DNS peers"     → DNS or network issue on host
+# - "Failed to dial bootstrap peer"   → Bootstrap peers down or unreachable
+# - "No peers connected"             → Network/DNS or no bootstrap peers
+# - "WS connection limit reached"    → Too many browser clients; increase --max-ws-connections or scale
+# - "Rejecting oversized offer"      → Normal; a peer sent an offer over size limit
+# - "Incoming connection error"      → Client or network issue
+```
+
+#### Common issues
+
+| Issue | What to do |
+|-------|------------|
+| Container exits immediately | Run `docker compose logs splash-relay --tail 100` and check for bind/port errors (e.g. 9090 or 11511 in use). Ensure ports are free or change `command`/port mapping. |
+| "No peers connected" | Check DNS from the host (`nslookup _dnsaddr.splash.dexie.space` or similar). If using `--known-peer`, ensure addresses are correct. Restart relay after fixing network. |
+| Stream tab in app not updating | Confirm app is using the correct relay URL (e.g. `wss://relay.yourdomain.com`). Check nginx is proxying to `splash-relay:9090` and that `docker compose logs splash-relay` shows no repeated errors. |
+| Too many WS connections | Increase `--max-ws-connections` in the relay `command` in docker-compose (e.g. `--max-ws-connections 1000`) and redeploy. |
+| Need to see what the relay is doing | Set `RUST_LOG=info` or `RUST_LOG=debug` (see above), reproduce, then turn verbose logging off. |
+
+#### Log retention (no storage after reboot)
+
+- Relay containers use the **`none`** logging driver: Docker does **not** store any logs. After a container restart/reboot there are no logs.
+- For live debugging, attach to the container or run with `docker compose run` as above. For longer-term auditing or metrics, use a log aggregator and configure the relay service with a different logging driver (e.g. `json-file` or a driver that ships to your stack).
 
 ### Rollback
 

@@ -95,11 +95,9 @@ services:
       pengui-network:
         aliases:
           - splash-relay
+    # No log storage: after container reboot there are no logs on disk
     logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
+      driver: "none"
 
   # Splash relay (testnet)
   splash-relay-testnet:
@@ -115,10 +113,7 @@ services:
         aliases:
           - splash-relay-testnet
     logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
+      driver: "none"
 
 networks:
   pengui-network:

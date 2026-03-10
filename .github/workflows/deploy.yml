@@ -18,18 +18,23 @@ on:
         description: "Release tag to deploy (leave empty for latest)"
         required: false
         type: string
-      build_relay:
-        description: "Also build and push relay image (slower; omit for app-only deploy)"
+      build_wasm:
+        description: "Build app image (includes WASM from crates/splash-wasm)"
         required: false
         type: boolean
-        default: false
+        default: true
+      build_relay:
+        description: "Build and push relay image (crates/splash-relay)"
+        required: false
+        type: boolean
+        default: true
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  # Build relay only when relay code changed (release) or manual + "build relay" checked; otherwise reuse :splash-relay for fast app-only deploy
+  # Build relay when relay code changed (release) or manual + "build relay" checked; otherwise reuse :splash-relay
   build-and-push-relay:
     name: Build and Push Splash Relay Image
     runs-on: ubuntu-latest
@@ -45,7 +50,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Detect relay changes
+      - name: Detect relay and WASM changes
         uses: dorny/paths-filter@v3
         id: filter
         with:
@@ -54,6 +59,8 @@ jobs:
             relay:
               - 'crates/splash-relay/**'
               - 'deployment/splash-relay/**'
+            wasm:
+              - 'crates/splash-wasm/**'
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -99,8 +106,9 @@ jobs:
             echo "relay_image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:splash-relay" >> "$GITHUB_OUTPUT"
           fi
 
+  # App image includes WASM (built from crates/splash-wasm in Dockerfile). Built on every release; on manual when "Build WASM/app" is checked.
   build-and-push:
-    name: Build and Push Docker Image
+    name: Build and Push App Image (incl. WASM)
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
