@@ -1002,8 +1002,14 @@ export function SwapTabContent({ mode }: SwapTabContentProps = {}) {
       liquidityFeePercent={liquidityFeePercent}
       modalPayAmount={modalPayAmount}
       pairsLoading={pairsLoading}
-      onOfferedChange={setOfferedAmount}
-      onRequestedChange={setRequestedAmount}
+      onOfferedChange={(v) => {
+        setLpAmount("");
+        setOfferedAmount(v);
+      }}
+      onRequestedChange={(v) => {
+        setLpAmount("");
+        setRequestedAmount(v);
+      }}
       onAmountDriverOffered={() => setAmountDriver("offered")}
       onAmountDriverRequested={() => setAmountDriver("requested")}
       onSubmitSwap={handleConfirmSwap}
