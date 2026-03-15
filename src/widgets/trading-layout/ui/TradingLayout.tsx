@@ -117,17 +117,15 @@ export default function TradingLayout({
     [],
   );
 
-  const isOrderBookView = activeTradingView === "orderbook";
-
   return (
     <div className="flex h-full">
-      {/* Order Book / Content - Full width on mobile/tablet, left panel on desktop (lg+) */}
+      {/* Left: Filters + main content (Order Book / Chart / Depth / Trades / Stream) */}
       <div className="flex flex-col flex-1 min-w-0">
         <div className="mb-2">
           <OrderBookFilters onFiltersChange={handleFiltersChange} />
         </div>
-        {/* Mobile Toggle - Limit / Market / Swap - only when Order Book tab is active */}
-        {isMobile && isOrderBookView && (
+        {/* Limit / Market / Swap tabs - shown for all main views (Order book, Chart, Depth, Trades, Stream) */}
+        {isMobile && (
           <div className="mb-2">
             <LimitOfferTab
               activeMode={currentMode}
@@ -146,22 +144,19 @@ export default function TradingLayout({
         </div>
       </div>
 
-      {/* Resize Handle - Hidden on mobile/tablet */}
-      {isOrderBookView && (
-        <div
-          className={`hidden lg:flex resize-handle m-1 ${t.card} hover:bg-gray-300 dark:hover:bg-gray-500 cursor-col-resize transition-colors items-center justify-center relative`}
-          title="Drag to resize panels"
-        >
-          <div className="w-full flex items-center justify-center">
-            <div className="flex items-center gap-1"></div>
-          </div>
-          <div className="absolute inset-0 w-6 h-full -left-1"></div>
+      {/* Resize Handle - shown on desktop for all views */}
+      <div
+        className={`hidden lg:flex resize-handle m-1 ${t.card} hover:bg-gray-300 dark:hover:bg-gray-500 cursor-col-resize transition-colors items-center justify-center relative`}
+        title="Drag to resize panels"
+      >
+        <div className="w-full flex items-center justify-center">
+          <div className="flex items-center gap-1"></div>
         </div>
-      )}
+        <div className="absolute inset-0 w-6 h-full -left-1"></div>
+      </div>
 
-      {/* Right Panel - Limit / Market / Swap - only when Order Book tab is active */}
-      {isOrderBookView && (
-        <TradingRightPanel
+      {/* Right Panel - Limit / Market / Swap - shown for all main views */}
+      <TradingRightPanel
         currentMode={currentMode}
         selectedOrderForTaking={selectedOrderForTaking}
         selectedOrderForMaking={selectedOrderForMaking}
@@ -170,8 +165,7 @@ export default function TradingLayout({
         onOfferCreated={handleOfferCreated}
         onOpenCreateModal={() => setShowCreateOfferModal(true)}
         filters={filters}
-        />
-      )}
+      />
 
       {/* Create Offer Modal */}
       {showCreateOfferModal && (
