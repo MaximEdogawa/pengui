@@ -138,7 +138,7 @@ export default function TradingLayout({
         )}
         <div className="flex-1 min-h-0">
           {isMobile && currentMode === "swap" ? (
-            <div className={`h-full overflow-y-auto ${t.card} rounded-lg border ${t.border} p-4`} style={{ scrollbarGutter: "stable" }}>
+            <div className={`h-full overflow-y-auto ${t.card} rounded-lg border ${t.border} p-2`} style={{ scrollbarGutter: "stable" }}>
               <SwapTabContent mode="inline" />
             </div>
           ) : (

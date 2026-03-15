@@ -45,7 +45,7 @@ export function SwapPreviewTabContent({
   isTestnet: boolean;
 }) {
   return (
-    <div className="space-y-1.5 text-xs">
+    <div className="space-y-1 text-[11px]">
       <div className="flex justify-between items-start">
         <span className={t.textSecondary}>You will receive:</span>
         <span className={`${t.text} inline-flex items-center gap-1 justify-end`}>
@@ -76,12 +76,12 @@ export function SwapPreviewTabContent({
           )}
         </span>
       </div>
-      <div className={`flex justify-between border-t ${t.border} pt-1.5 mt-1.5`}>
+      <div className={`flex justify-between border-t ${t.border} pt-1 mt-1`}>
         <span className={t.textSecondary}>Price</span>
         <span className={`font-mono ${t.text}`}>{priceLine ?? "—"}</span>
       </div>
       {isHighImpact ? (
-        <div className={`border-t ${t.border} pt-1.5 mt-1.5 rounded-lg p-2.5 bg-amber-500/10 dark:bg-amber-500/5 border border-amber-500/30 space-y-2`}>
+        <div className={`border-t ${t.border} pt-1 mt-1 rounded-md p-2 bg-amber-500/10 dark:bg-amber-500/5 border border-amber-500/30 space-y-1.5`}>
           <div className="flex items-center justify-between gap-2">
             <span className="text-xs text-amber-700 dark:text-amber-400 font-medium flex items-center gap-1.5">
               <AlertTriangle size={12} className="flex-shrink-0" />
@@ -108,18 +108,18 @@ export function SwapPreviewTabContent({
           </label>
         </div>
       ) : (
-        <div className={`flex justify-between border-t ${t.border} pt-1.5 mt-1.5`}>
+        <div className={`flex justify-between border-t ${t.border} pt-1 mt-1`}>
           <span className={t.textSecondary}>Price impact</span>
           <span className={`font-mono ${t.text}`}>
             {priceImpactPercent != null ? `${priceImpactPercent.toFixed(2)}%` : "—"}
           </span>
         </div>
       )}
-      <div className={`flex justify-between border-t ${t.border} pt-1.5 mt-1.5`}>
+      <div className={`flex justify-between border-t ${t.border} pt-1 mt-1`}>
         <span className={t.textSecondary}>Liquidity fee</span>
         <span className={t.text}>{liquidityFeePercent}%</span>
       </div>
-      <div className={`flex justify-between border-t ${t.border} pt-1.5 mt-1.5`}>
+      <div className={`flex justify-between border-t ${t.border} pt-1 mt-1`}>
         <span className={t.textSecondary}>Dev fee</span>
         <span className={t.text}>{DEV_FEE_PERCENT}%</span>
       </div>
@@ -147,7 +147,7 @@ export function RemovePreviewTabContent({
   const hasReceive = removeReceive != null;
   const lpDisplay = lpAmount.trim() || "—";
   return (
-    <div className="space-y-1.5 text-xs">
+    <div className="space-y-1 text-[11px]">
       <div className={t.textSecondary}>You will receive:</div>
       {hasReceive ? (
         <>
@@ -173,7 +173,7 @@ export function RemovePreviewTabContent({
           Enter LP amount above, or both Offered and Requested (in pool ratio) to see estimate.
         </p>
       )}
-      <div className={`border-t ${t.border} pt-1.5 mt-1.5`}>
+      <div className={`border-t ${t.border} pt-1 mt-1`}>
         <div className={t.textSecondary}>You will pay:</div>
         <div className="flex justify-between items-start mt-0.5">
           <span className={t.textSecondary}>LP</span>
@@ -209,7 +209,7 @@ export function AddPreviewTabContent({
 }) {
   const lpDisplay = (lpReceive ?? "").trim() || "—";
   return (
-    <div className="space-y-1.5 text-xs">
+    <div className="space-y-1 text-[11px]">
       <div className={t.textSecondary}>You will pay:</div>
       <div className="flex justify-between items-start">
         <span className={t.textSecondary}>{offeredTicker ?? "—"}</span>
@@ -233,7 +233,7 @@ export function AddPreviewTabContent({
           )}
         </span>
       </div>
-      <div className={`border-t ${t.border} pt-1.5 mt-1.5`}>
+      <div className={`border-t ${t.border} pt-1 mt-1`}>
         <div className={t.textSecondary}>Receive:</div>
         <div className="flex justify-between items-start mt-0.5">
           <span className={t.textSecondary}>LP</span>

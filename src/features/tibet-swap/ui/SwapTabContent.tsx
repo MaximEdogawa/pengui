@@ -177,9 +177,9 @@ function SwapFormBody({
 
   if (!hasValidFilterPair) {
     return (
-      <div className="space-y-3">
+      <div className="space-y-1.5">
         <div
-          className={`rounded-lg p-4 text-center text-sm ${t.card} border ${t.border} ${t.textSecondary}`}
+          className={`rounded-md p-2 text-center text-xs ${t.card} border ${t.border} ${t.textSecondary}`}
         >
           Select assets using the filter above (Sell and Buy) to set the swap
           pair.
@@ -234,13 +234,13 @@ function SwapFormBody({
     );
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-1.5">
       <div>
-        <label className={`block text-xs font-medium ${t.text} mb-1.5`}>
+        <label className={`block text-[11px] font-medium ${t.text} mb-0.5`}>
           Offered (you pay)
         </label>
         <div
-          className={`flex items-center gap-2 w-full px-2 py-1.5 border rounded-lg text-xs ${t.input} ${t.border} backdrop-blur-xl ${t.card}`}
+          className={`flex items-center gap-1.5 w-full px-1.5 py-1 border rounded-md text-[11px] ${t.input} ${t.border} backdrop-blur-xl ${t.card}`}
         >
           {isOfferedNative ? (
             <XchIcon size={14} isTestnet={isTestnet} />
@@ -278,11 +278,11 @@ function SwapFormBody({
       </div>
 
       <div>
-        <label className={`block text-xs font-medium ${t.text} mb-1.5`}>
+        <label className={`block text-[11px] font-medium ${t.text} mb-0.5`}>
           Requested (you receive)
         </label>
         <div
-          className={`flex items-center gap-2 w-full px-2 py-1.5 border rounded-lg text-xs ${t.input} ${t.border} backdrop-blur-xl ${t.card}`}
+          className={`flex items-center gap-1.5 w-full px-1.5 py-1 border rounded-md text-[11px] ${t.input} ${t.border} backdrop-blur-xl ${t.card}`}
         >
           {isRequestedNative ? (
             <XchIcon size={14} isTestnet={isTestnet} />
@@ -320,11 +320,11 @@ function SwapFormBody({
       </div>
 
       <div>
-        <label className={`block text-xs font-medium ${t.text} mb-1.5`}>
+        <label className={`block text-[11px] font-medium ${t.text} mb-0.5`}>
           LP token
         </label>
         <div
-          className={`flex items-center gap-2 w-full px-2 py-1.5 border rounded-lg text-xs ${t.input} ${t.border} backdrop-blur-xl ${t.card}`}
+          className={`flex items-center gap-1.5 w-full px-1.5 py-1 border rounded-md text-[11px] ${t.input} ${t.border} backdrop-blur-xl ${t.card}`}
         >
           {selectedPair && (
             <span className="relative inline-flex flex-shrink-0 w-[24px] h-[16px] items-center justify-center" title={`${tokenName} / XCH`}>
@@ -360,7 +360,7 @@ function SwapFormBody({
           Done.
         </p>
       )}
-      <div className="flex flex-wrap gap-2 justify-end">
+      <div className="flex flex-wrap gap-1.5 justify-end">
         <Button
           type="button"
           onClick={onRemove}
@@ -397,7 +397,7 @@ function SwapFormBody({
       </div>
 
       <div
-        className={`rounded-lg border ${t.border} ${t.cardHover} overflow-hidden`}
+        className={`rounded-md border ${t.border} ${t.cardHover} overflow-hidden`}
       >
         <div
           className={`flex border-b ${t.border}`}
@@ -411,7 +411,7 @@ function SwapFormBody({
               role="tab"
               aria-selected={previewTab === tab}
               onClick={() => setPreviewTab(tab)}
-              className={`flex-1 px-2 py-1.5 text-[11px] font-medium transition-colors ${
+              className={`flex-1 px-1.5 py-1 text-[10px] font-medium transition-colors ${
                 previewTab === tab
                   ? `${t.cardHover} ${t.text}`
                   : `${t.textSecondary} ${t.cardHover}`
@@ -422,7 +422,7 @@ function SwapFormBody({
             </button>
           ))}
         </div>
-        <div className="p-3">{previewContent}</div>
+        <div className="p-2">{previewContent}</div>
       </div>
     </div>
   );
@@ -961,12 +961,12 @@ export function SwapTabContent({ mode }: SwapTabContentProps = {}) {
     ) : null;
 
   const unifiedForm = (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-2">
       {hasValidFilterPair && swapFormContent}
 
       {!hasValidFilterPair && (
         <div
-          className={`rounded-lg p-4 text-center text-sm ${t.card} border ${t.border} ${t.textSecondary}`}
+          className={`rounded-md p-2 text-center text-xs ${t.card} border ${t.border} ${t.textSecondary}`}
         >
           Select assets using the filter above (Sell and Buy) to set the pair
           and see swap, add, and remove.
@@ -989,7 +989,7 @@ export function SwapTabContent({ mode }: SwapTabContentProps = {}) {
       <div
         className={`flex-1 flex flex-col overflow-hidden rounded-xl ${t.card} border ${t.border}`}
       >
-        <div className="flex-1 overflow-auto p-4">{unifiedForm}</div>
+        <div className="flex-1 overflow-auto p-2">{unifiedForm}</div>
       </div>
 
       {modalFragment}
