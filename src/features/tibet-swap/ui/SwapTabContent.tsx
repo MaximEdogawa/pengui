@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { ArrowLeftRight, Plus, Minus } from "lucide-react";
 import { useThemeClasses } from "@/shared/hooks";
 import { useNetwork } from "@/shared/hooks/useNetwork";
@@ -99,6 +99,7 @@ interface SwapFormBodyProps {
   isSwapPending: boolean;
   lpAmount: string;
   onLpAmountChange: (v: string) => void;
+  addLpReceive: string | undefined;
   removeReceive: { xch: number; token: number } | null;
   tokenName: string;
   liquidityError: string;
@@ -134,6 +135,7 @@ function SwapFormBody({
   isSwapPending,
   lpAmount,
   onLpAmountChange,
+  addLpReceive: addLpReceiveProp,
   removeReceive,
   tokenName,
   liquidityError,
@@ -152,24 +154,6 @@ function SwapFormBody({
     offeredTicker?.toLowerCase() === nativeTicker.toLowerCase();
   const isRequestedNative =
     requestedTicker?.toLowerCase() === nativeTicker.toLowerCase();
-
-  const addLpReceive = useMemo(() => {
-    if (!selectedPair || selectedPair.liquidity <= 0 || selectedPair.xch_reserve <= 0 || selectedPair.token_reserve <= 0) return undefined;
-    const offered = parseFloat(offeredAmount) || 0;
-    const requested = parseFloat(requestedAmount) || 0;
-    if (offered <= 0 || requested <= 0) return undefined;
-    const xchMojos = isOfferedNative
-      ? Math.round(convertToSmallestUnit(offered, "xch"))
-      : Math.round(convertToSmallestUnit(requested, "xch"));
-    const tokenSmallest = isOfferedNative
-      ? Math.round(convertToSmallestUnit(requested, "cat"))
-      : Math.round(convertToSmallestUnit(offered, "cat"));
-    const shareXch = xchMojos / selectedPair.xch_reserve;
-    const shareToken = tokenSmallest / selectedPair.token_reserve;
-    const share = Math.min(shareXch, shareToken);
-    const lpSmallest = Math.floor(share * selectedPair.liquidity);
-    return (lpSmallest / TOKEN_SMALLEST_PER_UNIT).toFixed(6);
-  }, [selectedPair, offeredAmount, requestedAmount, isOfferedNative]);
 
   if (!hasValidFilterPair) {
     return (
@@ -222,7 +206,7 @@ function SwapFormBody({
         isRequestedNative={isRequestedNative}
         selectedPair={selectedPair}
         isTestnet={isTestnet}
-        lpReceive={addLpReceive}
+        lpReceive={addLpReceiveProp}
       />
     );
 
@@ -578,6 +562,44 @@ interface UseLiquidityHandlersArgs {
   isTibetCreating: boolean;
 }
 
+function useAddLpReceiveAndSync(
+  selectedPair: TibetApiPair | null,
+  offeredAmount: string,
+  requestedAmount: string,
+  xchIsOffered: boolean,
+  setLpAmount: (v: string) => void,
+) {
+  const addLpReceive = useMemo(() => {
+    if (!selectedPair || selectedPair.liquidity <= 0 || selectedPair.xch_reserve <= 0 || selectedPair.token_reserve <= 0) return undefined;
+    const offered = parseFloat(offeredAmount) || 0;
+    const requested = parseFloat(requestedAmount) || 0;
+    if (offered <= 0 || requested <= 0) return undefined;
+    const xchMojos = xchIsOffered
+      ? Math.round(convertToSmallestUnit(offered, "xch"))
+      : Math.round(convertToSmallestUnit(requested, "xch"));
+    const tokenSmallest = xchIsOffered
+      ? Math.round(convertToSmallestUnit(requested, "cat"))
+      : Math.round(convertToSmallestUnit(offered, "cat"));
+    const shareXch = xchMojos / selectedPair.xch_reserve;
+    const shareToken = tokenSmallest / selectedPair.token_reserve;
+    const share = Math.min(shareXch, shareToken);
+    const lpSmallest = Math.floor(share * selectedPair.liquidity);
+    return (lpSmallest / TOKEN_SMALLEST_PER_UNIT).toFixed(6);
+  }, [selectedPair, offeredAmount, requestedAmount, xchIsOffered]);
+  const amountsFromLpRef = useRef(false);
+  const lpJustSetFromAmountsRef = useRef(false);
+  useEffect(() => {
+    if (amountsFromLpRef.current) {
+      amountsFromLpRef.current = false;
+      return;
+    }
+    if (addLpReceive == null) return;
+    lpJustSetFromAmountsRef.current = true;
+    setLpAmount(addLpReceive);
+  }, [addLpReceive, setLpAmount]);
+  return { addLpReceive, amountsFromLpRef, lpJustSetFromAmountsRef };
+}
+
 function useLiquidityHandlers({
   network,
   selectedPair,
@@ -721,9 +743,7 @@ export function SwapTabContent({ mode }: SwapTabContentProps = {}) {
   const [selectedPair, setSelectedPair] = useState<TibetApiPair | null>(null);
   const [offeredAmount, setOfferedAmount] = useState("");
   const [requestedAmount, setRequestedAmount] = useState("");
-  const [amountDriver, setAmountDriver] = useState<"offered" | "requested">(
-    "offered",
-  );
+  const [amountDriver, setAmountDriver] = useState<"offered" | "requested">("offered");
   const [lpAmount, setLpAmount] = useState("");
   const [liquidityError, setLiquidityError] = useState("");
   const [liquiditySuccess, setLiquiditySuccess] = useState(false);
@@ -737,7 +757,8 @@ export function SwapTabContent({ mode }: SwapTabContentProps = {}) {
   const nativeTicker = getNativeTokenTickerForNetwork(network);
   const isTestnet = network === "testnet";
 
-  // Fill amount values from order book only; never change asset filters (sell/buy)
+  // Fill amount values from order book only; never change asset filters (sell/buy).
+  // Clear LP so quote sync can run and update the other amount + LP from the XCH input.
   const currentSell = (filters?.sellAsset ?? [])[0] ?? "";
   const currentBuy = (filters?.buyAsset ?? [])[0] ?? "";
   useEffect(() => {
@@ -763,6 +784,7 @@ export function SwapTabContent({ mode }: SwapTabContentProps = {}) {
     )
       return;
 
+    setLpAmount("");
     const reqIsXch = isXchTicker(req.code ?? req.id);
     const offIsXch = isXchTicker(off.code ?? off.id);
     const sellIsXch = isXchTicker(currentSell);
@@ -854,22 +876,22 @@ export function SwapTabContent({ mode }: SwapTabContentProps = {}) {
     return removeReceiveEstimate(selectedPair, lp);
   }, [selectedPair, lpAmount]);
 
+  const { addLpReceive, amountsFromLpRef, lpJustSetFromAmountsRef } = useAddLpReceiveAndSync(
+    selectedPair,
+    offeredAmount,
+    requestedAmount,
+    xchIsOffered,
+    setLpAmount,
+  );
+
   useEffect(() => {
-    if (!removeReceive || !selectedPair || lpAmount.trim() === "") return;
-    const lpNum = parseFloat(lpAmount) || 0;
-    if (lpNum <= 0) return;
+    if (lpJustSetFromAmountsRef.current) { lpJustSetFromAmountsRef.current = false; return; }
+    if (!removeReceive || !selectedPair || lpAmount.trim() === "" || parseFloat(lpAmount) <= 0) return;
+    amountsFromLpRef.current = true;
     const xchStr = removeReceive.xch.toFixed(6);
-    const tokenStr =
-      removeReceive.token >= 1
-        ? removeReceive.token.toFixed(2)
-        : removeReceive.token.toFixed(6);
-    if (xchIsOffered) {
-      setOfferedAmount(xchStr);
-      setRequestedAmount(tokenStr);
-    } else {
-      setOfferedAmount(tokenStr);
-      setRequestedAmount(xchStr);
-    }
+    const tokenStr = removeReceive.token >= 1 ? removeReceive.token.toFixed(2) : removeReceive.token.toFixed(6);
+    if (xchIsOffered) { setOfferedAmount(xchStr); setRequestedAmount(tokenStr); }
+    else { setOfferedAmount(tokenStr); setRequestedAmount(xchStr); }
   }, [
     removeReceive,
     lpAmount,
@@ -877,6 +899,8 @@ export function SwapTabContent({ mode }: SwapTabContentProps = {}) {
     xchIsOffered,
     setOfferedAmount,
     setRequestedAmount,
+    amountsFromLpRef,
+    lpJustSetFromAmountsRef,
   ]);
 
   const tokenName =
@@ -986,6 +1010,7 @@ export function SwapTabContent({ mode }: SwapTabContentProps = {}) {
       isSwapPending={isSwapPending}
       lpAmount={lpAmount}
       onLpAmountChange={setLpAmount}
+      addLpReceive={addLpReceive}
       removeReceive={removeReceive}
       tokenName={tokenName}
       liquidityError={liquidityError}
