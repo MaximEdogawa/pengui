@@ -541,6 +541,7 @@ function applyPriceScaleConfiguration(
   series: ISeriesApi<"Candlestick" | "Line"> | null,
   ohlcData: OHLCData[],
   config: ChartConfig,
+  isMobile: boolean,
 ) {
   if (!series || ohlcData.length === 0) return;
 
@@ -548,12 +549,14 @@ function applyPriceScaleConfiguration(
     const priceScale = series.priceScale();
     const isCandlestick = config.chartType === "candlestick";
 
-    // Get margin size from constant based on timeframe
-    const marginSize = isCandlestick
+    // Get margin size from constant based on timeframe; slightly larger on mobile for candle visibility
+    let marginSize = isCandlestick
       ? (TIMEFRAME_MARGINS[config.timeframe] ?? DEFAULT_MARGIN)
       : DEFAULT_MARGIN;
+    if (isMobile && isCandlestick) {
+      marginSize = Math.min(0.2, marginSize + 0.04);
+    }
 
-    // Use standard autoScale with timeframe-appropriate margins
     priceScale.applyOptions({
       autoScale: true,
       scaleMargins: {
@@ -564,7 +567,6 @@ function applyPriceScaleConfiguration(
     });
   } catch (error) {
     logger.warn("Failed to apply price scale configuration", { error });
-    // Fallback: ensure autoScale is enabled even if configuration fails
     try {
       const priceScale = series.priceScale();
       priceScale.applyOptions({
@@ -634,71 +636,118 @@ function OHLCDataPanel({
   data,
   change,
   priceDecimals = 6,
+  isMobile = false,
 }: {
   data: OHLCData | null;
   change: { value: number; percent: number } | null;
   priceDecimals?: number;
+  isMobile?: boolean;
 }) {
+  const [expanded, setExpanded] = useState(false);
+
   if (!data) return null;
 
-  return (
-    <div className="absolute top-2 left-2 z-10 px-2 sm:px-2.5 py-1.5 sm:py-2 bg-[#1e222d]/85 backdrop-blur-sm rounded-lg border border-[#2a2e39]/50 shadow-md max-w-[calc(100%-1rem)] sm:max-w-[calc(50%-1rem)]">
-      <div className="flex flex-col gap-1 sm:gap-1.5 text-[10px] sm:text-[11px]">
-        {/* Line 1: O, H */}
-        <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
-          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-            <span className="text-[#868993] whitespace-nowrap shrink-0">O:</span>
-            <span className="text-[#d1d4dc] font-medium tabular-nums truncate" title={String(data.open)}>
-              {formatChartValue(data.open, priceDecimals)}
-            </span>
-          </div>
-          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-            <span className="text-[#868993] whitespace-nowrap shrink-0">H:</span>
-            <span className="text-[#d1d4dc] font-medium tabular-nums truncate" title={String(data.high)}>
-              {formatChartValue(data.high, priceDecimals)}
-            </span>
-          </div>
+  const showToggle = isMobile;
+  const isExpanded = !showToggle || expanded;
+
+  const panelContent = (
+    <div className="flex flex-col gap-1 sm:gap-1.5 text-[10px] sm:text-[11px]">
+      {/* Line 1: O, H */}
+      <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
+        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+          <span className="text-[#868993] whitespace-nowrap shrink-0">O:</span>
+          <span className="text-[#d1d4dc] font-medium tabular-nums truncate" title={String(data.open)}>
+            {formatChartValue(data.open, priceDecimals)}
+          </span>
         </div>
-        {/* Line 2: L, C */}
-        <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
-          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-            <span className="text-[#868993] whitespace-nowrap shrink-0">L:</span>
-            <span className="text-[#d1d4dc] font-medium tabular-nums truncate" title={String(data.low)}>
-              {formatChartValue(data.low, priceDecimals)}
-            </span>
-          </div>
-          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-            <span className="text-[#868993] whitespace-nowrap shrink-0">C:</span>
-            <span className="text-[#d1d4dc] font-medium tabular-nums truncate" title={String(data.close)}>
-              {formatChartValue(data.close, priceDecimals)}
-            </span>
-          </div>
-        </div>
-        {/* Line 3: Volume, Chg */}
-        <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
-          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-            <span className="text-[#868993] whitespace-nowrap shrink-0">Vol:</span>
-            <span className="text-[#d1d4dc] font-medium tabular-nums truncate">
-              {data.volume.toLocaleString()}
-            </span>
-          </div>
-          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-            <span className="text-[#868993] whitespace-nowrap shrink-0">Chg:</span>
-            {change ? (
-              <span
-                className={`font-medium tabular-nums truncate ${change.value >= 0 ? "text-[#26a69a]" : "text-[#ef5350]"}`}
-                title={`${change.value} (${change.percent}%)`}
-              >
-                {change.value >= 0 ? "+" : ""}
-                {formatChartValue(change.value, priceDecimals)} ({change.percent >= 0 ? "+" : ""}
-                {change.percent.toFixed(2)}%)
-              </span>
-            ) : (
-              <span className="text-[#868993]">—</span>
-            )}
-          </div>
+        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+          <span className="text-[#868993] whitespace-nowrap shrink-0">H:</span>
+          <span className="text-[#d1d4dc] font-medium tabular-nums truncate" title={String(data.high)}>
+            {formatChartValue(data.high, priceDecimals)}
+          </span>
         </div>
       </div>
+      {/* Line 2: L, C */}
+      <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
+        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+          <span className="text-[#868993] whitespace-nowrap shrink-0">L:</span>
+          <span className="text-[#d1d4dc] font-medium tabular-nums truncate" title={String(data.low)}>
+            {formatChartValue(data.low, priceDecimals)}
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+          <span className="text-[#868993] whitespace-nowrap shrink-0">C:</span>
+          <span className="text-[#d1d4dc] font-medium tabular-nums truncate" title={String(data.close)}>
+            {formatChartValue(data.close, priceDecimals)}
+          </span>
+        </div>
+      </div>
+      {/* Line 3: Volume, Chg */}
+      <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
+        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+          <span className="text-[#868993] whitespace-nowrap shrink-0">Vol:</span>
+          <span className="text-[#d1d4dc] font-medium tabular-nums truncate">
+            {data.volume.toLocaleString()}
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+          <span className="text-[#868993] whitespace-nowrap shrink-0">Chg:</span>
+          {change ? (
+            <span
+              className={`font-medium tabular-nums truncate ${change.value >= 0 ? "text-[#26a69a]" : "text-[#ef5350]"}`}
+              title={`${change.value} (${change.percent}%)`}
+            >
+              {change.value >= 0 ? "+" : ""}
+              {formatChartValue(change.value, priceDecimals)} ({change.percent >= 0 ? "+" : ""}
+              {change.percent.toFixed(2)}%)
+            </span>
+          ) : (
+            <span className="text-[#868993]">—</span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="absolute top-2 left-2 z-10 max-w-[calc(100%-1rem)] sm:max-w-[calc(50%-1rem)]">
+      {showToggle && !isExpanded ? (
+        <button
+          type="button"
+          onClick={() => setExpanded(true)}
+          className="px-2.5 py-1.5 bg-[#1e222d]/85 backdrop-blur-sm rounded-lg border border-[#2a2e39]/50 shadow-md text-[11px] text-[#d1d4dc] font-medium hover:bg-[#252a37]/90 hover:border-[#363a45] active:scale-[0.98] transition-colors touch-manipulation"
+          aria-expanded="false"
+          aria-label="Show OHLC stats"
+        >
+          OHLC
+          <span className="ml-1 text-[#868993] inline-block" aria-hidden>▸</span>
+        </button>
+      ) : (
+        <div
+          role={showToggle ? "button" : undefined}
+          tabIndex={showToggle ? 0 : undefined}
+          onClick={showToggle ? () => setExpanded(false) : undefined}
+          onKeyDown={
+            showToggle
+              ? (e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setExpanded(false);
+                  }
+                }
+              : undefined
+          }
+          className={`px-2 sm:px-2.5 py-1.5 sm:py-2 bg-[#1e222d]/85 backdrop-blur-sm rounded-lg border border-[#2a2e39]/50 shadow-md ${showToggle ? "cursor-pointer touch-manipulation" : ""}`}
+          aria-label={showToggle ? "Tap to collapse OHLC stats" : undefined}
+        >
+          {showToggle && (
+            <div className="flex items-center justify-end mb-1">
+              <span className="text-[#868993] text-xs" aria-hidden>▾</span>
+            </div>
+          )}
+          {panelContent}
+        </div>
+      )}
     </div>
   );
 }
@@ -706,16 +755,25 @@ function OHLCDataPanel({
 function applyBarSpacing(
   timeScale: ReturnType<IChartApi["timeScale"]>,
   config: ChartConfig,
+  isMobile: boolean,
 ) {
-  if (config.timeframe === "1M" && config.chartType === "candlestick") {
+  const isCandlestick = config.chartType === "candlestick";
+
+  if (config.timeframe === "1M" && isCandlestick) {
     // For monthly candlestick charts, use larger default spacing and higher max
     timeScale.applyOptions({
-      barSpacing: 12, // Double the default spacing for monthly charts
-      minBarSpacing: 2, // Allow more spacing when zoomed in
-      maxBarSpacing: 100, // Allow much more spacing when zoomed out
+      barSpacing: isMobile ? 14 : 12,
+      minBarSpacing: isMobile ? 3 : 2,
+      maxBarSpacing: 100,
+    });
+  } else if (isMobile && isCandlestick) {
+    // Small screens: more spacing so candles are easier to tap and read
+    timeScale.applyOptions({
+      barSpacing: 10,
+      minBarSpacing: 2,
+      maxBarSpacing: 40,
     });
   } else {
-    // Reset to default for other timeframes
     timeScale.applyOptions({
       barSpacing: 6,
       minBarSpacing: 1,
@@ -993,11 +1051,11 @@ export function LightweightChart({
       );
     }
 
-    applyPriceScaleConfiguration(seriesRef.current, ohlcData, config);
+    applyPriceScaleConfiguration(seriesRef.current, ohlcData, config, isMobile);
 
-    // Apply better bar spacing for monthly charts to make candles more visible
+    // Apply bar spacing (larger on mobile for better candle visibility)
     const timeScale = chart.timeScale();
-    applyBarSpacing(timeScale, config);
+    applyBarSpacing(timeScale, config, isMobile);
 
     // Set default zoom level based on timeframe (only when timeframe changes)
     const timeframeChanged = previousTimeframeRef.current !== config.timeframe;
@@ -1005,7 +1063,7 @@ export function LightweightChart({
       previousTimeframeRef.current = config.timeframe;
       applyDefaultZoomLevel(timeScale, ohlcData, config.timeframe);
     }
-  }, [ohlcData, config, indicators, isUsingSyntheticData]);
+  }, [ohlcData, config, indicators, isUsingSyntheticData, isMobile]);
 
   // Calculate change percentage from previous candle
   const change = (() => {
@@ -1037,7 +1095,12 @@ export function LightweightChart({
       )}
 
       {/* OHLC Data Panel */}
-      <OHLCDataPanel data={displayData} change={change} priceDecimals={priceDecimals} />
+      <OHLCDataPanel
+        data={displayData}
+        change={change}
+        priceDecimals={priceDecimals}
+        isMobile={isMobile}
+      />
 
       <div className="flex-1 relative min-h-[300px] sm:min-h-[400px]">
         <div ref={chartContainerRef} className="w-full h-full min-h-[300px] sm:min-h-[400px] touch-manipulation" style={{ touchAction: 'none' }} />
