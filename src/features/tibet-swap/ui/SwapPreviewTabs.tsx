@@ -1,6 +1,5 @@
 "use client";
 
-import { AlertTriangle } from "lucide-react";
 import { useThemeClasses } from "@/shared/hooks";
 import { TickerIcon, XchIcon } from "@/entities/asset";
 import type { TibetApiPair } from "../lib/tibetTypes";
@@ -19,10 +18,7 @@ export function SwapPreviewTabContent({
   isOfferedNative,
   selectedPair,
   priceLine,
-  isHighImpact,
   priceImpactPercent,
-  confirmHighImpact,
-  setConfirmHighImpact,
   liquidityFeePercent,
   nativeTicker,
   isTestnet,
@@ -36,10 +32,7 @@ export function SwapPreviewTabContent({
   isOfferedNative: boolean;
   selectedPair: TibetApiPair | null;
   priceLine: string | null;
-  isHighImpact: boolean;
   priceImpactPercent: number | null;
-  confirmHighImpact: boolean;
-  setConfirmHighImpact: (v: boolean) => void;
   liquidityFeePercent: string;
   nativeTicker: string;
   isTestnet: boolean;
@@ -80,41 +73,12 @@ export function SwapPreviewTabContent({
         <span className={t.textSecondary}>Price</span>
         <span className={`font-mono ${t.text}`}>{priceLine ?? "—"}</span>
       </div>
-      {isHighImpact ? (
-        <div className={`border-t ${t.border} pt-1 mt-1 rounded-md p-2 bg-amber-500/10 dark:bg-amber-500/5 border border-amber-500/30 space-y-1.5`}>
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-xs text-amber-700 dark:text-amber-400 font-medium flex items-center gap-1.5">
-              <AlertTriangle size={12} className="flex-shrink-0" />
-              Price impact
-            </span>
-            <span className="font-mono text-xs font-semibold text-amber-700 dark:text-amber-400">
-              {priceImpactPercent != null ? `${priceImpactPercent.toFixed(2)}%` : "—"}
-            </span>
-          </div>
-          <p className="text-[11px] leading-snug text-amber-700/90 dark:text-amber-400/90">
-            High price impact. Consider splitting your trade or using a smaller amount.
-          </p>
-          <label className="flex items-start gap-2 cursor-pointer select-none group">
-            <input
-              type="checkbox"
-              checked={confirmHighImpact}
-              onChange={(e) => setConfirmHighImpact(e.target.checked)}
-              className="mt-0.5 rounded border-amber-500 text-amber-500 focus:ring-amber-500/50 flex-shrink-0"
-              aria-label="Confirm you accept the high price impact"
-            />
-            <span className="text-[11px] text-amber-700 dark:text-amber-400 group-hover:opacity-90">
-              I understand the high price impact and want to swap
-            </span>
-          </label>
-        </div>
-      ) : (
-        <div className={`flex justify-between border-t ${t.border} pt-1 mt-1`}>
-          <span className={t.textSecondary}>Price impact</span>
-          <span className={`font-mono ${t.text}`}>
-            {priceImpactPercent != null ? `${priceImpactPercent.toFixed(2)}%` : "—"}
-          </span>
-        </div>
-      )}
+      <div className={`flex justify-between border-t ${t.border} pt-1 mt-1`}>
+        <span className={t.textSecondary}>Price impact</span>
+        <span className={`font-mono ${t.text}`}>
+          {priceImpactPercent != null ? `${priceImpactPercent.toFixed(2)}%` : "—"}
+        </span>
+      </div>
       <div className={`flex justify-between border-t ${t.border} pt-1 mt-1`}>
         <span className={t.textSecondary}>Liquidity fee</span>
         <span className={t.text}>{liquidityFeePercent}%</span>

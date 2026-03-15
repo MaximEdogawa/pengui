@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { ArrowLeftRight, Plus, Minus } from "lucide-react";
 import { useThemeClasses } from "@/shared/hooks";
 import { useNetwork } from "@/shared/hooks/useNetwork";
@@ -12,7 +12,7 @@ import { CHIA_ASSET_IDS } from "@/shared/lib/constants/chia-assets";
 import { logger } from "@/shared/lib/logger";
 import { useOrderBookFilters } from "@/features/trading/hooks/useOrderBookFilters";
 import { useSelectedOrder } from "@/features/trading/hooks/SelectedOrderProvider";
-import { SwapModal } from "./SwapModal";
+import { broadcastOfferToSplash } from "@/features/splash-terminal";
 import {
   SwapPreviewTabContent,
   RemovePreviewTabContent,
@@ -95,13 +95,16 @@ interface SwapFormBodyProps {
   onRequestedChange: (amount: string) => void;
   onAmountDriverOffered: () => void;
   onAmountDriverRequested: () => void;
-  onOpenSwapModal: () => void;
+  onSubmitSwap: () => void;
+  isSwapPending: boolean;
   lpAmount: string;
   onLpAmountChange: (v: string) => void;
   removeReceive: { xch: number; token: number } | null;
   tokenName: string;
   liquidityError: string;
   liquiditySuccess: boolean;
+  swapError: string;
+  swapSuccess: boolean;
   onRemove: () => void;
   onAdd: () => void;
   isLiquidityPending: boolean;
@@ -127,30 +130,23 @@ function SwapFormBody({
   onRequestedChange,
   onAmountDriverOffered,
   onAmountDriverRequested,
-  onOpenSwapModal,
+  onSubmitSwap,
+  isSwapPending,
   lpAmount,
   onLpAmountChange,
   removeReceive,
   tokenName,
   liquidityError,
   liquiditySuccess,
+  swapError,
+  swapSuccess,
   onRemove,
   onAdd,
   isLiquidityPending,
 }: SwapFormBodyProps) {
-  const [confirmHighImpact, setConfirmHighImpact] = useState(false);
   const [previewTab, setPreviewTab] = useState<"swap" | "remove" | "add">(
     "swap",
   );
-  const isHighImpact = priceImpactPercent != null && priceImpactPercent > 10;
-  useEffect(() => {
-    setConfirmHighImpact(false);
-  }, [
-    selectedPair?.pair_id,
-    offeredAmount,
-    requestedAmount,
-    priceImpactPercent,
-  ]);
 
   const isOfferedNative =
     offeredTicker?.toLowerCase() === nativeTicker.toLowerCase();
@@ -200,10 +196,7 @@ function SwapFormBody({
         isOfferedNative={isOfferedNative}
         selectedPair={selectedPair}
         priceLine={priceLine}
-        isHighImpact={isHighImpact}
         priceImpactPercent={priceImpactPercent}
-        confirmHighImpact={confirmHighImpact}
-        setConfirmHighImpact={setConfirmHighImpact}
         liquidityFeePercent={liquidityFeePercent}
         nativeTicker={nativeTicker}
         isTestnet={isTestnet}
@@ -350,15 +343,11 @@ function SwapFormBody({
         </div>
       </div>
 
-      {liquidityError && (
-        <p className="text-[10px]" style={{ color: "var(--color-error)" }}>
-          {liquidityError}
-        </p>
+      {(liquidityError || swapError) && (
+        <p className="text-[10px]" style={{ color: "var(--color-error)" }}>{swapError || liquidityError}</p>
       )}
-      {liquiditySuccess && (
-        <p className="text-[10px] text-emerald-600 dark:text-emerald-400">
-          Done.
-        </p>
+      {(liquiditySuccess || swapSuccess) && (
+        <p className="text-[10px] text-emerald-600 dark:text-emerald-400">Done.</p>
       )}
       <div className="flex flex-wrap gap-1.5 justify-end">
         <Button
@@ -381,18 +370,18 @@ function SwapFormBody({
         </Button>
         <Button
           type="button"
-          onClick={onOpenSwapModal}
+          onClick={onSubmitSwap}
           disabled={
-            (isHighImpact && !confirmHighImpact) ||
             !selectedPair ||
             !modalPayAmount ||
             !quote ||
-            pairsLoading
+            pairsLoading ||
+            isSwapPending
           }
           variant="info"
           icon={ArrowLeftRight}
         >
-          Swap
+          {isSwapPending ? "Swapping…" : "Swap"}
         </Button>
       </div>
 
@@ -735,10 +724,11 @@ export function SwapTabContent({ mode }: SwapTabContentProps = {}) {
   const [amountDriver, setAmountDriver] = useState<"offered" | "requested">(
     "offered",
   );
-  const [showSwapModal, setShowSwapModal] = useState(false);
   const [lpAmount, setLpAmount] = useState("");
   const [liquidityError, setLiquidityError] = useState("");
   const [liquiditySuccess, setLiquiditySuccess] = useState(false);
+  const [swapError, setSwapError] = useState("");
+  const [swapSuccess, setSwapSuccess] = useState(false);
 
   const createOfferMutation = useCreateOffer();
   const { createOffer: tibetCreateOffer, isCreating: tibetSubmitting } =
@@ -909,6 +899,68 @@ export function SwapTabContent({ mode }: SwapTabContentProps = {}) {
     isTibetCreating: tibetSubmitting,
   });
 
+  const isSwapPending = createOfferMutation.isPending || tibetSubmitting;
+
+  const handleConfirmSwap = useCallback(async () => {
+    if (!quote || !selectedPair || !modalPayAmount) return;
+    const amountInNum = parseFloat(modalPayAmount) || 0;
+    const amountInMojos = xchIsOffered
+      ? Math.round(convertToSmallestUnit(amountInNum, "xch"))
+      : 0;
+    const amountInTokenSmallest = xchIsOffered
+      ? 0
+      : Math.round(convertToSmallestUnit(amountInNum, "cat"));
+    const amountIn = xchIsOffered ? amountInMojos : amountInTokenSmallest;
+    if (amountIn <= 0) return;
+    setSwapError("");
+    setSwapSuccess(false);
+    try {
+      const xchAssetId =
+        network === "testnet" ? CHIA_ASSET_IDS.TXCH : CHIA_ASSET_IDS.XCH;
+      const result = await createOfferMutation.mutateAsync({
+        walletId: 1,
+        offerAssets: xchIsOffered
+          ? [{ assetId: xchAssetId, amount: amountInMojos }]
+          : [{ assetId: selectedPair.asset_id, amount: amountInTokenSmallest }],
+        requestAssets: xchIsOffered
+          ? [{ assetId: selectedPair.asset_id, amount: quote.amount_out }]
+          : [{ assetId: xchAssetId, amount: quote.amount_out }],
+      });
+      if (!result?.offer) {
+        throw new Error("Wallet did not return a valid offer");
+      }
+      const tibetResult = await tibetCreateOffer({
+        pair_id: selectedPair.pair_id,
+        offer: result.offer,
+        action: "SWAP",
+      });
+      if (!tibetResult.success) {
+        throw new Error(tibetResult.message || "Tibet swap failed");
+      }
+      try {
+        void broadcastOfferToSplash(result.offer);
+      } catch {
+        // Fire-and-forget
+      }
+      setSwapSuccess(true);
+      setOfferedAmount("");
+      setRequestedAmount("");
+      setTimeout(() => setSwapSuccess(false), 3000);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Swap failed";
+      logger.error("Swap failed", e);
+      setSwapError(msg);
+    }
+  }, [
+    quote,
+    selectedPair,
+    modalPayAmount,
+    xchIsOffered,
+    network,
+    createOfferMutation,
+    tibetCreateOffer,
+  ]);
+
   const swapFormContent = (
     <SwapFormBody
       t={t}
@@ -930,35 +982,21 @@ export function SwapTabContent({ mode }: SwapTabContentProps = {}) {
       onRequestedChange={setRequestedAmount}
       onAmountDriverOffered={() => setAmountDriver("offered")}
       onAmountDriverRequested={() => setAmountDriver("requested")}
-      onOpenSwapModal={() =>
-        selectedPair && modalPayAmount && quote && setShowSwapModal(true)
-      }
+      onSubmitSwap={handleConfirmSwap}
+      isSwapPending={isSwapPending}
       lpAmount={lpAmount}
       onLpAmountChange={setLpAmount}
       removeReceive={removeReceive}
       tokenName={tokenName}
       liquidityError={liquidityError}
       liquiditySuccess={liquiditySuccess}
+      swapError={swapError}
+      swapSuccess={swapSuccess}
       onRemove={handleRemove}
       onAdd={handleAdd}
       isLiquidityPending={isLiquidityPending}
     />
   );
-
-  const modalFragment =
-    showSwapModal && selectedPair ? (
-      <SwapModal
-        pair={selectedPair}
-        amountInRaw={modalPayAmount}
-        xchIsInput={xchIsOffered}
-        onClose={() => setShowSwapModal(false)}
-        onSuccess={() => {
-          setShowSwapModal(false);
-          setOfferedAmount("");
-          setRequestedAmount("");
-        }}
-      />
-    ) : null;
 
   const unifiedForm = (
     <div className="flex flex-col gap-2">
@@ -976,12 +1014,7 @@ export function SwapTabContent({ mode }: SwapTabContentProps = {}) {
   );
 
   if (mode === "inline") {
-    return (
-      <>
-        {unifiedForm}
-        {modalFragment}
-      </>
-    );
+    return unifiedForm;
   }
 
   return (
@@ -991,8 +1024,6 @@ export function SwapTabContent({ mode }: SwapTabContentProps = {}) {
       >
         <div className="flex-1 overflow-auto p-2">{unifiedForm}</div>
       </div>
-
-      {modalFragment}
     </div>
   );
 }
