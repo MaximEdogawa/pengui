@@ -21,38 +21,39 @@ export function SidebarProfile({
 
   return (
     <div
-      className={`flex-shrink-0 border-t ${t.border} transition-all duration-300 mb-4 mobile-landscape-profile p-1 ${
-        sidebarCollapsed ? 'lg:p-1.5' : 'lg:p-2'
+      className={`flex-shrink-0 border-t ${t.border} transition-all duration-300 mb-4 mobile-landscape-profile p-2 ${
+        sidebarCollapsed ? 'lg:px-2.5 lg:py-4' : 'lg:px-4 lg:py-4'
       }`}
     >
-      {/* Mobile: Icon only */}
-      <div className="flex flex-col items-center gap-1 lg:hidden">
+      {/* Mobile: Icon only - larger for touch */}
+      <div className="flex flex-col items-center gap-3 lg:hidden">
         <AppLink
           href="/profile"
           onClick={onCloseSidebar}
           scroll={false}
-          className={`w-8 h-8 rounded-lg ${profileLinkClass}`}
+          className={`w-14 h-14 rounded-full flex items-center justify-center relative ${profileLinkClass}`}
           title="Profile"
         >
           <div
-            className={`absolute inset-0 backdrop-blur-xl bg-white/10 rounded-lg border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200`}
+            className="absolute inset-0 backdrop-blur-xl bg-white/10 rounded-full border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+            aria-hidden
           />
           <div
-            className={`w-5 h-5 rounded bg-gradient-to-br ${t.accent} flex items-center justify-center flex-shrink-0 shadow-sm backdrop-blur-xl relative`}
+            className={`w-8 h-8 rounded-lg bg-gradient-to-br ${t.accent} flex items-center justify-center flex-shrink-0 shadow-sm backdrop-blur-xl relative`}
           >
-            <User className="w-3 h-3 text-white" />
+            <User className="w-5 h-5 text-white" />
           </div>
         </AppLink>
         {/* Theme toggle for mobile */}
         <button
           onClick={onToggleTheme}
-          className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${t.cardHover}`}
+          className={`w-14 h-14 rounded-full flex items-center justify-center transition-all ${t.cardHover}`}
           title={isDark ? 'Switch to Light' : 'Switch to Dark'}
         >
           {isDark ? (
-            <Sun className="w-4 h-4 text-amber-400" strokeWidth={2} />
+            <Sun className="w-7 h-7 text-amber-400" strokeWidth={2} />
           ) : (
-            <Moon className="w-4 h-4 text-slate-600" strokeWidth={2} />
+            <Moon className="w-7 h-7 text-slate-600" strokeWidth={2} />
           )}
         </button>
       </div>
@@ -64,23 +65,17 @@ export function SidebarProfile({
         scroll={false}
         className={`hidden lg:flex items-center ${
           sidebarCollapsed
-            ? 'w-8 h-8 mx-auto justify-center items-center'
-            : 'justify-start px-2.5 gap-3'
-        } py-2 ${
-          sidebarCollapsed ? 'rounded-full' : 'rounded-lg'
-        } transition-all group relative overflow-hidden ${profileLinkClass}`}
+            ? 'w-9 h-9 mx-auto justify-center items-center'
+            : 'justify-start px-3 gap-2.5'
+        } py-2 rounded-full transition-all group relative overflow-hidden ${profileLinkClass}`}
         title={sidebarCollapsed ? 'User' : 'Profile'}
       >
-        {/* Glass effect overlay */}
+        {/* Glass effect overlay - round */}
         <div
-          className={`absolute inset-0 backdrop-blur-xl bg-white/10 ${
-            sidebarCollapsed ? 'rounded-full' : 'rounded-lg'
-          } border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200`}
+          className="absolute inset-0 backdrop-blur-xl bg-white/10 rounded-full border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
         />
         <div
-          className={`absolute inset-0 bg-gradient-to-b from-white/5 to-transparent ${
-            sidebarCollapsed ? 'rounded-full' : 'rounded-lg'
-          } opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none`}
+          className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none"
         />
         {sidebarCollapsed ? (
           <div className="flex items-center justify-center relative">
@@ -91,7 +86,7 @@ export function SidebarProfile({
             </div>
           </div>
         ) : (
-          <div className="flex flex-row items-center justify-start gap-3 flex-1 min-w-0 relative">
+          <div className="flex flex-row items-center justify-start gap-2.5 flex-1 min-w-0 relative">
             <div
               className={`w-6 h-6 rounded-md bg-gradient-to-br ${t.accent} flex items-center justify-center flex-shrink-0 shadow-md backdrop-blur-xl`}
             >

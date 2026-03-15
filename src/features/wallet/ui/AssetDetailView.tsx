@@ -14,6 +14,7 @@ import TickerIcon, { XchIcon } from '@/entities/asset/ui/TickerIcon'
 import { useCatTokens, type DexieTicker } from '@/entities/asset'
 import { useNetwork } from '@/shared/hooks/useNetwork'
 import { useThemeClasses } from '@/shared/hooks'
+import { useResponsive } from '@/shared/hooks/useResponsive'
 import { useNavigationProgress } from '@/shared/providers/NavigationProgressProvider'
 import { useXchUsdPrice } from '@/shared/hooks/useXchUsdPrice'
 import { formatRelativeTime } from '@/shared/lib/utils/dateUtils'
@@ -42,24 +43,29 @@ import {
 
 const PAGE_SIZE = 20
 
-function formatBalance(balance: number, ticker: string): string {
-  if (ticker === 'XCH' || ticker === 'TXCH') return balance.toFixed(6)
+const DECIMALS_MOBILE = 4
+
+function formatBalance(balance: number, ticker: string, maxDecimals?: number): string {
+  const dec = maxDecimals ?? 6
+  if (ticker === 'XCH' || ticker === 'TXCH') return balance.toFixed(Math.min(6, dec))
   if (balance >= 1e9) return balance.toLocaleString(undefined, { maximumFractionDigits: 0 })
-  if (balance >= 1) return balance.toFixed(2)
-  return balance.toFixed(6)
+  if (balance >= 1) return balance.toFixed(Math.min(2, dec))
+  return balance.toFixed(Math.min(6, dec))
 }
 
-function formatUsd(value: number | null): string {
+function formatUsd(value: number | null, maxDecimals?: number): string {
   if (value == null || value <= 0) return '—'
-  return `$${value.toFixed(2)}`
+  const dec = maxDecimals ?? 2
+  return `$${value.toFixed(Math.min(2, dec))}`
 }
 
-function formatPrice(value: number | null): string {
+function formatPrice(value: number | null, maxDecimals?: number): string {
   if (value == null || value <= 0) return '—'
-  if (value >= 1_000) return `$${value.toLocaleString(undefined, { maximumFractionDigits: 2 })}`
-  if (value >= 1) return `$${value.toFixed(2)}`
-  if (value >= 0.01) return `$${value.toFixed(4)}`
-  return `$${value.toPrecision(3)}`
+  const dec = maxDecimals ?? 4
+  if (value >= 1_000) return `$${value.toLocaleString(undefined, { maximumFractionDigits: Math.min(2, dec) })}`
+  if (value >= 1) return `$${value.toFixed(Math.min(2, dec))}`
+  if (value >= 0.01) return `$${value.toFixed(Math.min(4, dec))}`
+  return `$${value.toPrecision(Math.min(3, dec + 1))}`
 }
 
 interface AssetDetailViewProps {
@@ -70,7 +76,9 @@ export default function AssetDetailView({ assetIdSlug }: AssetDetailViewProps) {
   const router = useRouter()
   const { startNavigation } = useNavigationProgress()
   const { isDark, t } = useThemeClasses()
+  const { isMobile } = useResponsive()
   const { network } = useNetwork()
+  const maxDecimals = isMobile ? DECIMALS_MOBILE : undefined
   const { priceUsd: xchUsdPrice } = useXchUsdPrice()
   const { getAsset, tickers } = useCatTokens()
   const [showSendModal, setShowSendModal] = useState(false)
@@ -131,7 +139,7 @@ export default function AssetDetailView({ assetIdSlug }: AssetDetailViewProps) {
           startNavigation()
           router.push('/wallet')
         }}
-        className={`flex items-center gap-2 mb-4 ${t.textSecondary} hover:underline`}
+        className={`flex items-center gap-2 mb-4 py-1.5 ${t.textSecondary} hover:underline touch-manipulation text-sm sm:text-base`}
       >
         <ArrowLeft size={18} />
         Back to Wallet
@@ -139,45 +147,45 @@ export default function AssetDetailView({ assetIdSlug }: AssetDetailViewProps) {
 
       <Card className="mb-4">
         {/* Header row */}
-        <div className="flex items-start justify-between gap-2 mb-3">
+        <div className="flex items-start justify-between gap-2 mb-3 min-w-0">
           {/* Icon + name + price */}
-          <div className="flex items-center gap-2.5 min-w-0">
+          <div className="flex items-center gap-2.5 min-w-0 flex-1 overflow-hidden">
             {isXch ? (
-              <XchIcon size={32} isTestnet={network === 'testnet'} />
+              <XchIcon size={36} isTestnet={network === 'testnet'} className="flex-shrink-0" />
             ) : (
-              <TickerIcon assetId={assetId} ticker={ticker} size={32} />
+              <TickerIcon assetId={assetId} ticker={ticker} size={36} className="flex-shrink-0" />
             )}
-            <div className="min-w-0">
-              <h1 className={`text-base font-semibold ${t.text} leading-tight truncate`}>{displayName}</h1>
-              <p className={`text-[11px] ${t.textSecondary} tabular-nums leading-tight`}>
+            <div className="min-w-0 overflow-hidden">
+              <h1 className={`text-lg sm:text-base font-semibold ${t.text} leading-tight truncate`}>{displayName}</h1>
+              <p className={`text-[13px] sm:text-[11px] ${t.textSecondary} tabular-nums leading-tight truncate`}>
                 {ticker}
                 {priceUsd != null && priceUsd > 0 && (
-                  <span className="ml-1">· {formatPrice(priceUsd)}</span>
+                  <span className="ml-1">· {formatPrice(priceUsd, maxDecimals)}</span>
                 )}
               </p>
             </div>
           </div>
           {/* Action buttons */}
-          <div className="flex items-center gap-1 flex-shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-1 flex-shrink-0">
             <button
               type="button"
               onClick={() => setShowSendModal(true)}
-              className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-colors ${
-                isDark ? 'bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30' : 'bg-cyan-100 text-cyan-700 hover:bg-cyan-200'
+              className={`inline-flex items-center gap-1 px-3 py-2 sm:px-2.5 sm:py-1.5 rounded-lg text-xs sm:text-[11px] font-medium transition-colors touch-manipulation ${
+                isDark ? 'bg-cyan-500/20 text-cyan-400 hover:bg-cyan-500/30 active:bg-cyan-500/40' : 'bg-cyan-100 text-cyan-700 hover:bg-cyan-200 active:bg-cyan-300'
               }`}
             >
-              <Send size={12} />
+              <Send size={14} className="sm:w-3 sm:h-3" />
               <span className="hidden sm:inline">Send</span>
             </button>
             {address && (
               <button
                 type="button"
                 onClick={() => setShowReceiveModal(true)}
-                className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-colors ${
-                  isDark ? 'bg-white/10 text-gray-300 hover:bg-white/15' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                className={`inline-flex items-center gap-1 px-3 py-2 sm:px-2.5 sm:py-1.5 rounded-lg text-xs sm:text-[11px] font-medium transition-colors touch-manipulation ${
+                  isDark ? 'bg-white/10 text-gray-300 hover:bg-white/15 active:bg-white/20' : 'bg-gray-200 text-gray-700 hover:bg-gray-300 active:bg-gray-400'
                 }`}
               >
-                <Download size={12} />
+                <Download size={14} className="sm:w-3 sm:h-3" />
                 <span className="hidden sm:inline">Receive</span>
               </button>
             )}
@@ -194,11 +202,11 @@ export default function AssetDetailView({ assetIdSlug }: AssetDetailViewProps) {
                 startNavigation()
                 router.push('/trading')
               }}
-              className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-colors ${
-                isDark ? 'bg-white/10 text-gray-300 hover:bg-white/15' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+              className={`inline-flex items-center gap-1 px-3 py-2 sm:px-2.5 sm:py-1.5 rounded-lg text-xs sm:text-[11px] font-medium transition-colors touch-manipulation ${
+                isDark ? 'bg-white/10 text-gray-300 hover:bg-white/15 active:bg-white/20' : 'bg-gray-200 text-gray-700 hover:bg-gray-300 active:bg-gray-400'
               }`}
             >
-              <TrendingUp size={12} />
+              <TrendingUp size={14} className="sm:w-3 sm:h-3" />
               <span className="hidden sm:inline">Trade</span>
             </button>
           </div>
@@ -212,11 +220,11 @@ export default function AssetDetailView({ assetIdSlug }: AssetDetailViewProps) {
               <span className={`${t.textSecondary} text-sm`}>Loading balance…</span>
             </div>
           ) : (
-            <div className="flex items-baseline gap-2 flex-wrap">
-              <p className={`text-xl font-semibold ${t.text} tabular-nums`}>
-                {formatBalance(balance, ticker)} {ticker}
+            <div className="flex items-baseline gap-2 flex-wrap min-w-0">
+              <p className={`text-xl font-semibold ${t.text} tabular-nums break-all sm:break-normal`} title={`${formatBalance(balance, ticker)} ${ticker}`}>
+                {formatBalance(balance, ticker, maxDecimals)} {ticker}
               </p>
-              <p className={`text-sm ${t.textSecondary} tabular-nums`}>{formatUsd(balanceUsd)}</p>
+              <p className={`text-sm ${t.textSecondary} tabular-nums flex-shrink-0`}>{formatUsd(balanceUsd, maxDecimals)}</p>
             </div>
           )}
         </div>

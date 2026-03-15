@@ -21,14 +21,13 @@ export function formatAmountForDisplay(amount: number, maxDecimals?: number): st
 
   const str = n.toString()
   const [int, dec] = str.split('.')
-
-  const effectiveMax = maxDecimals ?? 12
-  // Truncate if decimals exceed effective max (either >12 by default or maxDecimals when provided)
-  if (dec && dec.length > effectiveMax) {
-    const truncated = dec.slice(0, effectiveMax)
+  const cap = maxDecimals ?? 12
+  // Truncate if decimals exceed cap (either >12 by default or maxDecimals when provided)
+  if (dec && dec.length > cap) {
+    const truncated = dec.slice(0, cap)
     const trimmedTruncated = truncated.replace(/0+$/, '')
     const formattedInt = addThousandSeparators(int)
-    return trimmedTruncated ? `${formattedInt}.${trimmedTruncated}…` : `${formattedInt}…`
+    return trimmedTruncated ? `${formattedInt}.${trimmedTruncated}` : formattedInt
   }
 
   // Show full value without truncation - preserve original precision
@@ -55,7 +54,6 @@ export function formatPriceForDisplay(price: number, maxDecimals?: number): stri
   const [int, dec] = str.split('.')
   const formattedInt = addThousandSeparators(int)
   const decimalsForPrice = maxDecimals ?? (p < 1 ? 7 : 2)
-
   if (!dec) return formattedInt
   const cutDecimals = dec.slice(0, decimalsForPrice)
   const trimmedDecimals = cutDecimals.replace(/0+$/, '')

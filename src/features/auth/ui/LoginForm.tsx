@@ -7,33 +7,21 @@ import { LoginConnectWallet } from './LoginConnectWallet'
 export default function LoginForm() {
   return (
     <div
-      className="h-screen flex items-center justify-center px-3 py-8 sm:px-4 sm:py-12 md:px-6 md:py-16 lg:px-20 xl:px-80 backdrop-blur-3xl bg-cover bg-center bg-no-repeat relative overflow-hidden w-full"
+      className="fixed inset-0 flex items-center justify-center px-4 py-6 sm:px-4 sm:py-12 md:px-6 md:py-16 lg:px-20 xl:px-80 backdrop-blur-3xl bg-cover bg-center bg-no-repeat overflow-hidden"
       style={{
         backgroundImage: "url('/signin-glass.jpg')",
-        width: '100vw',
-        maxWidth: '100vw',
-        height: '100vh',
-        margin: 0,
-        padding: 0,
-        borderRight: 'none',
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        overflow: 'hidden',
       }}
     >
       {/* Dark icy gradient overlay */}
       <div className="absolute inset-0 bg-gradient-to-br from-slate-950/60 via-sky-950/30 to-cyan-900/15 pointer-events-none" />
       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent pointer-events-none" />
 
-      {/* Background glow elements */}
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-500/8 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-sky-400/6 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-blue-950/20 rounded-full blur-3xl pointer-events-none" />
+      {/* Background glow elements — hidden on small screens to avoid artifacts */}
+      <div className="hidden sm:block absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-500/8 rounded-full blur-3xl pointer-events-none" />
+      <div className="hidden sm:block absolute bottom-1/4 right-1/4 w-96 h-96 bg-sky-400/6 rounded-full blur-3xl pointer-events-none" />
+      <div className="hidden sm:block absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-blue-950/20 rounded-full blur-3xl pointer-events-none" />
 
-      <div className="px-4 sm:px-6 md:px-8 lg:px-10 flex py-6 sm:py-8 md:py-10 flex-col items-center gap-4 sm:gap-5 w-full backdrop-blur-2xl rounded-2xl sm:rounded-3xl bg-gradient-to-br from-slate-900/40 via-slate-950/30 to-black/20 border border-cyan-300/10 shadow-2xl shadow-black/40 max-w-md relative z-10">
+      <div className="px-5 sm:px-6 md:px-8 lg:px-10 flex py-8 sm:py-8 md:py-10 flex-col items-center gap-5 sm:gap-5 w-full backdrop-blur-2xl rounded-2xl sm:rounded-3xl bg-gradient-to-br from-slate-900/40 via-slate-950/30 to-black/20 border border-cyan-300/10 shadow-2xl shadow-black/40 max-w-md relative z-10">
         {/* Logo and Title Section */}
         <div className="flex flex-col items-center gap-3 sm:gap-4 w-full">
           <div className="relative group">
