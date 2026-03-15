@@ -24,34 +24,30 @@ import {
   ohlcToVolumePoints,
 } from "@/features/trading/lib/utils/chartUtils";
 
+/** Indicator data passed to the chart for overlays (SMA, EMA, RSI, MACD, Bollinger) */
+interface ChartIndicators {
+  sma: Record<number, number[]>;
+  ema: Record<number, number[]>;
+  rsi: number[];
+  macd: Array<{ time: number; macd: number; signal: number; histogram: number }>;
+  bollingerBands: Array<{ time: number; upper: number; middle: number; lower: number }>;
+}
+
 interface LightweightChartProps {
   ohlcData: OHLCData[];
   config: ChartConfig;
-  indicators: {
-    sma: Record<number, number[]>;
-    ema: Record<number, number[]>;
-    rsi: number[];
-    macd: Array<{
-      time: number;
-      macd: number;
-      signal: number;
-      histogram: number;
-    }>;
-    bollingerBands: Array<{
-      time: number;
-      upper: number;
-      middle: number;
-      lower: number;
-    }>;
-  };
+  indicators: ChartIndicators;
   isUsingSyntheticData: boolean;
   onScrollingChange?: (isScrolling: boolean) => void;
 }
 
-// Custom price formatter to show prices with 6 decimal places
-const priceFormatter = (price: number): string => {
-  return price.toFixed(6);
-};
+/** Change vs previous candle (value and percent) */
+interface CandleChange {
+  value: number;
+  percent: number;
+}
+
+const priceFormatter = (price: number): string => price.toFixed(6);
 
 // Price scale margins for each timeframe (candlestick charts)
 // Shorter timeframes need more margin to show price line properly
@@ -66,8 +62,28 @@ const TIMEFRAME_MARGINS: Record<string, number> = {
   "1M": 0.02, // Very tight margin for monthly
 } as const;
 
-// Default margin for line charts and unknown timeframes
 const DEFAULT_MARGIN = 0.1;
+const MOBILE_MARGIN_BUMP = 0.04;
+const MAX_MARGIN = 0.2;
+const SCROLL_IDLE_MS = 2000;
+const SECONDS_PER_HOUR = 3600;
+const ZOOM_WHEEL_MULTIPLIER = 2.5;
+const RESIZE_DEBOUNCE_MS = 100;
+
+/** Default bar spacing (desktop) */
+const DEFAULT_BAR_SPACING = 6;
+const MIN_BAR_SPACING = 1;
+const MAX_BAR_SPACING = 50;
+/** Mobile: wider bars for touch */
+const MOBILE_BAR_SPACING = 10;
+const MOBILE_MIN_BAR_SPACING = 2;
+const MOBILE_MAX_BAR_SPACING = 40;
+/** Monthly timeframe */
+const MONTHLY_BAR_SPACING = 12;
+const MONTHLY_BAR_SPACING_MOBILE = 14;
+const MONTHLY_MIN_BAR_SPACING = 2;
+const MONTHLY_MIN_BAR_SPACING_MOBILE = 3;
+const MONTHLY_MAX_BAR_SPACING = 100;
 
 // Default zoom levels (hours back) for each timeframe
 // These determine how much historical data is shown when switching timeframes
@@ -97,9 +113,9 @@ const CHART_OPTIONS = {
     borderColor: "#1a1d29",
     rightOffset: 5,
     visible: true,
-    barSpacing: 6, // Default spacing between bars (increased for better visibility)
-    minBarSpacing: 1, // Minimum spacing when zoomed in (prevents bars from overlapping)
-    maxBarSpacing: 50, // Maximum spacing when zoomed out (prevents bars from being too spread out)
+    barSpacing: DEFAULT_BAR_SPACING,
+    minBarSpacing: MIN_BAR_SPACING,
+    maxBarSpacing: MAX_BAR_SPACING,
     fixLeftEdge: false, // Allow scrolling to the left
     fixRightEdge: false, // Allow scrolling to the right
     lockVisibleTimeRangeOnResize: true, // Keep zoom level when window resizes
@@ -486,7 +502,7 @@ function setupAllIndicators(
   ohlcData: OHLCData[],
   options: {
     config: ChartConfig;
-    indicators: LightweightChartProps["indicators"];
+    indicators: ChartIndicators;
     indicatorSeriesRef: React.MutableRefObject<
       Array<ISeriesApi<"Line" | "Histogram">>
     >;
@@ -549,12 +565,11 @@ function applyPriceScaleConfiguration(
     const priceScale = series.priceScale();
     const isCandlestick = config.chartType === "candlestick";
 
-    // Get margin size from constant based on timeframe; slightly larger on mobile for candle visibility
     let marginSize = isCandlestick
       ? (TIMEFRAME_MARGINS[config.timeframe] ?? DEFAULT_MARGIN)
       : DEFAULT_MARGIN;
     if (isMobile && isCandlestick) {
-      marginSize = Math.min(0.2, marginSize + 0.04);
+      marginSize = Math.min(MAX_MARGIN, marginSize + MOBILE_MARGIN_BUMP);
     }
 
     priceScale.applyOptions({
@@ -568,10 +583,9 @@ function applyPriceScaleConfiguration(
   } catch (error) {
     logger.warn("Failed to apply price scale configuration", { error });
     try {
-      const priceScale = series.priceScale();
-      priceScale.applyOptions({
+      series.priceScale().applyOptions({
         autoScale: true,
-        scaleMargins: { top: 0.1, bottom: 0.1 },
+        scaleMargins: { top: DEFAULT_MARGIN, bottom: DEFAULT_MARGIN },
       });
     } catch {
       // Ignore fallback errors
@@ -598,8 +612,8 @@ function applyDefaultZoomLevel(
       // This ensures we show the last X hours of available data
       const to = lastCandleTime;
       const from = Math.max(
-        lastCandleTime - hoursBack * 60 * 60, // X hours back from last candle
-        firstCandleTime, // Don't go before first available data
+        lastCandleTime - hoursBack * SECONDS_PER_HOUR,
+        firstCandleTime,
       );
 
       // Only set range if it's valid
@@ -632,17 +646,24 @@ function formatChartValue(value: number, decimals: number): string {
   return value.toFixed(decimals);
 }
 
+const OHLC_LABEL_CLASS = "text-[#868993] whitespace-nowrap shrink-0";
+const OHLC_VALUE_CLASS = "text-[#d1d4dc] font-medium tabular-nums truncate";
+const OHLC_ROW_CLASS = "flex items-center gap-1.5 sm:gap-2 min-w-0";
+const OHLC_GROUP_CLASS = "flex items-center gap-3 sm:gap-4 flex-wrap";
+
+interface OHLCDataPanelProps {
+  data: OHLCData | null;
+  change: CandleChange | null;
+  priceDecimals?: number;
+  isMobile?: boolean;
+}
+
 function OHLCDataPanel({
   data,
   change,
   priceDecimals = 6,
   isMobile = false,
-}: {
-  data: OHLCData | null;
-  change: { value: number; percent: number } | null;
-  priceDecimals?: number;
-  isMobile?: boolean;
-}) {
+}: OHLCDataPanelProps) {
   const [expanded, setExpanded] = useState(false);
 
   if (!data) return null;
@@ -652,49 +673,44 @@ function OHLCDataPanel({
 
   const panelContent = (
     <div className="flex flex-col gap-1 sm:gap-1.5 text-[10px] sm:text-[11px]">
-      {/* Line 1: O, H */}
-      <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
-        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-          <span className="text-[#868993] whitespace-nowrap shrink-0">O:</span>
-          <span className="text-[#d1d4dc] font-medium tabular-nums truncate" title={String(data.open)}>
+      <div className={OHLC_GROUP_CLASS}>
+        <div className={OHLC_ROW_CLASS}>
+          <span className={OHLC_LABEL_CLASS}>O:</span>
+          <span className={OHLC_VALUE_CLASS} title={String(data.open)}>
             {formatChartValue(data.open, priceDecimals)}
           </span>
         </div>
-        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-          <span className="text-[#868993] whitespace-nowrap shrink-0">H:</span>
-          <span className="text-[#d1d4dc] font-medium tabular-nums truncate" title={String(data.high)}>
+        <div className={OHLC_ROW_CLASS}>
+          <span className={OHLC_LABEL_CLASS}>H:</span>
+          <span className={OHLC_VALUE_CLASS} title={String(data.high)}>
             {formatChartValue(data.high, priceDecimals)}
           </span>
         </div>
       </div>
-      {/* Line 2: L, C */}
-      <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
-        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-          <span className="text-[#868993] whitespace-nowrap shrink-0">L:</span>
-          <span className="text-[#d1d4dc] font-medium tabular-nums truncate" title={String(data.low)}>
+      <div className={OHLC_GROUP_CLASS}>
+        <div className={OHLC_ROW_CLASS}>
+          <span className={OHLC_LABEL_CLASS}>L:</span>
+          <span className={OHLC_VALUE_CLASS} title={String(data.low)}>
             {formatChartValue(data.low, priceDecimals)}
           </span>
         </div>
-        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-          <span className="text-[#868993] whitespace-nowrap shrink-0">C:</span>
-          <span className="text-[#d1d4dc] font-medium tabular-nums truncate" title={String(data.close)}>
+        <div className={OHLC_ROW_CLASS}>
+          <span className={OHLC_LABEL_CLASS}>C:</span>
+          <span className={OHLC_VALUE_CLASS} title={String(data.close)}>
             {formatChartValue(data.close, priceDecimals)}
           </span>
         </div>
       </div>
-      {/* Line 3: Volume, Chg */}
-      <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
-        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-          <span className="text-[#868993] whitespace-nowrap shrink-0">Vol:</span>
-          <span className="text-[#d1d4dc] font-medium tabular-nums truncate">
-            {data.volume.toLocaleString()}
-          </span>
+      <div className={OHLC_GROUP_CLASS}>
+        <div className={OHLC_ROW_CLASS}>
+          <span className={OHLC_LABEL_CLASS}>Vol:</span>
+          <span className={OHLC_VALUE_CLASS}>{data.volume.toLocaleString()}</span>
         </div>
-        <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-          <span className="text-[#868993] whitespace-nowrap shrink-0">Chg:</span>
+        <div className={OHLC_ROW_CLASS}>
+          <span className={OHLC_LABEL_CLASS}>Chg:</span>
           {change ? (
             <span
-              className={`font-medium tabular-nums truncate ${change.value >= 0 ? "text-[#26a69a]" : "text-[#ef5350]"}`}
+              className={`${OHLC_VALUE_CLASS} ${change.value >= 0 ? "text-[#26a69a]" : "text-[#ef5350]"}`}
               title={`${change.value} (${change.percent}%)`}
             >
               {change.value >= 0 ? "+" : ""}
@@ -702,7 +718,7 @@ function OHLCDataPanel({
               {change.percent.toFixed(2)}%)
             </span>
           ) : (
-            <span className="text-[#868993]">—</span>
+            <span className={OHLC_LABEL_CLASS}>—</span>
           )}
         </div>
       </div>
@@ -760,35 +776,33 @@ function applyBarSpacing(
   const isCandlestick = config.chartType === "candlestick";
 
   if (config.timeframe === "1M" && isCandlestick) {
-    // For monthly candlestick charts, use larger default spacing and higher max
     timeScale.applyOptions({
-      barSpacing: isMobile ? 14 : 12,
-      minBarSpacing: isMobile ? 3 : 2,
-      maxBarSpacing: 100,
+      barSpacing: isMobile ? MONTHLY_BAR_SPACING_MOBILE : MONTHLY_BAR_SPACING,
+      minBarSpacing: isMobile ? MONTHLY_MIN_BAR_SPACING_MOBILE : MONTHLY_MIN_BAR_SPACING,
+      maxBarSpacing: MONTHLY_MAX_BAR_SPACING,
     });
   } else if (isMobile && isCandlestick) {
-    // Small screens: more spacing so candles are easier to tap and read
     timeScale.applyOptions({
-      barSpacing: 10,
-      minBarSpacing: 2,
-      maxBarSpacing: 40,
+      barSpacing: MOBILE_BAR_SPACING,
+      minBarSpacing: MOBILE_MIN_BAR_SPACING,
+      maxBarSpacing: MOBILE_MAX_BAR_SPACING,
     });
   } else {
     timeScale.applyOptions({
-      barSpacing: 6,
-      minBarSpacing: 1,
-      maxBarSpacing: 50,
+      barSpacing: DEFAULT_BAR_SPACING,
+      minBarSpacing: MIN_BAR_SPACING,
+      maxBarSpacing: MAX_BAR_SPACING,
     });
   }
 }
+
+type CrosshairMoveParam = Parameters<Parameters<IChartApi["subscribeCrosshairMove"]>[0]>[0];
 
 function createCrosshairMoveHandler(
   ohlcDataRef: React.MutableRefObject<OHLCData[]>,
   setHoveredData: React.Dispatch<React.SetStateAction<OHLCData | null>>,
 ) {
-  return (
-    param: Parameters<Parameters<IChartApi["subscribeCrosshairMove"]>[0]>[0],
-  ) => {
+  return (param: CrosshairMoveParam) => {
     if (param.time && param.seriesData) {
       const currentData = ohlcDataRef.current;
       if (currentData.length > 0) {
@@ -831,13 +845,11 @@ function createWheelHandler(
 
     e.preventDefault();
 
-    const zoomMultiplier = 2.5;
     const currentOptions = timeScale.options();
-    const currentBarSpacing = currentOptions.barSpacing || 6;
-    const minBarSpacing = currentOptions.minBarSpacing || 1;
-    const maxBarSpacing = currentOptions.maxBarSpacing || 50;
-
-    const delta = e.deltaY * -0.01 * zoomMultiplier;
+    const currentBarSpacing = currentOptions.barSpacing ?? DEFAULT_BAR_SPACING;
+    const minBarSpacing = currentOptions.minBarSpacing ?? MIN_BAR_SPACING;
+    const maxBarSpacing = currentOptions.maxBarSpacing ?? MAX_BAR_SPACING;
+    const delta = e.deltaY * -0.01 * ZOOM_WHEEL_MULTIPLIER;
     let newBarSpacing = currentBarSpacing + delta;
     newBarSpacing = Math.max(
       minBarSpacing,
@@ -906,8 +918,9 @@ export function LightweightChart({
   const priceLineRef = useRef<ReturnType<
     ISeriesApi<"Candlestick" | "Line">["createPriceLine"]
   > | null>(null);
+  /** Tracks scroll/pan for optional refetch debouncing; set by visible range handler */
   const isUserScrollingRef = useRef(false);
-  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const previousTimeframeRef = useRef<string | null>(null);
   const ohlcDataRef = useRef<OHLCData[]>(ohlcData);
   const [hoveredData, setHoveredData] = useState<OHLCData | null>(null);
@@ -944,7 +957,7 @@ export function LightweightChart({
       scrollTimeoutRef.current = setTimeout(() => {
         isUserScrollingRef.current = false;
         onScrollingChange?.(false);
-      }, 2000); // 2 seconds after last scroll
+      }, SCROLL_IDLE_MS);
     };
 
     timeScale.subscribeVisibleTimeRangeChange(handleVisibleRangeChange);
@@ -1019,7 +1032,7 @@ export function LightweightChart({
             height: container.clientHeight,
           });
         }
-      }, 100);
+      }, RESIZE_DEBOUNCE_MS);
       return () => clearTimeout(timer);
     }
 

@@ -18,8 +18,8 @@ export function SidebarMenu({
 }: SidebarMenuProps) {
   return (
     <nav
-      className={`flex-1 space-y-1 lg:space-y-0.5 transition-all duration-300 overflow-y-auto overflow-x-hidden scrollbar-modern mobile-landscape-scrollable p-1 lg:p-1 ${
-        sidebarCollapsed ? 'lg:p-1.5' : 'lg:p-2'
+      className={`flex-1 space-y-2 lg:space-y-2.5 transition-all duration-300 overflow-y-auto overflow-x-hidden scrollbar-modern mobile-landscape-scrollable p-2 lg:px-3 lg:py-4 ${
+        sidebarCollapsed ? 'lg:px-2.5 lg:py-4' : 'lg:px-4 lg:py-4'
       }`}
     >
       {menuItems.map((item) => {
@@ -31,32 +31,28 @@ export function SidebarMenu({
             href={item.path}
             onClick={onCloseSidebar}
             scroll={false}
-            className={`flex items-center justify-center w-10 h-10 lg:w-8 lg:h-8 mx-auto rounded-lg lg:rounded-lg ${
+            className={`flex items-center justify-center w-14 h-14 lg:w-9 lg:h-9 mx-auto rounded-full lg:rounded-full ${
               sidebarCollapsed
-                ? 'lg:w-8 lg:h-8 lg:rounded-full'
-                : 'lg:w-full lg:h-auto lg:justify-start lg:px-3 lg:py-2 lg:gap-2.5 lg:rounded-lg'
+                ? 'lg:w-9 lg:h-9 lg:rounded-full'
+                : 'lg:w-full lg:h-auto lg:justify-start lg:px-3 lg:py-2 lg:gap-2.5 lg:rounded-full'
             } transition-all duration-200 group relative overflow-hidden touch-manipulation ${
               isActive ? `${t.text}` : `${t.textSecondary} ${t.cardHover}`
             }`}
             title={item.label}
           >
-            {/* Glass highlight background for active item */}
+            {/* Glass highlight background for active item - round */}
             {isActive && (
               <>
                 <div
-                  className={`absolute inset-0 backdrop-blur-xl bg-white/10 rounded-lg ${
-                    sidebarCollapsed ? 'lg:rounded-full' : 'lg:rounded-lg'
-                  } border border-white/10`}
+                  className="absolute inset-0 backdrop-blur-xl bg-white/10 rounded-full border border-white/10"
                 />
                 <div
-                  className={`absolute inset-0 bg-gradient-to-b from-white/5 to-transparent rounded-lg ${
-                    sidebarCollapsed ? 'lg:rounded-full' : 'lg:rounded-lg'
-                  }`}
+                  className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent rounded-full"
                 />
               </>
             )}
             <Icon
-              className={`w-5 h-5 lg:w-4 lg:h-4 flex-shrink-0 relative transition-all duration-200 ${
+              className={`w-7 h-7 lg:w-4 lg:h-4 flex-shrink-0 relative transition-all duration-200 ${
                 isActive ? 'opacity-100' : 'opacity-70 group-hover:opacity-100'
               }`}
             />
