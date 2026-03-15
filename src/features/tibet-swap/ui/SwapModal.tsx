@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Modal } from "@/shared/ui";
-import { X } from "lucide-react";
+import { X, AlertTriangle } from "lucide-react";
 import { useThemeClasses } from "@/shared/hooks";
 import { useNetwork } from "@/shared/hooks/useNetwork";
 import { useTibetQuote, useTibetCreateOffer } from "../hooks";
@@ -12,6 +12,7 @@ import { CHIA_ASSET_IDS } from "@/shared/lib/constants/chia-assets";
 import { logger } from "@/shared/lib/logger";
 import { broadcastOfferToSplash } from "@/features/splash-terminal";
 import type { TibetApiPair } from "../lib/tibetTypes";
+import { computePriceImpactPercent } from "../lib/priceImpact";
 
 const TOKEN_SMALLEST_PER_UNIT = 1000;
 
@@ -60,10 +61,15 @@ export function SwapModal({
 
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [confirmHighImpact, setConfirmHighImpact] = useState(false);
 
   useEffect(() => {
     setError("");
   }, [amountInRaw, pair.pair_id, xchIsInput]);
+
+  useEffect(() => {
+    setConfirmHighImpact(false);
+  }, [amountInRaw, pair.pair_id]);
 
   const handleConfirm = async () => {
     if (!quote || amountIn <= 0) return;
@@ -113,6 +119,7 @@ export function SwapModal({
   };
 
   const isPending = createOfferMutation.isPending || tibetSubmitting;
+  const priceImpact = quote ? computePriceImpactPercent(quote) : null;
 
   return (
     <Modal onClose={onClose} maxWidth="max-w-md" closeOnOverlayClick>
@@ -147,11 +154,40 @@ export function SwapModal({
                   : "—"}
             </span>
           </div>
-          {quote && quote.price_impact !== 0 && (
-            <div className={`flex justify-between text-xs mt-1 ${t.textTertiary}`}>
-              <span>Price impact</span>
-              <span>{quote.price_impact.toFixed(2)}%</span>
-            </div>
+          {quote && priceImpact != null && (
+            priceImpact > 10 ? (
+              <div className="mt-3 rounded-lg p-3 bg-amber-500/10 dark:bg-amber-500/5 border border-amber-500/30 space-y-2.5">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-medium text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
+                    <AlertTriangle size={12} className="flex-shrink-0" />
+                    Price impact
+                  </span>
+                  <span className="font-mono text-xs font-semibold text-amber-700 dark:text-amber-400">
+                    {priceImpact.toFixed(2)}%
+                  </span>
+                </div>
+                <p className="text-xs leading-snug text-amber-700/90 dark:text-amber-400/90">
+                  High price impact. Consider splitting your trade or using a smaller amount.
+                </p>
+                <label className="flex items-start gap-2 cursor-pointer select-none group">
+                  <input
+                    type="checkbox"
+                    checked={confirmHighImpact}
+                    onChange={(e) => setConfirmHighImpact(e.target.checked)}
+                    className="mt-0.5 rounded border-amber-500 text-amber-500 focus:ring-amber-500/50 flex-shrink-0"
+                    aria-label="Confirm you accept the high price impact"
+                  />
+                  <span className="text-xs text-amber-700 dark:text-amber-400 group-hover:opacity-90">
+                    I understand the high price impact and want to proceed
+                  </span>
+                </label>
+              </div>
+            ) : (
+              <div className={`flex justify-between text-xs mt-2 ${t.textSecondary}`}>
+                <span>Price impact</span>
+                <span className={t.text}>{priceImpact.toFixed(2)}%</span>
+              </div>
+            )
           )}
         </div>
 
@@ -174,7 +210,12 @@ export function SwapModal({
           <button
             type="button"
             onClick={handleConfirm}
-            disabled={!quote || isPending || success}
+            disabled={
+            !quote ||
+            (priceImpact != null && priceImpact > 10 && !confirmHighImpact) ||
+            isPending ||
+            success
+          }
             className={`flex-1 py-2 rounded-xl border ${t.border} bg-gradient-to-r ${t.accent} text-white ${t.accentHover} disabled:opacity-50 disabled:pointer-events-none transition-colors`}
           >
             {isPending ? "Submitting…" : success ? "Done" : "Confirm"}

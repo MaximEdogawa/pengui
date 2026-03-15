@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import { ArrowLeftRight, Plus, Minus } from "lucide-react";
+import { ArrowLeftRight, Plus, Minus, AlertTriangle } from "lucide-react";
 import { useThemeClasses } from "@/shared/hooks";
 import { useNetwork } from "@/shared/hooks/useNetwork";
 import { TickerIcon, XchIcon } from "@/entities/asset";
@@ -20,6 +20,7 @@ import {
 import { AmountInput, Button } from "@/shared/ui";
 import type { AssetType } from "@/entities/offer";
 import type { TibetApiPair, TibetQuote } from "../lib/tibetTypes";
+import { computePriceImpactPercent } from "../lib/priceImpact";
 
 type SwapSubTab = "swap" | "add" | "remove";
 
@@ -55,6 +56,7 @@ interface SwapFormBodyProps {
   requestedAmount: string;
   priceLine: string | null;
   quote: TibetQuote | null | undefined;
+  priceImpactPercent: number | null;
   liquidityFeePercent: string;
   modalPayAmount: string;
   pairsLoading: boolean;
@@ -77,6 +79,7 @@ function SwapFormBody({
   requestedAmount,
   priceLine,
   quote,
+  priceImpactPercent,
   liquidityFeePercent,
   modalPayAmount,
   pairsLoading,
@@ -86,6 +89,12 @@ function SwapFormBody({
   onAmountDriverRequested,
   onOpenSwapModal,
 }: SwapFormBodyProps) {
+  const [confirmHighImpact, setConfirmHighImpact] = useState(false);
+  const isHighImpact = priceImpactPercent != null && priceImpactPercent > 10;
+  useEffect(() => {
+    setConfirmHighImpact(false);
+  }, [selectedPair?.pair_id, offeredAmount, requestedAmount, priceImpactPercent]);
+
   if (!hasValidFilterPair) {
     return (
       <div className="space-y-3">
@@ -97,6 +106,7 @@ function SwapFormBody({
       </div>
     );
   }
+
   const isOfferedNative = offeredTicker?.toLowerCase() === nativeTicker.toLowerCase();
   const isRequestedNative = requestedTicker?.toLowerCase() === nativeTicker.toLowerCase();
   return (
@@ -198,12 +208,43 @@ function SwapFormBody({
             <span className={t.textSecondary}>Price</span>
             <span className={`font-mono ${t.text}`}>{priceLine ?? "—"}</span>
           </div>
-          <div className={`flex justify-between border-t ${t.border} pt-1.5 mt-1.5`}>
-            <span className={t.textSecondary}>Price impact</span>
-            <span className={`font-mono ${t.text}`}>
-              {quote != null ? `${quote.price_impact.toFixed(2)}%` : "—"}
-            </span>
-          </div>
+          {isHighImpact ? (
+            <div
+              className={`border-t ${t.border} pt-1.5 mt-1.5 rounded-lg p-2.5 bg-amber-500/10 dark:bg-amber-500/5 border border-amber-500/30 space-y-2`}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs text-amber-700 dark:text-amber-400 font-medium flex items-center gap-1.5">
+                  <AlertTriangle size={12} className="flex-shrink-0" />
+                  Price impact
+                </span>
+                <span className="font-mono text-xs font-semibold text-amber-700 dark:text-amber-400">
+                  {priceImpactPercent != null ? `${priceImpactPercent.toFixed(2)}%` : "—"}
+                </span>
+              </div>
+              <p className="text-[11px] leading-snug text-amber-700/90 dark:text-amber-400/90">
+                High price impact. Consider splitting your trade or using a smaller amount.
+              </p>
+              <label className="flex items-start gap-2 cursor-pointer select-none group">
+                <input
+                  type="checkbox"
+                  checked={confirmHighImpact}
+                  onChange={(e) => setConfirmHighImpact(e.target.checked)}
+                  className="mt-0.5 rounded border-amber-500 text-amber-500 focus:ring-amber-500/50 flex-shrink-0"
+                  aria-label="Confirm you accept the high price impact"
+                />
+                <span className="text-[11px] text-amber-700 dark:text-amber-400 group-hover:opacity-90">
+                  I understand the high price impact and want to swap
+                </span>
+              </label>
+            </div>
+          ) : (
+            <div className={`flex justify-between border-t ${t.border} pt-1.5 mt-1.5`}>
+              <span className={t.textSecondary}>Price impact</span>
+              <span className={`font-mono ${t.text}`}>
+                {priceImpactPercent != null ? `${priceImpactPercent.toFixed(2)}%` : "—"}
+              </span>
+            </div>
+          )}
           <div className={`flex justify-between border-t ${t.border} pt-1.5 mt-1.5`}>
             <span className={t.textSecondary}>Liquidity fee</span>
             <span className={t.text}>{liquidityFeePercent}%</span>
@@ -219,7 +260,13 @@ function SwapFormBody({
         <Button
           type="button"
           onClick={onOpenSwapModal}
-          disabled={!selectedPair || !modalPayAmount || !quote || pairsLoading}
+          disabled={
+            (isHighImpact && !confirmHighImpact) ||
+            !selectedPair ||
+            !modalPayAmount ||
+            !quote ||
+            pairsLoading
+          }
           variant="success"
           icon={ArrowLeftRight}
         >
@@ -349,7 +396,16 @@ function useSwapQuoteSync({
       ? (100 / selectedPair.inverse_fee).toFixed(2)
       : "—";
 
-  return { quote, modalPayAmount, priceLine, liquidityFeePercent };
+  const priceImpactPercent =
+    quote != null ? computePriceImpactPercent(quote) : null;
+
+  return {
+    quote,
+    modalPayAmount,
+    priceLine,
+    priceImpactPercent,
+    liquidityFeePercent,
+  };
 }
 
 interface SwapTabContentProps {
@@ -460,7 +516,8 @@ export function SwapTabContent({ mode }: SwapTabContentProps = {}) {
       requestedTicker.toLowerCase() === nativeTicker.toLowerCase());
 
   const xchIsOffered = offeredTicker?.toLowerCase() === nativeTicker.toLowerCase();
-  const { quote, modalPayAmount, priceLine, liquidityFeePercent } = useSwapQuoteSync({
+  const { quote, modalPayAmount, priceLine, priceImpactPercent, liquidityFeePercent } =
+    useSwapQuoteSync({
     selectedPair,
     amountDriver,
     xchIsOffered,
@@ -483,6 +540,7 @@ export function SwapTabContent({ mode }: SwapTabContentProps = {}) {
       requestedAmount={requestedAmount}
       priceLine={priceLine}
       quote={quote}
+      priceImpactPercent={priceImpactPercent}
       liquidityFeePercent={liquidityFeePercent}
       modalPayAmount={modalPayAmount}
       pairsLoading={pairsLoading}
