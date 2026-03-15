@@ -15,15 +15,19 @@ import type { TibetApiPair } from "../lib/tibetTypes";
 interface RemoveLiquiditySectionProps {
   pairs: TibetApiPair[];
   pairsLoading: boolean;
+  /** When set (e.g. from Swap tab filter), use this pair and hide pair selector for unified view */
+  selectedPairFromFilter?: TibetApiPair | null;
 }
 
 export function RemoveLiquiditySection({
   pairs,
   pairsLoading,
+  selectedPairFromFilter,
 }: RemoveLiquiditySectionProps) {
   const { t } = useThemeClasses();
   const { network } = useNetwork();
-  const [selectedPair, setSelectedPair] = useState<TibetApiPair | null>(null);
+  const [localPair, setLocalPair] = useState<TibetApiPair | null>(null);
+  const selectedPair = selectedPairFromFilter ?? localPair;
   const [lpAmount, setLpAmount] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
@@ -88,14 +92,16 @@ export function RemoveLiquiditySection({
 
   return (
     <div className={`rounded-xl p-2.5 space-y-2 max-w-sm ${t.card} border ${t.border}`}>
-      <PairSelector
-        pairs={pairs}
-        value={selectedPair}
-        onChange={setSelectedPair}
-        disabled={pairsLoading}
-        placeholder="Select pair"
-        variant="glass"
-      />
+      {selectedPairFromFilter == null && (
+        <PairSelector
+          pairs={pairs}
+          value={localPair}
+          onChange={setLocalPair}
+          disabled={pairsLoading}
+          placeholder="Select pair"
+          variant="glass"
+        />
+      )}
       <input
         type="text"
         inputMode="decimal"
