@@ -8,14 +8,23 @@ use libp2p::gossipsub::{self, MessageAcceptance};
 use libp2p::multiaddr::Protocol;
 use libp2p::swarm::{Config as SwarmConfig, SwarmEvent};
 use libp2p::{identify, identity, kad, noise, tcp, yamux, Multiaddr, PeerId, StreamProtocol};
-use log::{debug, info, warn};
+use log::{debug, error, info, warn};
 use std::collections::hash_map::DefaultHasher;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 use std::time::Duration;
 
 const NETWORK_NAME: &str = "splash";
 const MAX_OFFER_SIZE: usize = 300 * 1024;
+
+/// Returns true if this connection is an inbound WebSocket (browser/app peer).
+fn is_inbound_ws(endpoint: &libp2p::core::ConnectedPoint) -> bool {
+    if let libp2p::core::ConnectedPoint::Listener { local_addr, .. } = endpoint {
+        local_addr.iter().any(|p| matches!(p, Protocol::Ws(_)))
+    } else {
+        false
+    }
+}
 
 #[derive(Parser, Debug)]
 #[command(name = "splash-relay")]
@@ -36,6 +45,10 @@ struct Args {
     /// Use testnet (splash-testnet)
     #[arg(long)]
     testnet: bool,
+
+    /// Maximum concurrent WebSocket (browser/app) connections. Incoming WS over this limit are disconnected.
+    #[arg(long, default_value = "500")]
+    max_ws_connections: u32,
 }
 
 #[derive(libp2p::swarm::NetworkBehaviour)]
@@ -47,8 +60,28 @@ struct RelayBehaviour {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    // Early stderr so we see output even if logging or DNS fails (e.g. in Docker)
+    eprintln!("splash-relay starting...");
+
+    // Default info shows one startup line only; warn/error for issues. Set RUST_LOG=debug for verbose.
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
+    // Log panic as error so production logs show why the service stopped, then run default handler.
+    let default_hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |panic_info| {
+        error!("splash-relay panic (service stopping): {}", panic_info);
+        default_hook(panic_info);
+    }));
+
+    if let Err(e) = run().await {
+        error!("splash-relay failed: {}", e);
+        eprintln!("splash-relay failed: {}", e);
+        std::process::exit(1);
+    }
+    Ok(())
+}
+
+async fn run() -> Result<()> {
     let args = Args::parse();
     let network_name = if args.testnet {
         "splash-testnet"
@@ -56,25 +89,19 @@ async fn main() -> Result<()> {
         NETWORK_NAME
     };
 
-    info!("Starting Splash Relay");
-    info!("Network: {}", network_name);
-    info!("TCP port: {}", args.tcp_port);
-    info!("WebSocket port: {}", args.ws_port);
-
     let local_key = identity::Keypair::generate_ed25519();
     let local_peer_id = PeerId::from(local_key.public());
-    info!("Local Peer ID: {}", local_peer_id);
 
     let mut bootstrap_peers = args.known_peer.clone();
     if bootstrap_peers.is_empty() {
-        info!("Resolving bootstrap peers from DNS...");
+        debug!("Resolving bootstrap peers from DNS...");
         match resolve_peers_from_dns(network_name).await {
             Ok(peers) => {
-                info!("Discovered {} peers from DNS", peers.len());
+                debug!("Discovered {} peers from DNS", peers.len());
                 bootstrap_peers = peers;
             }
             Err(e) => {
-                warn!("Failed to resolve DNS peers: {}", e);
+                error!("Failed to resolve DNS peers (no bootstrap list): {}", e);
             }
         }
     }
@@ -149,16 +176,13 @@ async fn main() -> Result<()> {
 
     let topic = gossipsub::IdentTopic::new(format!("/{}/offers/1", network_name));
     swarm.behaviour_mut().gossipsub.subscribe(&topic)?;
-    info!("Subscribed to topic: /{}/offers/1", network_name);
 
     for peer_str in &bootstrap_peers {
         if let Ok(addr) = peer_str.parse::<Multiaddr>() {
             if let Some(Protocol::P2p(peer_id)) = addr.iter().last() {
                 swarm.behaviour_mut().kademlia.add_address(&peer_id, addr.clone());
-                info!("Added bootstrap peer: {}", peer_id);
-
                 if let Err(e) = swarm.dial(addr) {
-                    warn!("Failed to dial bootstrap peer: {}", e);
+                    error!("Failed to dial bootstrap peer {}: {}", peer_id, e);
                 }
             }
         }
@@ -166,25 +190,28 @@ async fn main() -> Result<()> {
 
     if !bootstrap_peers.is_empty() {
         if let Err(e) = swarm.behaviour_mut().kademlia.bootstrap() {
-            warn!("Kademlia bootstrap error: {:?}", e);
+            error!("Kademlia bootstrap error: {:?}", e);
         }
     }
 
+    let max_ws_connections = args.max_ws_connections;
     let mut peer_discovery_interval = tokio::time::interval(Duration::from_secs(30));
     let mut stats_interval = tokio::time::interval(Duration::from_secs(30));
     let mut reconnect_interval = tokio::time::interval(Duration::from_secs(120));
     let mut connected_peers: usize = 0;
+    let mut ws_connections: usize = 0;
     let mut offers_relayed: usize = 0;
     let mut peer_agents: HashMap<PeerId, String> = HashMap::new();
+    let mut rejected_ws_peers: HashSet<PeerId> = HashSet::new();
     let bootstrap_addrs: Vec<Multiaddr> = bootstrap_peers
         .iter()
         .filter_map(|s| s.parse().ok())
         .collect();
 
-    info!("Relay started. Waiting for connections...");
-    info!("Attempting to connect to {} bootstrap peers...", bootstrap_addrs.len());
-    info!("");
-    info!("Browser connection: use the WebSocket address below in the app (NEXT_PUBLIC_DEXIE_SPLASH_RELAY_WS_URL).");
+    info!(
+        "splash-relay ready | network={} tcp={} ws={} max_ws={} peer_id={}",
+        network_name, args.tcp_port, args.ws_port, max_ws_connections, local_peer_id
+    );
 
     loop {
         tokio::select! {
@@ -192,14 +219,18 @@ async fn main() -> Result<()> {
                 swarm.behaviour_mut().kademlia.get_closest_peers(PeerId::random());
             }
             _ = stats_interval.tick() => {
-                info!("Stats: {} connected peers, {} offers relayed", connected_peers, offers_relayed);
+                debug!("Stats: {} peers ({} WS), {} offers", connected_peers, ws_connections, offers_relayed);
                 if connected_peers == 0 {
-                    warn!("No peers connected yet. Retrying bootstrap peers...");
+                    if bootstrap_addrs.is_empty() {
+                        error!("No peers connected and no bootstrap peers configured; relay cannot join network");
+                    } else {
+                        warn!("No peers connected; check network/DNS and bootstrap peers");
+                    }
                 }
             }
             _ = reconnect_interval.tick() => {
                 if connected_peers < 3 {
-                    info!("Reconnecting to bootstrap peers (have {} connections)...", connected_peers);
+                    debug!("Reconnecting to bootstrap peers (have {})", connected_peers);
                     for addr in &bootstrap_addrs {
                         let _ = swarm.dial(addr.clone());
                     }
@@ -207,60 +238,51 @@ async fn main() -> Result<()> {
             }
             event = swarm.select_next_some() => {
                 match event {
-                    SwarmEvent::IncomingConnection { local_addr, send_back_addr, .. } => {
-                        let is_ws = local_addr.iter().any(|p| matches!(p, Protocol::Ws(_)));
-                        info!("Incoming connection ({}): local={} send_back={}", if is_ws { "WebSocket" } else { "TCP" }, local_addr, send_back_addr);
-                    }
+                    SwarmEvent::IncomingConnection { .. } => {}
                     SwarmEvent::IncomingConnectionError { local_addr, error, .. } => {
                         let is_ws = local_addr.iter().any(|p| matches!(p, Protocol::Ws(_)));
-                        warn!("Incoming connection error ({}): local={} error={:?}", if is_ws { "WebSocket" } else { "TCP" }, local_addr, error);
+                        error!("Incoming connection error ({}): {:?}", if is_ws { "WS" } else { "TCP" }, error);
                     }
                     SwarmEvent::NewListenAddr { address, .. } => {
-                        let full_addr = address.clone().with(Protocol::P2p(local_peer_id));
-                        info!("Listening on: {}", full_addr);
-
-                        if address.iter().any(|p| matches!(p, Protocol::Ws(_))) {
-                            info!("");
-                            info!("=== BROWSER CONNECTION ADDRESS ===");
-                            info!("  Multiaddr: {}", full_addr);
-                            info!("  WebSocket URL: ws://<host>:{} (or wss://<host>:{} with TLS)", args.ws_port, args.ws_port);
-                            info!("===================================");
-                            info!("");
-                        }
+                        debug!("Listening on {}", address.clone().with(Protocol::P2p(local_peer_id)));
                     }
                     SwarmEvent::ConnectionEstablished { peer_id, endpoint, .. } => {
                         connected_peers += 1;
-                        info!("Connected to {} via {:?} (total: {})", peer_id, endpoint, connected_peers);
-                    }
-                    SwarmEvent::ConnectionClosed { peer_id, cause, .. } => {
-                        connected_peers = connected_peers.saturating_sub(1);
-                        if let Some(ref c) = cause {
-                            debug!("Disconnected from {} cause: {:?} (total: {})", peer_id, c, connected_peers);
+                        if is_inbound_ws(&endpoint) {
+                            if ws_connections >= max_ws_connections as usize {
+                                warn!(
+                                    "WS connection limit reached ({}), rejecting peer",
+                                    max_ws_connections
+                                );
+                                rejected_ws_peers.insert(peer_id);
+                                let _ = swarm.disconnect_peer_id(peer_id);
+                                connected_peers = connected_peers.saturating_sub(1);
+                            } else {
+                                ws_connections += 1;
+                                if connected_peers == 1 {
+                                    info!("First peer connected: {} (WS)", peer_id);
+                                }
+                                debug!("WS peer connected (total WS: {})", ws_connections);
+                            }
+                        } else {
+                            if connected_peers == 1 {
+                                info!("First peer connected: {} (TCP)", peer_id);
+                            }
+                            debug!("TCP peer connected (total: {})", connected_peers);
                         }
-                        info!("Disconnected from {} (total: {})", peer_id, connected_peers);
                     }
-                    SwarmEvent::OutgoingConnectionError { peer_id, error, .. } => {
-                        debug!("Connection error to {:?}: {}", peer_id, error);
+                    SwarmEvent::ConnectionClosed { peer_id, endpoint, .. } => {
+                        if is_inbound_ws(&endpoint) && !rejected_ws_peers.remove(&peer_id) {
+                            ws_connections = ws_connections.saturating_sub(1);
+                        }
+                        connected_peers = connected_peers.saturating_sub(1);
+                        debug!("Peer disconnected (peers: {}, WS: {})", connected_peers, ws_connections);
                     }
+                    SwarmEvent::OutgoingConnectionError { .. } => {}
                     SwarmEvent::Behaviour(RelayBehaviourEvent::Gossipsub(
                         gossipsub::Event::Message { propagation_source, message_id, message }
                     )) => {
-                        let offer_str = String::from_utf8_lossy(&message.data);
-                        let offer_len = offer_str.len();
-
-                        let agent = peer_agents
-                            .get(&propagation_source)
-                            .map(|s| s.as_str())
-                            .unwrap_or("unknown");
-
-                        let preview: String = offer_str.chars().take(80).collect();
-                        info!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-                        info!("OFFER RECEIVED from {} ({})", propagation_source, agent);
-                        info!("Size: {} bytes | Preview: {}...", offer_len, preview);
-                        info!("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-
-                        debug!("Full offer: {}", offer_str);
-
+                        let offer_len = message.data.len();
                         if offer_len <= MAX_OFFER_SIZE {
                             let _ = swarm.behaviour_mut().gossipsub.report_message_validation_result(
                                 &message_id,
@@ -268,13 +290,12 @@ async fn main() -> Result<()> {
                                 MessageAcceptance::Accept,
                             );
                             offers_relayed += 1;
-                            // Explicitly re-publish so WebSocket/browser mesh peers receive the offer
                             if let Err(e) = swarm
                                 .behaviour_mut()
                                 .gossipsub
                                 .publish(topic.clone(), message.data.clone())
                             {
-                                debug!("Relay re-publish to mesh failed: {:?}", e);
+                                debug!("re-publish failed: {:?}", e);
                             }
                         } else {
                             warn!("Rejecting oversized offer: {} bytes", offer_len);
@@ -286,37 +307,36 @@ async fn main() -> Result<()> {
                         }
                     }
                     SwarmEvent::Behaviour(RelayBehaviourEvent::Gossipsub(
-                        gossipsub::Event::Subscribed { peer_id, topic, .. }
-                    )) => {
-                        info!("Peer {} subscribed to {}", peer_id, topic);
-                    }
+                        gossipsub::Event::Subscribed { .. }
+                    )) => {}
                     SwarmEvent::Behaviour(RelayBehaviourEvent::Identify(
                         identify::Event::Received { peer_id, info, .. }
                     )) => {
-                        info!("Identified peer: {} ({})", peer_id, info.agent_version);
                         peer_agents.insert(peer_id, info.agent_version.clone());
-
                         for addr in info.listen_addrs {
                             let is_non_global = addr.iter().any(|p| match p {
                                 Protocol::Ip4(ip) => ip.is_loopback() || ip.is_private(),
                                 Protocol::Ip6(ip) => ip.is_loopback(),
                                 _ => false,
                             });
-
                             if !is_non_global {
                                 swarm.behaviour_mut().kademlia.add_address(&peer_id, addr);
                             }
                         }
                     }
                     SwarmEvent::Behaviour(RelayBehaviourEvent::Kademlia(
-                        kad::Event::RoutingUpdated { peer, .. }
-                    )) => {
-                        info!("Kademlia routing updated for: {}", peer);
-                    }
+                        kad::Event::RoutingUpdated { .. }
+                    )) => {}
                     _ => {}
                 }
             }
         }
+    }
+    // Unreachable: main loop never exits unless process is killed or panics.
+    #[allow(unreachable_code)]
+    {
+        error!("main loop exited unexpectedly");
+        anyhow::bail!("main loop exited unexpectedly");
     }
 }
 
