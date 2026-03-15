@@ -8,12 +8,14 @@ import type {
 import CreateOfferForm from "@/features/trading/ui/componets/limit/CreateOfferForm";
 import LimitOfferTab from "./OfferTab";
 import MarketOfferTab from "@/features/trading/ui/widgets/market/MarketOfferContent";
+import { SwapTabContent } from "@/features/tibet-swap/ui/SwapTabContent";
+import type { OrderBookPanelMode } from "./types";
 
 interface TradingRightPanelProps {
-  currentMode: "maker" | "taker";
+  currentMode: OrderBookPanelMode;
   selectedOrderForTaking: OrderBookOrder | null;
   selectedOrderForMaking: OrderBookOrder | null;
-  onModeChange: (mode: "maker" | "taker") => void;
+  onModeChange: (mode: OrderBookPanelMode) => void;
   onOfferTaken: () => void;
   onOfferCreated: () => void;
   onOpenCreateModal: () => void;
@@ -112,6 +114,12 @@ export default function TradingRightPanel({
                 </button>
               </div>
             )}
+          </div>
+        </div>
+
+        <div className={`${currentMode === "swap" ? "" : "hidden"}`}>
+          <div className="w-full p-4">
+            <SwapTabContent mode="inline" />
           </div>
         </div>
       </div>

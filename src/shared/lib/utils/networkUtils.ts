@@ -114,6 +114,26 @@ export function isDefaultLocalRelayUrl(
 }
 
 /**
+ * Get Tibet Swap API URL for a given network.
+ * TibetSwap v2 API: https://api.v2.tibetswap.io
+ * @param network - The network type ('mainnet' or 'testnet')
+ * @returns The Tibet API base URL
+ */
+export function getTibetApiUrl(network: "mainnet" | "testnet"): string {
+  if (network === "testnet") {
+    return (
+      process.env.NEXT_PUBLIC_TIBET_TESTNET_API_URL ||
+      "https://api.v2.tibetswap.io"
+    );
+  }
+  return (
+    process.env.NEXT_PUBLIC_TIBET_MAINNET_API_URL ||
+    process.env.NEXT_PUBLIC_TIBET_API_URL ||
+    "https://api.v2.tibetswap.io"
+  );
+}
+
+/**
  * Get Space Scan API URL
  * @param network - Optional network type. Testnet uses api-testnet.spacescan.io.
  * @returns The Space Scan API base URL

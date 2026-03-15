@@ -103,6 +103,8 @@ export function useOrderBookFilters() {
   const storeToggleFilterPane = useOrderBookFilterStore((state) => state.toggleFilterPane)
   const storeSetShowFilterPane = useOrderBookFilterStore((state) => state.setShowFilterPane)
   const storeSetPagination = useOrderBookFilterStore((state) => state.setPagination)
+  const storeSetBuyAsset = useOrderBookFilterStore((state) => state.setBuyAsset)
+  const storeSetSellAsset = useOrderBookFilterStore((state) => state.setSellAsset)
 
   // Stable action wrappers
   const setSearchValue = useCallback((value: string) => {
@@ -141,6 +143,14 @@ export function useOrderBookFilters() {
     storeSetPagination(pagination)
   }, [storeSetPagination])
 
+  const setBuyAsset = useCallback((assets: string[]) => {
+    storeSetBuyAsset(assets)
+  }, [storeSetBuyAsset])
+
+  const setSellAsset = useCallback((assets: string[]) => {
+    storeSetSellAsset(assets)
+  }, [storeSetSellAsset])
+
   // Refresh function (placeholder - actual refresh handled by useOrderBook hook)
   const refreshOrderBook = useCallback(() => {
     // This is a no-op - the useOrderBook hook will automatically refetch when filters change
@@ -167,6 +177,8 @@ export function useOrderBookFilters() {
     toggleFilterPane,
     setShowFilterPane,
     setPagination,
+    setBuyAsset,
+    setSellAsset,
     refreshOrderBook,
   }
 }

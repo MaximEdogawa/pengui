@@ -90,11 +90,11 @@ function TradingPageContent({
     <div className="w-full h-full relative z-10 flex flex-col">
       {/* View Tabs */}
       <div
-        className={`mb-1.5 sm:mb-2 backdrop-blur-[40px] ${t.card} rounded-xl p-0.5 sm:p-1 border ${t.border} transition-all duration-300 shadow-lg shadow-black/5 ${
+        className={`mb-1.5 sm:mb-2 backdrop-blur-[40px] ${t.card} rounded-xl p-0.5 sm:p-1 border ${t.border} transition-all duration-300 shadow-lg shadow-black/5 overflow-x-auto ${
           isDark ? "bg-white/[0.03]" : "bg-white/30"
         }`}
       >
-        <div className="flex flex-wrap gap-0.5 sm:gap-1">
+        <div className="flex flex-nowrap sm:flex-wrap gap-0.5 sm:gap-1 min-w-0">
           {views.map((view) => {
             const Icon = view.icon;
             const isActive = activeView === view.id;
@@ -102,7 +102,7 @@ function TradingPageContent({
               <button
                 key={view.id}
                 onClick={() => setActiveView(view.id)}
-                className={`flex items-center gap-0.5 sm:gap-1 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg transition-all duration-200 font-medium text-[10px] sm:text-[11px] relative overflow-hidden ${
+                className={`flex items-center gap-0.5 sm:gap-1 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg transition-all duration-200 font-medium text-[10px] sm:text-[11px] relative overflow-hidden flex-shrink-0 ${
                   isActive
                     ? isDark
                       ? "bg-white/10 text-white backdrop-blur-xl"

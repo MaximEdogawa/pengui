@@ -8,7 +8,12 @@ import PriceChart from "@/features/trading/ui/widgets/chart/PriceChart";
 import { MarketDepthView } from "@/features/trading/ui/componets/depth";
 
 interface TradingContentProps {
-  activeView: "orderbook" | "chart" | "depth" | "trades" | "terminal";
+  activeView:
+    | "orderbook"
+    | "chart"
+    | "depth"
+    | "trades"
+    | "terminal";
   filters?: {
     buyAsset?: string[];
     sellAsset?: string[];

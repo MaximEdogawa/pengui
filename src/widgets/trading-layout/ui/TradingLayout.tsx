@@ -12,10 +12,18 @@ import OrderBookFilters from "@/features/trading/ui/widgets/orderbook/OrderBookF
 import LimitOfferTab from "./OfferTab";
 import TradingContent from "./TradingContent";
 import TradingRightPanel from "./TradingRightPanel";
+import type { OrderBookPanelMode } from "./types";
+
+export type { OrderBookPanelMode } from "./types";
 
 interface TradingLayoutProps {
-  activeTradingView?: "orderbook" | "chart" | "depth" | "trades" | "terminal";
-  activeMode?: "maker" | "taker";
+  activeTradingView?:
+    | "orderbook"
+    | "chart"
+    | "depth"
+    | "trades"
+    | "terminal";
+  activeMode?: OrderBookPanelMode;
 }
 
 export default function TradingLayout({
@@ -37,7 +45,7 @@ export default function TradingLayout({
 
   const [showCreateOfferModal, setShowCreateOfferModal] = useState(false);
   const [showTakeOfferModal, setShowTakeOfferModal] = useState(false);
-  const [currentMode, setCurrentMode] = useState<"maker" | "taker">(activeMode);
+  const [currentMode, setCurrentMode] = useState<OrderBookPanelMode>(activeMode);
 
   const handleOrderClick = useCallback(
     async (order: OrderBookOrder) => {
@@ -75,10 +83,8 @@ export default function TradingLayout({
     // via the query key dependency
   }, []);
 
-  const handleModeChange = useCallback((mode: "maker" | "taker") => {
+  const handleModeChange = useCallback((mode: OrderBookPanelMode) => {
     setCurrentMode(mode);
-    // Don't clear selected orders or reset form when switching modes
-    // Keep the state of each tab until a new offer is selected
     setShowTakeOfferModal(false);
     setShowCreateOfferModal(false);
   }, []);
@@ -103,27 +109,25 @@ export default function TradingLayout({
   }, [resetForm]);
 
   const handleMobileModeToggle = useCallback(
-    (mode: "maker" | "taker") => {
+    (mode: OrderBookPanelMode) => {
       setCurrentMode(mode);
-      // Just switch the active tab – don't open a modal.
-      // Modals are opened only when the user taps an order or explicitly
-      // clicks the action button.
       setShowCreateOfferModal(false);
       setShowTakeOfferModal(false);
     },
     [],
   );
 
+  const isOrderBookView = activeTradingView === "orderbook";
+
   return (
     <div className="flex h-full">
-      {/* Order Book - Full width on mobile/tablet, left panel on desktop (lg+) */}
+      {/* Order Book / Content - Full width on mobile/tablet, left panel on desktop (lg+) */}
       <div className="flex flex-col flex-1 min-w-0">
-        {/* Order Book Filters - Show on all screens */}
         <div className="mb-2">
           <OrderBookFilters onFiltersChange={handleFiltersChange} />
         </div>
-        {/* Mobile Toggle - Limit/Market - Only show on mobile */}
-        {isMobile && (
+        {/* Mobile Toggle - Limit / Market / Swap - only when Order Book tab is active */}
+        {isMobile && isOrderBookView && (
           <div className="mb-2">
             <LimitOfferTab
               activeMode={currentMode}
@@ -142,20 +146,22 @@ export default function TradingLayout({
         </div>
       </div>
 
-      {/* Resize Handle - Hidden on mobile/tablet, visible on desktop (lg+) */}
-      <div
-        className={`hidden lg:flex resize-handle m-1 ${t.card} hover:bg-gray-300 dark:hover:bg-gray-500 cursor-col-resize transition-colors items-center justify-center relative`}
-        title="Drag to resize panels"
-      >
-        <div className="w-full flex items-center justify-center">
-          <div className="flex items-center gap-1"></div>
+      {/* Resize Handle - Hidden on mobile/tablet */}
+      {isOrderBookView && (
+        <div
+          className={`hidden lg:flex resize-handle m-1 ${t.card} hover:bg-gray-300 dark:hover:bg-gray-500 cursor-col-resize transition-colors items-center justify-center relative`}
+          title="Drag to resize panels"
+        >
+          <div className="w-full flex items-center justify-center">
+            <div className="flex items-center gap-1"></div>
+          </div>
+          <div className="absolute inset-0 w-6 h-full -left-1"></div>
         </div>
-        {/* Invisible larger hit area */}
-        <div className="absolute inset-0 w-6 h-full -left-1"></div>
-      </div>
+      )}
 
-      {/* Right Panel with Trading Form - Hidden on mobile/tablet, visible on desktop (lg+) */}
-      <TradingRightPanel
+      {/* Right Panel - Limit / Market / Swap - only when Order Book tab is active */}
+      {isOrderBookView && (
+        <TradingRightPanel
         currentMode={currentMode}
         selectedOrderForTaking={selectedOrderForTaking}
         selectedOrderForMaking={selectedOrderForMaking}
@@ -164,7 +170,8 @@ export default function TradingLayout({
         onOfferCreated={handleOfferCreated}
         onOpenCreateModal={() => setShowCreateOfferModal(true)}
         filters={filters}
-      />
+        />
+      )}
 
       {/* Create Offer Modal */}
       {showCreateOfferModal && (
