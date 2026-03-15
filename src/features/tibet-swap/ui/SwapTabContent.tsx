@@ -152,6 +152,29 @@ function SwapFormBody({
     priceImpactPercent,
   ]);
 
+  const isOfferedNative =
+    offeredTicker?.toLowerCase() === nativeTicker.toLowerCase();
+  const isRequestedNative =
+    requestedTicker?.toLowerCase() === nativeTicker.toLowerCase();
+
+  const addLpReceive = useMemo(() => {
+    if (!selectedPair || selectedPair.liquidity <= 0 || selectedPair.xch_reserve <= 0 || selectedPair.token_reserve <= 0) return undefined;
+    const offered = parseFloat(offeredAmount) || 0;
+    const requested = parseFloat(requestedAmount) || 0;
+    if (offered <= 0 || requested <= 0) return undefined;
+    const xchMojos = isOfferedNative
+      ? Math.round(convertToSmallestUnit(offered, "xch"))
+      : Math.round(convertToSmallestUnit(requested, "xch"));
+    const tokenSmallest = isOfferedNative
+      ? Math.round(convertToSmallestUnit(requested, "cat"))
+      : Math.round(convertToSmallestUnit(offered, "cat"));
+    const shareXch = xchMojos / selectedPair.xch_reserve;
+    const shareToken = tokenSmallest / selectedPair.token_reserve;
+    const share = Math.min(shareXch, shareToken);
+    const lpSmallest = Math.floor(share * selectedPair.liquidity);
+    return (lpSmallest / TOKEN_SMALLEST_PER_UNIT).toFixed(6);
+  }, [selectedPair, offeredAmount, requestedAmount, isOfferedNative]);
+
   if (!hasValidFilterPair) {
     return (
       <div className="space-y-3">
@@ -164,11 +187,6 @@ function SwapFormBody({
       </div>
     );
   }
-
-  const isOfferedNative =
-    offeredTicker?.toLowerCase() === nativeTicker.toLowerCase();
-  const isRequestedNative =
-    requestedTicker?.toLowerCase() === nativeTicker.toLowerCase();
 
   const previewContent =
     previewTab === "swap" ? (
@@ -198,6 +216,7 @@ function SwapFormBody({
         tokenName={tokenName}
         selectedPair={selectedPair}
         isTestnet={isTestnet}
+        lpAmount={lpAmount}
       />
     ) : (
       <AddPreviewTabContent
@@ -210,6 +229,7 @@ function SwapFormBody({
         isRequestedNative={isRequestedNative}
         selectedPair={selectedPair}
         isTestnet={isTestnet}
+        lpReceive={addLpReceive}
       />
     );
 

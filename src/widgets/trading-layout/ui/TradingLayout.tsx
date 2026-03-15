@@ -12,6 +12,7 @@ import OrderBookFilters from "@/features/trading/ui/widgets/orderbook/OrderBookF
 import LimitOfferTab from "./OfferTab";
 import TradingContent from "./TradingContent";
 import TradingRightPanel from "./TradingRightPanel";
+import { SwapTabContent } from "@/features/tibet-swap/ui/SwapTabContent";
 import type { OrderBookPanelMode } from "./types";
 
 export type { OrderBookPanelMode } from "./types";
@@ -136,11 +137,17 @@ export default function TradingLayout({
           </div>
         )}
         <div className="flex-1 min-h-0">
-          <TradingContent
-            activeView={activeTradingView}
-            filters={filters}
-            onOrderClick={handleOrderClick}
-          />
+          {isMobile && currentMode === "swap" ? (
+            <div className={`h-full overflow-y-auto ${t.card} rounded-lg border ${t.border} p-4`} style={{ scrollbarGutter: "stable" }}>
+              <SwapTabContent mode="inline" />
+            </div>
+          ) : (
+            <TradingContent
+              activeView={activeTradingView}
+              filters={filters}
+              onOrderClick={handleOrderClick}
+            />
+          )}
         </div>
       </div>
 
