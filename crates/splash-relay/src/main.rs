@@ -284,6 +284,27 @@ async fn run() -> Result<()> {
                     )) => {
                         let offer_len = message.data.len();
                         if offer_len <= MAX_OFFER_SIZE {
+                            // Debug: show basic info about the offer payload we relay.
+                            // Enable with RUST_LOG=debug to inspect raw values without affecting production logs.
+                            if log::log_enabled!(log::Level::Debug) {
+                                if let Ok(text) = std::str::from_utf8(&message.data) {
+                                    // Truncate to avoid flooding logs.
+                                    let preview: String = text.chars().take(200).collect();
+                                    debug!(
+                                        "Relaying offer payload from {} ({} bytes): {}",
+                                        propagation_source,
+                                        offer_len,
+                                        preview
+                                    );
+                                } else {
+                                    debug!(
+                                        "Relaying non-UTF8 offer payload from {} ({} bytes)",
+                                        propagation_source,
+                                        offer_len
+                                    );
+                                }
+                            }
+
                             let _ = swarm.behaviour_mut().gossipsub.report_message_validation_result(
                                 &message_id,
                                 &propagation_source,

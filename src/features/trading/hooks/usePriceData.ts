@@ -4,7 +4,7 @@ import { useDexieDataService } from '@/features/offers/api/useDexieDataService'
 import { useNetwork } from '@/shared/hooks/useNetwork'
 import { logger } from '@/shared/lib/logger'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { aggregateTradesToOHLC, normalizeOHLCData } from '../lib/utils/chartUtils'
 import type { OHLCData, Timeframe } from '../lib/chartTypes'
 import type { OrderBookFilters } from '../lib/orderBookTypes'
@@ -199,15 +199,21 @@ export function usePriceData({ tickerId, timeframe, filters, enabled = true, isU
     gcTime: Infinity, // Keep data in cache indefinitely
     staleTime: timeframe === '1m' ? 10 * 1000 : 60 * 1000,
     // Refetch when query key changes (e.g., when filters change)
-    refetchOnMount: 'always', // Always refetch when component mounts, even if data is fresh
+    // Do not force a refetch on every mount; rely on interval / key changes instead
+    refetchOnMount: false,
     refetchOnReconnect: true, // Refetch when network reconnects
-    // Only auto-refetch for short timeframes when enabled and user is not scrolling
-    // Longer timeframes (1D, 1W, 1M) don't need frequent updates
-    refetchInterval: enabled && !!tickerId && !isUserScrolling && (timeframe === '1m' || timeframe === '15m' || timeframe === '1h')
-      ? (timeframe === '1m' ? 10 * 1000 : 60 * 1000)
-      : false,
-    // Don't refetch on window focus for longer timeframes or when scrolling
-    refetchOnWindowFocus: !isUserScrolling && (timeframe === '1m' || timeframe === '15m' || timeframe === '1h'),
+    // Auto-refetch:
+    // - 10s for 1m
+    // - 60s for 15m and all larger timeframes
+    refetchInterval:
+      enabled && !!tickerId && !isUserScrolling
+        ? timeframe === '1m'
+          ? 10 * 1000
+          : 60 * 1000
+        : false,
+    // Don't refetch on window focus when user is interacting; otherwise ok
+    refetchOnWindowFocus:
+      !isUserScrolling && (timeframe === '1m' || timeframe === '15m' || timeframe === '1h'),
     retry: 2,
   })
 
@@ -220,11 +226,32 @@ export function usePriceData({ tickerId, timeframe, filters, enabled = true, isU
   // TanStack Query should return cached data in query.data even when disabled, but we have a fallback
   const dataToUse = query.data ?? cachedData ?? undefined
 
+  // Keep OHLC array as stable as possible so consumers (chart) don't reset zoom
+  const [ohlcData, setOhlcData] = useState<OHLCData[]>([])
 
-  const ohlcData = useMemo<OHLCData[]>(
-    () => processOHLCData(dataToUse, timeframe, queryKey, tickerId),
-    [dataToUse, timeframe, queryKey, tickerId]
-  )
+  useEffect(() => {
+    const next = processOHLCData(dataToUse, timeframe, queryKey, tickerId)
+    // If nothing materially changed, keep previous array reference
+    const identical =
+      next.length === ohlcData.length &&
+      next.every((n, i) => {
+        const p = ohlcData[i]
+        return (
+          p &&
+          n.time === p.time &&
+          n.open === p.open &&
+          n.high === p.high &&
+          n.low === p.low &&
+          n.close === p.close &&
+          n.volume === p.volume
+        )
+      })
+    if (identical) {
+      return
+    }
+    setOhlcData(next)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dataToUse, timeframe, queryKey, tickerId])
 
   // Check if we have cached data available (even if query is disabled)
   // This helps prevent falling back to synthetic data when real data exists in cache

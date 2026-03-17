@@ -110,11 +110,9 @@ async function enrichOfferPayload(
 ): Promise<DexieOffer> {
   try {
     const apiUrl = getDexieApiUrl(network);
-    const resp = await fetch(`${apiUrl}/v1/offers`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ offer: p.offer }),
-    });
+    // Use GET to retrieve offer details by offer string so we don't POST from the stream.
+    const url = `${apiUrl}/v1/offers?offer=${encodeURIComponent(p.offer)}`;
+    const resp = await fetch(url);
     const data = (await resp.json()) as {
       success?: boolean;
       offer?: DexieOffer;
@@ -136,18 +134,49 @@ function createOffersCallback(
 ): (raw: unknown) => void {
   return (raw: unknown) => {
     const arr = Array.isArray(raw) ? raw : raw != null ? [raw] : [];
-    arr.forEach((item: unknown) => {
-      const p = item as SplashOfferPayload;
-      if (!p?.offer || typeof p.offer !== "string") return;
-      void (async () => {
-        const enriched = await enrichOfferPayload(p, networkRef.current);
-        receivedCountRef.current += 1;
-        const buf = bufferRef.current;
-        if (buf.length >= MAX_BUFFER_LEN) buf.shift();
-        buf.push(enriched);
-        offersCallbacksRef.current.forEach((cb) => cb([enriched]));
-      })();
-    });
+
+    // Batch enrichment to avoid overwhelming Dexie API when many offers arrive at once.
+    // Process offers in chunks of 10 with limited concurrency.
+    void (async () => {
+      const offers = arr
+        .map((item: unknown) => item as SplashOfferPayload)
+        .filter((p) => p?.offer && typeof p.offer === "string");
+
+      const chunkSize = 10;
+      const chunks = Array.from(
+        { length: Math.ceil(offers.length / chunkSize) },
+        (_, idx) => offers.slice(idx * chunkSize, (idx + 1) * chunkSize),
+      );
+
+      // Process chunks sequentially; within each chunk, enrich concurrently.
+      // This keeps peak concurrency at ~chunkSize while avoiding a stampede.
+      for (const chunk of chunks) {
+        const enrichedChunk = await Promise.all(
+          chunk.map((p) => enrichOfferPayload(p, networkRef.current)),
+        );
+
+        enrichedChunk.forEach((enriched) => {
+          // Deduplicate by id or offer string so the buffer and listeners
+          // don't receive the same offer repeatedly.
+          const key = enriched.id || enriched.offer;
+          if (key) {
+            const buf = bufferRef.current;
+            const alreadyPresent = buf.some(
+              (o) => (o.id || o.offer) === key,
+            );
+            if (alreadyPresent) {
+              return;
+            }
+          }
+
+          receivedCountRef.current += 1;
+          const buf = bufferRef.current;
+          if (buf.length >= MAX_BUFFER_LEN) buf.shift();
+          buf.push(enriched);
+          offersCallbacksRef.current.forEach((cb) => cb([enriched]));
+        });
+      }
+    })();
   };
 }
 

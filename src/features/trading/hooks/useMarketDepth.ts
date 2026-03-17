@@ -15,8 +15,8 @@ interface UseMarketDepthOptions {
 }
 
 /**
- * Hook for fetching and processing market depth data
- * Aggregates order book data by price level and calculates cumulative volumes
+ * Hook for market depth: aggregates order book by price level with cumulative volumes.
+ * Uses the combined order book from useOrderBook (Dexie snapshot + Splash stream offers).
  */
 export function useMarketDepth({
   filters,
@@ -24,14 +24,14 @@ export function useMarketDepth({
   pricePrecision = 8,
 }: UseMarketDepthOptions = {}) {
   const {
-    orderBookData,
+    orderBookData, // combined: Dexie snapshot + Splash stream
     orderBookLoading,
     orderBookError,
     refreshOrderBook,
-  } = useOrderBook(filters)
+  } = useOrderBook(filters);
 
-  // Use the same filtering logic as the order book to get buy/sell orders
-  const { filteredBuyOrders, filteredSellOrders, calculatePriceFn } = useOrderBookFiltering(orderBookData, filters)
+  const { filteredBuyOrders, filteredSellOrders, calculatePriceFn } =
+    useOrderBookFiltering(orderBookData, filters);
 
   // Transform order book data to chart format using filtered orders and correct price calculation
   const orderBookChartData = useMemo(
