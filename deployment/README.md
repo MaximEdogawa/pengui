@@ -265,12 +265,11 @@ docker compose exec nginx nginx -s reload
 
 ### Splash relay (Docker)
 
-The relay is a lightweight service: it logs only warnings by default and does not keep logs long-term. Use the steps below to troubleshoot on the server.
+Deployment sets **`RUST_LOG=info`** by default (startup line, peer warnings, errors). **`deploy.sh`** warns if the relay is **restarting** during deploy and prints the **last 60 log lines** after the relay start window.
 
 #### Where the logs are
 
-- **Service names**: `splash-relay` (mainnet), `splash-relay-testnet`
-- **Container names**: `pengui-splash-relay`, `pengui-splash-relay-testnet`
+- **Service**: `splash-relay` (mainnet) · **Container**: `pengui-splash-relay`
 - Relay uses **json-file** with **max-size 5m, max-file 1**: `docker compose logs` works; only the latest 5MB is kept. After a container restart the log file is new, so no long-term log storage.
 
 #### View relay logs on the server
@@ -285,42 +284,29 @@ docker compose logs -f splash-relay
 # Last 200 lines
 docker compose logs splash-relay --tail 200
 
-# Testnet relay
-docker compose logs -f splash-relay-testnet
-docker compose logs splash-relay-testnet --tail 200
-
 # By container name
 docker logs -f pengui-splash-relay
 docker logs pengui-splash-relay --tail 200
 ```
 
-#### Enable verbose logging (troubleshooting only)
+#### Verbose logging (troubleshooting)
 
-By default the relay logs at **warn** level. To see connections, stats, and startup details, set `RUST_LOG` when starting the container:
+Default in compose is **`RUST_LOG=info`**. For more detail, in **`deployment/.env`** set:
 
 ```bash
-# One-off run with verbose logs (mainnet)
-docker compose run --rm -e RUST_LOG=info splash-relay
-
-# Or add to docker-compose.yml under splash-relay (and splash-relay-testnet):
-#   environment:
-#     - RUST_LOG=info
-# Then: docker compose up -d splash-relay
+RUST_LOG=debug
 ```
 
-Use `RUST_LOG=debug` for maximum detail (connections, every offer, etc.); turn it off when done to avoid log volume and extra I/O.
+Then `docker compose up -d splash-relay`. Use **`debug`** only while troubleshooting (higher log volume). Remove or set back to **`info`** afterward.
 
 #### Check relay status and restart
 
 ```bash
 # Container status (running / exit code)
-docker compose ps splash-relay splash-relay-testnet
+docker compose ps splash-relay
 
-# Restart mainnet relay
+# Restart relay
 docker compose restart splash-relay
-
-# Restart both relays
-docker compose restart splash-relay splash-relay-testnet
 
 # View last log lines after restart
 docker compose logs splash-relay --tail 50

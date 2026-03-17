@@ -200,6 +200,35 @@ docker compose up -d --no-deps --wait pengui || warn "Pengui update had issues"
 if [ -n "${SPLASH_RELAY_IMAGE:-}" ]; then
     log "Starting splash-relay service..."
     docker compose up -d splash-relay || warn "Splash relay start had issues"
+    info "splash-relay logging level: ${RUST_LOG:-info} (set RUST_LOG=debug in .env for verbose relay logs)"
+    relay_restarts_seen=0
+    for wait_round in $(seq 1 20); do
+        relay_status=$(docker compose ps splash-relay --format '{{.Status}}' 2>/dev/null || true)
+        if echo "$relay_status" | grep -qi 'restarting'; then
+            relay_restarts_seen=1
+            warn "splash-relay is restarting (check $wait_round/20): $relay_status"
+        fi
+        if echo "$relay_status" | grep -qi 'healthy'; then
+            if [ "$relay_restarts_seen" -eq 1 ]; then
+                warn "splash-relay became healthy after earlier restarts — verify relay image and logs if this recurs"
+            else
+                log "splash-relay is healthy"
+            fi
+            break
+        fi
+        if echo "$relay_status" | grep -qiE 'exited|dead'; then
+            warn "splash-relay container not running: $relay_status"
+            break
+        fi
+        sleep 3
+    done
+    relay_final=$(docker compose ps splash-relay --format '{{.Status}}' 2>/dev/null || true)
+    if ! echo "$relay_final" | grep -qi 'healthy'; then
+        warn "splash-relay did not reach healthy within deploy window: $relay_final"
+        warn "Stream tab relay may be unavailable until the relay stays up"
+    fi
+    info "splash-relay recent logs (last 60 lines):"
+    docker compose logs splash-relay --tail 60 2>/dev/null || true
 fi
 
 # Check if pengui is healthy

@@ -92,17 +92,24 @@ services:
       - "9090:9090" # WebSocket for app/browser connections
       - "11511:11511" # TCP for Splash network (optional)
     command: ["--tcp-port", "11511", "--ws-port", "9090"]
+    environment:
+      # info = startup line + warnings/errors; debug for verbose (set in .env)
+      - RUST_LOG=${RUST_LOG:-info}
     networks:
       pengui-network:
         aliases:
           - splash-relay
-    # Minimal log retention: one 5MB file so "docker compose logs" works; new container = new file after reboot
     healthcheck:
-      test: ["CMD-SHELL", "nc -z -w 2 127.0.0.1 9090 && nc -z -w 2 127.0.0.1 11511"]
-      interval: 15s
-      timeout: 8s
-      retries: 5
-      start_period: 90s
+      # Several attempts per check: WS 9090 + Splash TCP 11511 must both accept
+      test:
+        [
+          "CMD-SHELL",
+          "for i in 1 2 3 4 5; do nc -z -w 3 127.0.0.1 9090 && nc -z -w 3 127.0.0.1 11511 && exit 0; sleep 2; done; exit 1",
+        ]
+      interval: 20s
+      timeout: 35s
+      retries: 4
+      start_period: 120s
     logging:
       driver: "json-file"
       options:
