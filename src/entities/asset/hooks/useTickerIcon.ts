@@ -25,6 +25,31 @@ const ICON_CACHE_TIME = 24 * 60 * 60 * 1000;
 const iconProxyUrlCache = new Map<string, string>(); // assetId -> proxy URL
 const iconObjectUrlCache = new Map<string, string>(); // proxy URL -> object URL
 
+// Soft upper bound for object URL cache. If more than this many distinct
+// proxy URLs are seen, oldest entries are evicted and their object URLs
+// are revoked to avoid unbounded memory growth.
+const MAX_ICON_OBJECT_URLS = 512;
+
+function rememberObjectUrl(proxyUrl: string, objectUrl: string) {
+  // If entry already exists, just update insertion order in Map and return.
+  if (iconObjectUrlCache.has(proxyUrl)) {
+    iconObjectUrlCache.set(proxyUrl, objectUrl);
+    return;
+  }
+
+  // Evict oldest entries if over capacity.
+  if (iconObjectUrlCache.size >= MAX_ICON_OBJECT_URLS) {
+    const iterator = iconObjectUrlCache.entries().next();
+    if (!iterator.done) {
+      const [oldestProxyUrl, oldestUrl] = iterator.value as [string, string];
+      iconObjectUrlCache.delete(oldestProxyUrl);
+      URL.revokeObjectURL(oldestUrl);
+    }
+  }
+
+  iconObjectUrlCache.set(proxyUrl, objectUrl);
+}
+
 function toIconUrl(previewUrl: string): string {
   if (typeof window === "undefined") return previewUrl;
   return isSpaceScanIconOrigin(previewUrl)
@@ -137,10 +162,10 @@ export function useTickerIcon(
     }
 
     const url = URL.createObjectURL(blob);
-    iconObjectUrlCache.set(proxyUrl, url);
+    rememberObjectUrl(proxyUrl, url);
     setObjectUrl(url);
-    // We intentionally do NOT revoke the object URL here; it is reused for
-    // this proxy URL across the app lifetime to avoid churn and duplicate entries.
+    // We intentionally rely on the bounded cache + eviction above to revoke
+    // object URLs; active, frequently used icons stay resident.
   }, [useBlob, blob, proxyUrl]);
 
   const isLoading = enabled && (tokensLoading || (useBlob && iconLoading));
