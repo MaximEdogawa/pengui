@@ -392,15 +392,22 @@ impl SplashNode {
                                                             let _ = cb.call1(&JsValue::NULL, &js_offer);
                                                         }
                                                         Err(e) => {
-                                                            log(&format!("[Splash] to_value error (enriched): {:?}", e));
+                                                            // Only log detailed conversion errors in debug builds.
+                                                            if cfg!(debug_assertions) {
+                                                                log(&format!("[Splash] to_value error (enriched): {:?}", e));
+                                                            }
                                                         }
                                                     }
                                                 }
                                                 Err(e) => {
-                                                    log(&format!(
-                                                        "[Splash] Dropping non-enriched offer payload from {}: {:?}",
-                                                        propagation_source, e
-                                                    ));
+                                                    // In normal builds we silently drop non-enriched payloads to
+                                                    // avoid noisy console logs. In debug builds, keep a hint.
+                                                    if cfg!(debug_assertions) {
+                                                        log(&format!(
+                                                            "[Splash] Dropping non-enriched offer payload from {}: {:?}",
+                                                            propagation_source, e
+                                                        ));
+                                                    }
                                                 }
                                             }
                                         }
