@@ -15,7 +15,7 @@ COPY crates/splash-relay/src ./src
 RUN cargo build --release
 
 FROM debian:bookworm-slim
-RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y ca-certificates netcat-openbsd && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /app/target/release/splash-relay /usr/local/bin/
 EXPOSE 11511 9090
 # TCP 11511 = Splash network, 9090 = WebSocket for browsers

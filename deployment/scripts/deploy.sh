@@ -23,11 +23,13 @@ cleanup_and_start() {
         docker compose up -d pengui 2>/dev/null || true
     fi
     
-    # Start relay services if not running
+    # Start relay if not running
     if [ -n "${SPLASH_RELAY_IMAGE:-}" ]; then
-        docker compose up -d splash-relay splash-relay-testnet 2>/dev/null || true
+        docker compose up -d splash-relay 2>/dev/null || true
     fi
-    # Start nginx if not running, or reload if it is
+    # Nginx (relay-coupled watchdog); build if missing
+    export RELAY_WATCHDOG=1
+    docker compose build nginx 2>/dev/null || true
     if docker compose ps nginx 2>/dev/null | grep -q "Up\|running"; then
         docker compose exec -T nginx nginx -s reload 2>/dev/null || true
     else
@@ -121,7 +123,9 @@ if [ "$NEED_CERT" = true ]; then
     docker compose pull pengui || true
     docker compose up -d pengui
     sleep 5
-    docker compose up -d nginx
+    # ACME: nginx without relay watchdog (relay may not exist yet)
+    docker compose build nginx || true
+    RELAY_WATCHDOG=0 docker compose up -d --no-deps nginx
     sleep 5
     
     # Verify ACME challenge path is accessible
@@ -206,13 +210,14 @@ else
     docker compose logs --tail=10 pengui || true
 fi
 
-# Update nginx - reload config if running, otherwise start it
+# Update nginx - rebuild image, then relay-coupled mode (exits if relay dies)
 log "Updating nginx..."
+docker compose build nginx || warn "Nginx image build had issues"
+export RELAY_WATCHDOG=1
 if docker compose ps nginx 2>/dev/null | grep -q "Up\|running"; then
-    # Nginx is running - just reload config (no restart = no downtime)
-    docker compose exec -T nginx nginx -s reload || docker compose up -d --no-deps nginx
+    docker compose exec -T nginx nginx -s reload 2>/dev/null || true
+    docker compose up -d --no-deps nginx || warn "Nginx restart had issues"
 else
-    # Nginx not running - start it
     docker compose up -d --no-deps nginx || warn "Nginx start had issues"
 fi
 

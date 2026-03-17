@@ -151,6 +151,12 @@ If the server already has an SSL cert that does not include the relay subdomain,
 
 > Note: the in-repo deployment currently only runs a **mainnet** relay. A separate testnet relay can be added later if needed.
 
+### Nginx and relay coupling
+
+- **Nginx image** is built from `deployment/nginx/` (Alpine + relay watchdog).
+- With **`RELAY_WATCHDOG=1`** (default in `.env.example`), the nginx container **exits** if `splash-relay` stops accepting TCP on **9090** (and the relay healthcheck requires **9090** and **11511**). Docker’s `restart: unless-stopped` brings nginx back; once the relay is healthy again, nginx stays up.
+- **`deploy.sh`** sets **`RELAY_WATCHDOG=0`** only for the initial **ACME / HTTP-only** nginx step (before the relay must be up). After HTTPS is configured, deploy uses **`RELAY_WATCHDOG=1`**.
+
 ## Files
 
 | File | Description |
@@ -158,6 +164,7 @@ If the server already has an SSL cert that does not include the relay subdomain,
 | `Dockerfile` | Multi-stage build for Next.js standalone server |
 | `docker-compose.yml` | Service orchestration (Next.js + nginx + certbot + splash-relay) |
 | `splash-relay/Dockerfile` | Build for splash-relay (Rust) |
+| `nginx/Dockerfile` | Nginx image with relay watchdog |
 | `nginx/nginx.conf` | Base nginx configuration |
 | `nginx/templates/*.conf.template` | Domain-specific nginx configs (including optional relay subdomain) |
 | `scripts/deploy.sh` | Automated deployment script |

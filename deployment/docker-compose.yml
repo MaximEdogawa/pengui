@@ -28,9 +28,12 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  # Nginx reverse proxy with SSL termination
+  # Nginx reverse proxy with SSL termination (exits when splash-relay stops listening)
   nginx:
-    image: nginx:alpine
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    image: pengui-nginx-relay-coupled:latest
     container_name: pengui-nginx
     restart: unless-stopped
     ports:
@@ -41,6 +44,8 @@ services:
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
       - ./certbot/conf:/etc/letsencrypt:ro
       - ./certbot/www:/var/www/certbot:ro
+    environment:
+      - RELAY_WATCHDOG=${RELAY_WATCHDOG:-1}
     depends_on:
       pengui:
         condition: service_healthy
@@ -52,17 +57,13 @@ services:
     healthcheck:
       test:
         [
-          "CMD",
-          "wget",
-          "--quiet",
-          "--tries=1",
-          "--spider",
-          "http://localhost/health",
+          "CMD-SHELL",
+          "wget -q -O /dev/null --tries=1 --timeout=3 http://127.0.0.1/health && nc -z -w 3 splash-relay 9090",
         ]
-      interval: 30s
+      interval: 15s
       timeout: 10s
       retries: 3
-      start_period: 10s
+      start_period: 30s
     logging:
       driver: "json-file"
       options:
@@ -97,11 +98,11 @@ services:
           - splash-relay
     # Minimal log retention: one 5MB file so "docker compose logs" works; new container = new file after reboot
     healthcheck:
-      test: ["CMD-SHELL", "ps aux | grep -q '[s]plash-relay'"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
+      test: ["CMD-SHELL", "nc -z -w 2 127.0.0.1 9090 && nc -z -w 2 127.0.0.1 11511"]
+      interval: 15s
+      timeout: 8s
+      retries: 5
+      start_period: 90s
     logging:
       driver: "json-file"
       options:

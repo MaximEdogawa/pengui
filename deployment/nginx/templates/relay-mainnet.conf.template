@@ -11,10 +11,8 @@ server {
     resolver 127.0.0.11 valid=30s ipv6=off;
 
     location / {
-        # Use host loopback + published port so nginx never depends on
-        # Docker DNS or the relay container being resolvable at startup.
-        # If the relay is down, clients just get 502 instead of nginx failing.
-        proxy_pass http://127.0.0.1:9090;
+        # Same Docker network as splash-relay; nginx starts only after relay is healthy.
+        proxy_pass http://splash-relay:9090;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection $connection_upgrade;
