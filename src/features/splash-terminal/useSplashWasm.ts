@@ -107,7 +107,14 @@ async function loadWasmModule(
 async function enrichOfferPayload(
   p: SplashOfferPayload,
   network: "mainnet" | "testnet",
+  cache: Map<string, DexieOffer>,
 ): Promise<DexieOffer> {
+  const cacheKey = p.offer;
+  const cached = cache.get(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
   try {
     const apiUrl = getDexieApiUrl(network);
     // Use GET to retrieve offer details by offer string so we don't POST from the stream.
@@ -118,12 +125,16 @@ async function enrichOfferPayload(
       offer?: DexieOffer;
     };
     if (data.success && data.offer) {
-      return { ...data.offer, offer: p.offer };
+      const enriched = { ...data.offer, offer: p.offer };
+      cache.set(cacheKey, enriched);
+      return enriched;
     }
   } catch {
     // fall through to minimal
   }
-  return toMinimalDexieOffer(p);
+  const minimal = toMinimalDexieOffer(p);
+  cache.set(cacheKey, minimal);
+  return minimal;
 }
 
 function createOffersCallback(
@@ -148,11 +159,15 @@ function createOffersCallback(
         (_, idx) => offers.slice(idx * chunkSize, (idx + 1) * chunkSize),
       );
 
+      // Simple in-memory cache for enriched offers so repeated Splash
+      // messages for the same offer don't keep hitting Dexie.
+      const enrichmentCache = new Map<string, DexieOffer>();
+
       // Process chunks sequentially; within each chunk, enrich concurrently.
       // This keeps peak concurrency at ~chunkSize while avoiding a stampede.
       for (const chunk of chunks) {
         const enrichedChunk = await Promise.all(
-          chunk.map((p) => enrichOfferPayload(p, networkRef.current)),
+          chunk.map((p) => enrichOfferPayload(p, networkRef.current, enrichmentCache)),
         );
 
         enrichedChunk.forEach((enriched) => {
