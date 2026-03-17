@@ -32,6 +32,53 @@ pub struct Offer {
     pub timestamp: f64,
 }
 
+/// Dexie-style asset for offers (matches frontend DexieAsset).
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct DexieAsset {
+    #[serde(default)]
+    pub id: String,
+    #[serde(default)]
+    pub code: String,
+    #[serde(default)]
+    pub name: String,
+    #[serde(default)]
+    pub amount: f64,
+}
+
+/// Enriched offer shape forwarded by splash-relay after Dexie enrichment.
+/// This mirrors the relay's EnrichedOffer and is close to the app's DexieOffer type.
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct EnrichedOffer {
+    #[serde(default)]
+    pub id: String,
+    #[serde(default)]
+    pub offer: String,
+    #[serde(default)]
+    pub status: i32,
+    #[serde(default)]
+    pub date_found: Option<String>,
+    #[serde(default)]
+    pub date_completed: Option<String>,
+    #[serde(default)]
+    pub date_pending: Option<String>,
+    #[serde(default)]
+    pub date_expiry: Option<String>,
+    #[serde(default)]
+    pub block_expiry: Option<i64>,
+    #[serde(default)]
+    pub spent_block_index: Option<i64>,
+    #[serde(default)]
+    pub price: Option<f64>,
+    #[serde(default)]
+    pub offered: Vec<DexieAsset>,
+    #[serde(default)]
+    pub requested: Vec<DexieAsset>,
+    #[serde(default)]
+    pub fees: Option<f64>,
+    #[serde(default)]
+    pub known_taker: Option<serde_json::Value>,
+}
+
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct SplashPeer {
     pub id: String,
@@ -327,8 +374,7 @@ impl SplashNode {
                             SwarmEvent::Behaviour(SplashBehaviourEvent::Gossipsub(
                                 gossipsub::Event::Message { propagation_source, message_id, message }
                             )) => {
-                                let offer_str = String::from_utf8_lossy(&message.data).to_string();
-                                if offer_str.len() <= MAX_OFFER_SIZE {
+                                if message.data.len() <= MAX_OFFER_SIZE {
                                     let _ = swarm.behaviour_mut().gossipsub.report_message_validation_result(
                                         &message_id,
                                         &propagation_source,
@@ -336,17 +382,32 @@ impl SplashNode {
                                     );
                                     match offer_callback.borrow().as_ref() {
                                         Some(cb) => {
-                                            let offer = Offer {
-                                                offer: offer_str,
-                                                peer_id: propagation_source.to_string(),
-                                                timestamp: js_sys::Date::now(),
-                                            };
-                                            match serde_wasm_bindgen::to_value(&offer) {
-                                                Ok(js_offer) => {
-                                                    let _ = cb.call1(&JsValue::NULL, &js_offer);
+                                            // First, try to interpret the payload as an enriched offer JSON
+                                            // coming from splash-relay. If that fails, fall back to the
+                                            // original minimal Offer shape so older peers still work.
+                                            if let Ok(enriched) = serde_json::from_slice::<EnrichedOffer>(&message.data) {
+                                                match serde_wasm_bindgen::to_value(&enriched) {
+                                                    Ok(js_offer) => {
+                                                        let _ = cb.call1(&JsValue::NULL, &js_offer);
+                                                    }
+                                                    Err(e) => {
+                                                        log(&format!("[Splash] to_value error (enriched): {:?}", e));
+                                                    }
                                                 }
-                                                Err(e) => {
-                                                    log(&format!("[Splash] to_value error: {:?}", e));
+                                            } else {
+                                                let offer_str = String::from_utf8_lossy(&message.data).to_string();
+                                                let offer = Offer {
+                                                    offer: offer_str,
+                                                    peer_id: propagation_source.to_string(),
+                                                    timestamp: js_sys::Date::now(),
+                                                };
+                                                match serde_wasm_bindgen::to_value(&offer) {
+                                                    Ok(js_offer) => {
+                                                        let _ = cb.call1(&JsValue::NULL, &js_offer);
+                                                    }
+                                                    Err(e) => {
+                                                        log(&format!("[Splash] to_value error (minimal): {:?}", e));
+                                                    }
                                                 }
                                             }
                                         }

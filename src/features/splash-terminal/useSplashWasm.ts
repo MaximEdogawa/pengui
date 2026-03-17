@@ -1,8 +1,7 @@
 "use client";
 
 import { type RefObject, useCallback, useRef, useState } from "react";
-import type { DexieOffer } from "@/entities/offer";
-import { getDexieApiUrl } from "@/shared/lib/utils/networkUtils";
+import type { DexieAsset, DexieOffer } from "@/entities/offer";
 import { applyWebSocketBufferedAmountPatch } from "@/shared/lib/websocketBufferedAmountPatch";
 import { WASM_FILES, WASM_PATH_PREFIX } from "@/shared/lib/constants/apiProxy";
 
@@ -21,23 +20,102 @@ function isValidRelayUrl(url: unknown): url is string {
   );
 }
 
-interface SplashOfferPayload {
-  offer: string;
-  peer_id: string;
-  timestamp: number;
+type EnrichedOfferFromRelay = unknown;
+
+function getField(obj: unknown, key: string): unknown {
+  if (!obj || typeof obj !== "object") return undefined;
+  return (obj as Record<string, unknown>)[key];
 }
 
-function toMinimalDexieOffer(p: SplashOfferPayload): DexieOffer {
+function normalizeAssetFromStream(raw: unknown): DexieAsset {
+  const id = getField(raw, "id");
+  const code = getField(raw, "code");
+  const name = getField(raw, "name");
+  const amount = getField(raw, "amount");
+
   return {
-    id: "",
-    maker: "",
-    status: 0,
-    offer: p.offer,
-    date_found: new Date(p.timestamp).toISOString(),
-    price: 0,
-    offered: [],
-    requested: [],
-    fees: 0,
+    id: typeof id === "string" ? id : "",
+    code: typeof code === "string" ? code : "",
+    name: typeof name === "string" ? name : "",
+    amount:
+      typeof amount === "number"
+        ? amount
+        : Number(amount ?? 0) || 0,
+  };
+}
+
+function normalizeOfferFromStream(raw: unknown): DexieOffer | null {
+  if (!raw || typeof raw !== "object") return null;
+  const offer = getField(raw, "offer");
+  const offerStr = typeof offer === "string" ? offer : "";
+  const offeredField = getField(raw, "offered");
+  const requestedField = getField(raw, "requested");
+
+  const offeredRaw = Array.isArray(offeredField) ? offeredField : [];
+  const requestedRaw = Array.isArray(requestedField) ? requestedField : [];
+
+  const offered = offeredRaw.map(normalizeAssetFromStream);
+  const requested = requestedRaw.map(normalizeAssetFromStream);
+
+  // If we have neither an offer string nor any asset details, treat as invalid.
+  if (!offerStr && offered.length === 0 && requested.length === 0) {
+    return null;
+  }
+
+  const maker = getField(raw, "maker");
+  const id = getField(raw, "id");
+  const status = getField(raw, "status");
+  const dateFound = getField(raw, "date_found");
+  const dateCompleted = getField(raw, "date_completed");
+  const datePending = getField(raw, "date_pending");
+  const dateExpiry = getField(raw, "date_expiry");
+  const blockExpiry = getField(raw, "block_expiry");
+  const spentBlockIndex = getField(raw, "spent_block_index");
+  const price = getField(raw, "price");
+  const fees = getField(raw, "fees");
+  const knownTaker = getField(raw, "known_taker");
+
+  return {
+    // DexieOffer fields
+    maker: typeof maker === "string" ? maker : "",
+    id: typeof id === "string" ? id : offerStr,
+    status: typeof status === "number" ? status : 0,
+    offer: offerStr,
+    date_found:
+      typeof dateFound === "string"
+        ? dateFound
+        : new Date().toISOString(),
+    date_completed:
+      typeof dateCompleted === "string" || dateCompleted === null
+        ? dateCompleted
+        : null,
+    date_pending:
+      typeof datePending === "string" || datePending === null
+        ? datePending
+        : null,
+    date_expiry:
+      typeof dateExpiry === "string" || dateExpiry === null
+        ? dateExpiry
+        : null,
+    block_expiry:
+      typeof blockExpiry === "number"
+        ? blockExpiry
+        : null,
+    spent_block_index:
+      typeof spentBlockIndex === "number"
+        ? spentBlockIndex
+        : null,
+    price:
+      typeof price === "number"
+        ? price
+        : Number(price ?? 0) || 0,
+    offered,
+    requested,
+    fees:
+      typeof fees === "number"
+        ? fees
+        : Number(fees ?? 0) || 0,
+    known_taker: knownTaker ?? null,
   };
 }
 
@@ -104,41 +182,8 @@ async function loadWasmModule(
   return wasmModule as unknown as SplashWasmModule;
 }
 
-async function enrichOfferPayload(
-  p: SplashOfferPayload,
-  network: "mainnet" | "testnet",
-  cache: Map<string, DexieOffer>,
-): Promise<DexieOffer> {
-  const cacheKey = p.offer;
-  const cached = cache.get(cacheKey);
-  if (cached) {
-    return cached;
-  }
-
-  try {
-    const apiUrl = getDexieApiUrl(network);
-    // Use GET to retrieve offer details by offer string so we don't POST from the stream.
-    const url = `${apiUrl}/v1/offers?offer=${encodeURIComponent(p.offer)}`;
-    const resp = await fetch(url);
-    const data = (await resp.json()) as {
-      success?: boolean;
-      offer?: DexieOffer;
-    };
-    if (data.success && data.offer) {
-      const enriched = { ...data.offer, offer: p.offer };
-      cache.set(cacheKey, enriched);
-      return enriched;
-    }
-  } catch {
-    // fall through to minimal
-  }
-  const minimal = toMinimalDexieOffer(p);
-  cache.set(cacheKey, minimal);
-  return minimal;
-}
-
 function createOffersCallback(
-  networkRef: RefObject<"mainnet" | "testnet">,
+  _networkRef: RefObject<"mainnet" | "testnet">,
   bufferRef: RefObject<DexieOffer[]>,
   receivedCountRef: RefObject<number>,
   offersCallbacksRef: RefObject<Set<(offers: DexieOffer[]) => void>>,
@@ -146,52 +191,28 @@ function createOffersCallback(
   return (raw: unknown) => {
     const arr = Array.isArray(raw) ? raw : raw != null ? [raw] : [];
 
-    // Batch enrichment to avoid overwhelming Dexie API when many offers arrive at once.
-    // Process offers in chunks of 10 with limited concurrency.
-    void (async () => {
-      const offers = arr
-        .map((item: unknown) => item as SplashOfferPayload)
-        .filter((p) => p?.offer && typeof p.offer === "string");
+    const offers = arr
+      .map((item: EnrichedOfferFromRelay) => normalizeOfferFromStream(item))
+      .filter((o): o is DexieOffer => o != null);
 
-      const chunkSize = 10;
-      const chunks = Array.from(
-        { length: Math.ceil(offers.length / chunkSize) },
-        (_, idx) => offers.slice(idx * chunkSize, (idx + 1) * chunkSize),
-      );
-
-      // Simple in-memory cache for enriched offers so repeated Splash
-      // messages for the same offer don't keep hitting Dexie.
-      const enrichmentCache = new Map<string, DexieOffer>();
-
-      // Process chunks sequentially; within each chunk, enrich concurrently.
-      // This keeps peak concurrency at ~chunkSize while avoiding a stampede.
-      for (const chunk of chunks) {
-        const enrichedChunk = await Promise.all(
-          chunk.map((p) => enrichOfferPayload(p, networkRef.current, enrichmentCache)),
-        );
-
-        enrichedChunk.forEach((enriched) => {
-          // Deduplicate by id or offer string so the buffer and listeners
-          // don't receive the same offer repeatedly.
-          const key = enriched.id || enriched.offer;
-          if (key) {
-            const buf = bufferRef.current;
-            const alreadyPresent = buf.some(
-              (o) => (o.id || o.offer) === key,
-            );
-            if (alreadyPresent) {
-              return;
-            }
-          }
-
-          receivedCountRef.current += 1;
-          const buf = bufferRef.current;
-          if (buf.length >= MAX_BUFFER_LEN) buf.shift();
-          buf.push(enriched);
-          offersCallbacksRef.current.forEach((cb) => cb([enriched]));
-        });
+    offers.forEach((enriched) => {
+      // Deduplicate by id or offer string so the buffer and listeners
+      // don't receive the same offer repeatedly.
+      const key = enriched.id || enriched.offer;
+      if (key) {
+        const buf = bufferRef.current;
+        const alreadyPresent = buf.some((o) => (o.id || o.offer) === key);
+        if (alreadyPresent) {
+          return;
+        }
       }
-    })();
+
+      receivedCountRef.current += 1;
+      const buf = bufferRef.current;
+      if (buf.length >= MAX_BUFFER_LEN) buf.shift();
+      buf.push(enriched);
+      offersCallbacksRef.current.forEach((cb) => cb([enriched]));
+    });
   };
 }
 

@@ -9,6 +9,7 @@ use libp2p::multiaddr::Protocol;
 use libp2p::swarm::{Config as SwarmConfig, SwarmEvent};
 use libp2p::{identify, identity, kad, noise, tcp, yamux, Multiaddr, PeerId, StreamProtocol};
 use log::{debug, error, info, warn};
+use serde::Deserialize;
 use std::collections::hash_map::DefaultHasher;
 use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
@@ -16,6 +17,86 @@ use std::time::Duration;
 
 const NETWORK_NAME: &str = "splash";
 const MAX_OFFER_SIZE: usize = 300 * 1024;
+const MAX_OFFER_CACHE_SIZE: usize = 10_000;
+
+#[derive(Debug, Deserialize)]
+struct MinimalSplashOffer {
+    offer: String,
+    #[allow(dead_code)]
+    peer_id: Option<String>,
+    #[allow(dead_code)]
+    timestamp: Option<i64>,
+}
+
+/// Opaque Dexie offer JSON as returned from /v1/offers POST.
+/// We intentionally avoid a strict Rust schema so we don't
+/// accidentally drop fields if Dexie adds or changes them.
+type EnrichedOffer = serde_json::Value;
+
+async fn fetch_enriched_offer(
+    dexie_api_base: &str,
+    offer_str: &str,
+) -> Result<Option<EnrichedOffer>> {
+    // Dexie offers API: POST /v1/offers with JSON body { "offer": "<offer string>" } to
+    // both register and retrieve the enriched offer.
+    let url = format!("{}/v1/offers", dexie_api_base);
+    let client = reqwest::Client::new();
+    let body = serde_json::json!({ "offer": offer_str });
+
+    // Up to 3 attempts with simple backoff.
+    for attempt in 1..=3 {
+        match client.post(&url).json(&body).send().await {
+            Ok(resp) => {
+                if !resp.status().is_success() {
+                    debug!(
+                        "Dexie POST /v1/offers failed (attempt {attempt}/3): status={} url={} body_offer_prefix={}",
+                        resp.status(),
+                        url,
+                        &offer_str.chars().take(16).collect::<String>()
+                    );
+                    continue;
+                }
+                let raw: serde_json::Value = resp.json().await?;
+                // Expect Dexie-like shape { success: bool, offer: {...} } but be tolerant.
+                if let Some(offer_val) = raw
+                    .get("offer")
+                    .cloned()
+                    .or_else(|| raw.get("data").cloned())
+                {
+                    // Log full Dexie offer JSON so asset tickers/amounts are visible in debug logs.
+                    debug!(
+                        "Dexie POST enrichment offer JSON: {}",
+                        offer_val
+                    );
+                    debug!(
+                        "Dexie enrichment success for offer (attempt {attempt}/3): {}",
+                        offer_str
+                    );
+                    return Ok(Some(offer_val));
+                } else {
+                    debug!(
+                        "Dexie enrichment missing 'offer' field (attempt {attempt}/3) url={}",
+                        url
+                    );
+                }
+            }
+            Err(e) => {
+                debug!(
+                    "Dexie GET error (attempt {attempt}/3) url={} err={:?}",
+                    url, e
+                );
+            }
+        }
+        // Small delay before next retry.
+        tokio::time::sleep(Duration::from_millis(200)).await;
+    }
+
+    debug!(
+        "Dexie POST enrichment failed after 3 attempts for offer: {}",
+        offer_str
+    );
+    Ok(None)
+}
 
 /// Returns true if this connection is an inbound WebSocket (browser/app peer).
 fn is_inbound_ws(endpoint: &libp2p::core::ConnectedPoint) -> bool {
@@ -213,6 +294,21 @@ async fn run() -> Result<()> {
         network_name, args.tcp_port, args.ws_port, max_ws_connections, local_peer_id
     );
 
+    // Dexie API base URL (can be configured via env; defaults match frontend getDexieApiUrl).
+    let dexie_api_base = if args.testnet {
+        std::env::var("DEXIE_TESTNET_API_BASE")
+            .unwrap_or_else(|_| "https://api-testnet.dexie.space".to_string())
+    } else {
+        std::env::var("DEXIE_MAINNET_API_BASE")
+            .unwrap_or_else(|_| "https://api.dexie.space".to_string())
+    };
+
+    // Cache of enriched Dexie offer JSON values keyed by raw offer string.
+    let mut offer_cache: HashMap<String, EnrichedOffer> = HashMap::new();
+    // Track which offers we've already published in this relay process so we don't
+    // re-broadcast the same offer multiple times if the network gossips it again.
+    let mut published_offers: HashSet<String> = HashSet::new();
+
     loop {
         tokio::select! {
             _ = peer_discovery_interval.tick() => {
@@ -284,39 +380,240 @@ async fn run() -> Result<()> {
                     )) => {
                         let offer_len = message.data.len();
                         if offer_len <= MAX_OFFER_SIZE {
-                            // Debug: show basic info about the offer payload we relay.
-                            // Enable with RUST_LOG=debug to inspect raw values without affecting production logs.
-                            if log::log_enabled!(log::Level::Debug) {
-                                if let Ok(text) = std::str::from_utf8(&message.data) {
-                                    // Truncate to avoid flooding logs.
-                                    let preview: String = text.chars().take(200).collect();
-                                    debug!(
-                                        "Relaying offer payload from {} ({} bytes): {}",
-                                        propagation_source,
-                                        offer_len,
-                                        preview
-                                    );
-                                } else {
-                                    debug!(
-                                        "Relaying non-UTF8 offer payload from {} ({} bytes)",
-                                        propagation_source,
-                                        offer_len
-                                    );
-                                }
-                            }
-
                             let _ = swarm.behaviour_mut().gossipsub.report_message_validation_result(
                                 &message_id,
                                 &propagation_source,
                                 MessageAcceptance::Accept,
                             );
-                            offers_relayed += 1;
-                            if let Err(e) = swarm
-                                .behaviour_mut()
-                                .gossipsub
-                                .publish(topic.clone(), message.data.clone())
+
+                            // Try to decode enriched offers first (already-enriched JSON from peers),
+                            // then fall back to minimal Splash offer payload and enrich it via Dexie with caching.
+                            let mut offer_key: Option<String> = None;
+                            let maybe_enriched = if let Ok(json_from_peer) =
+                                serde_json::from_slice::<serde_json::Value>(&message.data)
                             {
-                                debug!("re-publish failed: {:?}", e);
+                                // Only accept enriched offers that actually have asset details.
+                                let offered_len = json_from_peer
+                                    .get("offered")
+                                    .and_then(|v| v.as_array())
+                                    .map(|a| a.len())
+                                    .unwrap_or(0);
+                                let requested_len = json_from_peer
+                                    .get("requested")
+                                    .and_then(|v| v.as_array())
+                                    .map(|a| a.len())
+                                    .unwrap_or(0);
+
+                                if offered_len > 0 && requested_len > 0 {
+                                    let key = json_from_peer
+                                        .get("id")
+                                        .and_then(|v| v.as_str())
+                                        .map(|s| s.to_string())
+                                        .or_else(|| {
+                                            json_from_peer
+                                                .get("offer")
+                                                .and_then(|v| v.as_str())
+                                                .map(|s| s.to_string())
+                                        })
+                                        .unwrap_or_default();
+
+                                    if !key.is_empty() {
+                                        offer_key = Some(key.clone());
+                                    }
+
+                                    debug!(
+                                        "Received enriched offer JSON from peer {}: key={} offered_len={} requested_len={}",
+                                        propagation_source,
+                                        key,
+                                        offered_len,
+                                        requested_len,
+                                    );
+
+                                    if let Some(k) = &offer_key {
+                                        // If we've already published this enriched offer once in this process,
+                                        // skip re-broadcast entirely.
+                                        if published_offers.contains(k) {
+                                            debug!("Skipping already-published enriched offer {}", k);
+                                            None
+                                        } else {
+                                            if offer_cache.len() >= MAX_OFFER_CACHE_SIZE {
+                                                if let Some(old_key) = offer_cache.keys().next().cloned() {
+                                                    offer_cache.remove(&old_key);
+                                                }
+                                            }
+                                            offer_cache.insert(k.clone(), json_from_peer.clone());
+                                            Some(json_from_peer)
+                                        }
+                                    } else {
+                                        Some(json_from_peer)
+                                    }
+                                } else {
+                                    debug!(
+                                        "Ignoring enriched offer JSON from {} with empty assets",
+                                        propagation_source
+                                    );
+                                    None
+                                }
+                            } else if let Ok(text) = std::str::from_utf8(&message.data) {
+                                // Raw (minimal) Splash offer payload; only log the offer key, not the full string.
+                                if let Ok(minimal) = serde_json::from_str::<MinimalSplashOffer>(text) {
+                                    let key = minimal.offer.clone();
+                                    offer_key = Some(key.clone());
+
+                                    // Log every offer we decode at debug level.
+                                    debug!(
+                                        "Parsed MinimalSplashOffer from {}: offer={}",
+                                        propagation_source, key
+                                    );
+
+                                    // If we've already published this offer once in this process,
+                                    // skip enrichment and re-broadcast entirely (duplicate offer).
+                                    if published_offers.contains(&key) {
+                                        debug!("Skipping already-published offer {}", key);
+                                        None
+                                    } else if let Some(cached) = offer_cache.get(&key) {
+                                        debug!("Using cached enriched offer for {}", key);
+                                        Some(cached.clone())
+                                    } else {
+                                        match fetch_enriched_offer(&dexie_api_base, &minimal.offer).await {
+                                            Ok(Some(enriched)) => {
+                                                if offer_cache.len() >= MAX_OFFER_CACHE_SIZE {
+                                                    if let Some(old_key) = offer_cache.keys().next().cloned() {
+                                                        offer_cache.remove(&old_key);
+                                                    }
+                                                }
+                                                debug!(
+                                                    "Dexie POST enrichment success (cached) | len_offered={} len_requested={}",
+                                                    enriched
+                                                        .get("offered")
+                                                        .and_then(|v| v.as_array())
+                                                        .map(|a| a.len())
+                                                        .unwrap_or(0),
+                                                    enriched
+                                                        .get("requested")
+                                                        .and_then(|v| v.as_array())
+                                                        .map(|a| a.len())
+                                                        .unwrap_or(0),
+                                                );
+                                                offer_cache.insert(key.clone(), enriched.clone());
+                                                Some(enriched)
+                                            }
+                                            Ok(None) => {
+                                                debug!(
+                                                    "Dexie POST enrichment returned no offer JSON for key={}",
+                                                    key
+                                                );
+                                                None
+                                            }
+                                            Err(e) => {
+                                                debug!("Dexie POST enrichment error for key {}: {:?}", key, e);
+                                                None
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    // Not a MinimalSplashOffer JSON; treat the whole text as an offer string and try enrichment
+                                    // without logging the raw offer.
+                                    let key = text.trim().to_string();
+                                    offer_key = Some(key.clone());
+
+                                    if published_offers.contains(&key) {
+                                        debug!("Skipping already-published raw offer {}", key);
+                                        None
+                                    } else if let Some(cached) = offer_cache.get(&key) {
+                                        debug!("Using cached enriched offer for raw offer {}", key);
+                                        Some(cached.clone())
+                                    } else {
+                                        match fetch_enriched_offer(&dexie_api_base, &key).await {
+                                            Ok(Some(enriched)) => {
+                                                if offer_cache.len() >= MAX_OFFER_CACHE_SIZE {
+                                                    if let Some(old_key) = offer_cache.keys().next().cloned() {
+                                                        offer_cache.remove(&old_key);
+                                                    }
+                                                }
+                                                debug!(
+                                                    "Dexie POST enrichment success (cached, raw) | len_offered={} len_requested={}",
+                                                    enriched
+                                                        .get("offered")
+                                                        .and_then(|v| v.as_array())
+                                                        .map(|a| a.len())
+                                                        .unwrap_or(0),
+                                                    enriched
+                                                        .get("requested")
+                                                        .and_then(|v| v.as_array())
+                                                        .map(|a| a.len())
+                                                        .unwrap_or(0),
+                                                );
+                                                offer_cache.insert(key.clone(), enriched.clone());
+                                                Some(enriched)
+                                            }
+                                            Ok(None) => {
+                                                debug!(
+                                                    "No enriched offer returned from Dexie (GET+PATCH) for raw offer={}",
+                                                    key
+                                                );
+                                                None
+                                            }
+                                            Err(e) => {
+                                                debug!("Dexie enrichment error for raw offer {}: {:?}", key, e);
+                                                None
+                                            }
+                                        }
+                                    }
+                                }
+                            } else {
+                                debug!(
+                                    "Received non-UTF8 offer payload ({} bytes); nothing to broadcast",
+                                    offer_len
+                                );
+                                None
+                            };
+
+                            if let Some(enriched) = maybe_enriched {
+                                // Validate enriched JSON has non-empty offered/requested arrays before broadcasting.
+                                let offered = enriched
+                                    .get("offered")
+                                    .and_then(|v| v.as_array())
+                                    .cloned()
+                                    .unwrap_or_default();
+                                let requested = enriched
+                                    .get("requested")
+                                    .and_then(|v| v.as_array())
+                                    .cloned()
+                                    .unwrap_or_default();
+
+                                if offered.is_empty() || requested.is_empty() {
+                                    debug!(
+                                        "Enriched offer has empty offered/requested; not broadcasting. key={:?}",
+                                        offer_key
+                                    );
+                                    continue;
+                                }
+
+                                // Log the full enriched JSON we are about to broadcast so that
+                                // the asset tickers, amounts, and all Dexie fields are visible.
+                                debug!(
+                                    "Broadcasting enriched offer JSON from {}: {}",
+                                    propagation_source,
+                                    enriched
+                                );
+                                offers_relayed += 1;
+                                if let Some(k) = offer_key {
+                                    published_offers.insert(k);
+                                }
+                                if let Err(e) = swarm
+                                    .behaviour_mut()
+                                    .gossipsub
+                                    .publish(topic.clone(), serde_json::to_vec(&enriched).unwrap_or_default())
+                                {
+                                    debug!("re-publish failed for enriched offer: {:?}", e);
+                                }
+                            } else if let Some(key) = offer_key {
+                                // We only broadcast enriched offers; log that this one was dropped.
+                                debug!(
+                                    "Not broadcasting offer without enrichment after Dexie POST attempts: offer={}",
+                                    key
+                                );
                             }
                         } else {
                             warn!("Rejecting oversized offer: {} bytes", offer_len);

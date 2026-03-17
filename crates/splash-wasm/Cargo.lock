@@ -2019,6 +2019,7 @@ dependencies = [
  "libp2p-webrtc-websys",
  "serde",
  "serde-wasm-bindgen",
+ "serde_json",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "wasm-bindgen-test",
