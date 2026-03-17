@@ -160,9 +160,8 @@ jobs:
           context: .
           file: ./deployment/Dockerfile
           push: true
-          tags: |
-            # Single, explicit tag so deployments are always reproducible
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.tag }}
+          # Single, explicit tag so deployments are always reproducible
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.tag }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
