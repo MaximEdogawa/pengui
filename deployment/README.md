@@ -123,7 +123,6 @@ chmod +x scripts/deploy.sh
 The **splash-relay** services join the Splash network (libp2p) and expose WebSocket so the app’s Stream tab can receive live offers. They are included in `docker-compose.yml`.
 
 - **splash-relay** (mainnet): WebSocket on port **9090**, TCP on 11511.
-- **splash-relay-testnet**: WebSocket on host port **9091** (container 9090), `--testnet`.
 
 To have the app **auto-connect** to these relays, set at **build time** (e.g. in CI or when building the image):
 
@@ -150,12 +149,7 @@ No zone file or DNS code is stored in this repository; configure these records i
 
 If the server already has an SSL cert that does not include the relay subdomain, either run certbot once with `-d penguinpool.space -d relay.penguinpool.space` to expand the cert, or trigger a new certificate request (e.g. by removing the existing cert and redeploying).
 
-**To enable the testnet relay and `testnet-relay.penguinpool.space`:**
-
-1. **DNS**: A record `testnet-relay.penguinpool.space` → your relay server’s public IP (same as mainnet if both run on the same host).
-2. **GitHub Actions variable**: Set `NEXT_PUBLIC_DEXIE_SPLASH_RELAY_TESTNET_WS_URL=wss://testnet-relay.penguinpool.space`. Same as mainnet: the workflow derives the testnet relay subdomain from this URL for nginx and certbot; the app uses it for the Stream tab in testnet mode.
-
-The testnet relay container (`splash-relay-testnet`) is always started with the mainnet relay when `SPLASH_RELAY_IMAGE` is set; the subdomain config only exposes it over HTTPS. Nginx config is generated from `nginx/templates/relay-mainnet.conf.template` and `nginx/templates/relay-testnet.conf.template` when the corresponding WS URL vars are set (subdomains are derived from those URLs).
+> Note: the in-repo deployment currently only runs a **mainnet** relay. A separate testnet relay can be added later if needed.
 
 ## Files
 

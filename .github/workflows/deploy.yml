@@ -161,8 +161,8 @@ jobs:
           file: ./deployment/Dockerfile
           push: true
           tags: |
+            # Single, explicit tag so deployments are always reproducible
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.tag }}
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
@@ -226,7 +226,6 @@ jobs:
           EMAIL: ${{ vars.EMAIL }}
           STAGING: ${{ vars.STAGING }}
           RELAY_MAINNET_SUBDOMAIN: ${{ vars.NEXT_PUBLIC_SPLASH_RELAY_MAINNET_SUBDOMAIN }}
-          RELAY_TESTNET_SUBDOMAIN: ${{ vars.NEXT_PUBLIC_SPLASH_RELAY_TESTNET_SUBDOMAIN }}
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
@@ -234,7 +233,7 @@ jobs:
           port: 22
           timeout: 10m
           command_timeout: 5m
-          envs: DOCKER_IMAGE,SPLASH_RELAY_IMAGE,GITHUB_TOKEN,GITHUB_ACTOR,DOMAIN,EMAIL,STAGING,RELAY_MAINNET_SUBDOMAIN,RELAY_TESTNET_SUBDOMAIN
+          envs: DOCKER_IMAGE,SPLASH_RELAY_IMAGE,GITHUB_TOKEN,GITHUB_ACTOR,DOMAIN,EMAIL,STAGING,RELAY_MAINNET_SUBDOMAIN
           script: |
             export DOCKER_IMAGE="$DOCKER_IMAGE"
             export SPLASH_RELAY_IMAGE="$SPLASH_RELAY_IMAGE"
@@ -244,7 +243,6 @@ jobs:
             export EMAIL="$EMAIL"
             export STAGING="${STAGING:-0}"
             export RELAY_MAINNET_SUBDOMAIN="${RELAY_MAINNET_SUBDOMAIN:-}"
-            export RELAY_TESTNET_SUBDOMAIN="${RELAY_TESTNET_SUBDOMAIN:-}"
             chmod +x ~/pengui/deployment/scripts/deploy.sh
             ~/pengui/deployment/scripts/deploy.sh
 

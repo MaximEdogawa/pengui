@@ -166,12 +166,11 @@ log "Configuring nginx with HTTPS..."
 envsubst '${DOMAIN}' < nginx/templates/https.conf.template > nginx/conf.d/default.conf.tmp
 mv nginx/conf.d/default.conf.tmp nginx/conf.d/default.conf
 
-# Optional: relay subdomain WebSocket proxy (when RELAY_MAINNET_SUBDOMAIN or RELAY_TESTNET_SUBDOMAIN is set)
+# Optional: relay subdomain WebSocket proxy (when RELAY_MAINNET_SUBDOMAIN is set)
 rm -f nginx/conf.d/relay.conf
-if [ -n "${RELAY_MAINNET_SUBDOMAIN:-}" ] || [ -n "${RELAY_TESTNET_SUBDOMAIN:-}" ]; then
-    log "Configuring nginx relay subdomain(s)..."
-    [ -n "${RELAY_MAINNET_SUBDOMAIN:-}" ] && envsubst '${DOMAIN} ${RELAY_MAINNET_SUBDOMAIN}' < nginx/templates/relay-mainnet.conf.template >> nginx/conf.d/relay.conf
-    [ -n "${RELAY_TESTNET_SUBDOMAIN:-}" ] && envsubst '${DOMAIN} ${RELAY_TESTNET_SUBDOMAIN}' < nginx/templates/relay-testnet.conf.template >> nginx/conf.d/relay.conf
+if [ -n "${RELAY_MAINNET_SUBDOMAIN:-}" ]; then
+    log "Configuring nginx relay subdomain..."
+    envsubst '${DOMAIN} ${RELAY_MAINNET_SUBDOMAIN}' < nginx/templates/relay-mainnet.conf.template >> nginx/conf.d/relay.conf
 fi
 
 # Pull latest Docker image
@@ -183,20 +182,20 @@ fi
 # Zero-downtime deployment: start new containers before stopping old ones
 log "Deploying with zero-downtime strategy..."
 
-# Pull new images first (while old containers still running)
+  # Pull new images first (while old containers still running)
 log "Pulling latest images..."
 docker compose pull pengui || warn "Failed to pull pengui image"
 if [ -n "${SPLASH_RELAY_IMAGE:-}" ]; then
-    docker compose pull splash-relay splash-relay-testnet || warn "Failed to pull splash-relay image(s)"
+    docker compose pull splash-relay || warn "Failed to pull splash-relay image"
 fi
 
 log "Updating pengui application..."
 docker compose up -d --no-deps --wait pengui || warn "Pengui update had issues"
 
-# Start relay services when using registry image
+  # Start relay service when using registry image
 if [ -n "${SPLASH_RELAY_IMAGE:-}" ]; then
-    log "Starting splash-relay services..."
-    docker compose up -d splash-relay splash-relay-testnet || warn "Splash relay start had issues"
+    log "Starting splash-relay service..."
+    docker compose up -d splash-relay || warn "Splash relay start had issues"
 fi
 
 # Check if pengui is healthy
