@@ -382,32 +382,25 @@ impl SplashNode {
                                     );
                                     match offer_callback.borrow().as_ref() {
                                         Some(cb) => {
-                                            // First, try to interpret the payload as an enriched offer JSON
-                                            // coming from splash-relay. If that fails, fall back to the
-                                            // original minimal Offer shape so older peers still work.
-                                            if let Ok(enriched) = serde_json::from_slice::<EnrichedOffer>(&message.data) {
-                                                match serde_wasm_bindgen::to_value(&enriched) {
-                                                    Ok(js_offer) => {
-                                                        let _ = cb.call1(&JsValue::NULL, &js_offer);
-                                                    }
-                                                    Err(e) => {
-                                                        log(&format!("[Splash] to_value error (enriched): {:?}", e));
+                                            // Splash relay now always broadcasts Dexie-enriched offers as JSON.
+                                            // Only forward messages that successfully parse as EnrichedOffer;
+                                            // drop legacy/plain-string offers so the UI never sees half-empty rows.
+                                            match serde_json::from_slice::<EnrichedOffer>(&message.data) {
+                                                Ok(enriched) => {
+                                                    match serde_wasm_bindgen::to_value(&enriched) {
+                                                        Ok(js_offer) => {
+                                                            let _ = cb.call1(&JsValue::NULL, &js_offer);
+                                                        }
+                                                        Err(e) => {
+                                                            log(&format!("[Splash] to_value error (enriched): {:?}", e));
+                                                        }
                                                     }
                                                 }
-                                            } else {
-                                                let offer_str = String::from_utf8_lossy(&message.data).to_string();
-                                                let offer = Offer {
-                                                    offer: offer_str,
-                                                    peer_id: propagation_source.to_string(),
-                                                    timestamp: js_sys::Date::now(),
-                                                };
-                                                match serde_wasm_bindgen::to_value(&offer) {
-                                                    Ok(js_offer) => {
-                                                        let _ = cb.call1(&JsValue::NULL, &js_offer);
-                                                    }
-                                                    Err(e) => {
-                                                        log(&format!("[Splash] to_value error (minimal): {:?}", e));
-                                                    }
+                                                Err(e) => {
+                                                    log(&format!(
+                                                        "[Splash] Dropping non-enriched offer payload from {}: {:?}",
+                                                        propagation_source, e
+                                                    ));
                                                 }
                                             }
                                         }

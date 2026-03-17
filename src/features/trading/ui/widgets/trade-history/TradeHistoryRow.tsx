@@ -3,7 +3,7 @@
 import { useThemeClasses } from "@/shared/hooks";
 import { useResponsive } from "@/shared/hooks/useResponsive";
 import type { DexieOffer } from "@/entities/offer";
-import { TokenIcon } from "@/shared/ui";
+import { TickerIcon, XchIcon } from "@/entities/asset";
 import {
   formatAmountForDisplay,
   formatPriceForDisplay,
@@ -105,11 +105,16 @@ export default function TradeHistoryRow({
             <div className="flex items-center gap-1 min-w-0 flex-1">
               {requested ? (
                 <>
-                  <TokenIcon
-                    ticker={requested.code ?? ""}
-                    size={14}
-                    className="flex-shrink-0"
-                  />
+                  {requested.code === "XCH" || requested.code === "TXCH" ? (
+                    <XchIcon size={14} className="flex-shrink-0" />
+                  ) : (
+                    <TickerIcon
+                      assetId={requested.id}
+                      ticker={requested.code ?? ""}
+                      size={14}
+                      className="flex-shrink-0"
+                    />
+                  )}
                   <span className={`text-[10px] font-mono ${t.text} truncate`}>
                     {formatAssetAmount(
                       requested.amount,
@@ -128,11 +133,16 @@ export default function TradeHistoryRow({
             <div className="flex items-center gap-1 min-w-0 flex-1 justify-end">
               {offered ? (
                 <>
-                  <TokenIcon
-                    ticker={offered.code ?? ""}
-                    size={14}
-                    className="flex-shrink-0"
-                  />
+                  {offered.code === "XCH" || offered.code === "TXCH" ? (
+                    <XchIcon size={14} className="flex-shrink-0" />
+                  ) : (
+                    <TickerIcon
+                      assetId={offered.id}
+                      ticker={offered.code ?? ""}
+                      size={14}
+                      className="flex-shrink-0"
+                    />
+                  )}
                   <span className={`text-[10px] font-mono ${t.text} truncate`}>
                     {formatAssetAmount(
                       offered.amount,
@@ -174,11 +184,16 @@ export default function TradeHistoryRow({
         <div className="col-span-2 flex items-center gap-1 text-xs font-mono">
           {requested ? (
             <>
-              <TokenIcon
-                ticker={requested.code ?? ""}
-                size={16}
-                className="flex-shrink-0"
-              />
+              {requested.code === "XCH" || requested.code === "TXCH" ? (
+                <XchIcon size={16} className="flex-shrink-0" />
+              ) : (
+                <TickerIcon
+                  assetId={requested.id}
+                  ticker={requested.code ?? ""}
+                  size={16}
+                  className="flex-shrink-0"
+                />
+              )}
               <span className={`${t.text} truncate`}>
                 {formatAssetAmount(
                   requested.amount,
@@ -194,11 +209,16 @@ export default function TradeHistoryRow({
         <div className="col-span-2 flex items-center gap-1 text-xs font-mono">
           {offered ? (
             <>
-              <TokenIcon
-                ticker={offered.code ?? ""}
-                size={16}
-                className="flex-shrink-0"
-              />
+              {offered.code === "XCH" || offered.code === "TXCH" ? (
+                <XchIcon size={16} className="flex-shrink-0" />
+              ) : (
+                <TickerIcon
+                  assetId={offered.id}
+                  ticker={offered.code ?? ""}
+                  size={16}
+                  className="flex-shrink-0"
+                />
+              )}
               <span className={`${t.text} truncate`}>
                 {formatAssetAmount(
                   offered.amount,

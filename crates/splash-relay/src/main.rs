@@ -582,6 +582,20 @@ async fn run() -> Result<()> {
                                     .cloned()
                                     .unwrap_or_default();
 
+                                // Only broadcast open offers (Dexie status = 0).
+                                let status_val = enriched
+                                    .get("status")
+                                    .and_then(|v| v.as_i64())
+                                    .unwrap_or(0);
+                                if status_val != 0 {
+                                    debug!(
+                                        "Enriched offer has non-open status ({}); not broadcasting. key={:?}",
+                                        status_val,
+                                        offer_key
+                                    );
+                                    continue;
+                                }
+
                                 if offered.is_empty() || requested.is_empty() {
                                     debug!(
                                         "Enriched offer has empty offered/requested; not broadcasting. key={:?}",
