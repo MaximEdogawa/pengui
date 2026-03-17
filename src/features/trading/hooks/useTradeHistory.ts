@@ -226,13 +226,15 @@ export function useTradeHistory(options: TradeHistoryOptions = {}) {
     getNextPageParam: (lastPage, _all, lastParam) =>
       lastPage.rawCount >= PAGE_SIZE ? (lastParam as number) + 1 : undefined,
     enabled: baseEnabled && thFilters.showCompleted,
-    staleTime: 30 * 1000,
+    staleTime: 2 * 60 * 1000,
     gcTime: 5 * 60 * 1000,
     retry: 2,
-    // When Trades tab is mounted and visible, allow periodic and on-focus refreshes.
-    refetchOnWindowFocus: true,
-    refetchOnReconnect: true,
-    refetchInterval: baseEnabled && thFilters.showCompleted ? 60 * 1000 : false,
+    // Trade history is relatively stable; avoid aggressive background refetching
+    // to reduce Dexie traffic. Data is refreshed when filters or pair change,
+    // or when the user scrolls for more pages.
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchInterval: false,
   });
 
   const cancelledQuery = useInfiniteQuery({
@@ -256,12 +258,12 @@ export function useTradeHistory(options: TradeHistoryOptions = {}) {
     getNextPageParam: (lastPage, _all, lastParam) =>
       lastPage.rawCount >= PAGE_SIZE ? (lastParam as number) + 1 : undefined,
     enabled: baseEnabled && thFilters.showCancelled,
-    staleTime: 30 * 1000,
+    staleTime: 2 * 60 * 1000,
     gcTime: 5 * 60 * 1000,
     retry: 2,
-    refetchOnWindowFocus: true,
-    refetchOnReconnect: true,
-    refetchInterval: baseEnabled && thFilters.showCancelled ? 60 * 1000 : false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchInterval: false,
   });
 
   const pendingQuery = useInfiniteQuery({
@@ -285,12 +287,12 @@ export function useTradeHistory(options: TradeHistoryOptions = {}) {
     getNextPageParam: (lastPage, _all, lastParam) =>
       lastPage.rawCount >= PAGE_SIZE ? (lastParam as number) + 1 : undefined,
     enabled: baseEnabled && thFilters.showPending,
-    staleTime: 30 * 1000,
+    staleTime: 2 * 60 * 1000,
     gcTime: 5 * 60 * 1000,
     retry: 2,
-    refetchOnWindowFocus: true,
-    refetchOnReconnect: true,
-    refetchInterval: baseEnabled && thFilters.showPending ? 60 * 1000 : false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchInterval: false,
   });
 
   const { orderBookData, orderBookLoading, orderBookError } = useOrderBook(
