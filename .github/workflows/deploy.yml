@@ -64,6 +64,24 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Compute version tag for wasm tagging
+        id: wasm_meta
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG_IN="${{ github.event.inputs.tag }}"
+            if [ -z "$TAG_IN" ]; then
+              TAG="latest"
+            else
+              TAG="$TAG_IN"
+            fi
+          elif [ "${{ github.event_name }}" = "release" ]; then
+            TAG="${{ github.ref_name }}"
+          else
+            TAG="latest"
+          fi
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
       - name: Build and push splash-wasm image (use cache)
         uses: docker/build-push-action@v6
         with:
@@ -72,13 +90,14 @@ jobs:
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:splash-wasm
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:splash-wasm-${{ github.ref_name }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:splash-wasm-${{ steps.wasm_meta.outputs.tag }}
           cache-from: |
             type=gha,scope=pengui-wasm
             type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:splash-wasm
           cache-to: type=gha,mode=max,scope=pengui-wasm
 
-  # Build relay when relay code changed (release) or manual + "build relay" checked; otherwise reuse :splash-relay
+  # Always build/push the computed relay tag.
+  # Buildx will reuse cached layers when nothing changed.
   build-and-push-relay:
     name: Build and Push Splash Relay Image
     runs-on: ubuntu-latest
@@ -128,7 +147,9 @@ jobs:
           echo "relay_build_tag=$RELAY_BUILD_TAG" >> "$GITHUB_OUTPUT"
 
       - name: Build and push splash-relay image (use cache)
-        if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && github.event.inputs.build_relay == 'true')
+        # Always build/push the computed relay tag so deployments never fail with "manifest unknown".
+        # Buildx will reuse cached layers when nothing changed.
+        if: true
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -148,7 +169,7 @@ jobs:
           echo "relay_image=${{ steps.relay_meta.outputs.relay_image }}" >> "$GITHUB_OUTPUT"
 
   # App image includes WASM (built from crates/splash-wasm in Dockerfile).
-  # On manual runs: reuse existing GHCR image by default; set `build_app=true` to force rebuild/push.
+  # Always build/push the requested app tag; Buildx will reuse cached layers when nothing changed.
   build-and-push:
     name: Build and Push App Image (incl. WASM)
     runs-on: ubuntu-latest
@@ -209,8 +230,8 @@ jobs:
 
           IMG_VERSIONED="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.tag }}"
 
-          # Always build on release for reproducibility.
-          # On workflow_dispatch: build only when build_app=true; otherwise rely on the already-published image.
+          # This output is kept for backward compatibility with earlier workflow logic,
+          # but the app build step is currently unconditional (cache-driven).
           if [ "${{ github.event_name }}" = "release" ]; then
             app_needs_build=true
           else
@@ -221,7 +242,9 @@ jobs:
           echo "full_image=$IMG_VERSIONED" >> "$GITHUB_OUTPUT"
 
       - name: Build and push Docker image
-        if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && github.event.inputs.build_app == 'true')
+        # Always build/push the requested app tag.
+        # Buildx will reuse cached layers when nothing changed.
+        if: true
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -236,7 +259,8 @@ jobs:
           build-args: |
             NEXT_PUBLIC_APP_VERSION=${{ steps.meta.outputs.tag }}
             NEXT_PUBLIC_APP_ENV=${{ steps.meta.outputs.app_env }}
-            SPLASH_WASM_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:splash-wasm
+            # Use versioned WASM for deterministic app builds per requested tag.
+            SPLASH_WASM_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.tag == 'latest' && 'splash-wasm' || format('splash-wasm-{0}', steps.meta.outputs.tag) }}
             NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID=${{ secrets.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID }}
             NEXT_PUBLIC_WALLET_CONNECT_RELAY_URL=${{ vars.NEXT_PUBLIC_WALLET_CONNECT_RELAY_URL }}
             NEXT_PUBLIC_DEXIE_MAINNET_API_URL=${{ vars.NEXT_PUBLIC_DEXIE_MAINNET_API_URL }}
