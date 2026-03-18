@@ -122,14 +122,14 @@ chmod +x scripts/deploy.sh
 
 The **splash-relay** services join the Splash network (libp2p) and expose WebSocket so the app’s Stream tab can receive live offers. They are included in `docker-compose.yml`.
 
+The Docker images compile both `splash-wasm` and `splash-relay` from source during the CI image build, so you only need to pull the versioned images for a reproducible deployment.
+
 - **splash-relay** (mainnet): WebSocket on port **9090**, TCP on 11511.
-- **splash-relay-testnet**: WebSocket on host port **9091** (container 9090), `--testnet`.
 
 To have the app **auto-connect** to these relays, set at **build time** (e.g. in CI or when building the image):
 
 - `NEXT_PUBLIC_DEXIE_SPLASH_RELAY_WS_URL` – default relay (e.g. `wss://relay.penguinpool.space`)
 - `NEXT_PUBLIC_DEXIE_SPLASH_RELAY_MAINNET_WS_URL` – mainnet relay (e.g. `wss://relay.penguinpool.space`)
-- `NEXT_PUBLIC_DEXIE_SPLASH_RELAY_TESTNET_WS_URL` – testnet relay (e.g. `wss://testnet-relay.penguinpool.space`)
 
 For production with your own domain, set the relay subdomain in GitHub vars (see “DNS for relays” below) and use `wss://relay.yourdomain.com` in the app build vars. For local testing, use `ws://localhost:9090` and `ws://localhost:9091`.
 
@@ -139,7 +139,7 @@ DNS for your domain (e.g. penguinpool.space) is managed at your DNS provider, no
 
 1. **Add a subdomain** for the relay (e.g. `relay.penguinpool.space`).
 2. **Create an A record** (or CNAME if you use a hostname) pointing that subdomain to the **relay server’s public IP** (the host where the relay container runs; it can be the same machine as the app or a different one).
-3. For testnet relay, add `testnet-relay.penguinpool.space` (same A record → relay server IP). For more relays later: `relay-2.penguinpool.space`, etc.
+3. (Optional) Add additional mainnet relay subdomains later (e.g. `relay-2.penguinpool.space`).
 
 No zone file or DNS code is stored in this repository; configure these records in your DNS provider’s dashboard.
 
@@ -150,12 +150,13 @@ No zone file or DNS code is stored in this repository; configure these records i
 
 If the server already has an SSL cert that does not include the relay subdomain, either run certbot once with `-d penguinpool.space -d relay.penguinpool.space` to expand the cert, or trigger a new certificate request (e.g. by removing the existing cert and redeploying).
 
-**To enable the testnet relay and `testnet-relay.penguinpool.space`:**
+> Note: the in-repo deployment currently only runs a **mainnet** relay.
 
-1. **DNS**: A record `testnet-relay.penguinpool.space` → your relay server’s public IP (same as mainnet if both run on the same host).
-2. **GitHub Actions variable**: Set `NEXT_PUBLIC_DEXIE_SPLASH_RELAY_TESTNET_WS_URL=wss://testnet-relay.penguinpool.space`. Same as mainnet: the workflow derives the testnet relay subdomain from this URL for nginx and certbot; the app uses it for the Stream tab in testnet mode.
+### Nginx and relay coupling
 
-The testnet relay container (`splash-relay-testnet`) is always started with the mainnet relay when `SPLASH_RELAY_IMAGE` is set; the subdomain config only exposes it over HTTPS. Nginx config is generated from `nginx/templates/relay-mainnet.conf.template` and `nginx/templates/relay-testnet.conf.template` when the corresponding WS URL vars are set (subdomains are derived from those URLs).
+- **Nginx image** is built from `deployment/nginx/` (Alpine + relay watchdog).
+- With **`RELAY_WATCHDOG=1`** (default in `.env.example`), the nginx container **exits** if `splash-relay` stops accepting TCP on **9090** (and the relay healthcheck requires **9090** and **11511**). Docker’s `restart: unless-stopped` brings nginx back; once the relay is healthy again, nginx stays up.
+- **`deploy.sh`** sets **`RELAY_WATCHDOG=0`** only for the initial **ACME / HTTP-only** nginx step (before the relay must be up). After HTTPS is configured, deploy uses **`RELAY_WATCHDOG=1`**.
 
 ## Files
 
@@ -164,6 +165,7 @@ The testnet relay container (`splash-relay-testnet`) is always started with the 
 | `Dockerfile` | Multi-stage build for Next.js standalone server |
 | `docker-compose.yml` | Service orchestration (Next.js + nginx + certbot + splash-relay) |
 | `splash-relay/Dockerfile` | Build for splash-relay (Rust) |
+| `nginx/Dockerfile` | Nginx image with relay watchdog |
 | `nginx/nginx.conf` | Base nginx configuration |
 | `nginx/templates/*.conf.template` | Domain-specific nginx configs (including optional relay subdomain) |
 | `scripts/deploy.sh` | Automated deployment script |
@@ -208,7 +210,6 @@ docker compose logs -f
 docker compose logs -f pengui
 docker compose logs -f nginx
 docker compose logs -f splash-relay
-docker compose logs -f splash-relay-testnet
 ```
 
 ### Check Health
@@ -264,12 +265,11 @@ docker compose exec nginx nginx -s reload
 
 ### Splash relay (Docker)
 
-The relay is a lightweight service: it logs only warnings by default and does not keep logs long-term. Use the steps below to troubleshoot on the server.
+Deployment sets **`RUST_LOG=info`** by default (startup line, peer warnings, errors). **`deploy.sh`** warns if the relay is **restarting** during deploy and prints the **last 60 log lines** after the relay start window.
 
 #### Where the logs are
 
-- **Service names**: `splash-relay` (mainnet), `splash-relay-testnet`
-- **Container names**: `pengui-splash-relay`, `pengui-splash-relay-testnet`
+- **Service**: `splash-relay` (mainnet) · **Container**: `pengui-splash-relay`
 - Relay uses **json-file** with **max-size 5m, max-file 1**: `docker compose logs` works; only the latest 5MB is kept. After a container restart the log file is new, so no long-term log storage.
 
 #### View relay logs on the server
@@ -284,42 +284,29 @@ docker compose logs -f splash-relay
 # Last 200 lines
 docker compose logs splash-relay --tail 200
 
-# Testnet relay
-docker compose logs -f splash-relay-testnet
-docker compose logs splash-relay-testnet --tail 200
-
 # By container name
 docker logs -f pengui-splash-relay
 docker logs pengui-splash-relay --tail 200
 ```
 
-#### Enable verbose logging (troubleshooting only)
+#### Verbose logging (troubleshooting)
 
-By default the relay logs at **warn** level. To see connections, stats, and startup details, set `RUST_LOG` when starting the container:
+Default in compose is **`RUST_LOG=info`**. For more detail, in **`deployment/.env`** set:
 
 ```bash
-# One-off run with verbose logs (mainnet)
-docker compose run --rm -e RUST_LOG=info splash-relay
-
-# Or add to docker-compose.yml under splash-relay (and splash-relay-testnet):
-#   environment:
-#     - RUST_LOG=info
-# Then: docker compose up -d splash-relay
+RUST_LOG=debug
 ```
 
-Use `RUST_LOG=debug` for maximum detail (connections, every offer, etc.); turn it off when done to avoid log volume and extra I/O.
+Then `docker compose up -d splash-relay`. Use **`debug`** only while troubleshooting (higher log volume). Remove or set back to **`info`** afterward.
 
 #### Check relay status and restart
 
 ```bash
 # Container status (running / exit code)
-docker compose ps splash-relay splash-relay-testnet
+docker compose ps splash-relay
 
-# Restart mainnet relay
+# Restart relay
 docker compose restart splash-relay
-
-# Restart both relays
-docker compose restart splash-relay splash-relay-testnet
 
 # View last log lines after restart
 docker compose logs splash-relay --tail 50

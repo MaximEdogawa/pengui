@@ -19,6 +19,7 @@ RUN bun install --frozen-lockfile
 
 # Copy source and build
 COPY . .
+
 # Override public/wasm with built WASM (not in repo due to .gitignore)
 COPY --from=wasm-builder /out ./public/wasm
 

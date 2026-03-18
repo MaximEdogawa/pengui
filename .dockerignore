@@ -1,0 +1,14 @@
+# Keep Docker build context small and stable.
+# The relay Dockerfile only needs `crates/splash-relay/**` and Cargo.lock.
+# Ignore certbot runtime data (can be missing or have broken symlinks on the server).
+deployment/certbot/
+deployment/certbot/**/
+deployment/certbot/**/*
+
+# Common large/unneeded dirs
+node_modules/
+.git/
+**/.DS_Store
+playwright-report/
+test-results/
+
