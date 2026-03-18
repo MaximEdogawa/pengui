@@ -193,165 +193,30 @@ if [ -n "${SPLASH_RELAY_IMAGE:-}" ]; then
     docker compose pull splash-relay || warn "Failed to pull splash-relay image"
 fi
 
-# Capture currently-running images for rollback protection
-OLD_DOCKER_IMAGE="$(docker inspect pengui-app --format '{{.Config.Image}}' 2>/dev/null || true)"
-OLD_SPLASH_RELAY_IMAGE="$(docker inspect pengui-splash-relay --format '{{.Config.Image}}' 2>/dev/null || true)"
-if [ -z "$OLD_DOCKER_IMAGE" ]; then
-    warn "No previous pengui-app image found for rollback."
-fi
-if [ -z "$OLD_SPLASH_RELAY_IMAGE" ]; then
-    warn "No previous pengui-splash-relay image found for rollback."
-fi
-
 log "Updating pengui application..."
 docker compose up -d --no-deps --wait pengui || warn "Pengui update had issues"
 
-  # Start relay service when using registry image
-if [ -n "${SPLASH_RELAY_IMAGE:-}" ]; then
-    log "Starting splash-relay service..."
-    docker compose up -d splash-relay || warn "Splash relay start had issues"
-    info "splash-relay logging level: ${RUST_LOG:-info} (set RUST_LOG=debug in .env for verbose relay logs)"
+log "Starting splash-relay service..."
+docker compose up -d --no-deps --wait splash-relay || err "splash-relay failed to become healthy"
 
-    # Wait for stable relay health and detect restart loops.
-    # If relay keeps restarting, rollback to previous images and fail the pipeline.
-    initial_restart_count="$(docker inspect pengui-splash-relay --format '{{.RestartCount}}' 2>/dev/null || echo 0)"
-    last_observed_restart_count="$initial_restart_count"
-    deploy_window_seconds=120
-    poll_interval_seconds=3
-    rounds=$((deploy_window_seconds / poll_interval_seconds))
-
-    for wait_round in $(seq 1 $rounds); do
-        relay_restart_count="$(docker inspect pengui-splash-relay --format '{{.RestartCount}}' 2>/dev/null || echo 0)"
-        relay_state="$(docker inspect pengui-splash-relay --format '{{.State.Status}}' 2>/dev/null || echo unknown)"
-        relay_health="$(docker inspect pengui-splash-relay --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' 2>/dev/null || echo none)"
-
-        if [ "$relay_restart_count" != "$last_observed_restart_count" ]; then
-            warn "splash-relay restart detected: from=$last_observed_restart_count to=$relay_restart_count state=$relay_state health=$relay_health"
-            last_observed_restart_count="$relay_restart_count"
-        fi
-
-        if [ "$relay_health" = "healthy" ]; then
-            log "splash-relay is healthy (restarts during window: $((relay_restart_count - initial_restart_count)))"
-            break
-        fi
-
-        # Restart loop threshold: fail when restarts increase too much during deploy.
-        # Tune this number based on how often the relay legitimately restarts.
-        if [ $((relay_restart_count - initial_restart_count)) -ge 3 ]; then
-            warn "splash-relay entered a restart loop during deploy window."
-            warn "initial_restart_count=$initial_restart_count current=$relay_restart_count state=$relay_state health=$relay_health"
-
-            if [ -n "$OLD_SPLASH_RELAY_IMAGE" ]; then
-                warn "Rolling back to previous relay image: $OLD_SPLASH_RELAY_IMAGE"
-                export SPLASH_RELAY_IMAGE="$OLD_SPLASH_RELAY_IMAGE"
-            fi
-            if [ -n "$OLD_DOCKER_IMAGE" ]; then
-                warn "Rolling back to previous pengui image: $OLD_DOCKER_IMAGE"
-                export DOCKER_IMAGE="$OLD_DOCKER_IMAGE"
-            fi
-
-            # Ensure nginx doesn't exit while relay is unavailable during rollback.
-            export RELAY_WATCHDOG=0
-            docker compose up -d --no-deps pengui splash-relay nginx 2>/dev/null || true
-
-            err "Relay health failed (restart loop detected). Deployment rolled back and pipeline failed."
-        fi
-
-        # If container is gone/exited and no health yet, keep waiting a bit, but break early on hard failures.
-        if [ "$relay_state" = "exited" ] || [ "$relay_state" = "dead" ]; then
-            warn "splash-relay container state is $relay_state (health=$relay_health)."
-        fi
-
-        sleep $poll_interval_seconds
-    done
-
-    # Final health check after deploy window
-    relay_health="$(docker inspect pengui-splash-relay --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' 2>/dev/null || echo none)"
-    if [ "$relay_health" != "healthy" ]; then
-        warn "splash-relay did not become healthy within deploy window. health=$relay_health"
-        if [ -n "$OLD_SPLASH_RELAY_IMAGE" ]; then
-            warn "Rolling back to previous relay image: $OLD_SPLASH_RELAY_IMAGE"
-            export SPLASH_RELAY_IMAGE="$OLD_SPLASH_RELAY_IMAGE"
-        fi
-        if [ -n "$OLD_DOCKER_IMAGE" ]; then
-            warn "Rolling back to previous pengui image: $OLD_DOCKER_IMAGE"
-            export DOCKER_IMAGE="$OLD_DOCKER_IMAGE"
-        fi
-        export RELAY_WATCHDOG=0
-        docker compose up -d --no-deps pengui splash-relay nginx 2>/dev/null || true
-        docker compose logs splash-relay --tail 200 2>/dev/null || true
-        err "Relay health failed (not healthy). Deployment rolled back and pipeline failed."
-    fi
-
-    info "splash-relay recent logs (last 200 lines):"
-    docker compose logs splash-relay --tail 200 2>/dev/null || true
-fi
-
-# Check if pengui is healthy
-if docker compose ps pengui | grep -q "Up\|running\|healthy"; then
-    log "Next.js container is running"
-else
-    warn "Next.js container may still be starting"
-    docker compose logs --tail=10 pengui || true
-fi
-
-# Update nginx - rebuild image, then relay-coupled mode (exits if relay dies)
-log "Updating nginx..."
-docker compose build nginx || warn "Nginx image build had issues"
+log "Starting nginx..."
 export RELAY_WATCHDOG=1
-if docker compose ps nginx 2>/dev/null | grep -q "Up\|running"; then
-    docker compose exec -T nginx nginx -s reload 2>/dev/null || true
-    docker compose up -d --no-deps nginx || warn "Nginx restart had issues"
-else
-    docker compose up -d --no-deps nginx || warn "Nginx start had issues"
-fi
+docker compose up -d --no-deps --wait nginx || err "nginx failed to become healthy"
 
-# Clean up any orphaned containers
-docker compose up -d --remove-orphans 2>/dev/null || true
+# Reload nginx to apply updated configs from mounted templates.
+docker compose exec -T nginx nginx -s reload 2>/dev/null || true
 
-# Wait for services to be healthy
-log "Waiting for services to be healthy..."
-sleep 10
+info "Container status:"
+docker compose ps --format "table {{.Name}}\t{{.Status}}" 2>/dev/null || true
 
-# Quick verification (non-blocking)
-if docker compose ps pengui 2>/dev/null | grep -q "Up\|running"; then
-    log "Next.js application is running"
-else
-    warn "Next.js container may still be starting"
-fi
-
-if docker compose ps nginx 2>/dev/null | grep -q "Up\|running"; then
-    log "Nginx is running"
-else
-    warn "Nginx container may still be starting"
-fi
-
-# Quick health check (don't block on HTTPS issues)
-if curl -sf --max-time 5 "http://localhost/api/health" >/dev/null 2>&1; then
-    log "Health check passed (HTTP)"
-elif curl -sf --max-time 5 "https://$DOMAIN/api/health" >/dev/null 2>&1; then
+if curl -sf --max-time 5 "https://$DOMAIN/api/health" >/dev/null 2>&1; then
     log "Health check passed (HTTPS)"
 else
     warn "Health check pending - containers may still be initializing"
-fi
-
-# Show running containers
-info "Container status:"
-docker compose ps --format "table {{.Name}}\t{{.Status}}"
-
-# Set up certificate renewal cron job (runs daily at 3 AM)
-CRON_CMD="0 3 * * * cd $HOME/pengui/deployment && docker compose --profile certbot run --rm certbot renew --quiet && docker compose exec -T nginx nginx -s reload >/dev/null 2>&1"
-if ! crontab -l 2>/dev/null | grep -q "certbot renew"; then
-    log "Setting up automatic certificate renewal cron job..."
-    (crontab -l 2>/dev/null || true; echo "$CRON_CMD") | crontab -
-    log "Certificate renewal cron job added (daily at 3 AM)"
-else
-    log "Certificate renewal cron job already exists"
 fi
 
 log "=== Deployment complete ==="
 log "Site: https://$DOMAIN"
 log "Health: https://$DOMAIN/api/health"
 
-# Explicit exit to ensure script terminates
 exit 0

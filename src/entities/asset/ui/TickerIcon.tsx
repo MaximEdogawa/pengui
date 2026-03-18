@@ -7,6 +7,8 @@ export interface TickerIconProps {
   ticker?: string;
   size?: number;
   className?: string;
+  /** Optional flag to enable/disable loading. Defaults to true. */
+  enabled?: boolean;
 }
 
 /**
@@ -19,8 +21,9 @@ export default function TickerIcon({
   ticker = "",
   size = 28,
   className = "",
+  enabled = true,
 }: TickerIconProps) {
-  const { imageUrl, isLoading } = useTickerIcon(assetId);
+  const { imageUrl, isLoading } = useTickerIcon(assetId, enabled);
 
   if (!assetId) {
     return <XchIcon size={size} className={className}/>;

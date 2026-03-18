@@ -23,6 +23,9 @@ export function AssetList({ label, assets, getTickerSymbol, onSelect, highlighte
           const isXch = !asset.id || ticker === "XCH" || ticker === "TXCH";
 
           const isHighlighted = typeof highlightedIndex === 'number' && highlightedIndex === idx;
+          // Soft limit: only eagerly load icons for the first few rows in large lists.
+          // Additional rows load their icon when they become highlighted (via keyboard).
+          const enableIcon = idx < 10 || isHighlighted;
           const rowClasses = `flex items-center justify-between text-xs px-3 py-2 rounded-md transition-colors cursor-pointer ${
             isHighlighted
               ? 'bg-gray-200 text-gray-900 dark:bg-gray-700/80 dark:text-white'
@@ -40,7 +43,12 @@ export function AssetList({ label, assets, getTickerSymbol, onSelect, highlighte
                 {isXch ? (
                   <XchIcon size={16} isTestnet={isTestnet} />
                 ) : (
-                  <TickerIcon assetId={asset.id} ticker={ticker} size={16} />
+                  <TickerIcon
+                    assetId={asset.id}
+                    ticker={ticker}
+                    size={16}
+                    enabled={enableIcon}
+                  />
                 )}
                 <span className="truncate">{ticker}</span>
               </div>
