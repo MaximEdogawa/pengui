@@ -1,23 +1,32 @@
-# Build splash-relay (libp2p Splash network relay)
-# Layer order: deps cached first so we only rebuild the binary when source changes
-FROM rust:1-bookworm AS builder
-WORKDIR /app
-
-# Copy manifest and lockfile first for better layer caching
-COPY crates/splash-relay/Cargo.toml crates/splash-relay/Cargo.lock ./
-
-# Dummy source so we can build and cache dependencies without our code
-RUN mkdir -p src && echo 'fn main() {}' > src/main.rs
-RUN cargo build --release
-
-# Copy real source; only this layer and the final build step change when relay code changes
-COPY crates/splash-relay/src ./src
-RUN cargo build --release
-
+# syntax=docker/dockerfile:1.7
+#
+# splash-relay runtime image that bakes the relay binary at docker build time
+# by downloading it from the GitHub Release for RELEASE_TAG.
+#
 FROM debian:bookworm-slim
-RUN apt-get update && apt-get install -y ca-certificates netcat-openbsd && rm -rf /var/lib/apt/lists/*
-COPY --from=builder /app/target/release/splash-relay /usr/local/bin/
+
+RUN apt-get update && apt-get install -y ca-certificates curl netcat-openbsd && rm -rf /var/lib/apt/lists/*
+
+ARG RELEASE_TAG
+ARG GITHUB_REPOSITORY
+
+# Download the correct relay binary from the release assets and validate it.
+RUN --mount=type=secret,id=GITHUB_TOKEN,required=false \
+  set -eu; \
+  TAG="${RELEASE_TAG}"; \
+  REPO="${GITHUB_REPOSITORY}"; \
+  URL="https://github.com/${REPO}/releases/download/${TAG}/splash-relay-${TAG}-linux-amd64"; \
+  token="$(cat /run/secrets/GITHUB_TOKEN 2>/dev/null || true)"; \
+  if [ -n "$token" ]; then \
+    curl -fsSL -L -H "Authorization: Bearer $token" "$URL" -o /usr/local/bin/splash-relay; \
+  else \
+    curl -fsSL -L "$URL" -o /usr/local/bin/splash-relay; \
+  fi; \
+  chmod +x /usr/local/bin/splash-relay; \
+  /usr/local/bin/splash-relay --help 2>&1 | grep -q "Maximum concurrent WebSocket"
+
 EXPOSE 11511 9090
+
 # TCP 11511 = Splash network, 9090 = WebSocket for browsers
 ENTRYPOINT ["splash-relay"]
 CMD ["--tcp-port", "11511", "--ws-port", "9090"]

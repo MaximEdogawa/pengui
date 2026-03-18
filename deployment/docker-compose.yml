@@ -95,6 +95,7 @@ services:
     environment:
       # info = startup line + warnings/errors; debug for verbose (set in .env)
       - RUST_LOG=${RUST_LOG:-info}
+      - RUST_BACKTRACE=1
     networks:
       pengui-network:
         aliases:

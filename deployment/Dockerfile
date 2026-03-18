@@ -1,26 +1,41 @@
-# Build Splash WASM (required for /wasm/splash_wasm.js in production)
-FROM rust:1-bookworm AS wasm-builder
-WORKDIR /build
-RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates \
-    && curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
-COPY crates/splash-wasm /build/crates/splash-wasm
-WORKDIR /build/crates/splash-wasm
-RUN wasm-pack build --target web --out-dir /out
-
-# Build stage
+# syntax=docker/dockerfile:1.7
+#
+# Build stage for pengui.
+# Splash WASM bundle is downloaded from the GitHub Release for RELEASE_TAG
+# and baked into ./public/wasm before `bun run build`.
+#
 FROM oven/bun:1.2.23-alpine AS builder
-
 WORKDIR /app
+
+ARG RELEASE_TAG
+ARG GITHUB_REPOSITORY
+
+# Tools needed for fetching + extracting WASM bundle.
+RUN apk add --no-cache curl tar
 
 # Install dependencies first (better caching)
 COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile
 
-# Copy source and build
+# Copy source
 COPY . .
-# Override public/wasm with built WASM (not in repo due to .gitignore)
-COPY --from=wasm-builder /out ./public/wasm
+
+# Download splash-wasm bundle from GitHub Release and bake it into public/wasm.
+RUN --mount=type=secret,id=GITHUB_TOKEN,required=false \
+  set -eu; \
+  TAG="${RELEASE_TAG}"; \
+  REPO="${GITHUB_REPOSITORY}"; \
+  URL="https://github.com/${REPO}/releases/download/${TAG}/splash-wasm-${TAG}.tar.gz"; \
+  token="$(cat /run/secrets/GITHUB_TOKEN 2>/dev/null || true)"; \
+  mkdir -p ./public/wasm; \
+  if [ -n "$token" ]; then \
+    curl -fsSL -L -H "Authorization: Bearer $token" "$URL" -o /tmp/splash-wasm.tar.gz; \
+  else \
+    curl -fsSL -L "$URL" -o /tmp/splash-wasm.tar.gz; \
+  fi; \
+  tar -xzf /tmp/splash-wasm.tar.gz -C ./public/wasm; \
+  test -f ./public/wasm/splash_wasm.js; \
+  test -f ./public/wasm/splash_wasm_bg.wasm
 
 # Build arguments for environment variables at build time
 ARG NEXT_PUBLIC_APP_VERSION

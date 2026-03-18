@@ -128,7 +128,6 @@ To have the app **auto-connect** to these relays, set at **build time** (e.g. in
 
 - `NEXT_PUBLIC_DEXIE_SPLASH_RELAY_WS_URL` – default relay (e.g. `wss://relay.penguinpool.space`)
 - `NEXT_PUBLIC_DEXIE_SPLASH_RELAY_MAINNET_WS_URL` – mainnet relay (e.g. `wss://relay.penguinpool.space`)
-- `NEXT_PUBLIC_DEXIE_SPLASH_RELAY_TESTNET_WS_URL` – testnet relay (e.g. `wss://testnet-relay.penguinpool.space`)
 
 For production with your own domain, set the relay subdomain in GitHub vars (see “DNS for relays” below) and use `wss://relay.yourdomain.com` in the app build vars. For local testing, use `ws://localhost:9090` and `ws://localhost:9091`.
 
@@ -138,7 +137,7 @@ DNS for your domain (e.g. penguinpool.space) is managed at your DNS provider, no
 
 1. **Add a subdomain** for the relay (e.g. `relay.penguinpool.space`).
 2. **Create an A record** (or CNAME if you use a hostname) pointing that subdomain to the **relay server’s public IP** (the host where the relay container runs; it can be the same machine as the app or a different one).
-3. For testnet relay, add `testnet-relay.penguinpool.space` (same A record → relay server IP). For more relays later: `relay-2.penguinpool.space`, etc.
+3. (Optional) Add additional mainnet relay subdomains later (e.g. `relay-2.penguinpool.space`).
 
 No zone file or DNS code is stored in this repository; configure these records in your DNS provider’s dashboard.
 
@@ -149,7 +148,7 @@ No zone file or DNS code is stored in this repository; configure these records i
 
 If the server already has an SSL cert that does not include the relay subdomain, either run certbot once with `-d penguinpool.space -d relay.penguinpool.space` to expand the cert, or trigger a new certificate request (e.g. by removing the existing cert and redeploying).
 
-> Note: the in-repo deployment currently only runs a **mainnet** relay. A separate testnet relay can be added later if needed.
+> Note: the in-repo deployment currently only runs a **mainnet** relay.
 
 ### Nginx and relay coupling
 
@@ -209,7 +208,6 @@ docker compose logs -f
 docker compose logs -f pengui
 docker compose logs -f nginx
 docker compose logs -f splash-relay
-docker compose logs -f splash-relay-testnet
 ```
 
 ### Check Health

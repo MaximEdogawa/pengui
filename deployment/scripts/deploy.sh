@@ -27,8 +27,9 @@ cleanup_and_start() {
     if [ -n "${SPLASH_RELAY_IMAGE:-}" ]; then
         docker compose up -d splash-relay 2>/dev/null || true
     fi
-    # Nginx (relay-coupled watchdog); build if missing
-    export RELAY_WATCHDOG=1
+    # Nginx (relay-coupled watchdog)
+    # Respect RELAY_WATCHDOG if set by deploy logic (rollback uses 0).
+    export RELAY_WATCHDOG="${RELAY_WATCHDOG:-1}"
     docker compose build nginx 2>/dev/null || true
     if docker compose ps nginx 2>/dev/null | grep -q "Up\|running"; then
         docker compose exec -T nginx nginx -s reload 2>/dev/null || true
@@ -105,7 +106,6 @@ fi
 # Optional: extra -d for relay subdomains (so cert covers wss://relay subdomain)
 CERTBOT_RELAY_DOMAINS=""
 [ -n "${RELAY_MAINNET_SUBDOMAIN:-}" ] && CERTBOT_RELAY_DOMAINS="$CERTBOT_RELAY_DOMAINS -d $RELAY_MAINNET_SUBDOMAIN"
-[ -n "${RELAY_TESTNET_SUBDOMAIN:-}" ] && CERTBOT_RELAY_DOMAINS="$CERTBOT_RELAY_DOMAINS -d $RELAY_TESTNET_SUBDOMAIN"
 
 # Request SSL certificate if needed
 if [ "$NEED_CERT" = true ]; then
@@ -193,6 +193,16 @@ if [ -n "${SPLASH_RELAY_IMAGE:-}" ]; then
     docker compose pull splash-relay || warn "Failed to pull splash-relay image"
 fi
 
+# Capture currently-running images for rollback protection
+OLD_DOCKER_IMAGE="$(docker inspect pengui-app --format '{{.Config.Image}}' 2>/dev/null || true)"
+OLD_SPLASH_RELAY_IMAGE="$(docker inspect pengui-splash-relay --format '{{.Config.Image}}' 2>/dev/null || true)"
+if [ -z "$OLD_DOCKER_IMAGE" ]; then
+    warn "No previous pengui-app image found for rollback."
+fi
+if [ -z "$OLD_SPLASH_RELAY_IMAGE" ]; then
+    warn "No previous pengui-splash-relay image found for rollback."
+fi
+
 log "Updating pengui application..."
 docker compose up -d --no-deps --wait pengui || warn "Pengui update had issues"
 
@@ -201,34 +211,80 @@ if [ -n "${SPLASH_RELAY_IMAGE:-}" ]; then
     log "Starting splash-relay service..."
     docker compose up -d splash-relay || warn "Splash relay start had issues"
     info "splash-relay logging level: ${RUST_LOG:-info} (set RUST_LOG=debug in .env for verbose relay logs)"
-    relay_restarts_seen=0
-    for wait_round in $(seq 1 20); do
-        relay_status=$(docker compose ps splash-relay --format '{{.Status}}' 2>/dev/null || true)
-        if echo "$relay_status" | grep -qi 'restarting'; then
-            relay_restarts_seen=1
-            warn "splash-relay is restarting (check $wait_round/20): $relay_status"
+
+    # Wait for stable relay health and detect restart loops.
+    # If relay keeps restarting, rollback to previous images and fail the pipeline.
+    initial_restart_count="$(docker inspect pengui-splash-relay --format '{{.RestartCount}}' 2>/dev/null || echo 0)"
+    last_observed_restart_count="$initial_restart_count"
+    deploy_window_seconds=120
+    poll_interval_seconds=3
+    rounds=$((deploy_window_seconds / poll_interval_seconds))
+
+    for wait_round in $(seq 1 $rounds); do
+        relay_restart_count="$(docker inspect pengui-splash-relay --format '{{.RestartCount}}' 2>/dev/null || echo 0)"
+        relay_state="$(docker inspect pengui-splash-relay --format '{{.State.Status}}' 2>/dev/null || echo unknown)"
+        relay_health="$(docker inspect pengui-splash-relay --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' 2>/dev/null || echo none)"
+
+        if [ "$relay_restart_count" != "$last_observed_restart_count" ]; then
+            warn "splash-relay restart detected: from=$last_observed_restart_count to=$relay_restart_count state=$relay_state health=$relay_health"
+            last_observed_restart_count="$relay_restart_count"
         fi
-        if echo "$relay_status" | grep -qi 'healthy'; then
-            if [ "$relay_restarts_seen" -eq 1 ]; then
-                warn "splash-relay became healthy after earlier restarts — verify relay image and logs if this recurs"
-            else
-                log "splash-relay is healthy"
+
+        if [ "$relay_health" = "healthy" ]; then
+            log "splash-relay is healthy (restarts during window: $((relay_restart_count - initial_restart_count)))"
+            break
+        fi
+
+        # Restart loop threshold: fail when restarts increase too much during deploy.
+        # Tune this number based on how often the relay legitimately restarts.
+        if [ $((relay_restart_count - initial_restart_count)) -ge 3 ]; then
+            warn "splash-relay entered a restart loop during deploy window."
+            warn "initial_restart_count=$initial_restart_count current=$relay_restart_count state=$relay_state health=$relay_health"
+
+            if [ -n "$OLD_SPLASH_RELAY_IMAGE" ]; then
+                warn "Rolling back to previous relay image: $OLD_SPLASH_RELAY_IMAGE"
+                export SPLASH_RELAY_IMAGE="$OLD_SPLASH_RELAY_IMAGE"
             fi
-            break
+            if [ -n "$OLD_DOCKER_IMAGE" ]; then
+                warn "Rolling back to previous pengui image: $OLD_DOCKER_IMAGE"
+                export DOCKER_IMAGE="$OLD_DOCKER_IMAGE"
+            fi
+
+            # Ensure nginx doesn't exit while relay is unavailable during rollback.
+            export RELAY_WATCHDOG=0
+            docker compose up -d --no-deps pengui splash-relay nginx 2>/dev/null || true
+
+            err "Relay health failed (restart loop detected). Deployment rolled back and pipeline failed."
         fi
-        if echo "$relay_status" | grep -qiE 'exited|dead'; then
-            warn "splash-relay container not running: $relay_status"
-            break
+
+        # If container is gone/exited and no health yet, keep waiting a bit, but break early on hard failures.
+        if [ "$relay_state" = "exited" ] || [ "$relay_state" = "dead" ]; then
+            warn "splash-relay container state is $relay_state (health=$relay_health)."
         fi
-        sleep 3
+
+        sleep $poll_interval_seconds
     done
-    relay_final=$(docker compose ps splash-relay --format '{{.Status}}' 2>/dev/null || true)
-    if ! echo "$relay_final" | grep -qi 'healthy'; then
-        warn "splash-relay did not reach healthy within deploy window: $relay_final"
-        warn "Stream tab relay may be unavailable until the relay stays up"
+
+    # Final health check after deploy window
+    relay_health="$(docker inspect pengui-splash-relay --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' 2>/dev/null || echo none)"
+    if [ "$relay_health" != "healthy" ]; then
+        warn "splash-relay did not become healthy within deploy window. health=$relay_health"
+        if [ -n "$OLD_SPLASH_RELAY_IMAGE" ]; then
+            warn "Rolling back to previous relay image: $OLD_SPLASH_RELAY_IMAGE"
+            export SPLASH_RELAY_IMAGE="$OLD_SPLASH_RELAY_IMAGE"
+        fi
+        if [ -n "$OLD_DOCKER_IMAGE" ]; then
+            warn "Rolling back to previous pengui image: $OLD_DOCKER_IMAGE"
+            export DOCKER_IMAGE="$OLD_DOCKER_IMAGE"
+        fi
+        export RELAY_WATCHDOG=0
+        docker compose up -d --no-deps pengui splash-relay nginx 2>/dev/null || true
+        docker compose logs splash-relay --tail 200 2>/dev/null || true
+        err "Relay health failed (not healthy). Deployment rolled back and pipeline failed."
     fi
-    info "splash-relay recent logs (last 60 lines):"
-    docker compose logs splash-relay --tail 60 2>/dev/null || true
+
+    info "splash-relay recent logs (last 200 lines):"
+    docker compose logs splash-relay --tail 200 2>/dev/null || true
 fi
 
 # Check if pengui is healthy
