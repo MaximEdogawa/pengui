@@ -15,25 +15,69 @@ on:
           - beta
           - production
       tag:
-        description: "Release tag to deploy (leave empty for latest)"
+        description: "Optional app release tag to deploy (empty => deploy `:latest`)"
         required: false
         type: string
-      build_wasm:
-        description: "Build app image (includes WASM from crates/splash-wasm)"
+      relay_tag:
+        description: "Optional relay version to deploy as `splash-relay-${relay_tag}` (workflow_dispatch only)"
+        required: false
+        type: string
+      build_app:
+        description: "Rebuild app image (includes WASM from crates/splash-wasm)"
         required: false
         type: boolean
-        default: true
+        default: false
       build_relay:
         description: "Build and push relay image (crates/splash-relay)"
         required: false
         type: boolean
-        default: true
+        default: false
 
 env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
+  # Build Splash WASM image separately to keep its cache independent from the app image.
+  build-and-push-wasm:
+    name: Build and Push Splash WASM Image
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push splash-wasm image (use cache)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./deployment/splash-wasm/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:splash-wasm
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:splash-wasm-${{ github.ref_name }}
+          cache-from: |
+            type=gha,scope=pengui-wasm
+            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:splash-wasm
+          cache-to: type=gha,mode=max,scope=pengui-wasm
+
   # Build relay when relay code changed (release) or manual + "build relay" checked; otherwise reuse :splash-relay
   build-and-push-relay:
     name: Build and Push Splash Relay Image
@@ -46,67 +90,65 @@ jobs:
       relay_image: ${{ steps.set_relay_output.outputs.relay_image }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
-
-      - name: Detect relay and WASM changes
-        uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          base: ${{ github.event.repository.default_branch || 'main' }}
-          filters: |
-            relay:
-              - 'crates/splash-relay/**'
-              - 'deployment/splash-relay/**'
-            wasm:
-              - 'crates/splash-wasm/**'
+          fetch-tags: true
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Log in to Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract tag for relay
+      - name: Compute relay image/tag selection
         id: relay_meta
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ github.event.inputs.tag }}" ]; then
-            TAG="${{ github.event.inputs.tag }}"
-          elif [ "${{ github.event_name }}" = "release" ]; then
-            TAG="${{ github.ref_name }}"
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "release" ]; then
+            RELAY_BUILD_TAG="${{ github.ref_name }}"
           else
-            TAG="latest"
+            APP_TAG="${{ github.event.inputs.tag }}"
+            APP_TAG="${APP_TAG:-latest}"
+            REQUESTED_RELAY_TAG="${{ github.event.inputs.relay_tag }}"
+            RELAY_BUILD_TAG="${REQUESTED_RELAY_TAG:-$APP_TAG}"
           fi
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
-      - name: Build and push splash-relay image
-        if: steps.filter.outputs.relay == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.build_relay == 'true')
-        uses: docker/build-push-action@v5
+          # For "latest", use the unversioned `:splash-relay` image.
+          RELAY_IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:splash-relay"
+          if [ -n "${RELAY_BUILD_TAG:-}" ] && [ "$RELAY_BUILD_TAG" != "latest" ]; then
+            RELAY_IMAGE="${RELAY_IMAGE}-${RELAY_BUILD_TAG}"
+          fi
+
+          echo "relay_image=$RELAY_IMAGE" >> "$GITHUB_OUTPUT"
+          echo "relay_build_tag=$RELAY_BUILD_TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push splash-relay image (use cache)
+        if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && github.event.inputs.build_relay == 'true')
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: ./deployment/splash-relay/Dockerfile
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:splash-relay
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:splash-relay-${{ steps.relay_meta.outputs.tag }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:splash-relay-${{ steps.relay_meta.outputs.relay_build_tag }}
+          cache-from: |
+            type=gha,scope=pengui-relay
+            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:splash-relay
+          cache-to: type=gha,mode=max,scope=pengui-relay
 
       - name: Set relay image output
         id: set_relay_output
         run: |
-          if [ "${{ steps.filter.outputs.relay }}" = "true" ] || ([ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ github.event.inputs.build_relay }}" = "true" ]); then
-            echo "relay_image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:splash-relay-${{ steps.relay_meta.outputs.tag }}" >> "$GITHUB_OUTPUT"
-          else
-            echo "relay_image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:splash-relay" >> "$GITHUB_OUTPUT"
-          fi
+          echo "relay_image=${{ steps.relay_meta.outputs.relay_image }}" >> "$GITHUB_OUTPUT"
 
-  # App image includes WASM (built from crates/splash-wasm in Dockerfile). Built on every release; on manual when "Build WASM/app" is checked.
+  # App image includes WASM (built from crates/splash-wasm in Dockerfile).
+  # On manual runs: reuse existing GHCR image by default; set `build_app=true` to force rebuild/push.
   build-and-push:
     name: Build and Push App Image (incl. WASM)
     runs-on: ubuntu-latest
@@ -114,19 +156,20 @@ jobs:
     permissions:
       contents: read
       packages: write
+    needs: [build-and-push-wasm]
     outputs:
       image_tag: ${{ steps.meta.outputs.tag }}
-      full_image: ${{ steps.meta.outputs.full_image }}
+      full_image: ${{ steps.app_image_resolve.outputs.full_image }}
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@v4
 
       - name: Log in to Container Registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -135,8 +178,13 @@ jobs:
       - name: Extract metadata
         id: meta
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ github.event.inputs.tag }}" ]; then
-            TAG="${{ github.event.inputs.tag }}"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG_IN="${{ github.event.inputs.tag }}"
+            if [ -z "$TAG_IN" ]; then
+              TAG="latest"
+            else
+              TAG="$TAG_IN"
+            fi
           elif [ "${{ github.event_name }}" = "release" ]; then
             TAG="${{ github.ref_name }}"
           else
@@ -154,28 +202,47 @@ jobs:
           echo "full_image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:$TAG" >> "$GITHUB_OUTPUT"
           echo "app_env=$NEXT_PUBLIC_APP_ENV" >> "$GITHUB_OUTPUT"
 
+      - name: Decide whether to build/push app image
+        id: app_image_resolve
+        run: |
+          set -euo pipefail
+
+          IMG_VERSIONED="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.tag }}"
+
+          # Always build on release for reproducibility.
+          # On workflow_dispatch: build only when build_app=true; otherwise rely on the already-published image.
+          if [ "${{ github.event_name }}" = "release" ]; then
+            app_needs_build=true
+          else
+            app_needs_build="${{ github.event.inputs.build_app }}"
+          fi
+
+          echo "app_needs_build=$app_needs_build" >> "$GITHUB_OUTPUT"
+          echo "full_image=$IMG_VERSIONED" >> "$GITHUB_OUTPUT"
+
       - name: Build and push Docker image
-        uses: docker/build-push-action@v5
+        if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && github.event.inputs.build_app == 'true')
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: ./deployment/Dockerfile
           push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.tag }}
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # Single, explicit tag so deployments are always reproducible
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.tag }}
+          cache-from: |
+            type=gha,scope=pengui-app
+            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          cache-to: type=gha,mode=max,scope=pengui-app
           build-args: |
             NEXT_PUBLIC_APP_VERSION=${{ steps.meta.outputs.tag }}
             NEXT_PUBLIC_APP_ENV=${{ steps.meta.outputs.app_env }}
+            SPLASH_WASM_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:splash-wasm
             NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID=${{ secrets.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID }}
             NEXT_PUBLIC_WALLET_CONNECT_RELAY_URL=${{ vars.NEXT_PUBLIC_WALLET_CONNECT_RELAY_URL }}
             NEXT_PUBLIC_DEXIE_MAINNET_API_URL=${{ vars.NEXT_PUBLIC_DEXIE_MAINNET_API_URL }}
-            NEXT_PUBLIC_DEXIE_TESTNET_API_URL=${{ vars.NEXT_PUBLIC_DEXIE_TESTNET_API_URL }}
             NEXT_PUBLIC_API_BASE_URL=${{ vars.NEXT_PUBLIC_API_BASE_URL }}
             NEXT_PUBLIC_APP_URL=${{ vars.NEXT_PUBLIC_APP_URL }}
             NEXT_PUBLIC_DEXIE_SPLASH_RELAY_MAINNET_WS_URL=wss://${{ vars.NEXT_PUBLIC_SPLASH_RELAY_MAINNET_SUBDOMAIN }}
-            NEXT_PUBLIC_DEXIE_SPLASH_RELAY_TESTNET_WS_URL=wss://${{ vars.NEXT_PUBLIC_SPLASH_RELAY_TESTNET_SUBDOMAIN }}
 
   deploy:
     name: Deploy to Production
@@ -183,14 +250,14 @@ jobs:
     if: always() && !cancelled() && needs.build-and-push.result == 'success' && needs.build-and-push-relay.result == 'success'
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    environment: production
+    environment: ${{ github.event.inputs.environment || 'production' }}
     permissions:
       contents: read
       packages: read
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Ensure deployment directory exists
         uses: appleboy/ssh-action@v1.0.3
@@ -218,7 +285,6 @@ jobs:
         uses: appleboy/ssh-action@v1.2.5
         env:
           DOCKER_IMAGE: ${{ needs.build-and-push.outputs.full_image }}
-          # :splash-relay when relay wasn't built this run; :splash-relay-TAG when it was
           SPLASH_RELAY_IMAGE: ${{ needs.build-and-push-relay.outputs.relay_image }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_ACTOR: ${{ github.actor }}
@@ -226,7 +292,6 @@ jobs:
           EMAIL: ${{ vars.EMAIL }}
           STAGING: ${{ vars.STAGING }}
           RELAY_MAINNET_SUBDOMAIN: ${{ vars.NEXT_PUBLIC_SPLASH_RELAY_MAINNET_SUBDOMAIN }}
-          RELAY_TESTNET_SUBDOMAIN: ${{ vars.NEXT_PUBLIC_SPLASH_RELAY_TESTNET_SUBDOMAIN }}
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
@@ -234,19 +299,10 @@ jobs:
           port: 22
           timeout: 10m
           command_timeout: 5m
-          envs: DOCKER_IMAGE,SPLASH_RELAY_IMAGE,GITHUB_TOKEN,GITHUB_ACTOR,DOMAIN,EMAIL,STAGING,RELAY_MAINNET_SUBDOMAIN,RELAY_TESTNET_SUBDOMAIN
+          envs: DOCKER_IMAGE,SPLASH_RELAY_IMAGE,GITHUB_TOKEN,GITHUB_ACTOR,DOMAIN,EMAIL,STAGING,RELAY_MAINNET_SUBDOMAIN
           script: |
-            export DOCKER_IMAGE="$DOCKER_IMAGE"
-            export SPLASH_RELAY_IMAGE="$SPLASH_RELAY_IMAGE"
-            export GITHUB_TOKEN="$GITHUB_TOKEN"
-            export GITHUB_ACTOR="$GITHUB_ACTOR"
-            export DOMAIN="$DOMAIN"
-            export EMAIL="$EMAIL"
-            export STAGING="${STAGING:-0}"
-            export RELAY_MAINNET_SUBDOMAIN="${RELAY_MAINNET_SUBDOMAIN:-}"
-            export RELAY_TESTNET_SUBDOMAIN="${RELAY_TESTNET_SUBDOMAIN:-}"
             chmod +x ~/pengui/deployment/scripts/deploy.sh
-            ~/pengui/deployment/scripts/deploy.sh
+            STAGING="${STAGING:-0}" RELAY_MAINNET_SUBDOMAIN="${RELAY_MAINNET_SUBDOMAIN:-}" ~/pengui/deployment/scripts/deploy.sh
 
       - name: Verify deployment
         uses: appleboy/ssh-action@v1.2.5

@@ -68,7 +68,8 @@ export function usePriceChart({ config, isUserScrolling = false }: UsePriceChart
     isUserScrolling,
   })
 
-  const { orderBookData } = useOrderBook(filters)
+  // Separate order book query for chart; only runs when Chart tab is open (PriceChart mounted).
+  const { orderBookData } = useOrderBook(filters, { queryKeySuffix: 'chart' })
 
   const orderBookChartData = useMemo(
     () => transformOrderBookForChart(orderBookData, { filters }),

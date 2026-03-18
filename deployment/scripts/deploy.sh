@@ -23,11 +23,14 @@ cleanup_and_start() {
         docker compose up -d pengui 2>/dev/null || true
     fi
     
-    # Start relay services if not running
+    # Start relay if not running
     if [ -n "${SPLASH_RELAY_IMAGE:-}" ]; then
-        docker compose up -d splash-relay splash-relay-testnet 2>/dev/null || true
+        docker compose up -d splash-relay 2>/dev/null || true
     fi
-    # Start nginx if not running, or reload if it is
+    # Nginx (relay-coupled watchdog)
+    # Respect RELAY_WATCHDOG if set by deploy logic (rollback uses 0).
+    export RELAY_WATCHDOG="${RELAY_WATCHDOG:-1}"
+    docker compose build nginx 2>/dev/null || true
     if docker compose ps nginx 2>/dev/null | grep -q "Up\|running"; then
         docker compose exec -T nginx nginx -s reload 2>/dev/null || true
     else
@@ -103,7 +106,6 @@ fi
 # Optional: extra -d for relay subdomains (so cert covers wss://relay subdomain)
 CERTBOT_RELAY_DOMAINS=""
 [ -n "${RELAY_MAINNET_SUBDOMAIN:-}" ] && CERTBOT_RELAY_DOMAINS="$CERTBOT_RELAY_DOMAINS -d $RELAY_MAINNET_SUBDOMAIN"
-[ -n "${RELAY_TESTNET_SUBDOMAIN:-}" ] && CERTBOT_RELAY_DOMAINS="$CERTBOT_RELAY_DOMAINS -d $RELAY_TESTNET_SUBDOMAIN"
 
 # Request SSL certificate if needed
 if [ "$NEED_CERT" = true ]; then
@@ -121,7 +123,9 @@ if [ "$NEED_CERT" = true ]; then
     docker compose pull pengui || true
     docker compose up -d pengui
     sleep 5
-    docker compose up -d nginx
+    # ACME: nginx without relay watchdog (relay may not exist yet)
+    docker compose build nginx || true
+    RELAY_WATCHDOG=0 docker compose up -d --no-deps nginx
     sleep 5
     
     # Verify ACME challenge path is accessible
@@ -166,12 +170,11 @@ log "Configuring nginx with HTTPS..."
 envsubst '${DOMAIN}' < nginx/templates/https.conf.template > nginx/conf.d/default.conf.tmp
 mv nginx/conf.d/default.conf.tmp nginx/conf.d/default.conf
 
-# Optional: relay subdomain WebSocket proxy (when RELAY_MAINNET_SUBDOMAIN or RELAY_TESTNET_SUBDOMAIN is set)
+# Optional: relay subdomain WebSocket proxy (when RELAY_MAINNET_SUBDOMAIN is set)
 rm -f nginx/conf.d/relay.conf
-if [ -n "${RELAY_MAINNET_SUBDOMAIN:-}" ] || [ -n "${RELAY_TESTNET_SUBDOMAIN:-}" ]; then
-    log "Configuring nginx relay subdomain(s)..."
-    [ -n "${RELAY_MAINNET_SUBDOMAIN:-}" ] && envsubst '${DOMAIN} ${RELAY_MAINNET_SUBDOMAIN}' < nginx/templates/relay-mainnet.conf.template >> nginx/conf.d/relay.conf
-    [ -n "${RELAY_TESTNET_SUBDOMAIN:-}" ] && envsubst '${DOMAIN} ${RELAY_TESTNET_SUBDOMAIN}' < nginx/templates/relay-testnet.conf.template >> nginx/conf.d/relay.conf
+if [ -n "${RELAY_MAINNET_SUBDOMAIN:-}" ]; then
+    log "Configuring nginx relay subdomain..."
+    envsubst '${DOMAIN} ${RELAY_MAINNET_SUBDOMAIN}' < nginx/templates/relay-mainnet.conf.template >> nginx/conf.d/relay.conf
 fi
 
 # Pull latest Docker image
@@ -183,86 +186,37 @@ fi
 # Zero-downtime deployment: start new containers before stopping old ones
 log "Deploying with zero-downtime strategy..."
 
-# Pull new images first (while old containers still running)
+  # Pull new images first (while old containers still running)
 log "Pulling latest images..."
 docker compose pull pengui || warn "Failed to pull pengui image"
 if [ -n "${SPLASH_RELAY_IMAGE:-}" ]; then
-    docker compose pull splash-relay splash-relay-testnet || warn "Failed to pull splash-relay image(s)"
+    docker compose pull splash-relay || warn "Failed to pull splash-relay image"
 fi
 
 log "Updating pengui application..."
 docker compose up -d --no-deps --wait pengui || warn "Pengui update had issues"
 
-# Start relay services when using registry image
-if [ -n "${SPLASH_RELAY_IMAGE:-}" ]; then
-    log "Starting splash-relay services..."
-    docker compose up -d splash-relay splash-relay-testnet || warn "Splash relay start had issues"
-fi
+log "Starting splash-relay service..."
+docker compose up -d --no-deps --wait splash-relay || err "splash-relay failed to become healthy"
 
-# Check if pengui is healthy
-if docker compose ps pengui | grep -q "Up\|running\|healthy"; then
-    log "Next.js container is running"
-else
-    warn "Next.js container may still be starting"
-    docker compose logs --tail=10 pengui || true
-fi
+log "Starting nginx..."
+export RELAY_WATCHDOG=1
+docker compose up -d --no-deps --wait nginx || err "nginx failed to become healthy"
 
-# Update nginx - reload config if running, otherwise start it
-log "Updating nginx..."
-if docker compose ps nginx 2>/dev/null | grep -q "Up\|running"; then
-    # Nginx is running - just reload config (no restart = no downtime)
-    docker compose exec -T nginx nginx -s reload || docker compose up -d --no-deps nginx
-else
-    # Nginx not running - start it
-    docker compose up -d --no-deps nginx || warn "Nginx start had issues"
-fi
+# Reload nginx to apply updated configs from mounted templates.
+docker compose exec -T nginx nginx -s reload 2>/dev/null || true
 
-# Clean up any orphaned containers
-docker compose up -d --remove-orphans 2>/dev/null || true
+info "Container status:"
+docker compose ps --format "table {{.Name}}\t{{.Status}}" 2>/dev/null || true
 
-# Wait for services to be healthy
-log "Waiting for services to be healthy..."
-sleep 10
-
-# Quick verification (non-blocking)
-if docker compose ps pengui 2>/dev/null | grep -q "Up\|running"; then
-    log "Next.js application is running"
-else
-    warn "Next.js container may still be starting"
-fi
-
-if docker compose ps nginx 2>/dev/null | grep -q "Up\|running"; then
-    log "Nginx is running"
-else
-    warn "Nginx container may still be starting"
-fi
-
-# Quick health check (don't block on HTTPS issues)
-if curl -sf --max-time 5 "http://localhost/api/health" >/dev/null 2>&1; then
-    log "Health check passed (HTTP)"
-elif curl -sf --max-time 5 "https://$DOMAIN/api/health" >/dev/null 2>&1; then
+if curl -sf --max-time 5 "https://$DOMAIN/api/health" >/dev/null 2>&1; then
     log "Health check passed (HTTPS)"
 else
     warn "Health check pending - containers may still be initializing"
-fi
-
-# Show running containers
-info "Container status:"
-docker compose ps --format "table {{.Name}}\t{{.Status}}"
-
-# Set up certificate renewal cron job (runs daily at 3 AM)
-CRON_CMD="0 3 * * * cd $HOME/pengui/deployment && docker compose --profile certbot run --rm certbot renew --quiet && docker compose exec -T nginx nginx -s reload >/dev/null 2>&1"
-if ! crontab -l 2>/dev/null | grep -q "certbot renew"; then
-    log "Setting up automatic certificate renewal cron job..."
-    (crontab -l 2>/dev/null || true; echo "$CRON_CMD") | crontab -
-    log "Certificate renewal cron job added (daily at 3 AM)"
-else
-    log "Certificate renewal cron job already exists"
 fi
 
 log "=== Deployment complete ==="
 log "Site: https://$DOMAIN"
 log "Health: https://$DOMAIN/api/health"
 
-# Explicit exit to ensure script terminates
 exit 0

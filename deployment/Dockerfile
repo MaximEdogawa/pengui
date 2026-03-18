@@ -1,12 +1,7 @@
-# Build Splash WASM (required for /wasm/splash_wasm.js in production)
-FROM rust:1-bookworm AS wasm-builder
-WORKDIR /build
-RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates \
-    && curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
-COPY crates/splash-wasm /build/crates/splash-wasm
-WORKDIR /build/crates/splash-wasm
-RUN wasm-pack build --target web --out-dir /out
+# Splash WASM is built in a separate image to keep caching independent.
+# The image must contain the compiled wasm bundle at `/out`.
+ARG SPLASH_WASM_IMAGE=ghcr.io/maximedogawa/pengui:splash-wasm
+FROM ${SPLASH_WASM_IMAGE} AS wasm-builder
 
 # Build stage
 FROM oven/bun:1.2.23-alpine AS builder
@@ -19,6 +14,7 @@ RUN bun install --frozen-lockfile
 
 # Copy source and build
 COPY . .
+
 # Override public/wasm with built WASM (not in repo due to .gitignore)
 COPY --from=wasm-builder /out ./public/wasm
 

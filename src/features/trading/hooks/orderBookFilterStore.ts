@@ -203,6 +203,23 @@ export const useOrderBookFilterStore = create<OrderBookFilterStore>()(
         if (!error && state) {
           // Ensure filteredSuggestions is always an array (not persisted)
           state.filteredSuggestions = []
+
+          // If filters are effectively empty and the user has not explicitly cleared them,
+          // apply network-specific defaults so Trading shows a sensible initial pair.
+          const buy = state.filters.buyAsset ?? []
+          const sell = state.filters.sellAsset ?? []
+          const status = state.filters.status ?? []
+          const hasAnyFilters = buy.length > 0 || sell.length > 0 || status.length > 0
+          if (!hasAnyFilters && !state.userClearedFilters) {
+            const net = state.savedNetwork ?? 'mainnet'
+            if (net === 'mainnet') {
+              state.filters.buyAsset = ['XCH']
+              state.filters.sellAsset = ['BYC']
+            } else {
+              state.filters.buyAsset = ['TXCH']
+              state.filters.sellAsset = ['TBYC']
+            }
+          }
         }
         // Mark as hydrated (even on error, we should proceed)
         useOrderBookFilterStore.setState({ _hasHydrated: true })
