@@ -28,9 +28,12 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  # Nginx reverse proxy with SSL termination
+  # Nginx reverse proxy with SSL termination (exits when splash-relay stops listening)
   nginx:
-    image: nginx:alpine
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    image: pengui-nginx-relay-coupled:latest
     container_name: pengui-nginx
     restart: unless-stopped
     ports:
@@ -41,6 +44,8 @@ services:
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
       - ./certbot/conf:/etc/letsencrypt:ro
       - ./certbot/www:/var/www/certbot:ro
+    environment:
+      - RELAY_WATCHDOG=${RELAY_WATCHDOG:-1}
     depends_on:
       pengui:
         condition: service_healthy
@@ -52,17 +57,13 @@ services:
     healthcheck:
       test:
         [
-          "CMD",
-          "wget",
-          "--quiet",
-          "--tries=1",
-          "--spider",
-          "http://localhost/health",
+          "CMD-SHELL",
+          "wget -q -O /dev/null --tries=1 --timeout=3 http://127.0.0.1/health && nc -z -w 3 splash-relay 9090",
         ]
-      interval: 30s
+      interval: 15s
       timeout: 10s
       retries: 3
-      start_period: 10s
+      start_period: 30s
     logging:
       driver: "json-file"
       options:
@@ -91,30 +92,25 @@ services:
       - "9090:9090" # WebSocket for app/browser connections
       - "11511:11511" # TCP for Splash network (optional)
     command: ["--tcp-port", "11511", "--ws-port", "9090"]
+    environment:
+      # info = startup line + warnings/errors; debug for verbose (set in .env)
+      - RUST_LOG=${RUST_LOG:-info}
+      - RUST_BACKTRACE=1
     networks:
       pengui-network:
         aliases:
           - splash-relay
-    # Minimal log retention: one 5MB file so "docker compose logs" works; new container = new file after reboot
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "5m"
-        max-file: "1"
-
-  # Splash relay (testnet)
-  splash-relay-testnet:
-    image: ${SPLASH_RELAY_IMAGE:-ghcr.io/maximedogawa/pengui:splash-relay}
-    container_name: pengui-splash-relay-testnet
-    hostname: splash-relay-testnet
-    restart: unless-stopped
-    ports:
-      - "9091:9090"
-    command: ["--tcp-port", "11512", "--ws-port", "9090", "--testnet"]
-    networks:
-      pengui-network:
-        aliases:
-          - splash-relay-testnet
+    healthcheck:
+      # Several attempts per check: WS 9090 + Splash TCP 11511 must both accept
+      test:
+        [
+          "CMD-SHELL",
+          "for i in 1 2 3 4 5; do nc -z -w 3 127.0.0.1 9090 && nc -z -w 3 127.0.0.1 11511 && exit 0; sleep 2; done; exit 1",
+        ]
+      interval: 20s
+      timeout: 35s
+      retries: 4
+      start_period: 120s
     logging:
       driver: "json-file"
       options:
