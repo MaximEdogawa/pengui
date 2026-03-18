@@ -6,15 +6,25 @@ import TradeHistoryTable from "./TradeHistoryTable";
 import { Loader2 } from "lucide-react";
 import { OrderBookOrder } from "@/features/trading/lib/orderBookTypes";
 import { useOrderBookFilters } from "@/features/trading/hooks/useOrderBookFilters";
-import { useTradeHistory } from "@/features/trading/hooks/useTradeHistory";
+import {
+  useTradeHistory,
+  type TradeHistoryResult,
+} from "@/features/trading/hooks/useTradeHistory";
 import { useTradeHistoryFilters } from "@/features/trading/hooks/useTradeHistoryFilters";
 import { useTradeHistorySorting } from "@/features/trading/hooks/useTradeHistorySorting";
 
 interface TradeHistoryContainerProps {
+  /**
+   * Optional injected trade history result.
+   * When omitted, the container falls back to creating its own queries
+   * (backwards-compatible usage, e.g. in Storybook).
+   */
+  tradeHistoryResult?: TradeHistoryResult;
   onOfferClick?: (order: OrderBookOrder) => void;
 }
 
 export default function TradeHistoryContainer({
+  tradeHistoryResult,
   onOfferClick,
 }: TradeHistoryContainerProps) {
   const { t } = useThemeClasses();
@@ -27,6 +37,16 @@ export default function TradeHistoryContainer({
     setShowCancelled,
     setShowPending,
   } = useTradeHistoryFilters();
+
+  // Always create a local result to satisfy hook rules; prefer injected
+  // result when provided (from TradingContent).
+  const fallbackResult = useTradeHistory({
+    orderBookFilters,
+    tradeHistoryFilters: thFilters,
+  });
+
+  const localResult = tradeHistoryResult ?? fallbackResult;
+
   const {
     offers,
     isLoading,
@@ -35,7 +55,7 @@ export default function TradeHistoryContainer({
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-  } = useTradeHistory({ orderBookFilters, tradeHistoryFilters: thFilters });
+  } = localResult;
   const { sortTrades, sortConfig, setSort } = useTradeHistorySorting();
   const sentinelRef = useRef<HTMLDivElement>(null);
 
@@ -91,7 +111,7 @@ export default function TradeHistoryContainer({
             onClick={() => setMyTradesOnly(false)}
             className={`px-1.5 sm:px-2 py-0.5 sm:py-1 text-[10px] sm:text-[11px] font-medium rounded-md transition-all duration-200 ${
               !thFilters.myTradesOnly
-                ? "bg-white/20 dark:bg-white/10 text-slate-800 dark:text-slate-100"
+                ? "bg-white/20 dark:bg:white/10 text-slate-800 dark:text-slate-100"
                 : "text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300"
             }`}
           >
@@ -111,7 +131,7 @@ export default function TradeHistoryContainer({
 
         {/* Status checkboxes - glass */}
         <div
-          className={`flex items-center gap-2 sm:gap-3 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-lg backdrop-blur-xl bg-white/5 dark:bg-black/5 border border-white/10 dark:border-white/5 ${t.text}`}
+          className={`flex items-center gap-2 sm:gap-3 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-lg backdrop-blur-xl bg:white/5 dark:bg-black/5 border border-white/10 dark:border-white/5 ${t.text}`}
         >
           <label className="flex items-center gap-1 sm:gap-1.5 cursor-pointer">
             <input

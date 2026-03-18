@@ -14,6 +14,7 @@ import {
   formatPriceForDisplay,
 } from "@/features/trading/lib/formatAmount";
 import { calculateOrderPrice as calculateOrderPriceNumeric } from "@/features/trading/lib/services/priceCalculation";
+import { useSplashConnection } from "@/features/splash-terminal/SplashConnectionProvider";
 
 interface OrderBookTableProps {
   orders: OrderBookOrder[];
@@ -424,6 +425,8 @@ interface OrderBookTableHeaderProps {
 
 export function OrderBookTableHeader({ filters }: OrderBookTableHeaderProps) {
   const { network } = useNetwork();
+  const splash = useSplashConnection();
+  const streamActive = splash.status === "connected";
 
   const getPriceHeaderTicker = (): string => {
     if (filters?.buyAsset && filters.buyAsset.length > 0) {
@@ -461,6 +464,14 @@ export function OrderBookTableHeader({ filters }: OrderBookTableHeaderProps) {
           <span className="font-medium text-[10px] sm:text-[10px] uppercase tracking-wider text-gray-600 dark:text-gray-300 flex-shrink-0">
             Price
           </span>
+          {streamActive && (
+            <span
+              className="ml-1 inline-flex items-center"
+              title="Live stream active"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_0_3px_rgba(16,185,129,0.4)]" />
+            </span>
+          )}
         </div>
       </div>
     </div>
@@ -583,7 +594,9 @@ function OrderBookTableRow({
       className={`w-full group relative mb-0.5 cursor-pointer transition-all duration-200${isMine ? " ring-1 ring-inset ring-blue-400/40 dark:ring-blue-400/30" : ""}`}
       style={{
         ...(isNew
-          ? { animation: `${orderType === "buy" ? "obNewBuy" : "obNewSell"} 2s cubic-bezier(0.22, 1, 0.36, 1) forwards` }
+          ? {
+              animation: `${orderType === "buy" ? "obNewBuy" : "obNewSell"} 2s cubic-bezier(0.22, 1, 0.36, 1) forwards`,
+            }
           : {}),
       }}
       onClick={() => onClick(order)}
@@ -676,7 +689,10 @@ function OrderBookTableRow({
             {isLoadingDetails && !detailedData && (
               <Loader2 className="w-3 h-3 animate-spin text-gray-400 mr-1 flex-shrink-0" />
             )}
-            <span className="tabular-nums truncate" title={calculateOrderPrice(order)}>
+            <span
+              className="tabular-nums truncate"
+              title={calculateOrderPrice(order)}
+            >
               {calculateOrderPrice(order)}
             </span>
           </div>

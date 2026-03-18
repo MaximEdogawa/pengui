@@ -229,6 +229,10 @@ export function useTradeHistory(options: TradeHistoryOptions = {}) {
     staleTime: 30 * 1000,
     gcTime: 5 * 60 * 1000,
     retry: 2,
+    // When Trades tab is mounted and visible, allow periodic and on-focus refreshes.
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    refetchInterval: baseEnabled && thFilters.showCompleted ? 60 * 1000 : false,
   });
 
   const cancelledQuery = useInfiniteQuery({
@@ -255,6 +259,9 @@ export function useTradeHistory(options: TradeHistoryOptions = {}) {
     staleTime: 30 * 1000,
     gcTime: 5 * 60 * 1000,
     retry: 2,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    refetchInterval: baseEnabled && thFilters.showCancelled ? 60 * 1000 : false,
   });
 
   const pendingQuery = useInfiniteQuery({
@@ -281,6 +288,9 @@ export function useTradeHistory(options: TradeHistoryOptions = {}) {
     staleTime: 30 * 1000,
     gcTime: 5 * 60 * 1000,
     retry: 2,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    refetchInterval: baseEnabled && thFilters.showPending ? 60 * 1000 : false,
   });
 
   const { orderBookData, orderBookLoading, orderBookError } = useOrderBook(
@@ -417,3 +427,5 @@ export function useTradeHistory(options: TradeHistoryOptions = {}) {
     isFetchingNextPage,
   };
 }
+
+export type TradeHistoryResult = ReturnType<typeof useTradeHistory>;

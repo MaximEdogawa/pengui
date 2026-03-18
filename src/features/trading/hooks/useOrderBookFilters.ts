@@ -23,10 +23,13 @@ export function useOrderBookFilters() {
   const savedNetwork = useOrderBookFilterStore((state) => state.savedNetwork)
   const hasActiveFilters = useHasActiveFilters()
   const hasHydrated = useHasHydrated()
+  const userClearedFilters = useOrderBookFilterStore((state) => state.userClearedFilters)
 
   // Get actions directly from store for network change handling
   const storeClearFiltersForNetwork = useOrderBookFilterStore((state) => state.clearAllFilters)
   const setSavedNetwork = useOrderBookFilterStore((state) => state.setSavedNetwork)
+  const storeSetBuyAsset = useOrderBookFilterStore((state) => state.setBuyAsset)
+  const storeSetSellAsset = useOrderBookFilterStore((state) => state.setSellAsset)
 
   // Handle network changes - clear ALL filters when network changes
   // Wait for hydration to complete before making network-based decisions
@@ -34,24 +37,45 @@ export function useOrderBookFilters() {
     // Don't run until store has been hydrated from localStorage
     if (!hasHydrated) return
 
+    const applyDefaultPairForNetwork = (net: typeof network) => {
+      if (net === 'mainnet') {
+        // Default mainnet pair: XCH/BYC
+        storeSetBuyAsset(['XCH'])
+        storeSetSellAsset(['BYC'])
+      } else {
+        // Default testnet pair: TXCH/TBYC
+        storeSetBuyAsset(['TXCH'])
+        storeSetSellAsset(['TBYC'])
+      }
+    }
+
     if (prevNetworkRef.current === null) {
-      // Initial mount (after hydration) - check if stored network matches current network
+      // Initial mount (after hydration)
       if (savedNetwork !== null && savedNetwork !== network) {
-        // Network mismatch - clear all filters and update network
+        // Stored network does not match current -> reset and apply defaults for current network
         storeClearFiltersForNetwork()
         setSavedNetwork(network)
-      } else if (savedNetwork === null) {
-        // No saved network - set it
-        setSavedNetwork(network)
+        applyDefaultPairForNetwork(network)
+      } else {
+        // Either no saved network or it matches current.
+        // If there are no active filters and the user hasn't explicitly cleared them,
+        // apply network-specific defaults and persist them.
+        if (!hasActiveFilters && !userClearedFilters) {
+          applyDefaultPairForNetwork(network)
+        }
+        if (savedNetwork === null) {
+          setSavedNetwork(network)
+        }
       }
       prevNetworkRef.current = network
     } else if (prevNetworkRef.current !== network) {
       // Network changed - clear all filters and update network
       storeClearFiltersForNetwork()
       setSavedNetwork(network)
+      applyDefaultPairForNetwork(network)
       prevNetworkRef.current = network
     }
-  }, [network, savedNetwork, hasHydrated, storeClearFiltersForNetwork, setSavedNetwork])
+  }, [network, savedNetwork, hasHydrated, hasActiveFilters, userClearedFilters, storeClearFiltersForNetwork, setSavedNetwork, storeSetBuyAsset, storeSetSellAsset])
 
   // Invalidate queries when filters or pagination change
   const buyAssetKey = JSON.stringify(filters.buyAsset || [])

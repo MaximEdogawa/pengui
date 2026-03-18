@@ -137,6 +137,8 @@ export function useOfferParsing({ order, offerString }: UseOfferParsingProps) {
         response?.error_message || "Failed to fetch offer details",
       );
     },
+    // Perform HTTP request for detailed offer inspection like before,
+    // but only when we actually have an order id.
     enabled: !!order?.id,
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,

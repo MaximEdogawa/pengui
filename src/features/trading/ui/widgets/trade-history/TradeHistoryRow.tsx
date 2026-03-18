@@ -3,6 +3,7 @@
 import { useThemeClasses } from "@/shared/hooks";
 import { useResponsive } from "@/shared/hooks/useResponsive";
 import type { DexieOffer } from "@/entities/offer";
+import { TickerIcon, XchIcon } from "@/entities/asset";
 import {
   formatAmountForDisplay,
   formatPriceForDisplay,
@@ -100,18 +101,62 @@ export default function TradeHistoryRow({
       >
         {/* Row 1: Requested → Offered + Price */}
         <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1 min-w-0 flex-1">
-            <span className={`text-[10px] font-mono ${t.text} truncate`}>
-              {requested
-                ? formatAssetAmount(requested.amount, requested.code ?? "", maxDecimals)
-                : "—"}
-            </span>
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <div className="flex items-center gap-1 min-w-0 flex-1">
+              {requested ? (
+                <>
+                  {requested.code === "XCH" || requested.code === "TXCH" ? (
+                    <XchIcon size={14} className="flex-shrink-0" />
+                  ) : (
+                    <TickerIcon
+                      assetId={requested.id}
+                      ticker={requested.code ?? ""}
+                      size={14}
+                      className="flex-shrink-0"
+                    />
+                  )}
+                  <span className={`text-[10px] font-mono ${t.text} truncate`}>
+                    {formatAssetAmount(
+                      requested.amount,
+                      requested.code ?? "",
+                      maxDecimals,
+                    )}
+                  </span>
+                </>
+              ) : (
+                <span className={`text-[10px] font-mono ${t.text} truncate`}>
+                  —
+                </span>
+              )}
+            </div>
             <span className={`text-[9px] ${t.textSecondary} flex-shrink-0`}>→</span>
-            <span className={`text-[10px] font-mono ${t.text} truncate`}>
-              {offered
-                ? formatAssetAmount(offered.amount, offered.code ?? "", maxDecimals)
-                : "—"}
-            </span>
+            <div className="flex items-center gap-1 min-w-0 flex-1 justify-end">
+              {offered ? (
+                <>
+                  {offered.code === "XCH" || offered.code === "TXCH" ? (
+                    <XchIcon size={14} className="flex-shrink-0" />
+                  ) : (
+                    <TickerIcon
+                      assetId={offered.id}
+                      ticker={offered.code ?? ""}
+                      size={14}
+                      className="flex-shrink-0"
+                    />
+                  )}
+                  <span className={`text-[10px] font-mono ${t.text} truncate`}>
+                    {formatAssetAmount(
+                      offered.amount,
+                      offered.code ?? "",
+                      maxDecimals,
+                    )}
+                  </span>
+                </>
+              ) : (
+                <span className={`text-[10px] font-mono ${t.text} truncate`}>
+                  —
+                </span>
+              )}
+            </div>
           </div>
           <span className={`text-[10px] font-mono ${t.text} flex-shrink-0 tabular-nums`}>
             {formatPriceForDisplay(price, maxDecimals)}
@@ -136,15 +181,55 @@ export default function TradeHistoryRow({
           isMyOffer ? "border-l-2 border-l-blue-500/30" : ""
         } ${onClick ? "cursor-pointer" : ""}`}
       >
-        <div className={`text-xs font-mono ${t.text} col-span-2 truncate`}>
-          {requested
-            ? formatAssetAmount(requested.amount, requested.code ?? "", maxDecimals)
-            : "—"}
+        <div className="col-span-2 flex items-center gap-1 text-xs font-mono">
+          {requested ? (
+            <>
+              {requested.code === "XCH" || requested.code === "TXCH" ? (
+                <XchIcon size={16} className="flex-shrink-0" />
+              ) : (
+                <TickerIcon
+                  assetId={requested.id}
+                  ticker={requested.code ?? ""}
+                  size={16}
+                  className="flex-shrink-0"
+                />
+              )}
+              <span className={`${t.text} truncate`}>
+                {formatAssetAmount(
+                  requested.amount,
+                  requested.code ?? "",
+                  maxDecimals,
+                )}
+              </span>
+            </>
+          ) : (
+            <span className={`${t.text} truncate`}>—</span>
+          )}
         </div>
-        <div className={`text-xs font-mono ${t.text} col-span-2 truncate`}>
-          {offered
-            ? formatAssetAmount(offered.amount, offered.code ?? "", maxDecimals)
-            : "—"}
+        <div className="col-span-2 flex items-center gap-1 text-xs font-mono">
+          {offered ? (
+            <>
+              {offered.code === "XCH" || offered.code === "TXCH" ? (
+                <XchIcon size={16} className="flex-shrink-0" />
+              ) : (
+                <TickerIcon
+                  assetId={offered.id}
+                  ticker={offered.code ?? ""}
+                  size={16}
+                  className="flex-shrink-0"
+                />
+              )}
+              <span className={`${t.text} truncate`}>
+                {formatAssetAmount(
+                  offered.amount,
+                  offered.code ?? "",
+                  maxDecimals,
+                )}
+              </span>
+            </>
+          ) : (
+            <span className={`${t.text} truncate`}>—</span>
+          )}
         </div>
         <div className={`text-xs font-mono ${t.text} truncate`}>
           {formatPriceForDisplay(price, maxDecimals)}

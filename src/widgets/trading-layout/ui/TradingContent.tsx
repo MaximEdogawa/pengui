@@ -6,6 +6,8 @@ import StreamContainer from "@/features/trading/ui/widgets/stream/StreamContaine
 import type { OrderBookOrder } from "@/features/trading/lib/orderBookTypes";
 import PriceChart from "@/features/trading/ui/widgets/chart/PriceChart";
 import { MarketDepthView } from "@/features/trading/ui/componets/depth";
+import { useTradeHistory } from "@/features/trading/hooks/useTradeHistory";
+import { useTradeHistoryFilters } from "@/features/trading/hooks/useTradeHistoryFilters";
 
 interface TradingContentProps {
   activeView: "orderbook" | "chart" | "depth" | "trades" | "terminal";
@@ -21,6 +23,13 @@ export default function TradingContent({
   filters,
   onOrderClick,
 }: TradingContentProps) {
+  const { filters: thFilters } = useTradeHistoryFilters();
+  const tradeHistoryResult = useTradeHistory({
+    orderBookFilters: filters,
+    tradeHistoryFilters: thFilters,
+    enabled: activeView === "trades",
+  });
+
   if (activeView === "orderbook") {
     return <OrderBookContainer filters={filters} onOrderClick={onOrderClick} />;
   }
@@ -34,7 +43,12 @@ export default function TradingContent({
   }
 
   if (activeView === "trades") {
-    return <TradeHistoryContainer onOfferClick={onOrderClick} />;
+    return (
+      <TradeHistoryContainer
+        tradeHistoryResult={tradeHistoryResult}
+        onOfferClick={onOrderClick}
+      />
+    );
   }
 
   if (activeView === "terminal") {
