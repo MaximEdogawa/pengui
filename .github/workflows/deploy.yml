@@ -146,7 +146,12 @@ jobs:
 
           relay_needs_build=false
           relay_image="$IMG_REQUESTED"
-          relay_build_tag="$APP_TAG"
+          # When manually building and `relay_tag` is provided, we want to build that exact versioned tag.
+          # For "latest" deployments, keep the previous behavior (versioned tag may become `splash-relay-latest`).
+          relay_build_tag="$RELAY_TAG"
+          if [ -z "$relay_build_tag" ]; then
+            relay_build_tag="$APP_TAG"
+          fi
 
           if exists "$IMG_REQUESTED"; then
             relay_needs_build=false
@@ -167,6 +172,13 @@ jobs:
             relay_image="$IMG_FALLBACK"
           fi
 
+          # If the user explicitly requested a relay build (workflow_dispatch + build_relay=true),
+          # deploy the relay tag we targeted (IMG_REQUESTED), even if a fallback image existed.
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ github.event.inputs.build_relay }}" = "true" ]; then
+            relay_needs_build=true
+            relay_image="$IMG_REQUESTED"
+          fi
+
           echo "relay_needs_build=$relay_needs_build" >> "$GITHUB_OUTPUT"
           echo "relay_image=$relay_image" >> "$GITHUB_OUTPUT"
           echo "relay_build_tag=$relay_build_tag" >> "$GITHUB_OUTPUT"
@@ -179,7 +191,7 @@ jobs:
           exit 1
 
       - name: Build and push splash-relay image (only when missing)
-        if: steps.relay_image_resolve.outputs.relay_needs_build == 'true' && (github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && github.event.inputs.build_relay == 'true'))
+        if: (github.event_name == 'release' && steps.relay_image_resolve.outputs.relay_needs_build == 'true') || (github.event_name == 'workflow_dispatch' && github.event.inputs.build_relay == 'true')
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -273,7 +285,7 @@ jobs:
           exit 1
 
       - name: Build and push Docker image
-        if: steps.app_image_resolve.outputs.app_needs_build == 'true' && (github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && github.event.inputs.build_wasm == 'true'))
+        if: (github.event_name == 'release' && steps.app_image_resolve.outputs.app_needs_build == 'true') || (github.event_name == 'workflow_dispatch' && github.event.inputs.build_wasm == 'true')
         uses: docker/build-push-action@v6
         with:
           context: .
