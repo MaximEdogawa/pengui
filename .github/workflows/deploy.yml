@@ -15,8 +15,8 @@ on:
           - beta
           - production
       tag:
-        description: "Release tag to deploy (leave empty for latest)"
-        required: true
+        description: "Optional app release tag to deploy (empty => deploy `:latest`)"
+        required: false
         type: string
       relay_tag:
         description: "Optional relay version to deploy as `splash-relay-${relay_tag}` (workflow_dispatch only)"
@@ -26,12 +26,12 @@ on:
         description: "Build app image (includes WASM from crates/splash-wasm)"
         required: false
         type: boolean
-        default: true
+        default: false
       build_relay:
         description: "Build and push relay image (crates/splash-relay)"
         required: false
         type: boolean
-        default: true
+        default: false
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -54,6 +54,7 @@ jobs:
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
+          fetch-tags: true
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
@@ -78,16 +79,66 @@ jobs:
             REQUESTED_RELAY_TAG=""
           fi
 
-          # If relay_tag is set (workflow_dispatch only), use splash-relay-${relay_tag}.
-          # Otherwise deploy the relay matching the app tag.
-          if [ -n "$REQUESTED_RELAY_TAG" ]; then
-            RELAY_TAG="$REQUESTED_RELAY_TAG"
-          else
-            RELAY_TAG="$APP_TAG"
+          # Normalize empty -> latest for manual runs.
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -z "${APP_TAG}" ]; then
+            APP_TAG="latest"
           fi
 
-          IMG_REQUESTED="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:splash-relay-${RELAY_TAG}"
-          IMG_FALLBACK="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:splash-relay-${APP_TAG}"
+          # Decide which relay tag we prefer to deploy.
+          # - workflow_dispatch: use requested relay_tag when provided, else match app tag.
+          # - release: if relay source didn't change since previous release tag, reuse the previous relay tag.
+          RELAY_TAG=""
+          RELAY_CODE_CHANGED=true
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            RELAY_CODE_CHANGED=true
+            if [ -n "$REQUESTED_RELAY_TAG" ]; then
+              RELAY_TAG="$REQUESTED_RELAY_TAG"
+            else
+              RELAY_TAG="$APP_TAG"
+            fi
+          else
+            CURRENT_TAG="${{ github.ref_name }}"
+            PREV_TAG="$(git tag --sort=-creatordate | awk -v cur="$CURRENT_TAG" '$0!=cur {print $0; exit}')"
+            if [ -z "$PREV_TAG" ]; then
+              RELAY_CODE_CHANGED=true
+              RELAY_TAG="$CURRENT_TAG"
+            else
+              # If none of the relay source files changed between tags, skip building relay.
+              if mapfile -t changed_files < <(git diff --name-only "$PREV_TAG" "$CURRENT_TAG" -- crates/splash-relay deployment/splash-relay || true); then
+                if [ "${#changed_files[@]}" -gt 0 ]; then
+                  RELAY_CODE_CHANGED=true
+                  RELAY_TAG="$CURRENT_TAG"
+                else
+                  RELAY_CODE_CHANGED=false
+                  RELAY_TAG="$PREV_TAG"
+                fi
+              else
+                RELAY_CODE_CHANGED=true
+                RELAY_TAG="$CURRENT_TAG"
+              fi
+            fi
+          fi
+
+          # Build image refs:
+          # - For tag = "latest" (or empty), use the unversioned `:splash-relay` image.
+          if [ -z "$RELAY_TAG" ] || [ "$RELAY_TAG" = "latest" ]; then
+            IMG_REQUESTED="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:splash-relay"
+          else
+            IMG_REQUESTED="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:splash-relay-${RELAY_TAG}"
+          fi
+
+          # Fallback:
+          # - If workflow_dispatch and relay_tag is set, also fall back to app tag match.
+          # - Otherwise, fall back to unversioned `:splash-relay`.
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "$REQUESTED_RELAY_TAG" ]; then
+            if [ -z "$APP_TAG" ] || [ "$APP_TAG" = "latest" ]; then
+              IMG_FALLBACK="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:splash-relay"
+            else
+              IMG_FALLBACK="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:splash-relay-${APP_TAG}"
+            fi
+          else
+            IMG_FALLBACK="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:splash-relay"
+          fi
 
           exists() {
             docker buildx imagetools inspect "$1" >/dev/null 2>&1
@@ -105,7 +156,13 @@ jobs:
             relay_image="$IMG_FALLBACK"
             echo "relay_fallback_used=true" >> "$GITHUB_OUTPUT"
           else
-            # Missing requested+fallback => build relay for fallback (matches app tag).
+            # Missing requested+fallback => build relay (only when allowed).
+            if [ "${{ github.event_name }}" = "release" ] && [ "$RELAY_CODE_CHANGED" != "true" ]; then
+              echo "::error::Relay image missing for previous release and relay source did not change; refusing to rebuild."
+              exit 1
+            fi
+
+            # Build relay for fallback match (so it aligns with app tag on workflow_dispatch).
             relay_needs_build=true
             relay_image="$IMG_FALLBACK"
           fi
@@ -168,8 +225,13 @@ jobs:
       - name: Extract metadata
         id: meta
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ github.event.inputs.tag }}" ]; then
-            TAG="${{ github.event.inputs.tag }}"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG_IN="${{ github.event.inputs.tag }}"
+            if [ -z "$TAG_IN" ]; then
+              TAG="latest"
+            else
+              TAG="$TAG_IN"
+            fi
           elif [ "${{ github.event_name }}" = "release" ]; then
             TAG="${{ github.ref_name }}"
           else
