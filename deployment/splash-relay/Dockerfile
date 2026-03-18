@@ -1,29 +1,27 @@
 # syntax=docker/dockerfile:1.7
 #
-# splash-relay runtime image that bakes the relay binary at docker build time
-# by downloading it from the GitHub Release for RELEASE_TAG.
+# splash-relay build compiles the relay binary inside Docker and validates it
+# at build time to prevent publishing broken/no-op relay images.
 #
+
+FROM rust:1-bookworm AS builder
+WORKDIR /app
+
+COPY crates/splash-relay/Cargo.toml crates/splash-relay/Cargo.lock ./
+
+RUN cargo fetch --locked
+
+COPY crates/splash-relay/src ./src
+RUN cargo build --locked --release
+
+# Sanity check: ensure the binary is really our clap-based relay.
+RUN /app/target/release/splash-relay --help 2>&1 | grep -q "Maximum concurrent WebSocket"
+
 FROM debian:bookworm-slim
 
-RUN apt-get update && apt-get install -y ca-certificates curl netcat-openbsd && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y ca-certificates netcat-openbsd && rm -rf /var/lib/apt/lists/*
 
-ARG RELEASE_TAG
-ARG GITHUB_REPOSITORY
-
-# Download the correct relay binary from the release assets and validate it.
-RUN --mount=type=secret,id=GITHUB_TOKEN,required=false \
-  set -eu; \
-  TAG="${RELEASE_TAG}"; \
-  REPO="${GITHUB_REPOSITORY}"; \
-  URL="https://github.com/${REPO}/releases/download/${TAG}/splash-relay-${TAG}-linux-amd64"; \
-  token="$(cat /run/secrets/GITHUB_TOKEN 2>/dev/null || true)"; \
-  if [ -n "$token" ]; then \
-    curl -fsSL -L -H "Authorization: Bearer $token" "$URL" -o /usr/local/bin/splash-relay; \
-  else \
-    curl -fsSL -L "$URL" -o /usr/local/bin/splash-relay; \
-  fi; \
-  chmod +x /usr/local/bin/splash-relay; \
-  /usr/local/bin/splash-relay --help 2>&1 | grep -q "Maximum concurrent WebSocket"
+COPY --from=builder /app/target/release/splash-relay /usr/local/bin/splash-relay
 
 EXPOSE 11511 9090
 

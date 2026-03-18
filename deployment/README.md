@@ -122,6 +122,8 @@ chmod +x scripts/deploy.sh
 
 The **splash-relay** services join the Splash network (libp2p) and expose WebSocket so the app’s Stream tab can receive live offers. They are included in `docker-compose.yml`.
 
+The Docker images compile both `splash-wasm` and `splash-relay` from source during the CI image build, so you only need to pull the versioned images for a reproducible deployment.
+
 - **splash-relay** (mainnet): WebSocket on port **9090**, TCP on 11511.
 
 To have the app **auto-connect** to these relays, set at **build time** (e.g. in CI or when building the image):

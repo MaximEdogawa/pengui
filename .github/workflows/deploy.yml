@@ -18,6 +18,10 @@ on:
         description: "Release tag to deploy (leave empty for latest)"
         required: true
         type: string
+      relay_tag:
+        description: "Optional relay version to deploy as `splash-relay-${relay_tag}` (workflow_dispatch only)"
+        required: false
+        type: string
       build_wasm:
         description: "Build app image (includes WASM from crates/splash-wasm)"
         required: false
@@ -35,71 +39,11 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  build-and-upload-release-assets:
-    name: Build + Upload splash assets
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-    if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && github.event.inputs.tag != '')
-    permissions:
-      contents: write
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-
-      - name: Set TAG
-        id: tag
-        run: |
-          if [ "${{ github.event_name }}" = "release" ]; then
-            echo "tag=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
-          else
-            echo "tag=${{ github.event.inputs.tag }}" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Install wasm-pack
-        run: |
-          curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
-          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
-
-      - name: Build splash-wasm
-        run: |
-          set -euo pipefail
-          TAG="${{ steps.tag.outputs.tag }}"
-          mkdir -p /tmp/wasm-out
-          cd crates/splash-wasm
-          wasm-pack build --target web --out-dir /tmp/wasm-out
-          tar -czf "splash-wasm-${TAG}.tar.gz" -C /tmp/wasm-out splash_wasm.js splash_wasm_bg.wasm
-
-      - name: Build splash-relay binary
-        run: |
-          set -euo pipefail
-          TAG="${{ steps.tag.outputs.tag }}"
-          cd crates/splash-relay
-          cargo build --locked --release
-          cp "target/release/splash-relay" "/tmp/splash-relay-${TAG}-linux-amd64"
-          /tmp/splash-relay-${TAG}-linux-amd64 --help 2>&1 | grep -q "Maximum concurrent WebSocket"
-
-      - name: Upload release assets
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          TAG="${{ steps.tag.outputs.tag }}"
-          gh release upload "$TAG" \
-            "splash-wasm-${TAG}.tar.gz" \
-            "/tmp/splash-relay-${TAG}-linux-amd64" \
-            --clobber
-
   # Build relay when relay code changed (release) or manual + "build relay" checked; otherwise reuse :splash-relay
   build-and-push-relay:
     name: Build and Push Splash Relay Image
     runs-on: ubuntu-latest
     timeout-minutes: 45
-    needs: [build-and-upload-release-assets]
     permissions:
       contents: read
       packages: write
@@ -111,18 +55,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Detect relay and WASM changes
-        uses: dorny/paths-filter@v4
-        id: filter
-        with:
-          base: ${{ github.event.repository.default_branch || 'main' }}
-          filters: |
-            relay:
-              - 'crates/splash-relay/**'
-              - 'deployment/splash-relay/**'
-            wasm:
-              - 'crates/splash-wasm/**'
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
@@ -133,20 +65,64 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract tag for relay
-        id: relay_meta
+      - name: Resolve which relay image to use (skip builds if available)
+        id: relay_image_resolve
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ github.event.inputs.tag }}" ]; then
-            TAG="${{ github.event.inputs.tag }}"
-          elif [ "${{ github.event_name }}" = "release" ]; then
-            TAG="${{ github.ref_name }}"
-          else
-            TAG="latest"
-          fi
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          set -euo pipefail
 
-      - name: Build and push splash-relay image
-        if: github.event_name == 'release' || steps.filter.outputs.relay == 'true' || (github.event_name == 'workflow_dispatch' && github.event.inputs.build_relay == 'true')
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            APP_TAG="${{ github.event.inputs.tag }}"
+            REQUESTED_RELAY_TAG="${{ github.event.inputs.relay_tag }}"
+          else
+            APP_TAG="${{ github.ref_name }}"
+            REQUESTED_RELAY_TAG=""
+          fi
+
+          # If relay_tag is set (workflow_dispatch only), use splash-relay-${relay_tag}.
+          # Otherwise deploy the relay matching the app tag.
+          if [ -n "$REQUESTED_RELAY_TAG" ]; then
+            RELAY_TAG="$REQUESTED_RELAY_TAG"
+          else
+            RELAY_TAG="$APP_TAG"
+          fi
+
+          IMG_REQUESTED="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:splash-relay-${RELAY_TAG}"
+          IMG_FALLBACK="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:splash-relay-${APP_TAG}"
+
+          exists() {
+            docker buildx imagetools inspect "$1" >/dev/null 2>&1
+          }
+
+          relay_needs_build=false
+          relay_image="$IMG_REQUESTED"
+          relay_build_tag="$APP_TAG"
+
+          if exists "$IMG_REQUESTED"; then
+            relay_needs_build=false
+            relay_image="$IMG_REQUESTED"
+          elif exists "$IMG_FALLBACK"; then
+            relay_needs_build=false
+            relay_image="$IMG_FALLBACK"
+            echo "relay_fallback_used=true" >> "$GITHUB_OUTPUT"
+          else
+            # Missing requested+fallback => build relay for fallback (matches app tag).
+            relay_needs_build=true
+            relay_image="$IMG_FALLBACK"
+          fi
+
+          echo "relay_needs_build=$relay_needs_build" >> "$GITHUB_OUTPUT"
+          echo "relay_image=$relay_image" >> "$GITHUB_OUTPUT"
+          echo "relay_build_tag=$relay_build_tag" >> "$GITHUB_OUTPUT"
+
+      - name: Fail if relay image missing and build not allowed
+        if: steps.relay_image_resolve.outputs.relay_needs_build == 'true' && github.event_name == 'workflow_dispatch' && github.event.inputs.build_relay != 'true'
+        run: |
+          echo "::error::Relay image not found in GHCR and build_relay=false."
+          echo "relay_image=${{ steps.relay_image_resolve.outputs.relay_image }}"
+          exit 1
+
+      - name: Build and push splash-relay image (only when missing)
+        if: steps.relay_image_resolve.outputs.relay_needs_build == 'true' && (github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && github.event.inputs.build_relay == 'true'))
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -154,30 +130,20 @@ jobs:
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:splash-relay
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:splash-relay-${{ steps.relay_meta.outputs.tag }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:splash-relay-${{ steps.relay_image_resolve.outputs.relay_build_tag }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          secrets: |
-            "GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}"
-          build-args: |
-            RELEASE_TAG=${{ steps.relay_meta.outputs.tag }}
-            GITHUB_REPOSITORY=${{ github.repository }}
 
       - name: Set relay image output
         id: set_relay_output
         run: |
-          if [ "${{ github.event_name }}" = "release" ] || [ "${{ steps.filter.outputs.relay }}" = "true" ] || ([ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ github.event.inputs.build_relay }}" = "true" ]); then
-            echo "relay_image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:splash-relay-${{ steps.relay_meta.outputs.tag }}" >> "$GITHUB_OUTPUT"
-          else
-            echo "relay_image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:splash-relay" >> "$GITHUB_OUTPUT"
-          fi
+          echo "relay_image=${{ steps.relay_image_resolve.outputs.relay_image }}" >> "$GITHUB_OUTPUT"
 
   # App image includes WASM (built from crates/splash-wasm in Dockerfile). Built on every release; on manual when "Build WASM/app" is checked.
   build-and-push:
     name: Build and Push App Image (incl. WASM)
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    needs: [build-and-upload-release-assets]
     permissions:
       contents: read
       packages: write
@@ -221,7 +187,31 @@ jobs:
           echo "full_image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:$TAG" >> "$GITHUB_OUTPUT"
           echo "app_env=$NEXT_PUBLIC_APP_ENV" >> "$GITHUB_OUTPUT"
 
+      - name: Resolve whether app image already exists (skip WASM build if available)
+        id: app_image_resolve
+        run: |
+          set -euo pipefail
+          IMG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.tag }}"
+
+          exists() {
+            docker buildx imagetools inspect "$IMG" >/dev/null 2>&1
+          }
+
+          if exists "$IMG"; then
+            echo "app_needs_build=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "app_needs_build=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Fail if app image missing and build not allowed
+        if: steps.app_image_resolve.outputs.app_needs_build == 'true' && github.event_name == 'workflow_dispatch' && github.event.inputs.build_wasm != 'true'
+        run: |
+          echo "::error::App image not found in GHCR and build_wasm=false."
+          echo "full_image=${{ steps.meta.outputs.full_image }}"
+          exit 1
+
       - name: Build and push Docker image
+        if: steps.app_image_resolve.outputs.app_needs_build == 'true' && (github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && github.event.inputs.build_wasm == 'true'))
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -231,11 +221,7 @@ jobs:
           tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.tag }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          secrets: |
-            "GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }}"
           build-args: |
-            RELEASE_TAG=${{ steps.meta.outputs.tag }}
-            GITHUB_REPOSITORY=${{ github.repository }}
             NEXT_PUBLIC_APP_VERSION=${{ steps.meta.outputs.tag }}
             NEXT_PUBLIC_APP_ENV=${{ steps.meta.outputs.app_env }}
             NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID=${{ secrets.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID }}
