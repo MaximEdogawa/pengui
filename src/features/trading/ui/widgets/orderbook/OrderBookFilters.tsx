@@ -173,7 +173,7 @@ export default function OrderBookFilters({
             onFocus={() =>
               filteredSuggestions.length > 0 && setShowSuggestions(true)
             }
-            placeholder={`Search assets (e.g., ${getNativeTokenTickerForNetwork(network)}, TBYC)...`}
+            placeholder={`Search assets (e.g., ${getNativeTokenTickerForNetwork(network)})...`}
             className={`w-full px-1.5 sm:px-2 py-1 sm:py-1.5 text-[11px] sm:text-xs rounded-lg border-2 ${t.border} ${t.bg} ${t.text} focus:outline-none focus:ring-2 focus:ring-blue-500/50 backdrop-blur-sm`}
           />
 

@@ -1,10 +1,8 @@
 "use client";
 
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
-import { ArrowLeftRight, Plus, Minus } from "lucide-react";
 import { useThemeClasses } from "@/shared/hooks";
 import { useNetwork } from "@/shared/hooks/useNetwork";
-import { TickerIcon, XchIcon } from "@/entities/asset";
 import { getNativeTokenTickerForNetwork } from "@/shared/lib/config/environment";
 import { useTibetPairs, useTibetQuote, useTibetCreateOffer } from "../hooks";
 import { useCreateOffer } from "@/features/wallet";
@@ -13,19 +11,14 @@ import { logger } from "@/shared/lib/logger";
 import { useOrderBookFilters } from "@/features/trading/hooks/useOrderBookFilters";
 import { useSelectedOrder } from "@/features/trading/hooks/SelectedOrderProvider";
 import { broadcastOfferToSplash } from "@/features/splash-terminal";
-import {
-  SwapPreviewTabContent,
-  RemovePreviewTabContent,
-  AddPreviewTabContent,
-} from "./SwapPreviewTabs";
+import { isXchTicker } from "../lib/tibetUiUtils";
+import { SwapFormBody } from "./SwapFormBody";
 import {
   convertToSmallestUnit,
   MOJOS_PER_XCH,
   mojosToXch,
 } from "@/shared/lib/utils/chia-units";
-import { AmountInput, Button } from "@/shared/ui";
-import type { AssetType } from "@/entities/offer";
-import type { TibetApiPair, TibetQuote } from "../lib/tibetTypes";
+import type { TibetApiPair } from "../lib/tibetTypes";
 import { computePriceImpactPercent } from "../lib/priceImpact";
 
 const TOKEN_SMALLEST_PER_UNIT = 1000;
@@ -34,11 +27,6 @@ function formatPrice(xchPerToken: number): string {
   if (xchPerToken >= 1) return xchPerToken.toFixed(4);
   if (xchPerToken >= 0.0001) return xchPerToken.toFixed(8);
   return xchPerToken.toExponential(4);
-}
-
-function isXchTicker(ticker: string | null): boolean {
-  const c = (ticker ?? "").toLowerCase();
-  return c === "xch" || c === "txch";
 }
 
 /** Estimate XCH and token received when removing lpAmount (display units) of LP from pair */
@@ -73,332 +61,6 @@ function lpToRemoveFromDesiredOutput(
   const share = Math.min(shareFromXch, shareFromToken);
   if (share <= 0) return null;
   return Math.floor(share * pair.liquidity);
-}
-
-interface SwapFormBodyProps {
-  t: ReturnType<typeof useThemeClasses>["t"];
-  hasValidFilterPair: boolean;
-  nativeTicker: string;
-  isTestnet: boolean;
-  offeredTicker: string | null;
-  requestedTicker: string | null;
-  selectedPair: TibetApiPair | null;
-  offeredAmount: string;
-  requestedAmount: string;
-  priceLine: string | null;
-  quote: TibetQuote | null | undefined;
-  priceImpactPercent: number | null;
-  liquidityFeePercent: string;
-  modalPayAmount: string;
-  pairsLoading: boolean;
-  onOfferedChange: (amount: string) => void;
-  onRequestedChange: (amount: string) => void;
-  onAmountDriverOffered: () => void;
-  onAmountDriverRequested: () => void;
-  onSubmitSwap: () => void;
-  isSwapPending: boolean;
-  lpAmount: string;
-  onLpAmountChange: (v: string) => void;
-  addLpReceive: string | undefined;
-  removeReceive: { xch: number; token: number } | null;
-  tokenName: string;
-  liquidityError: string;
-  liquiditySuccess: boolean;
-  swapError: string;
-  swapSuccess: boolean;
-  onRemove: () => void;
-  onAdd: () => void;
-  isLiquidityPending: boolean;
-}
-
-function SwapFormBody({
-  t,
-  hasValidFilterPair,
-  nativeTicker,
-  isTestnet,
-  offeredTicker,
-  requestedTicker,
-  selectedPair,
-  offeredAmount,
-  requestedAmount,
-  priceLine,
-  quote,
-  priceImpactPercent,
-  liquidityFeePercent,
-  modalPayAmount,
-  pairsLoading,
-  onOfferedChange,
-  onRequestedChange,
-  onAmountDriverOffered,
-  onAmountDriverRequested,
-  onSubmitSwap,
-  isSwapPending,
-  lpAmount,
-  onLpAmountChange,
-  addLpReceive: addLpReceiveProp,
-  removeReceive,
-  tokenName,
-  liquidityError,
-  liquiditySuccess,
-  swapError,
-  swapSuccess,
-  onRemove,
-  onAdd,
-  isLiquidityPending,
-}: SwapFormBodyProps) {
-  const [previewTab, setPreviewTab] = useState<"swap" | "remove" | "add">(
-    "swap",
-  );
-
-  const isOfferedNative =
-    offeredTicker?.toLowerCase() === nativeTicker.toLowerCase();
-  const isRequestedNative =
-    requestedTicker?.toLowerCase() === nativeTicker.toLowerCase();
-
-  if (!hasValidFilterPair) {
-    return (
-      <div className="space-y-1.5">
-        <div
-          className={`rounded-md p-2 text-center text-xs ${t.card} border ${t.border} ${t.textSecondary}`}
-        >
-          Select assets using the filter above (Sell and Buy) to set the swap
-          pair.
-        </div>
-      </div>
-    );
-  }
-
-  const previewContent =
-    previewTab === "swap" ? (
-      <SwapPreviewTabContent
-        t={t}
-        requestedTicker={requestedTicker}
-        requestedAmount={requestedAmount}
-        offeredTicker={offeredTicker}
-        offeredAmount={offeredAmount}
-        isRequestedNative={isRequestedNative}
-        isOfferedNative={isOfferedNative}
-        selectedPair={selectedPair}
-        priceLine={priceLine}
-        priceImpactPercent={priceImpactPercent}
-        liquidityFeePercent={liquidityFeePercent}
-        nativeTicker={nativeTicker}
-        isTestnet={isTestnet}
-      />
-    ) : previewTab === "remove" ? (
-      <RemovePreviewTabContent
-        t={t}
-        removeReceive={removeReceive}
-        nativeTicker={nativeTicker}
-        tokenName={tokenName}
-        selectedPair={selectedPair}
-        isTestnet={isTestnet}
-        lpAmount={lpAmount}
-      />
-    ) : (
-      <AddPreviewTabContent
-        t={t}
-        offeredTicker={offeredTicker}
-        offeredAmount={offeredAmount}
-        requestedTicker={requestedTicker}
-        requestedAmount={requestedAmount}
-        isOfferedNative={isOfferedNative}
-        isRequestedNative={isRequestedNative}
-        selectedPair={selectedPair}
-        isTestnet={isTestnet}
-        lpReceive={addLpReceiveProp}
-      />
-    );
-
-  return (
-    <div className="space-y-1.5">
-      <div>
-        <label className={`block text-[11px] font-medium ${t.text} mb-0.5`}>
-          Offered (you pay)
-        </label>
-        <div
-          className={`flex items-center gap-1.5 w-full px-1.5 py-1 border rounded-md text-[11px] ${t.input} ${t.border} backdrop-blur-xl ${t.card}`}
-        >
-          {isOfferedNative ? (
-            <XchIcon size={14} isTestnet={isTestnet} />
-          ) : selectedPair ? (
-            <TickerIcon
-              assetId={selectedPair.asset_id}
-              ticker={offeredTicker ?? undefined}
-              size={14}
-            />
-          ) : (
-            <span
-              className={`w-[14px] h-[14px] rounded-full ${t.card} border ${t.border}`}
-            />
-          )}
-          <span className={`font-medium ${t.text} flex-shrink-0`}>
-            {offeredTicker}
-          </span>
-          <div className="flex-1 min-w-0">
-            <AmountInput
-              value={parseFloat(offeredAmount) || 0}
-              tempInput={offeredAmount}
-              type={
-                (offeredTicker && isXchTicker(offeredTicker)
-                  ? "xch"
-                  : "cat") as AssetType
-              }
-              onChange={(amount, temp) => {
-                onAmountDriverOffered();
-                onOfferedChange(temp !== undefined ? temp : String(amount));
-              }}
-              onBlur={() => {}}
-            />
-          </div>
-        </div>
-      </div>
-
-      <div>
-        <label className={`block text-[11px] font-medium ${t.text} mb-0.5`}>
-          Requested (you receive)
-        </label>
-        <div
-          className={`flex items-center gap-1.5 w-full px-1.5 py-1 border rounded-md text-[11px] ${t.input} ${t.border} backdrop-blur-xl ${t.card}`}
-        >
-          {isRequestedNative ? (
-            <XchIcon size={14} isTestnet={isTestnet} />
-          ) : selectedPair ? (
-            <TickerIcon
-              assetId={selectedPair.asset_id}
-              ticker={requestedTicker ?? undefined}
-              size={14}
-            />
-          ) : (
-            <span
-              className={`w-[14px] h-[14px] rounded-full ${t.card} border ${t.border}`}
-            />
-          )}
-          <span className={`font-medium ${t.text} flex-shrink-0`}>
-            {requestedTicker}
-          </span>
-          <div className="flex-1 min-w-0">
-            <AmountInput
-              value={parseFloat(requestedAmount) || 0}
-              tempInput={requestedAmount}
-              type={
-                (requestedTicker && isXchTicker(requestedTicker)
-                  ? "xch"
-                  : "cat") as AssetType
-              }
-              onChange={(amount, temp) => {
-                onAmountDriverRequested();
-                onRequestedChange(temp !== undefined ? temp : String(amount));
-              }}
-              onBlur={() => {}}
-            />
-          </div>
-        </div>
-      </div>
-
-      <div>
-        <label className={`block text-[11px] font-medium ${t.text} mb-0.5`}>
-          LP token
-        </label>
-        <div
-          className={`flex items-center gap-1.5 w-full px-1.5 py-1 border rounded-md text-[11px] ${t.input} ${t.border} backdrop-blur-xl ${t.card}`}
-        >
-          {selectedPair && (
-            <span className="relative inline-flex flex-shrink-0 w-[24px] h-[16px] items-center justify-center" title={`${tokenName} / XCH`}>
-              <span className="absolute left-0 top-0 z-0">
-                <XchIcon size={16} isTestnet={isTestnet} />
-              </span>
-              <span className="absolute left-2 top-0 z-10">
-                <TickerIcon assetId={selectedPair.asset_id} ticker={tokenName} size={16} />
-              </span>
-            </span>
-          )}
-          <div className="flex-1 min-w-0">
-            <AmountInput
-              value={parseFloat(lpAmount) || 0}
-              tempInput={lpAmount}
-              type="cat"
-              onChange={(amt, temp) =>
-                onLpAmountChange(temp !== undefined ? temp : String(amt))
-              }
-              onBlur={() => {}}
-            />
-          </div>
-        </div>
-      </div>
-
-      {(liquidityError || swapError) && (
-        <p className="text-[10px]" style={{ color: "var(--color-error)" }}>{swapError || liquidityError}</p>
-      )}
-      {(liquiditySuccess || swapSuccess) && (
-        <p className="text-[10px] text-emerald-600 dark:text-emerald-400">Done.</p>
-      )}
-      <div className="flex flex-wrap gap-1.5 justify-end">
-        <Button
-          type="button"
-          onClick={onRemove}
-          disabled={!selectedPair || isLiquidityPending || pairsLoading}
-          variant="danger"
-          icon={Minus}
-        >
-          Remove
-        </Button>
-        <Button
-          type="button"
-          onClick={onAdd}
-          disabled={!selectedPair || isLiquidityPending || pairsLoading}
-          variant="success"
-          icon={Plus}
-        >
-          Add
-        </Button>
-        <Button
-          type="button"
-          onClick={onSubmitSwap}
-          disabled={
-            !selectedPair ||
-            !modalPayAmount ||
-            !quote ||
-            pairsLoading ||
-            isSwapPending
-          }
-          variant="info"
-          icon={ArrowLeftRight}
-        >
-          {isSwapPending ? "Swapping…" : "Swap"}
-        </Button>
-      </div>
-
-      <div
-        className={`rounded-md border ${t.border} ${t.cardHover} overflow-hidden`}
-      >
-        <div
-          className={`flex border-b ${t.border}`}
-          role="tablist"
-          aria-label="Preview type"
-        >
-          {(["swap", "remove", "add"] as const).map((tab) => (
-            <button
-              key={tab}
-              type="button"
-              role="tab"
-              aria-selected={previewTab === tab}
-              onClick={() => setPreviewTab(tab)}
-              className={`flex-1 px-1.5 py-1 text-[10px] font-medium transition-colors ${
-                previewTab === tab
-                  ? `${t.cardHover} ${t.text}`
-                  : `${t.textSecondary} ${t.cardHover}`
-              }`}
-            >
-              {tab === "swap" ? "Swap" : tab === "remove" ? "Remove" : "Add"}{" "}
-              preview
-            </button>
-          ))}
-        </div>
-        <div className="p-2">{previewContent}</div>
-      </div>
-    </div>
-  );
 }
 
 interface UseSwapQuoteSyncArgs {
@@ -494,7 +156,14 @@ function useSwapQuoteSync({
         );
       }
     }
-  }, [quote, amountDriver, xchIsOffered, setOfferedAmount, setRequestedAmount, skipQuoteSync]);
+  }, [
+    quote,
+    amountDriver,
+    xchIsOffered,
+    setOfferedAmount,
+    setRequestedAmount,
+    skipQuoteSync,
+  ]);
 
   const modalPayAmount =
     amountDriver === "offered"
@@ -570,7 +239,13 @@ function useAddLpReceiveAndSync(
   setLpAmount: (v: string) => void,
 ) {
   const addLpReceive = useMemo(() => {
-    if (!selectedPair || selectedPair.liquidity <= 0 || selectedPair.xch_reserve <= 0 || selectedPair.token_reserve <= 0) return undefined;
+    if (
+      !selectedPair ||
+      selectedPair.liquidity <= 0 ||
+      selectedPair.xch_reserve <= 0 ||
+      selectedPair.token_reserve <= 0
+    )
+      return undefined;
     const offered = parseFloat(offeredAmount) || 0;
     const requested = parseFloat(requestedAmount) || 0;
     if (offered <= 0 || requested <= 0) return undefined;
@@ -627,7 +302,7 @@ function useLiquidityHandlers({
       ? parseFloat(requestedAmount) || 0
       : parseFloat(offeredAmount) || 0;
     if (xch <= 0 || token <= 0) {
-      setLiquidityError("Enter both amounts in Offered and Requested");
+      setLiquidityError("Enter both Sell and Buy amounts");
       return;
     }
     setLiquidityError("");
@@ -680,14 +355,18 @@ function useLiquidityHandlers({
         tokenDisplay,
       );
       if (computed == null || computed <= 0) {
-        setLiquidityError("Amounts should match pool ratio (use Offered and Requested)");
+        setLiquidityError(
+          "Amounts should match pool ratio (use Sell and Buy)",
+        );
         return;
       }
       lpSmallest = computed;
     } else {
       const lp = parseFloat(lpAmount) || 0;
       if (lp <= 0) {
-        setLiquidityError("Enter LP token amount or both Offered and Requested");
+        setLiquidityError(
+          "Enter LP amount or both Sell and Buy amounts",
+        );
         return;
       }
       lpSmallest = Math.round(convertToSmallestUnit(lp, "cat"));
@@ -743,7 +422,9 @@ export function SwapTabContent({ mode }: SwapTabContentProps = {}) {
   const [selectedPair, setSelectedPair] = useState<TibetApiPair | null>(null);
   const [offeredAmount, setOfferedAmount] = useState("");
   const [requestedAmount, setRequestedAmount] = useState("");
-  const [amountDriver, setAmountDriver] = useState<"offered" | "requested">("offered");
+  const [amountDriver, setAmountDriver] = useState<"offered" | "requested">(
+    "offered",
+  );
   const [lpAmount, setLpAmount] = useState("");
   const [liquidityError, setLiquidityError] = useState("");
   const [liquiditySuccess, setLiquiditySuccess] = useState(false);
@@ -814,13 +495,12 @@ export function SwapTabContent({ mode }: SwapTabContentProps = {}) {
     limit: 100,
   });
 
-  // Pair is only set via the filter bar: when filter has one token + native, resolve the Tibet pair
+  // Pair is only set via the filter bar: one CAT + XCH/TXCH (both count as native for testnet/mainnet)
   useEffect(() => {
     const buy = filters?.buyAsset ?? [];
     const sell = filters?.sellAsset ?? [];
     const allTickers = [...buy, ...sell];
-    const native = nativeTicker.toLowerCase();
-    const tokenTickers = allTickers.filter((tk) => tk.toLowerCase() !== native);
+    const tokenTickers = allTickers.filter((tk) => !isXchTicker(tk));
     if (tokenTickers.length !== 1 || allPairs.length === 0) {
       setSelectedPair(null);
       return;
@@ -837,7 +517,6 @@ export function SwapTabContent({ mode }: SwapTabContentProps = {}) {
   }, [
     filters?.buyAsset,
     filters?.sellAsset,
-    nativeTicker,
     allPairs,
     selectedPair?.pair_id,
   ]);
@@ -848,11 +527,9 @@ export function SwapTabContent({ mode }: SwapTabContentProps = {}) {
     !!offeredTicker &&
     !!requestedTicker &&
     !!selectedPair &&
-    (offeredTicker.toLowerCase() === nativeTicker.toLowerCase() ||
-      requestedTicker.toLowerCase() === nativeTicker.toLowerCase());
+    (isXchTicker(offeredTicker) || isXchTicker(requestedTicker));
 
-  const xchIsOffered =
-    offeredTicker?.toLowerCase() === nativeTicker.toLowerCase();
+  const xchIsOffered = isXchTicker(offeredTicker);
   const {
     quote,
     modalPayAmount,
@@ -876,22 +553,40 @@ export function SwapTabContent({ mode }: SwapTabContentProps = {}) {
     return removeReceiveEstimate(selectedPair, lp);
   }, [selectedPair, lpAmount]);
 
-  const { addLpReceive, amountsFromLpRef, lpJustSetFromAmountsRef } = useAddLpReceiveAndSync(
-    selectedPair,
-    offeredAmount,
-    requestedAmount,
-    xchIsOffered,
-    setLpAmount,
-  );
+  const { addLpReceive, amountsFromLpRef, lpJustSetFromAmountsRef } =
+    useAddLpReceiveAndSync(
+      selectedPair,
+      offeredAmount,
+      requestedAmount,
+      xchIsOffered,
+      setLpAmount,
+    );
 
   useEffect(() => {
-    if (lpJustSetFromAmountsRef.current) { lpJustSetFromAmountsRef.current = false; return; }
-    if (!removeReceive || !selectedPair || lpAmount.trim() === "" || parseFloat(lpAmount) <= 0) return;
+    if (lpJustSetFromAmountsRef.current) {
+      lpJustSetFromAmountsRef.current = false;
+      return;
+    }
+    if (
+      !removeReceive ||
+      !selectedPair ||
+      lpAmount.trim() === "" ||
+      parseFloat(lpAmount) <= 0
+    )
+      return;
     amountsFromLpRef.current = true;
     const xchStr = removeReceive.xch.toFixed(6);
-    const tokenStr = removeReceive.token >= 1 ? removeReceive.token.toFixed(2) : removeReceive.token.toFixed(6);
-    if (xchIsOffered) { setOfferedAmount(xchStr); setRequestedAmount(tokenStr); }
-    else { setOfferedAmount(tokenStr); setRequestedAmount(xchStr); }
+    const tokenStr =
+      removeReceive.token >= 1
+        ? removeReceive.token.toFixed(2)
+        : removeReceive.token.toFixed(6);
+    if (xchIsOffered) {
+      setOfferedAmount(xchStr);
+      setRequestedAmount(tokenStr);
+    } else {
+      setOfferedAmount(tokenStr);
+      setRequestedAmount(xchStr);
+    }
   }, [
     removeReceive,
     lpAmount,
@@ -1053,7 +748,7 @@ export function SwapTabContent({ mode }: SwapTabContentProps = {}) {
       <div
         className={`flex-1 flex flex-col overflow-hidden rounded-xl ${t.card} border ${t.border}`}
       >
-        <div className="flex-1 overflow-auto p-2">{unifiedForm}</div>
+        <div className="flex-1 overflow-auto px-1.5 py-1">{unifiedForm}</div>
       </div>
     </div>
   );

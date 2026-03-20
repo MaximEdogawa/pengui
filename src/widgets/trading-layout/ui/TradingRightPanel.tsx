@@ -118,7 +118,7 @@ export default function TradingRightPanel({
         </div>
 
         <div className={`${currentMode === "swap" ? "" : "hidden"}`}>
-          <div className="w-full p-2">
+          <div className="w-full px-1 py-0.5">
             <SwapTabContent mode="inline" />
           </div>
         </div>
