@@ -10,11 +10,9 @@ import { useCreateOffer } from "@/features/wallet";
 import { convertToSmallestUnit, mojosToXch } from "@/shared/lib/utils/chia-units";
 import { CHIA_ASSET_IDS } from "@/shared/lib/constants/chia-assets";
 import { logger } from "@/shared/lib/logger";
-import { broadcastOfferToSplash } from "@/features/splash-terminal";
 import type { TibetApiPair } from "../lib/tibetTypes";
+import { TOKEN_SMALLEST_PER_UNIT } from "../lib/swapLiquidityMath";
 import { computePriceImpactPercent } from "../lib/priceImpact";
-
-const TOKEN_SMALLEST_PER_UNIT = 1000;
 
 interface SwapModalProps {
   pair: TibetApiPair;
@@ -93,21 +91,11 @@ export function SwapModal({
         throw new Error("Wallet did not return a valid offer");
       }
 
-      const tibetResult = await tibetCreateOffer({
+      await tibetCreateOffer({
         pair_id: pair.pair_id,
         offer: result.offer,
         action: "SWAP",
       });
-
-      if (!tibetResult.success) {
-        throw new Error(tibetResult.message || "Tibet swap failed");
-      }
-
-      try {
-        void broadcastOfferToSplash(result.offer);
-      } catch {
-        // Fire-and-forget; do not fail the flow
-      }
 
       setSuccess(true);
       setTimeout(() => onSuccess(), 1500);

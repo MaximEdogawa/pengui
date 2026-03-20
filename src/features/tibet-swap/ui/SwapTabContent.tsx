@@ -1,413 +1,27 @@
 "use client";
 
-import { useState, useMemo, useEffect, useCallback, useRef } from "react";
+import { useState, useMemo } from "react";
 import { useThemeClasses } from "@/shared/hooks";
 import { useNetwork } from "@/shared/hooks/useNetwork";
 import { getNativeTokenTickerForNetwork } from "@/shared/lib/config/environment";
-import { useTibetPairs, useTibetQuote, useTibetCreateOffer } from "../hooks";
+import {
+  useTibetPairs,
+  useTibetCreateOffer,
+  useSwapQuoteSync,
+  useLiquidityHandlers,
+  useAddLpReceiveAndSync,
+  useSwapTabOrderPrefill,
+  useSwapTabPairFromFilters,
+  useSwapTabLpRemoveAmountsSync,
+  useSwapTabConfirmSwap,
+} from "../hooks";
 import { useCreateOffer } from "@/features/wallet";
-import { CHIA_ASSET_IDS } from "@/shared/lib/constants/chia-assets";
-import { logger } from "@/shared/lib/logger";
 import { useOrderBookFilters } from "@/features/trading/hooks/useOrderBookFilters";
 import { useSelectedOrder } from "@/features/trading/hooks/SelectedOrderProvider";
-import { broadcastOfferToSplash } from "@/features/splash-terminal";
 import { isXchTicker } from "../lib/tibetUiUtils";
+import { removeReceiveEstimate } from "../lib/swapLiquidityMath";
 import { SwapFormBody } from "./SwapFormBody";
-import {
-  convertToSmallestUnit,
-  MOJOS_PER_XCH,
-  mojosToXch,
-} from "@/shared/lib/utils/chia-units";
 import type { TibetApiPair } from "../lib/tibetTypes";
-import { computePriceImpactPercent } from "../lib/priceImpact";
-
-const TOKEN_SMALLEST_PER_UNIT = 1000;
-
-function formatPrice(xchPerToken: number): string {
-  if (xchPerToken >= 1) return xchPerToken.toFixed(4);
-  if (xchPerToken >= 0.0001) return xchPerToken.toFixed(8);
-  return xchPerToken.toExponential(4);
-}
-
-/** Estimate XCH and token received when removing lpAmount (display units) of LP from pair */
-function removeReceiveEstimate(
-  pair: TibetApiPair,
-  lpDisplay: number,
-): { xch: number; token: number } | null {
-  if (lpDisplay <= 0 || pair.liquidity <= 0) return null;
-  const lpSmallest = lpDisplay * TOKEN_SMALLEST_PER_UNIT;
-  const share = lpSmallest / pair.liquidity;
-  const xchMojos = pair.xch_reserve * share;
-  const tokenSmallest = pair.token_reserve * share;
-  return {
-    xch: mojosToXch(Math.round(xchMojos)),
-    token: Math.round(tokenSmallest) / TOKEN_SMALLEST_PER_UNIT,
-  };
-}
-
-/** LP amount (smallest units) to remove to receive given XCH and token (display units); amounts must match pool ratio */
-function lpToRemoveFromDesiredOutput(
-  pair: TibetApiPair,
-  xchDisplay: number,
-  tokenDisplay: number,
-): number | null {
-  if (pair.liquidity <= 0 || pair.xch_reserve <= 0 || pair.token_reserve <= 0)
-    return null;
-  const xchMojos = Math.round(convertToSmallestUnit(xchDisplay, "xch"));
-  const tokenSmallest = Math.round(convertToSmallestUnit(tokenDisplay, "cat"));
-  if (xchMojos <= 0 && tokenSmallest <= 0) return null;
-  const shareFromXch = xchMojos / pair.xch_reserve;
-  const shareFromToken = tokenSmallest / pair.token_reserve;
-  const share = Math.min(shareFromXch, shareFromToken);
-  if (share <= 0) return null;
-  return Math.floor(share * pair.liquidity);
-}
-
-interface UseSwapQuoteSyncArgs {
-  selectedPair: TibetApiPair | null;
-  amountDriver: "offered" | "requested";
-  xchIsOffered: boolean;
-  offeredAmount: string;
-  requestedAmount: string;
-  setOfferedAmount: (v: string) => void;
-  setRequestedAmount: (v: string) => void;
-  /** When true, do not overwrite offered/requested from quote (e.g. when LP amount drives the form) */
-  skipQuoteSync?: boolean;
-}
-
-function useSwapQuoteSync({
-  selectedPair,
-  amountDriver,
-  xchIsOffered,
-  offeredAmount,
-  requestedAmount,
-  setOfferedAmount,
-  setRequestedAmount,
-  skipQuoteSync = false,
-}: UseSwapQuoteSyncArgs) {
-  const offeredAmountNum = parseFloat(offeredAmount) || 0;
-  const requestedAmountNum = parseFloat(requestedAmount) || 0;
-  const amountInMojos = xchIsOffered
-    ? Math.round(convertToSmallestUnit(offeredAmountNum, "xch"))
-    : 0;
-  const amountInTokenSmallest = xchIsOffered
-    ? 0
-    : Math.round(convertToSmallestUnit(offeredAmountNum, "cat"));
-  const amountOutTokenSmallest = xchIsOffered
-    ? Math.round(convertToSmallestUnit(requestedAmountNum, "cat"))
-    : 0;
-  const amountOutMojos = xchIsOffered
-    ? 0
-    : Math.round(convertToSmallestUnit(requestedAmountNum, "xch"));
-
-  const quoteParams = useMemo(() => {
-    if (!selectedPair) return null;
-    if (amountDriver === "offered") {
-      const amt = xchIsOffered ? amountInMojos : amountInTokenSmallest;
-      if (amt <= 0) return null;
-      return {
-        pair_id: selectedPair.pair_id,
-        amount_in: amt,
-        amount_out: undefined,
-        xch_is_input: xchIsOffered,
-        estimate_fee: true,
-      };
-    }
-    const amt = xchIsOffered ? amountOutTokenSmallest : amountOutMojos;
-    if (amt <= 0) return null;
-    return {
-      pair_id: selectedPair.pair_id,
-      amount_in: undefined,
-      amount_out: amt,
-      xch_is_input: xchIsOffered,
-      estimate_fee: true,
-    };
-  }, [
-    selectedPair,
-    amountDriver,
-    xchIsOffered,
-    amountInMojos,
-    amountInTokenSmallest,
-    amountOutTokenSmallest,
-    amountOutMojos,
-  ]);
-
-  const { data: quote } = useTibetQuote(quoteParams);
-
-  useEffect(() => {
-    if (!quote || skipQuoteSync) return;
-    if (amountDriver === "offered" && quote.amount_out > 0) {
-      if (xchIsOffered) {
-        const tokenUnits = quote.amount_out / TOKEN_SMALLEST_PER_UNIT;
-        setRequestedAmount(
-          tokenUnits >= 1 ? tokenUnits.toFixed(4) : tokenUnits.toFixed(6),
-        );
-      } else {
-        setRequestedAmount(mojosToXch(quote.amount_out).toFixed(6));
-      }
-    }
-    if (amountDriver === "requested" && quote.amount_in > 0) {
-      if (xchIsOffered) {
-        setOfferedAmount(mojosToXch(quote.amount_in).toFixed(6));
-      } else {
-        const tokenUnits = quote.amount_in / TOKEN_SMALLEST_PER_UNIT;
-        setOfferedAmount(
-          tokenUnits >= 1 ? tokenUnits.toFixed(4) : tokenUnits.toFixed(6),
-        );
-      }
-    }
-  }, [
-    quote,
-    amountDriver,
-    xchIsOffered,
-    setOfferedAmount,
-    setRequestedAmount,
-    skipQuoteSync,
-  ]);
-
-  const modalPayAmount =
-    amountDriver === "offered"
-      ? offeredAmount
-      : quote && quote.amount_in > 0
-        ? xchIsOffered
-          ? mojosToXch(quote.amount_in).toFixed(6)
-          : quote.amount_in / TOKEN_SMALLEST_PER_UNIT >= 1
-            ? (quote.amount_in / TOKEN_SMALLEST_PER_UNIT).toFixed(4)
-            : (quote.amount_in / TOKEN_SMALLEST_PER_UNIT).toFixed(6)
-        : "";
-
-  const priceLine = useMemo(() => {
-    if (!selectedPair || !quote || quote.amount_out <= 0) return null;
-    const tokenName = selectedPair.asset_short_name || selectedPair.asset_name;
-    if (xchIsOffered) {
-      const xchPerToken =
-        quote.amount_in /
-        MOJOS_PER_XCH /
-        (quote.amount_out / TOKEN_SMALLEST_PER_UNIT);
-      return `1 ${tokenName} = ${formatPrice(xchPerToken)} XCH`;
-    }
-    const tokenPerXch =
-      quote.amount_out /
-      MOJOS_PER_XCH /
-      (quote.amount_in / TOKEN_SMALLEST_PER_UNIT);
-    return `1 XCH = ${formatPrice(tokenPerXch)} ${tokenName}`;
-  }, [selectedPair, quote, xchIsOffered]);
-
-  const liquidityFeePercent =
-    selectedPair && selectedPair.inverse_fee > 0
-      ? (100 / selectedPair.inverse_fee).toFixed(2)
-      : "—";
-
-  const priceImpactPercent =
-    quote != null ? computePriceImpactPercent(quote) : null;
-
-  return {
-    quote,
-    modalPayAmount,
-    priceLine,
-    priceImpactPercent,
-    liquidityFeePercent,
-  };
-}
-
-interface UseLiquidityHandlersArgs {
-  network: string;
-  selectedPair: TibetApiPair | null;
-  offeredAmount: string;
-  requestedAmount: string;
-  setOfferedAmount: (v: string) => void;
-  setRequestedAmount: (v: string) => void;
-  xchIsOffered: boolean;
-  lpAmount: string;
-  setLpAmount: (v: string) => void;
-  setLiquidityError: (v: string) => void;
-  setLiquiditySuccess: (v: boolean) => void;
-  createOfferMutation: ReturnType<typeof useCreateOffer>;
-  tibetCreateOffer: (params: {
-    pair_id: string;
-    offer: string;
-    action: "ADD_LIQUIDITY" | "REMOVE_LIQUIDITY";
-  }) => Promise<{ success: boolean; message?: string }>;
-  isTibetCreating: boolean;
-}
-
-function useAddLpReceiveAndSync(
-  selectedPair: TibetApiPair | null,
-  offeredAmount: string,
-  requestedAmount: string,
-  xchIsOffered: boolean,
-  setLpAmount: (v: string) => void,
-) {
-  const addLpReceive = useMemo(() => {
-    if (
-      !selectedPair ||
-      selectedPair.liquidity <= 0 ||
-      selectedPair.xch_reserve <= 0 ||
-      selectedPair.token_reserve <= 0
-    )
-      return undefined;
-    const offered = parseFloat(offeredAmount) || 0;
-    const requested = parseFloat(requestedAmount) || 0;
-    if (offered <= 0 || requested <= 0) return undefined;
-    const xchMojos = xchIsOffered
-      ? Math.round(convertToSmallestUnit(offered, "xch"))
-      : Math.round(convertToSmallestUnit(requested, "xch"));
-    const tokenSmallest = xchIsOffered
-      ? Math.round(convertToSmallestUnit(requested, "cat"))
-      : Math.round(convertToSmallestUnit(offered, "cat"));
-    const shareXch = xchMojos / selectedPair.xch_reserve;
-    const shareToken = tokenSmallest / selectedPair.token_reserve;
-    const share = Math.min(shareXch, shareToken);
-    const lpSmallest = Math.floor(share * selectedPair.liquidity);
-    return (lpSmallest / TOKEN_SMALLEST_PER_UNIT).toFixed(6);
-  }, [selectedPair, offeredAmount, requestedAmount, xchIsOffered]);
-  const amountsFromLpRef = useRef(false);
-  const lpJustSetFromAmountsRef = useRef(false);
-  useEffect(() => {
-    if (amountsFromLpRef.current) {
-      amountsFromLpRef.current = false;
-      return;
-    }
-    if (addLpReceive == null) return;
-    lpJustSetFromAmountsRef.current = true;
-    setLpAmount(addLpReceive);
-  }, [addLpReceive, setLpAmount]);
-  return { addLpReceive, amountsFromLpRef, lpJustSetFromAmountsRef };
-}
-
-function useLiquidityHandlers({
-  network,
-  selectedPair,
-  offeredAmount,
-  requestedAmount,
-  setOfferedAmount,
-  setRequestedAmount,
-  xchIsOffered,
-  lpAmount,
-  setLpAmount,
-  setLiquidityError,
-  setLiquiditySuccess,
-  createOfferMutation,
-  tibetCreateOffer,
-  isTibetCreating,
-}: UseLiquidityHandlersArgs) {
-  const isLiquidityPending = createOfferMutation.isPending || isTibetCreating;
-
-  const handleAdd = async () => {
-    if (!selectedPair) return;
-    const xch = xchIsOffered
-      ? parseFloat(offeredAmount) || 0
-      : parseFloat(requestedAmount) || 0;
-    const token = xchIsOffered
-      ? parseFloat(requestedAmount) || 0
-      : parseFloat(offeredAmount) || 0;
-    if (xch <= 0 || token <= 0) {
-      setLiquidityError("Enter both Sell and Buy amounts");
-      return;
-    }
-    setLiquidityError("");
-    setLiquiditySuccess(false);
-    try {
-      const xchAssetId =
-        network === "testnet" ? CHIA_ASSET_IDS.TXCH : CHIA_ASSET_IDS.XCH;
-      const xchMojos = Math.round(convertToSmallestUnit(xch, "xch"));
-      const tokenSmallest = Math.round(convertToSmallestUnit(token, "cat"));
-      const result = await createOfferMutation.mutateAsync({
-        walletId: 1,
-        offerAssets: [
-          { assetId: xchAssetId, amount: xchMojos },
-          { assetId: selectedPair.asset_id, amount: tokenSmallest },
-        ],
-        requestAssets: [],
-      });
-      if (!result?.offer)
-        throw new Error("Wallet did not return a valid offer");
-      const tibetResult = await tibetCreateOffer({
-        pair_id: selectedPair.pair_id,
-        offer: result.offer,
-        action: "ADD_LIQUIDITY",
-      });
-      if (!tibetResult.success)
-        throw new Error(tibetResult.message || "Add liquidity failed");
-      setLiquiditySuccess(true);
-      setOfferedAmount("");
-      setRequestedAmount("");
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : "Add liquidity failed";
-      logger.error("Add liquidity failed", e);
-      setLiquidityError(msg);
-    }
-  };
-
-  const handleRemove = async () => {
-    if (!selectedPair) return;
-    const xchDisplay = xchIsOffered
-      ? parseFloat(offeredAmount) || 0
-      : parseFloat(requestedAmount) || 0;
-    const tokenDisplay = xchIsOffered
-      ? parseFloat(requestedAmount) || 0
-      : parseFloat(offeredAmount) || 0;
-    let lpSmallest: number;
-    if (xchDisplay > 0 && tokenDisplay > 0) {
-      const computed = lpToRemoveFromDesiredOutput(
-        selectedPair,
-        xchDisplay,
-        tokenDisplay,
-      );
-      if (computed == null || computed <= 0) {
-        setLiquidityError(
-          "Amounts should match pool ratio (use Sell and Buy)",
-        );
-        return;
-      }
-      lpSmallest = computed;
-    } else {
-      const lp = parseFloat(lpAmount) || 0;
-      if (lp <= 0) {
-        setLiquidityError(
-          "Enter LP amount or both Sell and Buy amounts",
-        );
-        return;
-      }
-      lpSmallest = Math.round(convertToSmallestUnit(lp, "cat"));
-    }
-    setLiquidityError("");
-    setLiquiditySuccess(false);
-    try {
-      const xchAssetId =
-        network === "testnet" ? CHIA_ASSET_IDS.TXCH : CHIA_ASSET_IDS.XCH;
-      const result = await createOfferMutation.mutateAsync({
-        walletId: 1,
-        offerAssets: [
-          { assetId: selectedPair.liquidity_asset_id, amount: lpSmallest },
-        ],
-        requestAssets: [
-          { assetId: xchAssetId, amount: 1 },
-          { assetId: selectedPair.asset_id, amount: 1 },
-        ],
-      });
-      if (!result?.offer)
-        throw new Error("Wallet did not return a valid offer");
-      const tibetResult = await tibetCreateOffer({
-        pair_id: selectedPair.pair_id,
-        offer: result.offer,
-        action: "REMOVE_LIQUIDITY",
-      });
-      if (!tibetResult.success)
-        throw new Error(tibetResult.message || "Remove liquidity failed");
-      setLiquiditySuccess(true);
-      setLpAmount("");
-      setOfferedAmount("");
-      setRequestedAmount("");
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : "Remove liquidity failed";
-      logger.error("Remove liquidity failed", e);
-      setLiquidityError(msg);
-    }
-  };
-
-  return { handleAdd, handleRemove, isLiquidityPending };
-}
 
 interface SwapTabContentProps {
   /** When true, render only the swap form (no sub-tabs, no extra card) to match Limit/Market layout */
@@ -438,88 +52,24 @@ export function SwapTabContent({ mode }: SwapTabContentProps = {}) {
   const nativeTicker = getNativeTokenTickerForNetwork(network);
   const isTestnet = network === "testnet";
 
-  // Fill amount values from order book only; never change asset filters (sell/buy).
-  // Clear LP so quote sync can run and update the other amount + LP from the XCH input.
   const currentSell = (filters?.sellAsset ?? [])[0] ?? "";
   const currentBuy = (filters?.buyAsset ?? [])[0] ?? "";
-  useEffect(() => {
-    const order = selectedOrderForTaking;
-    if (!order?.id || !order.requesting?.length || !order.offering?.length)
-      return;
-    if (!currentSell || !currentBuy) return;
-    const req = order.requesting[0];
-    const off = order.offering[0];
-    const reqTicker = ((req.code ?? req.id) || "").toLowerCase();
-    const offTicker = ((off.code ?? off.id) || "").toLowerCase();
-    if (!reqTicker || !offTicker) return;
 
-    const orderSet = new Set([reqTicker, offTicker]);
-    const filterSet = new Set([
-      currentSell.toLowerCase(),
-      currentBuy.toLowerCase(),
-    ]);
-    if (
-      orderSet.size !== 2 ||
-      filterSet.size !== 2 ||
-      ![...orderSet].every((a) => filterSet.has(a))
-    )
-      return;
-
-    setLpAmount("");
-    const reqIsXch = isXchTicker(req.code ?? req.id);
-    const offIsXch = isXchTicker(off.code ?? off.id);
-    const sellIsXch = isXchTicker(currentSell);
-    if (reqIsXch && sellIsXch) {
-      setOfferedAmount(String(req.amount));
-      setRequestedAmount("");
-      setAmountDriver("offered");
-    } else if (offIsXch && sellIsXch) {
-      setOfferedAmount(String(off.amount));
-      setRequestedAmount("");
-      setAmountDriver("offered");
-    } else if (reqIsXch && !sellIsXch) {
-      setOfferedAmount("");
-      setRequestedAmount(String(req.amount));
-      setAmountDriver("requested");
-    } else if (offIsXch && !sellIsXch) {
-      setOfferedAmount("");
-      setRequestedAmount(String(off.amount));
-      setAmountDriver("requested");
-    } else {
-      setOfferedAmount("");
-      setRequestedAmount("");
-    }
-  }, [selectedOrderForTaking, currentSell, currentBuy]);
+  useSwapTabOrderPrefill({
+    selectedOrderForTaking,
+    currentSell,
+    currentBuy,
+    setLpAmount,
+    setOfferedAmount,
+    setRequestedAmount,
+    setAmountDriver,
+  });
 
   const { data: allPairs = [], isLoading: pairsLoading } = useTibetPairs({
     limit: 100,
   });
 
-  // Pair is only set via the filter bar: one CAT + XCH/TXCH (both count as native for testnet/mainnet)
-  useEffect(() => {
-    const buy = filters?.buyAsset ?? [];
-    const sell = filters?.sellAsset ?? [];
-    const allTickers = [...buy, ...sell];
-    const tokenTickers = allTickers.filter((tk) => !isXchTicker(tk));
-    if (tokenTickers.length !== 1 || allPairs.length === 0) {
-      setSelectedPair(null);
-      return;
-    }
-    const tokenTicker = tokenTickers[0];
-    const match = allPairs.find((p) => {
-      const pt = (p.asset_short_name || p.asset_name || "").toLowerCase();
-      const tok = tokenTicker.toLowerCase();
-      return pt === tok || pt.includes(tok) || tok.includes(pt);
-    });
-    if (match && selectedPair?.pair_id !== match.pair_id)
-      setSelectedPair(match);
-    if (!match) setSelectedPair(null);
-  }, [
-    filters?.buyAsset,
-    filters?.sellAsset,
-    allPairs,
-    selectedPair?.pair_id,
-  ]);
+  useSwapTabPairFromFilters(filters, allPairs, selectedPair, setSelectedPair);
 
   const offeredTicker = (filters?.sellAsset ?? [])[0] ?? null;
   const requestedTicker = (filters?.buyAsset ?? [])[0] ?? null;
@@ -562,41 +112,16 @@ export function SwapTabContent({ mode }: SwapTabContentProps = {}) {
       setLpAmount,
     );
 
-  useEffect(() => {
-    if (lpJustSetFromAmountsRef.current) {
-      lpJustSetFromAmountsRef.current = false;
-      return;
-    }
-    if (
-      !removeReceive ||
-      !selectedPair ||
-      lpAmount.trim() === "" ||
-      parseFloat(lpAmount) <= 0
-    )
-      return;
-    amountsFromLpRef.current = true;
-    const xchStr = removeReceive.xch.toFixed(6);
-    const tokenStr =
-      removeReceive.token >= 1
-        ? removeReceive.token.toFixed(2)
-        : removeReceive.token.toFixed(6);
-    if (xchIsOffered) {
-      setOfferedAmount(xchStr);
-      setRequestedAmount(tokenStr);
-    } else {
-      setOfferedAmount(tokenStr);
-      setRequestedAmount(xchStr);
-    }
-  }, [
+  useSwapTabLpRemoveAmountsSync({
     removeReceive,
-    lpAmount,
     selectedPair,
+    lpAmount,
     xchIsOffered,
     setOfferedAmount,
     setRequestedAmount,
     amountsFromLpRef,
     lpJustSetFromAmountsRef,
-  ]);
+  });
 
   const tokenName =
     selectedPair?.asset_short_name || selectedPair?.asset_name || "Token";
@@ -620,57 +145,7 @@ export function SwapTabContent({ mode }: SwapTabContentProps = {}) {
 
   const isSwapPending = createOfferMutation.isPending || tibetSubmitting;
 
-  const handleConfirmSwap = useCallback(async () => {
-    if (!quote || !selectedPair || !modalPayAmount) return;
-    const amountInNum = parseFloat(modalPayAmount) || 0;
-    const amountInMojos = xchIsOffered
-      ? Math.round(convertToSmallestUnit(amountInNum, "xch"))
-      : 0;
-    const amountInTokenSmallest = xchIsOffered
-      ? 0
-      : Math.round(convertToSmallestUnit(amountInNum, "cat"));
-    const amountIn = xchIsOffered ? amountInMojos : amountInTokenSmallest;
-    if (amountIn <= 0) return;
-    setSwapError("");
-    setSwapSuccess(false);
-    try {
-      const xchAssetId =
-        network === "testnet" ? CHIA_ASSET_IDS.TXCH : CHIA_ASSET_IDS.XCH;
-      const result = await createOfferMutation.mutateAsync({
-        walletId: 1,
-        offerAssets: xchIsOffered
-          ? [{ assetId: xchAssetId, amount: amountInMojos }]
-          : [{ assetId: selectedPair.asset_id, amount: amountInTokenSmallest }],
-        requestAssets: xchIsOffered
-          ? [{ assetId: selectedPair.asset_id, amount: quote.amount_out }]
-          : [{ assetId: xchAssetId, amount: quote.amount_out }],
-      });
-      if (!result?.offer) {
-        throw new Error("Wallet did not return a valid offer");
-      }
-      const tibetResult = await tibetCreateOffer({
-        pair_id: selectedPair.pair_id,
-        offer: result.offer,
-        action: "SWAP",
-      });
-      if (!tibetResult.success) {
-        throw new Error(tibetResult.message || "Tibet swap failed");
-      }
-      try {
-        void broadcastOfferToSplash(result.offer);
-      } catch {
-        // Fire-and-forget
-      }
-      setSwapSuccess(true);
-      setOfferedAmount("");
-      setRequestedAmount("");
-      setTimeout(() => setSwapSuccess(false), 3000);
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : "Swap failed";
-      logger.error("Swap failed", e);
-      setSwapError(msg);
-    }
-  }, [
+  const handleConfirmSwap = useSwapTabConfirmSwap({
     quote,
     selectedPair,
     modalPayAmount,
@@ -678,7 +153,11 @@ export function SwapTabContent({ mode }: SwapTabContentProps = {}) {
     network,
     createOfferMutation,
     tibetCreateOffer,
-  ]);
+    setSwapError,
+    setSwapSuccess,
+    setOfferedAmount,
+    setRequestedAmount,
+  });
 
   const swapFormContent = (
     <SwapFormBody

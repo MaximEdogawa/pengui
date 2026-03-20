@@ -9,3 +9,18 @@ export {
   useTibetCreateOffer,
   type TibetCreateOfferVariables,
 } from "./useTibetCreateOffer";
+export { useSwapQuoteSync } from "./useSwapQuoteSync";
+export {
+  useLiquidityHandlers,
+  useAddLpReceiveAndSync,
+  type UseLiquidityHandlersArgs,
+} from "./useSwapTabLiquidity";
+export {
+  useSwapTabOrderPrefill,
+  useSwapTabPairFromFilters,
+  useSwapTabLpRemoveAmountsSync,
+} from "./useSwapTabSyncEffects";
+export {
+  useSwapTabConfirmSwap,
+  type UseSwapTabConfirmSwapOptions,
+} from "./useSwapTabConfirmSwap";

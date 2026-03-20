@@ -69,15 +69,11 @@ export function RemoveLiquiditySection({
         throw new Error("Wallet did not return a valid offer");
       }
 
-      const tibetResult = await tibetCreateOffer({
+      await tibetCreateOffer({
         pair_id: selectedPair.pair_id,
         offer: result.offer,
         action: "REMOVE_LIQUIDITY",
       });
-
-      if (!tibetResult.success) {
-        throw new Error(tibetResult.message || "Remove liquidity failed");
-      }
 
       setSuccess(true);
       setLpAmount("");
