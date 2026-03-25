@@ -192,12 +192,14 @@ describe('xchToMojos', () => {
     it('should validate XCH amounts (up to 12 decimals)', () => {
       expect(assetInputAmounts.isValid('1', 'xch')).toBe(true)
       expect(assetInputAmounts.isValid('1.123456789012', 'xch')).toBe(true)
+      expect(assetInputAmounts.isValid('1,123456789012', 'xch')).toBe(true)
       expect(assetInputAmounts.isValid('1.1234567890123', 'xch')).toBe(false) // 13 decimals
     })
 
     it('should validate CAT amounts (up to 3 decimals)', () => {
       expect(assetInputAmounts.isValid('1', 'cat')).toBe(true)
       expect(assetInputAmounts.isValid('1.123', 'cat')).toBe(true)
+      expect(assetInputAmounts.isValid('1,123', 'cat')).toBe(true)
       expect(assetInputAmounts.isValid('1.1234', 'cat')).toBe(false) // 4 decimals
     })
 
@@ -210,6 +212,8 @@ describe('xchToMojos', () => {
 
     it('should reject multiple decimal points', () => {
       expect(assetInputAmounts.isValid('1.2.3')).toBe(false)
+      expect(assetInputAmounts.isValid('1,2,3')).toBe(false)
+      expect(assetInputAmounts.isValid('1.2,3')).toBe(false)
     })
   })
 
@@ -217,12 +221,15 @@ describe('xchToMojos', () => {
     it('should parse empty string as 0', () => {
       expect(assetInputAmounts.parse('')).toBe(0)
       expect(assetInputAmounts.parse('.')).toBe(0)
+      expect(assetInputAmounts.parse(',')).toBe(0)
     })
 
     it('should parse valid numbers', () => {
       expect(assetInputAmounts.parse('1')).toBe(1)
       expect(assetInputAmounts.parse('1.5')).toBe(1.5)
       expect(assetInputAmounts.parse('0.123')).toBe(0.123)
+      expect(assetInputAmounts.parse('1,5')).toBe(1.5)
+      expect(assetInputAmounts.parse('0,123')).toBe(0.123)
     })
 
     it('should parse NFT as integer', () => {

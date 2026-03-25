@@ -140,7 +140,7 @@ export default function MarketOfferTab({
           <input
             type="text"
             inputMode="decimal"
-            pattern="[0-9]*\.?[0-9]*"
+            pattern="[0-9]*[.,]?[0-9]*"
             value={
               formState.feeInput !== undefined
                 ? formState.feeInput

@@ -34,7 +34,7 @@ export default function AmountInput({
 
   // NFT uses numeric input (integers only), tokens use decimal input (floats allowed)
   const inputMode = type === 'nft' ? 'numeric' : 'decimal'
-  const pattern = type === 'nft' ? '[0-9]*' : '[0-9]*\\.?[0-9]*'
+  const pattern = type === 'nft' ? '[0-9]*' : '[0-9]*[.,]?[0-9]*'
 
   // Dynamic font sizing: scale down if amount is very long
   const amountLength = displayValue.length

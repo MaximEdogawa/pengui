@@ -29,7 +29,7 @@ export function FeeInput({
       <input
         type="text"
         inputMode="decimal"
-        pattern="[0-9]*\.?[0-9]*"
+        pattern="[0-9]*[.,]?[0-9]*"
         value={feeDisplayValue}
         onChange={(e) => handleFeeChange(e.target.value)}
         onBlur={handleFeeBlur}
