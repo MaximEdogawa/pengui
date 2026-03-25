@@ -215,9 +215,12 @@ export const assetInputAmounts = {
       return /^\d+$/.test(value) // Only digits, no decimal point
     }
 
-    // Check for valid number format: digits, single decimal point, digits after decimal
-    const decimalCount = (value.match(/\./g) || []).length
-    if (!/^\d*\.?\d*$/.test(value) || decimalCount > 1) {
+    // Digits with at most one decimal separator (. or ,) — iOS often uses "," on decimal keyboards
+    const sepCount = (value.match(/[.,]/g) || []).length
+    if (sepCount > 1 || (value.includes('.') && value.includes(','))) {
+      return false
+    }
+    if (!/^\d*[.,]?\d*$/.test(value)) {
       return false
     }
 
@@ -225,13 +228,13 @@ export const assetInputAmounts = {
     const type = assetType?.toLowerCase()
     if (type === 'xch') {
       // XCH: up to 12 decimal places (mojo precision: 1 XCH = 1,000,000,000,000 mojos)
-      const decimalPart = value.split('.')[1]
+      const decimalPart = value.split(/[.,]/)[1]
       if (decimalPart && decimalPart.length > 12) {
         return false
       }
     } else if (type === 'cat') {
       // CAT tokens: up to 3 decimal places
-      const decimalPart = value.split('.')[1]
+      const decimalPart = value.split(/[.,]/)[1]
       if (decimalPart && decimalPart.length > 3) {
         return false
       }
@@ -250,7 +253,7 @@ export const assetInputAmounts = {
    * @returns Parsed number or 0 if invalid (always a safe number)
    */
   parse(value: string, assetType?: AssetType): AssetAmount {
-    if (value === '' || value === '.') {
+    if (value === '' || value === '.' || value === ',') {
       return 0
     }
 
@@ -264,8 +267,9 @@ export const assetInputAmounts = {
       return Math.max(0, Math.floor(parsed)) // Ensure non-negative integer
     }
 
-    // For tokens: parse as float
-    const parsed = parseFloat(value)
+    // For tokens: parse as float (comma as decimal separator for locales / iOS keyboards)
+    const normalized = value.replace(',', '.')
+    const parsed = parseFloat(normalized)
     // Safely convert: ensure it's a valid number, non-negative, and finite
     if (isNaN(parsed) || !isFinite(parsed) || parsed < 0) {
       return 0

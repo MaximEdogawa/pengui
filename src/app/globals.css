@@ -102,6 +102,9 @@
     left: 0;
     right: 0;
     bottom: 0;
+    /* Avoid font scaling that looks like zoom on mobile WebKit */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
   }
   body {
     @apply bg-background text-foreground;

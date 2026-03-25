@@ -161,7 +161,7 @@ export default function SendTransactionForm({
         label={`Amount (${ticker})`}
         type="text"
         inputMode="decimal"
-        pattern="[0-9]*\.?[0-9]*"
+        pattern="[0-9]*[.,]?[0-9]*"
         value={
           amountInput !== undefined
             ? amountInput
@@ -207,7 +207,7 @@ export default function SendTransactionForm({
         }
         type="text"
         inputMode="decimal"
-        pattern="[0-9]*\.?[0-9]*"
+        pattern="[0-9]*[.,]?[0-9]*"
         value={
           feeInput !== undefined
             ? feeInput

@@ -23,7 +23,7 @@ export function FeeInput({ fee, feeInput, onFeeChange, onFeeBlur, isSubmitting }
       <input
         type="text"
         inputMode="decimal"
-        pattern="[0-9]*\.?[0-9]*"
+        pattern="[0-9]*[.,]?[0-9]*"
         value={
           feeInput !== undefined
             ? feeInput

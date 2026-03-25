@@ -85,6 +85,7 @@ export function useSignCoinSpends() {
       if (!result.success) throw new Error(result.error)
       return result.data
     },
+    retry: false,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [WALLET_CONNECT_KEY, BALANCE_KEY] })
     },
@@ -101,6 +102,7 @@ export function useSignMessage() {
       if (!result.success) throw new Error(result.error)
       return result.data
     },
+    retry: false,
   })
 }
 
@@ -115,6 +117,7 @@ export function useSendTransaction() {
       if (!result.success) throw new Error(result.error)
       return result.data
     },
+    retry: false,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [WALLET_CONNECT_KEY, BALANCE_KEY] })
     },
@@ -132,6 +135,7 @@ export function useCreateOffer() {
       if (!result.success) throw new Error(result.error)
       return result.data
     },
+    retry: false,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [WALLET_CONNECT_KEY, BALANCE_KEY] })
     },
@@ -149,6 +153,7 @@ export function useCancelOffer() {
       if (!result.success) throw new Error(result.error)
       return result.data
     },
+    retry: false,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [WALLET_CONNECT_KEY, BALANCE_KEY] })
     },
@@ -166,6 +171,7 @@ export function useTakeOffer() {
       if (!result.success) throw new Error(result.error)
       return result.data
     },
+    retry: false,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [WALLET_CONNECT_KEY, BALANCE_KEY] })
     },
