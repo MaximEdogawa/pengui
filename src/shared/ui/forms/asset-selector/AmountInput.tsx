@@ -51,7 +51,11 @@ export default function AmountInput({
       value={displayValue}
       onChange={(e) => {
         const inputValue = e.target.value
-        if (assetInputAmounts.isValid(inputValue, type)) {
+        const isDeletion = inputValue.length < displayValue.length
+        if (
+          assetInputAmounts.isValid(inputValue, type) ||
+          isDeletion
+        ) {
           const parsedAmount = assetInputAmounts.parse(inputValue, type)
           onChange(parsedAmount, inputValue)
         }

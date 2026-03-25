@@ -8,6 +8,7 @@ import { convertToSmallestUnit } from "@/shared/lib/utils/chia-units";
 import type { TibetApiPair, TibetOfferResponse } from "../lib/tibetTypes";
 import {
   TOKEN_SMALLEST_PER_UNIT,
+  formatTibetCatAmountForInput,
   lpToRemoveFromDesiredOutput,
 } from "../lib/swapLiquidityMath";
 
@@ -32,12 +33,18 @@ export interface UseLiquidityHandlersArgs {
   isTibetCreating: boolean;
 }
 
+/**
+ * Estimated LP from current Sell/Buy (add-liquidity share) and sync into the LP field.
+ * `onProgrammaticLpSet` marks LP as not user-typed so remove-LP sync does not overwrite XCH.
+ * Refs coordinate with `useSwapTabLpRemoveAmountsSync` to avoid feedback loops.
+ */
 export function useAddLpReceiveAndSync(
   selectedPair: TibetApiPair | null,
   offeredAmount: string,
   requestedAmount: string,
   xchIsOffered: boolean,
   setLpAmount: (v: string) => void,
+  onProgrammaticLpSet?: () => void,
 ) {
   const addLpReceive = useMemo(() => {
     if (
@@ -60,7 +67,7 @@ export function useAddLpReceiveAndSync(
     const shareToken = tokenSmallest / selectedPair.token_reserve;
     const share = Math.min(shareXch, shareToken);
     const lpSmallest = Math.floor(share * selectedPair.liquidity);
-    return (lpSmallest / TOKEN_SMALLEST_PER_UNIT).toFixed(6);
+    return formatTibetCatAmountForInput(lpSmallest / TOKEN_SMALLEST_PER_UNIT);
   }, [selectedPair, offeredAmount, requestedAmount, xchIsOffered]);
   const amountsFromLpRef = useRef(false);
   const lpJustSetFromAmountsRef = useRef(false);
@@ -70,9 +77,10 @@ export function useAddLpReceiveAndSync(
       return;
     }
     if (addLpReceive == null) return;
+    onProgrammaticLpSet?.();
     lpJustSetFromAmountsRef.current = true;
     setLpAmount(addLpReceive);
-  }, [addLpReceive, setLpAmount]);
+  }, [addLpReceive, setLpAmount, onProgrammaticLpSet]);
   return { addLpReceive, amountsFromLpRef, lpJustSetFromAmountsRef };
 }
 

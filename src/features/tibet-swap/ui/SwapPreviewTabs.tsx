@@ -3,6 +3,7 @@
 import { useThemeClasses } from "@/shared/hooks";
 import { TickerIcon, XchIcon } from "@/entities/asset";
 import type { TibetApiPair } from "../lib/tibetTypes";
+import { formatTibetCatAmountForInput } from "../lib/swapLiquidityMath";
 
 const DEV_FEE_PERCENT = 0.7;
 
@@ -163,10 +164,7 @@ export function RemovePreviewTabContent({
                 />
               )}
               <span>
-                ~
-                {removeReceive.token >= 1
-                  ? removeReceive.token.toFixed(2)
-                  : removeReceive.token.toFixed(6)}{" "}
+                ~{formatTibetCatAmountForInput(removeReceive.token)}{" "}
                 {tokenName}
               </span>
             </span>

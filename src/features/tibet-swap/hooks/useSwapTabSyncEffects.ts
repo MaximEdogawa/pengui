@@ -1,9 +1,16 @@
 "use client";
 
-import { useEffect, type Dispatch, type MutableRefObject, type SetStateAction } from "react";
+import {
+  useEffect,
+  type Dispatch,
+  type MutableRefObject,
+  type RefObject,
+  type SetStateAction,
+} from "react";
 import type { OrderBookOrder } from "@/features/trading/lib/orderBookTypes";
 import type { TibetApiPair } from "../lib/tibetTypes";
 import { isXchTicker } from "../lib/tibetUiUtils";
+import { formatTibetCatAmountForInput } from "../lib/swapLiquidityMath";
 
 type LpRemoveReceive = { xch: number; token: number };
 
@@ -122,6 +129,11 @@ export interface UseSwapTabLpRemoveAmountsSyncOptions {
   setRequestedAmount: (v: string) => void;
   amountsFromLpRef: MutableRefObject<boolean>;
   lpJustSetFromAmountsRef: MutableRefObject<boolean>;
+  /**
+   * When false, Sell/Buy are not driven from LP remove math (auto LP from swap).
+   * When true, user typed LP — drive Sell/Buy from remove estimate.
+   */
+  lpEditedByUserRef: RefObject<boolean>;
 }
 
 export function useSwapTabLpRemoveAmountsSync(
@@ -136,12 +148,14 @@ export function useSwapTabLpRemoveAmountsSync(
     setRequestedAmount,
     amountsFromLpRef,
     lpJustSetFromAmountsRef,
+    lpEditedByUserRef,
   } = options;
   useEffect(() => {
     if (lpJustSetFromAmountsRef.current) {
       lpJustSetFromAmountsRef.current = false;
       return;
     }
+    if (!lpEditedByUserRef.current) return;
     if (
       !removeReceive ||
       !selectedPair ||
@@ -151,10 +165,7 @@ export function useSwapTabLpRemoveAmountsSync(
       return;
     amountsFromLpRef.current = true;
     const xchStr = removeReceive.xch.toFixed(6);
-    const tokenStr =
-      removeReceive.token >= 1
-        ? removeReceive.token.toFixed(2)
-        : removeReceive.token.toFixed(6);
+    const tokenStr = formatTibetCatAmountForInput(removeReceive.token);
     if (xchIsOffered) {
       setOfferedAmount(xchStr);
       setRequestedAmount(tokenStr);

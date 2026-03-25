@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useCallback } from "react";
 import { useThemeClasses } from "@/shared/hooks";
 import { useNetwork } from "@/shared/hooks/useNetwork";
 import { getNativeTokenTickerForNetwork } from "@/shared/lib/config/environment";
@@ -44,6 +44,12 @@ export function SwapTabContent({ mode }: SwapTabContentProps = {}) {
   const [liquiditySuccess, setLiquiditySuccess] = useState(false);
   const [swapError, setSwapError] = useState("");
   const [swapSuccess, setSwapSuccess] = useState(false);
+
+  /** True when LP amount was typed for remove liquidity; quote sync must not overwrite Sell/Buy. */
+  const lpAmountEditedByUserRef = useRef(false);
+  const markLpProgrammatic = useCallback(() => {
+    lpAmountEditedByUserRef.current = false;
+  }, []);
 
   const createOfferMutation = useCreateOffer();
   const { createOffer: tibetCreateOffer, isCreating: tibetSubmitting } =
@@ -94,7 +100,8 @@ export function SwapTabContent({ mode }: SwapTabContentProps = {}) {
     requestedAmount,
     setOfferedAmount,
     setRequestedAmount,
-    skipQuoteSync: lpAmount.trim() !== "",
+    skipQuoteSync:
+      lpAmount.trim() !== "" && lpAmountEditedByUserRef.current,
   });
 
   const removeReceive = useMemo(() => {
@@ -110,6 +117,7 @@ export function SwapTabContent({ mode }: SwapTabContentProps = {}) {
       requestedAmount,
       xchIsOffered,
       setLpAmount,
+      markLpProgrammatic,
     );
 
   useSwapTabLpRemoveAmountsSync({
@@ -121,6 +129,7 @@ export function SwapTabContent({ mode }: SwapTabContentProps = {}) {
     setRequestedAmount,
     amountsFromLpRef,
     lpJustSetFromAmountsRef,
+    lpEditedByUserRef: lpAmountEditedByUserRef,
   });
 
   const tokenName =
@@ -177,10 +186,12 @@ export function SwapTabContent({ mode }: SwapTabContentProps = {}) {
       modalPayAmount={modalPayAmount}
       pairsLoading={pairsLoading}
       onOfferedChange={(v) => {
+        lpAmountEditedByUserRef.current = false;
         setLpAmount("");
         setOfferedAmount(v);
       }}
       onRequestedChange={(v) => {
+        lpAmountEditedByUserRef.current = false;
         setLpAmount("");
         setRequestedAmount(v);
       }}
@@ -189,7 +200,10 @@ export function SwapTabContent({ mode }: SwapTabContentProps = {}) {
       onSubmitSwap={handleConfirmSwap}
       isSwapPending={isSwapPending}
       lpAmount={lpAmount}
-      onLpAmountChange={setLpAmount}
+      onLpAmountChange={(v) => {
+        lpAmountEditedByUserRef.current = true;
+        setLpAmount(v);
+      }}
       addLpReceive={addLpReceive}
       removeReceive={removeReceive}
       tokenName={tokenName}

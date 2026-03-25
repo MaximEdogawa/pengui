@@ -3,6 +3,14 @@ import type { TibetApiPair } from "./tibetTypes";
 
 export const TOKEN_SMALLEST_PER_UNIT = 1000;
 
+/**
+ * Format CAT token amounts for AmountInput (type "cat"): max 3 decimal places per Chia CAT rules.
+ * Quote sync must never use toFixed(4/6) here or isValid rejects edits and backspace appears broken.
+ */
+export function formatTibetCatAmountForInput(displayUnits: number): string {
+  return displayUnits.toFixed(3);
+}
+
 export function formatSwapPrice(xchPerToken: number): string {
   if (xchPerToken >= 1) return xchPerToken.toFixed(4);
   if (xchPerToken >= 0.0001) return xchPerToken.toFixed(8);
