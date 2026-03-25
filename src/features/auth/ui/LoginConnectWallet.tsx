@@ -136,7 +136,9 @@ export function LoginConnectWallet() {
           if (!mountedRef.current) return
           await processSession(session, wc)
         } catch {
-          if (mountedRef.current) initConnection()
+          if (mountedRef.current) {
+            setError('Connection was rejected in the wallet')
+          }
         }
       }
     } catch (err) {
