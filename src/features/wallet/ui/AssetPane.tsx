@@ -6,6 +6,8 @@ import { useNetwork } from '@/shared/hooks/useNetwork'
 import { useResponsive } from '@/shared/hooks/useResponsive'
 import TickerIcon, { XchIcon } from '@/entities/asset/ui/TickerIcon'
 import { CHIA_ASSET_IDS } from '@/shared/lib/constants/chia-assets'
+import { TibetLpPairIcon } from '@/features/tibet-swap/ui/TibetLpPairIcon'
+import { useTibetLpPairMap } from '@/features/tibet-swap/hooks/useTibetLpPairMap'
 import type { WalletAssetItem } from '../hooks/useWalletAssets'
 
 interface AssetPaneProps {
@@ -45,7 +47,13 @@ export default function AssetPane({ asset, href }: AssetPaneProps) {
   const { isMobile } = useResponsive()
   const { network } = useNetwork()
   const maxDecimals = isMobile ? DECIMALS_MOBILE : undefined
+  const lpMap = useTibetLpPairMap()
   const isXch = asset.assetId === CHIA_ASSET_IDS.XCH || asset.assetId === ''
+  const lpPair = !isXch ? lpMap.get(asset.assetId) : undefined
+  const isLpToken = lpPair != null
+  const lpTicker = lpPair
+    ? `${lpPair.asset_short_name || lpPair.asset_name}-XCH`
+    : asset.ticker
   const linkClass = `w-full flex items-center gap-3 sm:gap-3 p-3.5 sm:p-3 rounded-xl border transition-all text-left block cursor-pointer touch-manipulation min-w-0 ${
     isDark
       ? 'bg-white/[0.03] border-white/5 hover:bg-white/5 active:bg-white/8'
@@ -60,22 +68,34 @@ export default function AssetPane({ asset, href }: AssetPaneProps) {
       <div className="flex-shrink-0">
         {isXch ? (
           <XchIcon size={36} isTestnet={network === 'testnet'} />
+        ) : isLpToken ? (
+          <TibetLpPairIcon liquidityAssetId={asset.assetId} size={36} />
         ) : (
           <TickerIcon assetId={asset.assetId} ticker={asset.ticker} size={36} />
         )}
       </div>
       <div className="flex-1 min-w-0 overflow-hidden">
-        <p className={`${t.text} text-[15px] sm:text-sm font-medium truncate`}>{asset.name}</p>
+        <p className={`${t.text} text-[15px] sm:text-sm font-medium truncate`}>
+          {isLpToken ? lpTicker : asset.name}
+        </p>
         <p className={`${t.textSecondary} text-[13px] sm:text-xs tabular-nums truncate`}>
-          {asset.ticker}
-          {asset.priceUsd != null && asset.priceUsd > 0 && (
-            <span className="ml-1">· {formatPrice(asset.priceUsd, maxDecimals)}</span>
+          {isLpToken ? (
+            <span className="text-emerald-500/80 dark:text-emerald-400/70 text-[11px] font-medium">
+              TibetSwap
+            </span>
+          ) : (
+            <>
+              {asset.ticker}
+              {asset.priceUsd != null && asset.priceUsd > 0 && (
+                <span className="ml-1">· {formatPrice(asset.priceUsd, maxDecimals)}</span>
+              )}
+            </>
           )}
         </p>
       </div>
       <div className="flex flex-col items-end flex-shrink-0 min-w-0 max-w-[50%] sm:max-w-none">
-        <p className={`${t.text} text-[15px] sm:text-sm font-semibold tabular-nums text-right truncate w-full`} title={`${formatBalance(asset.balance, asset.type)} ${asset.ticker}`}>
-          {formatBalance(asset.balance, asset.type, maxDecimals)} {asset.ticker}
+        <p className={`${t.text} text-[15px] sm:text-sm font-semibold tabular-nums text-right truncate w-full`} title={`${formatBalance(asset.balance, asset.type)} ${isLpToken ? lpTicker : asset.ticker}`}>
+          {formatBalance(asset.balance, asset.type, maxDecimals)} {isLpToken ? lpTicker : asset.ticker}
         </p>
         <p className={`${t.textSecondary} text-[13px] sm:text-xs tabular-nums text-right truncate w-full`} title={formatUsd(asset.balanceUsd)}>
           {formatUsd(asset.balanceUsd)}

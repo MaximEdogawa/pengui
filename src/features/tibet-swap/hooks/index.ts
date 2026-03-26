@@ -1,4 +1,5 @@
 export { useTibetApi, TIBET_KEY } from "./useTibetApi";
+export { useTibetLpPairMap } from "./useTibetLpPairMap";
 export { useTibetTokens } from "./useTibetTokens";
 export { useTibetPairs } from "./useTibetPairs";
 export { useTibetPair } from "./useTibetPair";

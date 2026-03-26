@@ -3,6 +3,7 @@
 import type { ThemeClasses } from "@/shared/lib/theme";
 import { TickerIcon, XchIcon } from "@/entities/asset";
 import { AmountInput } from "@/shared/ui";
+import { AssetPairIcon } from "@/shared/ui/icons/AssetPairIcon";
 import type { AssetType } from "@/entities/offer";
 import type { TibetApiPair } from "../lib/tibetTypes";
 import { isXchTicker } from "../lib/tibetUiUtils";
@@ -71,17 +72,16 @@ export function SwapTradeCard({
           title={`${tokenName} / ${nativeTicker} — set amount to remove LP`}
         >
           {selectedPair ? (
-            <div
-              className="flex shrink-0 items-center -space-x-1.5"
-              aria-hidden
-            >
-              <XchIcon size={12} isTestnet={isTestnet} />
-              <TickerIcon
-                assetId={selectedPair.asset_id}
-                ticker={tokenName}
-                size={12}
-              />
-            </div>
+            <AssetPairIcon
+              back={<XchIcon size={12} isTestnet={isTestnet} />}
+              front={
+                <TickerIcon
+                  assetId={selectedPair.asset_id}
+                  ticker={tokenName}
+                  size={12}
+                />
+              }
+            />
           ) : (
             <span
               className={`h-3 w-3 shrink-0 rounded-full ${t.card} border ${t.border}`}

@@ -3,3 +3,4 @@ export { SwapModal } from "./SwapModal";
 export { PairSelector } from "./PairSelector";
 export { AddLiquiditySection } from "./AddLiquiditySection";
 export { RemoveLiquiditySection } from "./RemoveLiquiditySection";
+export { TibetLpPairIcon } from "./TibetLpPairIcon";

@@ -5,6 +5,8 @@ import { ChevronDown } from "lucide-react";
 import { useThemeClasses } from "@/shared/hooks";
 import { useNetwork } from "@/shared/hooks/useNetwork";
 import { XchIcon } from "@/entities/asset";
+import TickerIcon from "@/entities/asset/ui/TickerIcon";
+import { AssetPairIcon } from "@/shared/ui/icons/AssetPairIcon";
 import type { TibetApiPair } from "../lib/tibetTypes";
 
 const ICON_SIZE = 20;
@@ -18,29 +20,19 @@ function PairOptionRow({
   isTestnet: boolean;
   compact?: boolean;
 }) {
+  const iconSize = compact ? 16 : ICON_SIZE;
   return (
     <span className="flex items-center gap-2 min-w-0">
-      <span className="flex flex-shrink-0 items-center -space-x-1.5">
-        <span className="ring-2 ring-slate-200 dark:ring-slate-800 rounded-full">
-          <XchIcon size={compact ? 16 : ICON_SIZE} isTestnet={isTestnet} />
-        </span>
-        {pair.asset_image_url ? (
-          <img
-            src={pair.asset_image_url}
-            alt=""
-            width={compact ? 16 : ICON_SIZE}
-            height={compact ? 16 : ICON_SIZE}
-            className="rounded-full ring-2 ring-slate-200 dark:ring-slate-800 object-cover flex-shrink-0"
-            loading="lazy"
+      <AssetPairIcon
+        back={<XchIcon size={iconSize} isTestnet={isTestnet} />}
+        front={
+          <TickerIcon
+            assetId={pair.asset_id}
+            ticker={pair.asset_short_name || pair.asset_name}
+            size={iconSize}
           />
-        ) : (
-          <span className="ring-2 ring-slate-200 dark:ring-slate-800 rounded-full flex items-center justify-center bg-slate-500 text-white text-[10px] font-semibold flex-shrink-0"
-            style={{ width: compact ? 16 : ICON_SIZE, height: compact ? 16 : ICON_SIZE }}
-          >
-            {(pair.asset_short_name || pair.asset_name).slice(0, 2).toUpperCase()}
-          </span>
-        )}
-      </span>
+        }
+      />
       <span className="truncate">
         XCH / {pair.asset_short_name || pair.asset_name}
       </span>
