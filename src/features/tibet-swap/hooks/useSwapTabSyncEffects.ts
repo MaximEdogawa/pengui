@@ -3,7 +3,6 @@
 import {
   useEffect,
   type Dispatch,
-  type MutableRefObject,
   type RefObject,
   type SetStateAction,
 } from "react";
@@ -62,27 +61,32 @@ export function useSwapTabOrderPrefill(options: UseSwapTabOrderPrefillOptions) {
     const reqIsXch = isXchTicker(req.code ?? req.id);
     const offIsXch = isXchTicker(off.code ?? off.id);
     const sellIsXch = isXchTicker(currentSell);
-    if (reqIsXch && sellIsXch) {
-      setOfferedAmount(String(req.amount));
-      setRequestedAmount("");
-      setAmountDriver("offered");
-    } else if (offIsXch && sellIsXch) {
-      setOfferedAmount(String(off.amount));
-      setRequestedAmount("");
-      setAmountDriver("offered");
-    } else if (reqIsXch && !sellIsXch) {
-      setOfferedAmount("");
-      setRequestedAmount(String(req.amount));
-      setAmountDriver("requested");
-    } else if (offIsXch && !sellIsXch) {
-      setOfferedAmount("");
-      setRequestedAmount(String(off.amount));
-      setAmountDriver("requested");
+
+    const xchSide = reqIsXch ? "req" : offIsXch ? "off" : null;
+    if (xchSide) {
+      const amount = xchSide === "req" ? req.amount : off.amount;
+      if (sellIsXch) {
+        setOfferedAmount(String(amount));
+        setRequestedAmount("");
+        setAmountDriver("offered");
+      } else {
+        setOfferedAmount("");
+        setRequestedAmount(String(amount));
+        setAmountDriver("requested");
+      }
     } else {
       setOfferedAmount("");
       setRequestedAmount("");
     }
-  }, [selectedOrderForTaking, currentSell, currentBuy, setLpAmount, setOfferedAmount, setRequestedAmount, setAmountDriver]);
+  }, [
+    selectedOrderForTaking,
+    currentSell,
+    currentBuy,
+    setLpAmount,
+    setOfferedAmount,
+    setRequestedAmount,
+    setAmountDriver,
+  ]);
 }
 
 /** Pair is only set via the filter bar: one CAT + XCH/TXCH (both count as native for testnet/mainnet) */
@@ -127,12 +131,8 @@ export interface UseSwapTabLpRemoveAmountsSyncOptions {
   xchIsOffered: boolean;
   setOfferedAmount: (v: string) => void;
   setRequestedAmount: (v: string) => void;
-  amountsFromLpRef: MutableRefObject<boolean>;
-  lpJustSetFromAmountsRef: MutableRefObject<boolean>;
-  /**
-   * When false, Sell/Buy are not driven from LP remove math (auto LP from swap).
-   * When true, user typed LP — drive Sell/Buy from remove estimate.
-   */
+  amountsFromLpRef: RefObject<boolean>;
+  lpJustSetFromAmountsRef: RefObject<boolean>;
   lpEditedByUserRef: RefObject<boolean>;
 }
 
@@ -182,5 +182,6 @@ export function useSwapTabLpRemoveAmountsSync(
     setRequestedAmount,
     amountsFromLpRef,
     lpJustSetFromAmountsRef,
+    lpEditedByUserRef,
   ]);
 }

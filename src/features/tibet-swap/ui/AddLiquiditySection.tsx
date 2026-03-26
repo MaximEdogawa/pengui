@@ -3,14 +3,11 @@
 import { useState } from "react";
 import { Plus } from "lucide-react";
 import { useThemeClasses } from "@/shared/hooks";
-import { useNetwork } from "@/shared/hooks/useNetwork";
-import { useTibetCreateOffer } from "../hooks";
-import { useCreateOffer } from "@/features/wallet";
 import { convertToSmallestUnit } from "@/shared/lib/utils/chia-units";
-import { CHIA_ASSET_IDS } from "@/shared/lib/constants/chia-assets";
 import { logger } from "@/shared/lib/logger";
 import { PairSelector } from "./PairSelector";
 import type { TibetApiPair } from "../lib/tibetTypes";
+import { useTibetOffer } from "../hooks/useTibetOffer";
 
 interface AddLiquiditySectionProps {
   pairs: TibetApiPair[];
@@ -25,7 +22,6 @@ export function AddLiquiditySection({
   selectedPairFromFilter,
 }: AddLiquiditySectionProps) {
   const { t } = useThemeClasses();
-  const { network } = useNetwork();
   const [localPair, setLocalPair] = useState<TibetApiPair | null>(null);
   const selectedPair = selectedPairFromFilter ?? localPair;
   const [xchAmount, setXchAmount] = useState("");
@@ -33,9 +29,7 @@ export function AddLiquiditySection({
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
-  const createOfferMutation = useCreateOffer();
-  const { createOffer: tibetCreateOffer, isCreating: tibetSubmitting } =
-    useTibetCreateOffer();
+  const tibetOffer = useTibetOffer();
 
   const handleAdd = async () => {
     if (!selectedPair) return;
@@ -45,32 +39,38 @@ export function AddLiquiditySection({
       setError("Enter XCH and token amounts");
       return;
     }
+
     setError("");
     setSuccess(false);
 
     try {
-      const xchAssetId =
-        network === "testnet" ? CHIA_ASSET_IDS.TXCH : CHIA_ASSET_IDS.XCH;
       const xchMojos = Math.round(convertToSmallestUnit(xch, "xch"));
       const tokenSmallest = Math.round(convertToSmallestUnit(token, "cat"));
+      const shareXch = xchMojos / selectedPair.xch_reserve;
+      const shareToken = tokenSmallest / selectedPair.token_reserve;
+      const share = Math.min(shareXch, shareToken);
 
-      const result = await createOfferMutation.mutateAsync({
-        walletId: 1,
-        offerAssets: [
-          { assetId: xchAssetId, amount: xchMojos },
-          { assetId: selectedPair.asset_id, amount: tokenSmallest },
-        ],
-        requestAssets: [],
-      });
+      // Use floor to mirror the AMM formula — ensures requested LP never exceeds what's minted
+      const xchMojosToOffer = Math.floor(share * selectedPair.xch_reserve);
+      const tokenSmallestToOffer = Math.floor(share * selectedPair.token_reserve);
+      const lpReceiveSmallest = Math.floor(
+        Math.min(
+          xchMojosToOffer / selectedPair.xch_reserve,
+          tokenSmallestToOffer / selectedPair.token_reserve,
+        ) * selectedPair.liquidity,
+      );
 
-      if (!result?.offer) {
-        throw new Error("Wallet did not return a valid offer");
+      if (lpReceiveSmallest <= 0) {
+        setError("Amounts too small, increase XCH or token input");
+        return;
       }
 
-      await tibetCreateOffer({
-        pair_id: selectedPair.pair_id,
-        offer: result.offer,
-        action: "ADD_LIQUIDITY",
+      // Give XCH + token, receive LP tokens
+      await tibetOffer.addLiquidity({
+        pair: selectedPair,
+        xchAmount: xchMojosToOffer,
+        tokenAmount: tokenSmallestToOffer,
+        lpAmount: lpReceiveSmallest,
       });
 
       setSuccess(true);
@@ -83,10 +83,10 @@ export function AddLiquiditySection({
     }
   };
 
-  const isPending = createOfferMutation.isPending || tibetSubmitting;
-
   return (
-    <div className={`rounded-xl p-2.5 space-y-2 max-w-sm ${t.card} border ${t.border}`}>
+    <div
+      className={`rounded-xl p-2.5 space-y-2 max-w-sm ${t.card} border ${t.border}`}
+    >
       {selectedPairFromFilter == null && (
         <PairSelector
           pairs={pairs}
@@ -117,16 +117,18 @@ export function AddLiquiditySection({
       />
       {error && <p className="text-[10px] text-red-500">{error}</p>}
       {success && (
-        <p className="text-[10px] text-emerald-600 dark:text-emerald-400">Added.</p>
+        <p className="text-[10px] text-emerald-600 dark:text-emerald-400">
+          Added.
+        </p>
       )}
       <button
         type="button"
         onClick={handleAdd}
-        disabled={!selectedPair || isPending || pairsLoading}
+        disabled={!selectedPair || tibetOffer.isPending || pairsLoading}
         className={`w-full rounded-xl py-1.5 flex items-center justify-center gap-1.5 text-xs font-medium border ${t.border} disabled:opacity-40 disabled:pointer-events-none bg-gradient-to-r ${t.accent} text-white ${t.accentHover} transition-colors`}
       >
         <Plus size={14} />
-        {isPending ? "…" : "Add"}
+        {tibetOffer.isPending ? "…" : "Add"}
       </button>
     </div>
   );

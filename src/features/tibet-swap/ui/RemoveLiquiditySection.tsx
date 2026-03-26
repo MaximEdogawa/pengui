@@ -3,14 +3,11 @@
 import { useState } from "react";
 import { Minus } from "lucide-react";
 import { useThemeClasses } from "@/shared/hooks";
-import { useNetwork } from "@/shared/hooks/useNetwork";
-import { useTibetCreateOffer } from "../hooks";
-import { useCreateOffer } from "@/features/wallet";
 import { convertToSmallestUnit } from "@/shared/lib/utils/chia-units";
-import { CHIA_ASSET_IDS } from "@/shared/lib/constants/chia-assets";
 import { logger } from "@/shared/lib/logger";
 import { PairSelector } from "./PairSelector";
 import type { TibetApiPair } from "../lib/tibetTypes";
+import { useTibetOffer } from "../hooks/useTibetOffer";
 
 interface RemoveLiquiditySectionProps {
   pairs: TibetApiPair[];
@@ -25,16 +22,13 @@ export function RemoveLiquiditySection({
   selectedPairFromFilter,
 }: RemoveLiquiditySectionProps) {
   const { t } = useThemeClasses();
-  const { network } = useNetwork();
   const [localPair, setLocalPair] = useState<TibetApiPair | null>(null);
   const selectedPair = selectedPairFromFilter ?? localPair;
   const [lpAmount, setLpAmount] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
-  const createOfferMutation = useCreateOffer();
-  const { createOffer: tibetCreateOffer, isCreating: tibetSubmitting } =
-    useTibetCreateOffer();
+  const tibetOffer = useTibetOffer();
 
   const handleRemove = async () => {
     if (!selectedPair) return;
@@ -43,36 +37,31 @@ export function RemoveLiquiditySection({
       setError("Enter LP amount to remove");
       return;
     }
+    if (selectedPair.liquidity <= 0) {
+      setError("Pool has no liquidity");
+      return;
+    }
     setError("");
     setSuccess(false);
 
     try {
-      const xchAssetId =
-        network === "testnet" ? CHIA_ASSET_IDS.TXCH : CHIA_ASSET_IDS.XCH;
       const lpSmallest = Math.round(convertToSmallestUnit(lp, "cat"));
+      const removeShare = lpSmallest / selectedPair.liquidity;
+      // Use floor so we never request more than the AMM formula yields
+      const xchMojosExpected = Math.floor(selectedPair.xch_reserve * removeShare);
+      const tokenSmallestExpected = Math.floor(selectedPair.token_reserve * removeShare);
 
-      const result = await createOfferMutation.mutateAsync({
-        walletId: 1,
-        offerAssets: [
-          {
-            assetId: selectedPair.liquidity_asset_id,
-            amount: lpSmallest,
-          },
-        ],
-        requestAssets: [
-          { assetId: xchAssetId, amount: 1 },
-          { assetId: selectedPair.asset_id, amount: 1 },
-        ],
-      });
-
-      if (!result?.offer) {
-        throw new Error("Wallet did not return a valid offer");
+      if (xchMojosExpected <= 0 || tokenSmallestExpected <= 0) {
+        setError("LP amount too small to withdraw meaningful funds");
+        return;
       }
 
-      await tibetCreateOffer({
-        pair_id: selectedPair.pair_id,
-        offer: result.offer,
-        action: "REMOVE_LIQUIDITY",
+      // Give LP tokens, receive XCH + token
+      await tibetOffer.removeLiquidity({
+        pair: selectedPair,
+        lpAmount: lpSmallest,
+        xchAmount: xchMojosExpected,
+        tokenAmount: tokenSmallestExpected,
       });
 
       setSuccess(true);
@@ -83,8 +72,6 @@ export function RemoveLiquiditySection({
       setError(msg);
     }
   };
-
-  const isPending = createOfferMutation.isPending || tibetSubmitting;
 
   return (
     <div className={`rounded-xl p-2.5 space-y-2 max-w-sm ${t.card} border ${t.border}`}>
@@ -112,11 +99,11 @@ export function RemoveLiquiditySection({
       <button
         type="button"
         onClick={handleRemove}
-        disabled={!selectedPair || isPending || pairsLoading}
+        disabled={!selectedPair || tibetOffer.isPending || pairsLoading}
         className={`w-full rounded-xl py-1.5 flex items-center justify-center gap-1.5 text-xs font-medium border ${t.border} disabled:opacity-40 disabled:pointer-events-none bg-gradient-to-r ${t.accent} text-white ${t.accentHover} transition-colors`}
       >
         <Minus size={14} />
-        {isPending ? "…" : "Remove"}
+        {tibetOffer.isPending ? "…" : "Remove"}
       </button>
     </div>
   );

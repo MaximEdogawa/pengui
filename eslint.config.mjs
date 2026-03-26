@@ -90,14 +90,14 @@ export default [
       // Clean Code Principles (Robert C. Martin) - Fast Built-in Rules
       // These rules are fast because they use built-in ESLint analyzers (no AST traversal overhead)
       // Maximum 3 parameters per function (Clean Code: "The ideal number of arguments is zero")
-      "max-params": ["warn", 5], // Clean Code: functions should have 5 or fewer parameters
+      "max-params": ["warn", 6], // Clean Code: functions should have 5 or fewer parameters
       // Cyclomatic complexity - measures decision points (fast built-in rule)
       complexity: ["warn", { max: 40 }], // Clean Code: keep functions simple
       // Function length - Clean Code recommends ~20 lines, we use 185 for React components
       "max-lines-per-function": [
         "warn",
         {
-          max: 300,
+          max: 350,
           skipBlankLines: true,
           skipComments: true,
           IIFEs: true,

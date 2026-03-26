@@ -1,16 +1,16 @@
 "use client";
 
 import { useMemo, useEffect, useRef } from "react";
-import { useCreateOffer } from "@/features/wallet";
-import { CHIA_ASSET_IDS } from "@/shared/lib/constants/chia-assets";
 import { logger } from "@/shared/lib/logger";
 import { convertToSmallestUnit } from "@/shared/lib/utils/chia-units";
-import type { TibetApiPair, TibetOfferResponse } from "../lib/tibetTypes";
+import type { TibetApiPair } from "../lib/tibetTypes";
 import {
   TOKEN_SMALLEST_PER_UNIT,
   formatTibetCatAmountForInput,
   lpToRemoveFromDesiredOutput,
 } from "../lib/swapLiquidityMath";
+import { useTibetApi } from "./useTibetApi";
+import { useTibetOffer } from "./useTibetOffer";
 
 export interface UseLiquidityHandlersArgs {
   network: string;
@@ -24,13 +24,8 @@ export interface UseLiquidityHandlersArgs {
   setLpAmount: (v: string) => void;
   setLiquidityError: (v: string) => void;
   setLiquiditySuccess: (v: boolean) => void;
-  createOfferMutation: ReturnType<typeof useCreateOffer>;
-  tibetCreateOffer: (params: {
-    pair_id: string;
-    offer: string;
-    action: "ADD_LIQUIDITY" | "REMOVE_LIQUIDITY";
-  }) => Promise<TibetOfferResponse>;
-  isTibetCreating: boolean;
+  /** Override Tibet's fee estimate with a user-specified value in mojos. */
+  manualFee?: number;
 }
 
 /**
@@ -54,23 +49,29 @@ export function useAddLpReceiveAndSync(
       selectedPair.token_reserve <= 0
     )
       return undefined;
+
     const offered = parseFloat(offeredAmount) || 0;
     const requested = parseFloat(requestedAmount) || 0;
+
     if (offered <= 0 || requested <= 0) return undefined;
+
     const xchMojos = xchIsOffered
       ? Math.round(convertToSmallestUnit(offered, "xch"))
       : Math.round(convertToSmallestUnit(requested, "xch"));
     const tokenSmallest = xchIsOffered
       ? Math.round(convertToSmallestUnit(requested, "cat"))
       : Math.round(convertToSmallestUnit(offered, "cat"));
+
     const shareXch = xchMojos / selectedPair.xch_reserve;
     const shareToken = tokenSmallest / selectedPair.token_reserve;
     const share = Math.min(shareXch, shareToken);
     const lpSmallest = Math.floor(share * selectedPair.liquidity);
+
     return formatTibetCatAmountForInput(lpSmallest / TOKEN_SMALLEST_PER_UNIT);
   }, [selectedPair, offeredAmount, requestedAmount, xchIsOffered]);
   const amountsFromLpRef = useRef(false);
   const lpJustSetFromAmountsRef = useRef(false);
+
   useEffect(() => {
     if (amountsFromLpRef.current) {
       amountsFromLpRef.current = false;
@@ -81,6 +82,7 @@ export function useAddLpReceiveAndSync(
     lpJustSetFromAmountsRef.current = true;
     setLpAmount(addLpReceive);
   }, [addLpReceive, setLpAmount, onProgrammaticLpSet]);
+
   return { addLpReceive, amountsFromLpRef, lpJustSetFromAmountsRef };
 }
 
@@ -96,11 +98,11 @@ export function useLiquidityHandlers({
   setLpAmount,
   setLiquidityError,
   setLiquiditySuccess,
-  createOfferMutation,
-  tibetCreateOffer,
-  isTibetCreating,
+  manualFee,
 }: UseLiquidityHandlersArgs) {
-  const isLiquidityPending = createOfferMutation.isPending || isTibetCreating;
+  const tibetApi = useTibetApi();
+  const tibetOffer = useTibetOffer();
+  const isLiquidityPending = tibetOffer.isPending;
 
   const handleAdd = async () => {
     if (!selectedPair) return;
@@ -117,25 +119,65 @@ export function useLiquidityHandlers({
     setLiquidityError("");
     setLiquiditySuccess(false);
     try {
-      const xchAssetId =
-        network === "testnet" ? CHIA_ASSET_IDS.TXCH : CHIA_ASSET_IDS.XCH;
+      // Fetch fresh pair state so amounts match current pool reserves
+      const freshPair = await tibetApi.getPair(selectedPair.pair_id);
+      if (
+        freshPair.xch_reserve <= 0 ||
+        freshPair.token_reserve <= 0 ||
+        freshPair.liquidity <= 0
+      ) {
+        setLiquidityError("Pool has no liquidity, cannot add");
+        return;
+      }
+
       const xchMojos = Math.round(convertToSmallestUnit(xch, "xch"));
       const tokenSmallest = Math.round(convertToSmallestUnit(token, "cat"));
-      const result = await createOfferMutation.mutateAsync({
-        walletId: 1,
-        offerAssets: [
-          { assetId: xchAssetId, amount: xchMojos },
-          { assetId: selectedPair.asset_id, amount: tokenSmallest },
-        ],
-        requestAssets: [],
+      const shareXch = xchMojos / freshPair.xch_reserve;
+      const shareToken = tokenSmallest / freshPair.token_reserve;
+      const share = Math.min(shareXch, shareToken);
+
+      // Use floor so offer amounts never exceed share * reserve. Round-up would lower
+      // the effective share Tibet sees, causing it to mint fewer LP than requested.
+      const xchMojosToOffer = Math.floor(share * freshPair.xch_reserve);
+      const tokenSmallestToOffer = Math.floor(share * freshPair.token_reserve);
+      // Recompute LP from actual offer amounts — mirrors Tibet's AMM formula exactly.
+      const lpReceiveSmallest = Math.floor(
+        Math.min(
+          xchMojosToOffer / freshPair.xch_reserve,
+          tokenSmallestToOffer / freshPair.token_reserve,
+        ) * freshPair.liquidity,
+      );
+
+      if (
+        xchMojosToOffer <= 0 ||
+        tokenSmallestToOffer <= 0 ||
+        lpReceiveSmallest <= 0
+      ) {
+        setLiquidityError("Amounts too small, increase XCH or token input");
+        return;
+      }
+
+      // Use manual fee if set, otherwise ask Tibet for an estimate
+      let fee: number | undefined = manualFee;
+      if (fee === undefined) {
+        const feeQuote = await tibetApi.getQuote({
+          pair_id: freshPair.pair_id,
+          amount_in: xchMojosToOffer,
+          xch_is_input: true,
+          estimate_fee: true,
+        });
+        fee = feeQuote.fee ?? undefined;
+      }
+
+      // Give XCH + token, receive LP tokens
+      await tibetOffer.addLiquidity({
+        pair: freshPair,
+        xchAmount: xchMojosToOffer,
+        tokenAmount: tokenSmallestToOffer,
+        lpAmount: lpReceiveSmallest,
+        fee,
       });
-      if (!result?.offer)
-        throw new Error("Wallet did not return a valid offer");
-      await tibetCreateOffer({
-        pair_id: selectedPair.pair_id,
-        offer: result.offer,
-        action: "ADD_LIQUIDITY",
-      });
+
       setLiquiditySuccess(true);
       setOfferedAmount("");
       setRequestedAmount("");
@@ -154,52 +196,75 @@ export function useLiquidityHandlers({
     const tokenDisplay = xchIsOffered
       ? parseFloat(requestedAmount) || 0
       : parseFloat(offeredAmount) || 0;
-    let lpSmallest: number;
-    if (xchDisplay > 0 && tokenDisplay > 0) {
-      const computed = lpToRemoveFromDesiredOutput(
-        selectedPair,
-        xchDisplay,
-        tokenDisplay,
-      );
-      if (computed == null || computed <= 0) {
-        setLiquidityError(
-          "Amounts should match pool ratio (use Sell and Buy)",
-        );
-        return;
-      }
-      lpSmallest = computed;
-    } else {
-      const lp = parseFloat(lpAmount) || 0;
-      if (lp <= 0) {
-        setLiquidityError(
-          "Enter LP amount or both Sell and Buy amounts",
-        );
-        return;
-      }
-      lpSmallest = Math.round(convertToSmallestUnit(lp, "cat"));
+    const lp = parseFloat(lpAmount) || 0;
+
+    if (xchDisplay <= 0 && tokenDisplay <= 0 && lp <= 0) {
+      setLiquidityError("Enter LP amount or both Sell and Buy amounts");
+      return;
     }
+
     setLiquidityError("");
     setLiquiditySuccess(false);
+
     try {
-      const xchAssetId =
-        network === "testnet" ? CHIA_ASSET_IDS.TXCH : CHIA_ASSET_IDS.XCH;
-      const result = await createOfferMutation.mutateAsync({
-        walletId: 1,
-        offerAssets: [
-          { assetId: selectedPair.liquidity_asset_id, amount: lpSmallest },
-        ],
-        requestAssets: [
-          { assetId: xchAssetId, amount: 1 },
-          { assetId: selectedPair.asset_id, amount: 1 },
-        ],
+      // Fetch fresh pair state so amounts match current pool reserves
+      const freshPair = await tibetApi.getPair(selectedPair.pair_id);
+      if (freshPair.liquidity <= 0) {
+        setLiquidityError("Pool has no liquidity");
+        return;
+      }
+
+      let lpSmallest: number;
+      if (xchDisplay > 0 && tokenDisplay > 0) {
+        const computed = lpToRemoveFromDesiredOutput(
+          freshPair,
+          xchDisplay,
+          tokenDisplay,
+        );
+        if (computed == null || computed <= 0) {
+          setLiquidityError(
+            "Amounts should match pool ratio (use Sell and Buy)",
+          );
+          return;
+        }
+        lpSmallest = computed;
+      } else {
+        lpSmallest = Math.round(convertToSmallestUnit(lp, "cat"));
+      }
+
+      const removeShare = lpSmallest / freshPair.liquidity;
+      // Use floor so we never request more than the AMM formula yields
+      const xchMojosExpected = Math.floor(freshPair.xch_reserve * removeShare);
+      const tokenSmallestExpected = Math.floor(
+        freshPair.token_reserve * removeShare,
+      );
+
+      if (xchMojosExpected <= 0 || tokenSmallestExpected <= 0) {
+        setLiquidityError("LP amount too small to withdraw meaningful funds");
+        return;
+      }
+
+      // Use manual fee if set, otherwise ask Tibet for an estimate
+      let fee: number | undefined = manualFee;
+      if (fee === undefined) {
+        const feeQuote = await tibetApi.getQuote({
+          pair_id: freshPair.pair_id,
+          amount_out: xchMojosExpected,
+          xch_is_input: false,
+          estimate_fee: true,
+        });
+        fee = feeQuote.fee ?? undefined;
+      }
+
+      // Give LP tokens, receive XCH + token
+      await tibetOffer.removeLiquidity({
+        pair: freshPair,
+        lpAmount: lpSmallest,
+        xchAmount: xchMojosExpected,
+        tokenAmount: tokenSmallestExpected,
+        fee,
       });
-      if (!result?.offer)
-        throw new Error("Wallet did not return a valid offer");
-      await tibetCreateOffer({
-        pair_id: selectedPair.pair_id,
-        offer: result.offer,
-        action: "REMOVE_LIQUIDITY",
-      });
+
       setLiquiditySuccess(true);
       setLpAmount("");
       setOfferedAmount("");

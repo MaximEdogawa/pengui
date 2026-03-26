@@ -5,10 +5,8 @@ export { useTibetPair } from "./useTibetPair";
 export { useTibetToken } from "./useTibetToken";
 export { useTibetRouter } from "./useTibetRouter";
 export { useTibetQuote } from "./useTibetQuote";
-export {
-  useTibetCreateOffer,
-  type TibetCreateOfferVariables,
-} from "./useTibetCreateOffer";
+export { useTibetCreateOffer, type TibetCreateOfferVariables } from "./useTibetCreateOffer";
+export { useTibetOffer } from "./useTibetOffer";
 export { useSwapQuoteSync } from "./useSwapQuoteSync";
 export {
   useLiquidityHandlers,

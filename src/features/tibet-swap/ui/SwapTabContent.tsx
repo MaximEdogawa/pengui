@@ -1,12 +1,12 @@
 "use client";
 
 import { useState, useMemo, useRef, useCallback } from "react";
+import { convertToSmallestUnit } from "@/shared/lib/utils/chia-units";
 import { useThemeClasses } from "@/shared/hooks";
 import { useNetwork } from "@/shared/hooks/useNetwork";
 import { getNativeTokenTickerForNetwork } from "@/shared/lib/config/environment";
 import {
   useTibetPairs,
-  useTibetCreateOffer,
   useSwapQuoteSync,
   useLiquidityHandlers,
   useAddLpReceiveAndSync,
@@ -15,7 +15,6 @@ import {
   useSwapTabLpRemoveAmountsSync,
   useSwapTabConfirmSwap,
 } from "../hooks";
-import { useCreateOffer } from "@/features/wallet";
 import { useOrderBookFilters } from "@/features/trading/hooks/useOrderBookFilters";
 import { useSelectedOrder } from "@/features/trading/hooks/SelectedOrderProvider";
 import { isXchTicker } from "../lib/tibetUiUtils";
@@ -44,6 +43,12 @@ export function SwapTabContent({ mode }: SwapTabContentProps = {}) {
   const [liquiditySuccess, setLiquiditySuccess] = useState(false);
   const [swapError, setSwapError] = useState("");
   const [swapSuccess, setSwapSuccess] = useState(false);
+  const [manualFeeXch, setManualFeeXch] = useState("");
+
+  const manualFeeMojos = useMemo(() => {
+    const v = parseFloat(manualFeeXch);
+    return v > 0 ? Math.round(convertToSmallestUnit(v, "xch")) : undefined;
+  }, [manualFeeXch]);
 
   /** True when LP amount was typed for remove liquidity; quote sync must not overwrite Sell/Buy. */
   const lpAmountEditedByUserRef = useRef(false);
@@ -51,9 +56,6 @@ export function SwapTabContent({ mode }: SwapTabContentProps = {}) {
     lpAmountEditedByUserRef.current = false;
   }, []);
 
-  const createOfferMutation = useCreateOffer();
-  const { createOffer: tibetCreateOffer, isCreating: tibetSubmitting } =
-    useTibetCreateOffer();
 
   const nativeTicker = getNativeTokenTickerForNetwork(network);
   const isTestnet = network === "testnet";
@@ -147,21 +149,16 @@ export function SwapTabContent({ mode }: SwapTabContentProps = {}) {
     setLpAmount,
     setLiquidityError,
     setLiquiditySuccess,
-    createOfferMutation,
-    tibetCreateOffer,
-    isTibetCreating: tibetSubmitting,
+    manualFee: manualFeeMojos,
   });
 
-  const isSwapPending = createOfferMutation.isPending || tibetSubmitting;
-
-  const handleConfirmSwap = useSwapTabConfirmSwap({
+  const { handleConfirmSwap, isSwapPending } = useSwapTabConfirmSwap({
     quote,
     selectedPair,
     modalPayAmount,
     xchIsOffered,
     network,
-    createOfferMutation,
-    tibetCreateOffer,
+    manualFee: manualFeeMojos,
     setSwapError,
     setSwapSuccess,
     setOfferedAmount,
@@ -214,6 +211,8 @@ export function SwapTabContent({ mode }: SwapTabContentProps = {}) {
       onRemove={handleRemove}
       onAdd={handleAdd}
       isLiquidityPending={isLiquidityPending}
+      manualFeeXch={manualFeeXch}
+      onManualFeeChange={setManualFeeXch}
     />
   );
 

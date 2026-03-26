@@ -1,12 +1,11 @@
 "use client";
 
 import { useCallback } from "react";
-import { useCreateOffer } from "@/features/wallet";
-import { CHIA_ASSET_IDS } from "@/shared/lib/constants/chia-assets";
 import { logger } from "@/shared/lib/logger";
 import { convertToSmallestUnit } from "@/shared/lib/utils/chia-units";
+import { CHIA_ASSET_IDS } from "@/shared/lib/constants/chia-assets";
 import type { TibetApiPair, TibetQuote } from "../lib/tibetTypes";
-import type { TibetCreateOfferVariables } from "./useTibetCreateOffer";
+import { useTibetOffer } from "./useTibetOffer";
 
 export interface UseSwapTabConfirmSwapOptions {
   quote: TibetQuote | null | undefined;
@@ -14,30 +13,28 @@ export interface UseSwapTabConfirmSwapOptions {
   modalPayAmount: string;
   xchIsOffered: boolean;
   network: string;
-  createOfferMutation: ReturnType<typeof useCreateOffer>;
-  tibetCreateOffer: (params: TibetCreateOfferVariables) => Promise<unknown>;
+  manualFee?: number;
   setSwapError: (v: string) => void;
   setSwapSuccess: (v: boolean) => void;
   setOfferedAmount: (v: string) => void;
   setRequestedAmount: (v: string) => void;
 }
 
-export function useSwapTabConfirmSwap(options: UseSwapTabConfirmSwapOptions) {
-  const {
-    quote,
-    selectedPair,
-    modalPayAmount,
-    xchIsOffered,
-    network,
-    createOfferMutation,
-    tibetCreateOffer,
-    setSwapError,
-    setSwapSuccess,
-    setOfferedAmount,
-    setRequestedAmount,
-  } = options;
+export function useSwapTabConfirmSwap({
+  quote,
+  selectedPair,
+  modalPayAmount,
+  xchIsOffered,
+  network,
+  manualFee,
+  setSwapError,
+  setSwapSuccess,
+  setOfferedAmount,
+  setRequestedAmount,
+}: UseSwapTabConfirmSwapOptions) {
+  const tibetOffer = useTibetOffer();
 
-  return useCallback(async () => {
+  const handleConfirmSwap = useCallback(async () => {
     if (!quote || !selectedPair || !modalPayAmount) return;
     const amountInNum = parseFloat(modalPayAmount) || 0;
     const amountInMojos = xchIsOffered
@@ -48,28 +45,24 @@ export function useSwapTabConfirmSwap(options: UseSwapTabConfirmSwapOptions) {
       : Math.round(convertToSmallestUnit(amountInNum, "cat"));
     const amountIn = xchIsOffered ? amountInMojos : amountInTokenSmallest;
     if (amountIn <= 0) return;
+
     setSwapError("");
     setSwapSuccess(false);
     try {
       const xchAssetId =
         network === "testnet" ? CHIA_ASSET_IDS.TXCH : CHIA_ASSET_IDS.XCH;
-      const result = await createOfferMutation.mutateAsync({
-        walletId: 1,
-        offerAssets: xchIsOffered
-          ? [{ assetId: xchAssetId, amount: amountInMojos }]
-          : [{ assetId: selectedPair.asset_id, amount: amountInTokenSmallest }],
-        requestAssets: xchIsOffered
-          ? [{ assetId: selectedPair.asset_id, amount: quote.amount_out }]
-          : [{ assetId: xchAssetId, amount: quote.amount_out }],
+
+      // Tibet's server-computed amount_out is used as receiveAmount so the
+      // offer amounts match exactly what Tibet expects when taking the offer.
+      await tibetOffer.swap({
+        pair: selectedPair,
+        giveAssetId: xchIsOffered ? xchAssetId : selectedPair.asset_id,
+        giveAmount: xchIsOffered ? amountInMojos : amountInTokenSmallest,
+        receiveAssetId: xchIsOffered ? selectedPair.asset_id : xchAssetId,
+        receiveAmount: quote.amount_out,
+        fee: manualFee,
       });
-      if (!result?.offer) {
-        throw new Error("Wallet did not return a valid offer");
-      }
-      await tibetCreateOffer({
-        pair_id: selectedPair.pair_id,
-        offer: result.offer,
-        action: "SWAP",
-      });
+
       setSwapSuccess(true);
       setOfferedAmount("");
       setRequestedAmount("");
@@ -85,11 +78,13 @@ export function useSwapTabConfirmSwap(options: UseSwapTabConfirmSwapOptions) {
     modalPayAmount,
     xchIsOffered,
     network,
-    createOfferMutation,
-    tibetCreateOffer,
+    manualFee,
+    tibetOffer,
     setSwapError,
     setSwapSuccess,
     setOfferedAmount,
     setRequestedAmount,
   ]);
+
+  return { handleConfirmSwap, isSwapPending: tibetOffer.isPending };
 }

@@ -5,10 +5,10 @@ import { Modal } from "@/shared/ui";
 import { X, AlertTriangle } from "lucide-react";
 import { useThemeClasses } from "@/shared/hooks";
 import { useNetwork } from "@/shared/hooks/useNetwork";
-import { useTibetQuote, useTibetCreateOffer } from "../hooks";
-import { useCreateOffer } from "@/features/wallet";
-import { convertToSmallestUnit, mojosToXch } from "@/shared/lib/utils/chia-units";
+import { useTibetQuote } from "../hooks";
+import { useTibetOffer } from "../hooks/useTibetOffer";
 import { CHIA_ASSET_IDS } from "@/shared/lib/constants/chia-assets";
+import { convertToSmallestUnit, mojosToXch } from "@/shared/lib/utils/chia-units";
 import { logger } from "@/shared/lib/logger";
 import type { TibetApiPair } from "../lib/tibetTypes";
 import { TOKEN_SMALLEST_PER_UNIT } from "../lib/swapLiquidityMath";
@@ -31,9 +31,7 @@ export function SwapModal({
 }: SwapModalProps) {
   const { t } = useThemeClasses();
   const { network } = useNetwork();
-  const createOfferMutation = useCreateOffer();
-  const { createOffer: tibetCreateOffer, isCreating: tibetSubmitting } =
-    useTibetCreateOffer();
+  const tibetOffer = useTibetOffer();
 
   const amountInNum = parseFloat(amountInRaw) || 0;
   const amountInMojos = xchIsInput
@@ -77,24 +75,14 @@ export function SwapModal({
       const xchAssetId =
         network === "testnet" ? CHIA_ASSET_IDS.TXCH : CHIA_ASSET_IDS.XCH;
 
-      const result = await createOfferMutation.mutateAsync({
-        walletId: 1,
-        offerAssets: xchIsInput
-          ? [{ assetId: xchAssetId, amount: amountInMojos }]
-          : [{ assetId: pair.asset_id, amount: amountInTokenSmallest }],
-        requestAssets: xchIsInput
-          ? [{ assetId: pair.asset_id, amount: quote.amount_out }]
-          : [{ assetId: xchAssetId, amount: quote.amount_out }],
-      });
-
-      if (!result?.offer) {
-        throw new Error("Wallet did not return a valid offer");
-      }
-
-      await tibetCreateOffer({
-        pair_id: pair.pair_id,
-        offer: result.offer,
-        action: "SWAP",
+      // Tibet's server-computed amount_out is used as receiveAmount so offer
+      // amounts match exactly what Tibet expects when taking the offer.
+      await tibetOffer.swap({
+        pair,
+        giveAssetId: xchIsInput ? xchAssetId : pair.asset_id,
+        giveAmount: xchIsInput ? amountInMojos : amountInTokenSmallest,
+        receiveAssetId: xchIsInput ? pair.asset_id : xchAssetId,
+        receiveAmount: quote.amount_out,
       });
 
       setSuccess(true);
@@ -106,7 +94,7 @@ export function SwapModal({
     }
   };
 
-  const isPending = createOfferMutation.isPending || tibetSubmitting;
+  const isPending = tibetOffer.isPending;
   const priceImpact = quote ? computePriceImpactPercent(quote) : null;
 
   return (

@@ -47,6 +47,8 @@ export interface SwapFormBodyProps {
   onRemove: () => void;
   onAdd: () => void;
   isLiquidityPending: boolean;
+  manualFeeXch: string;
+  onManualFeeChange: (v: string) => void;
 }
 
 export function SwapFormBody({
@@ -83,6 +85,8 @@ export function SwapFormBody({
   onRemove,
   onAdd,
   isLiquidityPending,
+  manualFeeXch,
+  onManualFeeChange,
 }: SwapFormBodyProps) {
   const [previewTab, setPreviewTab] = useState<"swap" | "remove" | "add">(
     "swap",
@@ -177,6 +181,22 @@ export function SwapFormBody({
           Done.
         </p>
       )}
+
+      <div className={`flex items-center gap-2 px-1 text-xs ${t.textSecondary}`}>
+        <label htmlFor="manual-fee-input" className="shrink-0">
+          Fee (XCH)
+        </label>
+        <input
+          id="manual-fee-input"
+          type="text"
+          inputMode="decimal"
+          placeholder="auto"
+          aria-label="Manual blockchain fee in XCH"
+          value={manualFeeXch}
+          onChange={(e) => onManualFeeChange(e.target.value)}
+          className={`w-28 rounded-lg px-2 py-0.5 text-xs border ${t.input} ${t.text} placeholder:opacity-50 focus:outline-none focus:ring-1 ${t.focusRing}`}
+        />
+      </div>
 
       <div className="flex flex-col gap-1.5">
         <Button
