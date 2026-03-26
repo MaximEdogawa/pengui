@@ -115,13 +115,9 @@ function useIconBlob(proxyUrl: string | null, enabled: boolean) {
  */
 export function useTickerIcon(
   assetId: string | null | undefined,
-  enabled: boolean = true,
+  enabled: boolean = true
 ): UseTickerIconResult {
-  const {
-    data: iconMap,
-    isLoading: tokensLoading,
-    error: tokensError,
-  } = useAllTokenIcons();
+  const { data: iconMap, isLoading: tokensLoading, error: tokensError } = useAllTokenIcons();
 
   // Resolve proxy URL for this asset from the shared token map, but remember
   // the mapping so subsequent calls for the same assetId don't depend on the
@@ -171,8 +167,7 @@ export function useTickerIcon(
   const isLoading = enabled && (tokensLoading || (useBlob && iconLoading));
   const error = (tokensError ?? iconError) as Error | null;
 
-  const imageUrl: string | null =
-    !assetId ? null : useBlob ? objectUrl : proxyUrl;
+  const imageUrl: string | null = !assetId ? null : useBlob ? objectUrl : proxyUrl;
 
   return { imageUrl, isLoading, error };
 }

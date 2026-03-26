@@ -1,8 +1,8 @@
-import { getNativeTokenTickerForNetwork } from '@/shared/lib/config/environment'
+import { getNativeTokenTickerForNetwork } from "@/shared/lib/config/environment";
 
 export interface Asset {
-  id: string
-  code?: string
+  id: string;
+  code?: string;
 }
 
 /**
@@ -12,12 +12,12 @@ export function getTickerSymbol(
   assetId: string,
   code: string | undefined,
   getCatTokenInfo: (assetId: string) => { ticker?: string } | undefined,
-  network: 'mainnet' | 'testnet' = 'mainnet'
+  network: "mainnet" | "testnet" = "mainnet"
 ): string {
-  if (code) return code
-  if (!assetId) return getNativeTokenTickerForNetwork(network)
-  const tickerInfo = getCatTokenInfo(assetId)
-  return tickerInfo?.ticker || assetId.slice(0, 8)
+  if (code) return code;
+  if (!assetId) return getNativeTokenTickerForNetwork(network);
+  const tickerInfo = getCatTokenInfo(assetId);
+  return tickerInfo?.ticker || assetId.slice(0, 8);
 }
 
 /**
@@ -26,19 +26,19 @@ export function getTickerSymbol(
 export function isNativeToken(
   asset: Asset,
   getTickerSymbolFn: (assetId: string, code?: string) => string,
-  network: 'mainnet' | 'testnet' = 'mainnet'
+  network: "mainnet" | "testnet" = "mainnet"
 ): boolean {
-  const ticker = getTickerSymbolFn(asset.id, asset.code)
-  const nativeTicker = getNativeTokenTickerForNetwork(network)
+  const ticker = getTickerSymbolFn(asset.id, asset.code);
+  const nativeTicker = getNativeTokenTickerForNetwork(network);
   // Check if it's XCH, TXCH, or the native token for current network
   return (
-    ticker.toUpperCase() === 'XCH' ||
-    ticker.toUpperCase() === 'TXCH' ||
+    ticker.toUpperCase() === "XCH" ||
+    ticker.toUpperCase() === "TXCH" ||
     ticker.toUpperCase() === nativeTicker.toUpperCase() ||
-    asset.id === '' ||
-    asset.id.toLowerCase() === 'xch' ||
-    asset.id.toLowerCase() === 'txch'
-  )
+    asset.id === "" ||
+    asset.id.toLowerCase() === "xch" ||
+    asset.id.toLowerCase() === "txch"
+  );
 }
 
 /**
@@ -49,15 +49,15 @@ export function assetMatchesFilter(
   filterAssets: string[],
   getTickerSymbolFn: (assetId: string, code?: string) => string
 ): boolean {
-  if (!filterAssets || filterAssets.length === 0) return false
+  if (!filterAssets || filterAssets.length === 0) return false;
   return filterAssets.some((filterAsset) => {
-    const assetTicker = getTickerSymbolFn(asset.id, asset.code)
+    const assetTicker = getTickerSymbolFn(asset.id, asset.code);
     return (
       assetTicker.toLowerCase() === filterAsset.toLowerCase() ||
       asset.id.toLowerCase() === filterAsset.toLowerCase() ||
       (asset.code && asset.code.toLowerCase() === filterAsset.toLowerCase())
-    )
-  })
+    );
+  });
 }
 
 /**
@@ -69,28 +69,28 @@ export function areAssetsEqual(
   getTickerSymbolFn: (assetId: string, code?: string) => string,
   isNativeTokenFn: (asset: Asset) => boolean
 ): boolean {
-  const ticker1 = getTickerSymbolFn(asset1.id, asset1.code)
-  const ticker2 = getTickerSymbolFn(asset2.id, asset2.code)
+  const ticker1 = getTickerSymbolFn(asset1.id, asset1.code);
+  const ticker2 = getTickerSymbolFn(asset2.id, asset2.code);
 
   // Check if tickers match
   if (ticker1.toLowerCase() === ticker2.toLowerCase()) {
-    return true
+    return true;
   }
 
   // Check if asset IDs match
   if (asset1.id.toLowerCase() === asset2.id.toLowerCase()) {
-    return true
+    return true;
   }
 
   // Check if codes match
   if (asset1.code && asset2.code && asset1.code.toLowerCase() === asset2.code.toLowerCase()) {
-    return true
+    return true;
   }
 
   // Special case: Check if both are native tokens (XCH/TXCH are the same)
   if (isNativeTokenFn(asset1) && isNativeTokenFn(asset2)) {
-    return true
+    return true;
   }
 
-  return false
+  return false;
 }

@@ -12,9 +12,7 @@ export default function DashboardPage() {
   const [mounted, setMounted] = useState(false);
   const { theme: currentTheme, systemTheme } = useTheme();
 
-  const isDark =
-    currentTheme === "dark" ||
-    (currentTheme === "system" && systemTheme === "dark");
+  const isDark = currentTheme === "dark" || (currentTheme === "system" && systemTheme === "dark");
   const t = getThemeClasses(isDark);
 
   useEffect(() => {

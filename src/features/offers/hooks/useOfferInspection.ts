@@ -1,61 +1,61 @@
-'use client'
+"use client";
 
-import { useDexieDataService } from '../api/useDexieDataService'
-import type { DexieOfferSearchParams, DexiePostOfferParams } from '../lib/dexieTypes'
+import { useDexieDataService } from "../api/useDexieDataService";
+import type { DexieOfferSearchParams, DexiePostOfferParams } from "../lib/dexieTypes";
 
-export type ValidatedOfferString = string & { readonly __validated: true }
- 
-/** 
+export type ValidatedOfferString = string & { readonly __validated: true };
+
+/**
  * Hook for offer inspection and search using Dexie API
  * Provides a convenient interface for components to interact with Dexie
  */
 export function useOfferInspection() {
-  const dexieDataService = useDexieDataService()
+  const dexieDataService = useDexieDataService();
 
   /**
    * Inspect a specific offer by Dexie ID
    */
   const inspectOffer = async (dexieId: string) => {
-    return await dexieDataService.inspectOffer(dexieId)
-  }
+    return await dexieDataService.inspectOffer(dexieId);
+  };
 
   /**
    * Inspect offer with polling functionality - checks every 20 seconds until expired/completed/cancelled
    */
   const inspectOfferWithPolling = async (dexieId: string, maxAttempts: number = 30) => {
-    return await dexieDataService.inspectOfferWithPolling(dexieId, maxAttempts)
-  }
+    return await dexieDataService.inspectOfferWithPolling(dexieId, maxAttempts);
+  };
 
   /**
    * Validate an offer string before processing
    */
   const validateOffer = (offerString: string): ValidatedOfferString => {
     if (!dexieDataService.validateOfferString(offerString)) {
-      throw new Error('Invalid offer string format')
+      throw new Error("Invalid offer string format");
     }
-    return offerString as ValidatedOfferString
-  }
+    return offerString as ValidatedOfferString;
+  };
 
   /**
    * Search for offers with various filters
    */
   const searchOffers = async (params: DexieOfferSearchParams = {}) => {
-    return await dexieDataService.searchOffers(params)
-  }
+    return await dexieDataService.searchOffers(params);
+  };
 
   /**
    * Get offer by ID
    */
   const getOfferById = async (offerId: string) => {
-    return await dexieDataService.inspectOffer(offerId)
-  }
+    return await dexieDataService.inspectOffer(offerId);
+  };
 
   /**
    * Post an offer to Dexie
    */
   const postOffer = async (params: DexiePostOfferParams) => {
-    return await dexieDataService.postOffer(params)
-  }
+    return await dexieDataService.postOffer(params);
+  };
 
   /**
    * Search for offers by asset ID
@@ -65,8 +65,8 @@ export function useOfferInspection() {
       requested: assetId,
       page_size: limit,
       status: 0, // Only open offers
-    })
-  }
+    });
+  };
 
   /**
    * Search for offers by maker address
@@ -75,8 +75,8 @@ export function useOfferInspection() {
     return await searchOffers({
       maker: makerAddress,
       page_size: limit,
-    })
-  }
+    });
+  };
 
   /**
    * Get recent offers
@@ -85,8 +85,8 @@ export function useOfferInspection() {
     return await searchOffers({
       status: 0, // Only open offers
       page_size: limit,
-    })
-  }
+    });
+  };
 
   return {
     // Direct service access
@@ -123,5 +123,5 @@ export function useOfferInspection() {
 
     // Refresh functions
     refreshOffers: dexieDataService.refreshOffers,
-  }
+  };
 }

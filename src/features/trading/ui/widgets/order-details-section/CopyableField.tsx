@@ -8,11 +8,7 @@ interface CopyableFieldProps {
   className?: string;
 }
 
-export function CopyableField({
-  label,
-  value,
-  className = "",
-}: CopyableFieldProps) {
+export function CopyableField({ label, value, className = "" }: CopyableFieldProps) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = useCallback(async () => {
@@ -26,9 +22,7 @@ export function CopyableField({
   return (
     <div>
       <div className="flex items-center justify-between mb-1">
-        <span className="text-xs text-gray-500 dark:text-gray-400">
-          {label}:
-        </span>
+        <span className="text-xs text-gray-500 dark:text-gray-400">{label}:</span>
         <button
           type="button"
           onClick={handleCopy}

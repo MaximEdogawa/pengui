@@ -1,37 +1,37 @@
-'use client'
+"use client";
 
-import { formatAddress } from '@/shared/lib/utils/addressUtils'
-import { formatRelativeTime } from '@/shared/lib/utils/dateUtils'
-import { formatAmountFromMojos } from '@/shared/lib/utils/amountUtils'
-import { convertFromSmallestUnit } from '@/shared/lib/utils/chia-units'
-import { useThemeClasses } from '@/shared/hooks'
-import type { StoredTransaction } from '@/shared/lib/walletConnect/utils/transactionStorage'
-import { ArrowUpRight, ArrowDownLeft, Clock, CheckCircle2, XCircle } from 'lucide-react'
+import { formatAddress } from "@/shared/lib/utils/addressUtils";
+import { formatRelativeTime } from "@/shared/lib/utils/dateUtils";
+import { formatAmountFromMojos } from "@/shared/lib/utils/amountUtils";
+import { convertFromSmallestUnit } from "@/shared/lib/utils/chia-units";
+import { useThemeClasses } from "@/shared/hooks";
+import type { StoredTransaction } from "@/shared/lib/walletConnect/utils/transactionStorage";
+import { ArrowUpRight, ArrowDownLeft, Clock, CheckCircle2, XCircle } from "lucide-react";
 
 // Color constants to avoid duplication
-const RED_COLOR_DARK = 'text-red-400'
-const RED_COLOR_LIGHT = 'text-red-600'
-const EMERALD_COLOR_DARK = 'text-emerald-400'
-const EMERALD_COLOR_LIGHT = 'text-emerald-600'
-const YELLOW_COLOR_DARK = 'text-yellow-400'
-const YELLOW_COLOR_LIGHT = 'text-yellow-600'
+const RED_COLOR_DARK = "text-red-400";
+const RED_COLOR_LIGHT = "text-red-600";
+const EMERALD_COLOR_DARK = "text-emerald-400";
+const EMERALD_COLOR_LIGHT = "text-emerald-600";
+const YELLOW_COLOR_DARK = "text-yellow-400";
+const YELLOW_COLOR_LIGHT = "text-yellow-600";
 
 interface TransactionItemProps {
-  transaction: StoredTransaction
+  transaction: StoredTransaction;
 }
 
 export default function TransactionItem({ transaction: tx }: TransactionItemProps) {
-  const { isDark, t } = useThemeClasses()
+  const { isDark, t } = useThemeClasses();
 
-  const address = tx.recipientAddress || tx.senderAddress || ''
-  const isSend = tx.type === 'send'
+  const address = tx.recipientAddress || tx.senderAddress || "";
+  const isSend = tx.type === "send";
 
   return (
     <div
       className={`p-3 rounded-xl backdrop-blur-xl border transition-all ${
         isDark
-          ? 'bg-white/[0.03] border-white/5 hover:bg-white/5'
-          : 'bg-white/50 border-cyan-200/30 hover:bg-white/60'
+          ? "bg-white/[0.03] border-white/5 hover:bg-white/5"
+          : "bg-white/50 border-cyan-200/30 hover:bg-white/60"
       }`}
     >
       <div className="flex items-center justify-between">
@@ -40,11 +40,11 @@ export default function TransactionItem({ transaction: tx }: TransactionItemProp
             className={`p-2 rounded-lg flex-shrink-0 ${
               isSend
                 ? isDark
-                  ? 'bg-red-500/10'
-                  : 'bg-red-100'
+                  ? "bg-red-500/10"
+                  : "bg-red-100"
                 : isDark
-                  ? 'bg-emerald-500/10'
-                  : 'bg-emerald-100'
+                  ? "bg-emerald-500/10"
+                  : "bg-emerald-100"
             }`}
           >
             {isSend ? (
@@ -58,22 +58,22 @@ export default function TransactionItem({ transaction: tx }: TransactionItemProp
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <p className={`${t.text} text-sm font-medium`}>{isSend ? 'Sent' : 'Received'}</p>
-              {tx.status === 'pending' && (
+              <p className={`${t.text} text-sm font-medium`}>{isSend ? "Sent" : "Received"}</p>
+              {tx.status === "pending" && (
                 <Clock className={isDark ? YELLOW_COLOR_DARK : YELLOW_COLOR_LIGHT} size={14} />
               )}
-              {tx.status === 'confirmed' && (
+              {tx.status === "confirmed" && (
                 <CheckCircle2
                   className={isDark ? EMERALD_COLOR_DARK : EMERALD_COLOR_LIGHT}
                   size={14}
                 />
               )}
-              {tx.status === 'failed' && (
+              {tx.status === "failed" && (
                 <XCircle className={isDark ? RED_COLOR_DARK : RED_COLOR_LIGHT} size={14} />
               )}
             </div>
             <p className={`${t.textSecondary} text-xs truncate`}>
-              {address ? formatAddress(address, 8, 6) : 'Unknown address'}
+              {address ? formatAddress(address, 8, 6) : "Unknown address"}
             </p>
             {tx.memo && (
               <p className={`${t.textSecondary} text-xs mt-1 truncate`} title={tx.memo}>
@@ -94,10 +94,10 @@ export default function TransactionItem({ transaction: tx }: TransactionItemProp
                   : EMERALD_COLOR_LIGHT
             }`}
           >
-            {isSend ? '-' : '+'}
-            {tx.amountAsset === 'XCH' || tx.amountAsset === 'TXCH' || !tx.amountAsset
-              ? `${formatAmountFromMojos(tx.amount)} ${tx.amountAsset ?? 'XCH'}`
-              : `${convertFromSmallestUnit(Number(tx.amount), 'cat')} ${tx.amountAsset}`}
+            {isSend ? "-" : "+"}
+            {tx.amountAsset === "XCH" || tx.amountAsset === "TXCH" || !tx.amountAsset
+              ? `${formatAmountFromMojos(tx.amount)} ${tx.amountAsset ?? "XCH"}`
+              : `${convertFromSmallestUnit(Number(tx.amount), "cat")} ${tx.amountAsset}`}
           </p>
           <p className={`${t.textSecondary} text-xs`}>{formatRelativeTime(tx.timestamp)}</p>
           {tx.fee && parseFloat(tx.fee) > 0 && (
@@ -108,5 +108,5 @@ export default function TransactionItem({ transaction: tx }: TransactionItemProp
         </div>
       </div>
     </div>
-  )
+  );
 }

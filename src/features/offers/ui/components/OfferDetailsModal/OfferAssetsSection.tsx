@@ -1,34 +1,34 @@
-'use client'
+"use client";
 
-import type { OfferDetails } from '@/entities/offer'
-import { TickerIcon, XchIcon } from '@/entities/asset'
-import { useNetwork } from '@/shared/hooks'
-import { formatAssetAmount } from '@/shared/lib/utils/chia-units'
-import type { ThemeClasses } from '@/shared/lib/theme'
+import type { OfferDetails } from "@/entities/offer";
+import { TickerIcon, XchIcon } from "@/entities/asset";
+import { useNetwork } from "@/shared/hooks";
+import { formatAssetAmount } from "@/shared/lib/utils/chia-units";
+import type { ThemeClasses } from "@/shared/lib/theme";
 
 interface OfferAssetsSectionProps {
-  offer: OfferDetails
-  getTickerSymbol: (assetId: string) => string
-  t: ThemeClasses
+  offer: OfferDetails;
+  getTickerSymbol: (assetId: string) => string;
+  t: ThemeClasses;
 }
 
-export function OfferAssetsSection({
-  offer,
-  getTickerSymbol,
-  t,
-}: OfferAssetsSectionProps) {
-  const { network } = useNetwork()
-  const isTestnet = network === 'testnet'
+export function OfferAssetsSection({ offer, getTickerSymbol, t }: OfferAssetsSectionProps) {
+  const { network } = useNetwork();
+  const isTestnet = network === "testnet";
 
-  const renderAssetIcon = (assetId: string | undefined, symbol: string | undefined, type: string) => {
-    const ticker = assetId ? getTickerSymbol(assetId) : (symbol || type.toUpperCase())
-    const isXch = !assetId || ticker === 'XCH' || ticker === 'TXCH'
-    
+  const renderAssetIcon = (
+    assetId: string | undefined,
+    symbol: string | undefined,
+    type: string
+  ) => {
+    const ticker = assetId ? getTickerSymbol(assetId) : symbol || type.toUpperCase();
+    const isXch = !assetId || ticker === "XCH" || ticker === "TXCH";
+
     if (isXch) {
-      return <XchIcon size={20} isTestnet={isTestnet} />
+      return <XchIcon size={20} isTestnet={isTestnet} />;
     }
-    return <TickerIcon assetId={assetId} ticker={ticker} size={20} />
-  }
+    return <TickerIcon assetId={assetId} ticker={ticker} size={20} />;
+  };
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -41,8 +41,8 @@ export function OfferAssetsSection({
           {(offer.assetsOffered || []).map((asset, index) => {
             const ticker = asset.assetId
               ? getTickerSymbol(asset.assetId)
-              : asset.symbol || asset.type.toUpperCase()
-            
+              : asset.symbol || asset.type.toUpperCase();
+
             return (
               <div
                 key={`offered-${index}`}
@@ -54,9 +54,7 @@ export function OfferAssetsSection({
                     <span className={`font-medium ${t.text} text-base`}>
                       {formatAssetAmount(asset.amount, asset.type)}
                     </span>
-                    <span className={`text-xs font-medium ${t.textSecondary}`}>
-                      {ticker}
-                    </span>
+                    <span className={`text-xs font-medium ${t.textSecondary}`}>{ticker}</span>
                   </div>
                 </div>
                 <div className="text-right">
@@ -65,7 +63,7 @@ export function OfferAssetsSection({
                   </span>
                 </div>
               </div>
-            )
+            );
           })}
         </div>
       </div>
@@ -79,8 +77,8 @@ export function OfferAssetsSection({
           {(offer.assetsRequested || []).map((asset, index) => {
             const ticker = asset.assetId
               ? getTickerSymbol(asset.assetId)
-              : asset.symbol || asset.type.toUpperCase()
-            
+              : asset.symbol || asset.type.toUpperCase();
+
             return (
               <div
                 key={`requested-${index}`}
@@ -92,9 +90,7 @@ export function OfferAssetsSection({
                     <span className={`font-medium ${t.text} text-base`}>
                       {formatAssetAmount(asset.amount, asset.type)}
                     </span>
-                    <span className={`text-xs font-medium ${t.textSecondary}`}>
-                      {ticker}
-                    </span>
+                    <span className={`text-xs font-medium ${t.textSecondary}`}>{ticker}</span>
                   </div>
                 </div>
                 <div className="text-right">
@@ -103,10 +99,10 @@ export function OfferAssetsSection({
                   </span>
                 </div>
               </div>
-            )
+            );
           })}
         </div>
       </div>
     </div>
-  )
+  );
 }

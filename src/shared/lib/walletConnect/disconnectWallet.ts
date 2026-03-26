@@ -4,10 +4,7 @@ import {
   connectSession as connectSessionAction,
   setConnectedWallet,
 } from "@maximedogawa/chia-wallet-connect-react";
-import {
-  WALLET_CONNECT_STORAGE_KEY,
-  getWalletConnectAppConfig,
-} from "./constants/wallet-connect";
+import { WALLET_CONNECT_STORAGE_KEY, getWalletConnectAppConfig } from "./constants/wallet-connect";
 
 export interface DisconnectWalletOptions {
   /** Clear all redux-persist keys from localStorage (use on loading fallback before redirect). */
@@ -20,9 +17,7 @@ export interface DisconnectWalletOptions {
  * Disconnect wallet: end WalletConnect sessions, clear Redux state and localStorage.
  * Reusable from SafeConnectButton (disconnect only) and PersistGateLoadingFallback (disconnect + clear persist + redirect).
  */
-export async function disconnectWallet(
-  options: DisconnectWalletOptions = {}
-): Promise<void> {
+export async function disconnectWallet(options: DisconnectWalletOptions = {}): Promise<void> {
   const { clearPersist = false, redirectToLogin = false } = options;
 
   try {
@@ -46,12 +41,9 @@ export async function disconnectWallet(
       try {
         localStorage.removeItem(WALLET_CONNECT_STORAGE_KEY);
         if (clearPersist) {
-          const keysToRemove = Array.from(
-            { length: window.localStorage.length },
-            (_, i) => window.localStorage.key(i)
-          ).filter(
-            (key): key is string => key !== null && key.startsWith("persist:")
-          );
+          const keysToRemove = Array.from({ length: window.localStorage.length }, (_, i) =>
+            window.localStorage.key(i)
+          ).filter((key): key is string => key !== null && key.startsWith("persist:"));
           keysToRemove.forEach((key) => localStorage.removeItem(key));
         }
       } catch {

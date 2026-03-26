@@ -101,9 +101,7 @@ export default function OrderTooltip({
       style={tooltipStyle}
     >
       <div className="space-y-2">
-        <div className="text-sm font-semibold text-gray-900 dark:text-white">
-          Order Details
-        </div>
+        <div className="text-sm font-semibold text-gray-900 dark:text-white">Order Details</div>
 
         {/* Order ID */}
         <div>
@@ -115,22 +113,15 @@ export default function OrderTooltip({
 
         {/* Offering Assets */}
         <div>
-          <span className="text-xs text-gray-500 dark:text-gray-400">
-            Offering:
-          </span>
+          <span className="text-xs text-gray-500 dark:text-gray-400">Offering:</span>
           <div className="mt-1 space-y-1">
             {order.offering.map((asset, idx) => {
               const ticker = asset.code || getTickerSymbol(asset.id);
               return (
-                <div
-                  key={idx}
-                  className="flex items-center justify-between text-xs"
-                >
+                <div key={idx} className="flex items-center justify-between text-xs">
                   <div className="flex items-center gap-1.5">
                     {renderAssetIcon(asset.id, ticker)}
-                    <span className="text-gray-900 dark:text-white">
-                      {ticker}
-                    </span>
+                    <span className="text-gray-900 dark:text-white">{ticker}</span>
                   </div>
                   <span className="font-mono text-gray-700 dark:text-gray-300">
                     {formatAmountForTooltip(asset.amount || 0)}
@@ -143,22 +134,15 @@ export default function OrderTooltip({
 
         {/* Requested Assets */}
         <div>
-          <span className="text-xs text-gray-500 dark:text-gray-400">
-            Requested:
-          </span>
+          <span className="text-xs text-gray-500 dark:text-gray-400">Requested:</span>
           <div className="mt-1 space-y-1">
             {order.requesting.map((asset, idx) => {
               const ticker = asset.code || getTickerSymbol(asset.id);
               return (
-                <div
-                  key={idx}
-                  className="flex items-center justify-between text-xs"
-                >
+                <div key={idx} className="flex items-center justify-between text-xs">
                   <div className="flex items-center gap-1.5">
                     {renderAssetIcon(asset.id, ticker)}
-                    <span className="text-gray-900 dark:text-white">
-                      {ticker}
-                    </span>
+                    <span className="text-gray-900 dark:text-white">{ticker}</span>
                   </div>
                   <span className="font-mono text-gray-700 dark:text-gray-300">
                     {formatAmountForTooltip(asset.amount || 0)}
@@ -170,25 +154,22 @@ export default function OrderTooltip({
         </div>
 
         {/* Price Range Percentage */}
-        {priceDeviationPercent !== null &&
-          priceDeviationPercent !== undefined && (
-            <div>
-              <span className="text-xs text-gray-500 dark:text-gray-400">
-                Price Range:
-              </span>
-              <span className="text-xs font-mono text-gray-900 dark:text-white ml-1">
-                {priceDeviationPercent < 0.01
-                  ? (() => {
-                      // Show full precision up to 10 decimal places, remove trailing zeros
-                      const formatted = priceDeviationPercent.toFixed(10);
-                      // Remove trailing zeros after decimal point, but keep at least .0
-                      const trimmed = formatted.replace(/0+$/, "");
-                      return `${trimmed.endsWith(".") ? `${trimmed}0` : trimmed}%`;
-                    })()
-                  : `${priceDeviationPercent.toFixed(2)}%`}
-              </span>
-            </div>
-          )}
+        {priceDeviationPercent !== null && priceDeviationPercent !== undefined && (
+          <div>
+            <span className="text-xs text-gray-500 dark:text-gray-400">Price Range:</span>
+            <span className="text-xs font-mono text-gray-900 dark:text-white ml-1">
+              {priceDeviationPercent < 0.01
+                ? (() => {
+                    // Show full precision up to 10 decimal places, remove trailing zeros
+                    const formatted = priceDeviationPercent.toFixed(10);
+                    // Remove trailing zeros after decimal point, but keep at least .0
+                    const trimmed = formatted.replace(/0+$/, "");
+                    return `${trimmed.endsWith(".") ? `${trimmed}0` : trimmed}%`;
+                  })()
+                : `${priceDeviationPercent.toFixed(2)}%`}
+            </span>
+          </div>
+        )}
 
         <div className="text-xs text-gray-500 dark:text-gray-400">
           {new Date(order.timestamp).toLocaleString()}

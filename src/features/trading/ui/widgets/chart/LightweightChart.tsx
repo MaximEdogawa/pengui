@@ -19,10 +19,7 @@ import { useEffect, useRef, useState } from "react";
 import { useResponsive } from "@/shared/hooks/useResponsive";
 import { logger } from "@/shared/lib/logger";
 import { ChartConfig, OHLCData } from "@/features/trading/lib/chartTypes";
-import {
-  ohlcToPricePoints,
-  ohlcToVolumePoints,
-} from "@/features/trading/lib/utils/chartUtils";
+import { ohlcToPricePoints, ohlcToVolumePoints } from "@/features/trading/lib/utils/chartUtils";
 
 /** Indicator data passed to the chart for overlays (SMA, EMA, RSI, MACD, Bollinger) */
 interface ChartIndicators {
@@ -209,7 +206,7 @@ function isValidPoint(p: { time: number; value: number }): boolean {
  */
 function removeSeries(
   chart: IChartApi,
-  series: ISeriesApi<"Candlestick" | "Line" | "Histogram"> | null,
+  series: ISeriesApi<"Candlestick" | "Line" | "Histogram"> | null
 ) {
   if (series) {
     try {
@@ -223,7 +220,7 @@ function removeSeries(
 function setupMainSeries(
   chart: IChartApi,
   ohlcData: OHLCData[],
-  chartType: "candlestick" | "line",
+  chartType: "candlestick" | "line"
 ): ISeriesApi<"Candlestick" | "Line"> {
   // Filter and validate candles
   const validCandles = ohlcData.filter(isValidCandle);
@@ -253,10 +250,7 @@ function setupMainSeries(
   }
 }
 
-function setupVolumeSeries(
-  chart: IChartApi,
-  ohlcData: OHLCData[],
-): ISeriesApi<"Histogram"> {
+function setupVolumeSeries(chart: IChartApi, ohlcData: OHLCData[]): ISeriesApi<"Histogram"> {
   const volumeSeries = chart.addSeries(HistogramSeries, {
     color: "rgba(100, 100, 100, 0.3)",
     priceFormat: { type: "volume" },
@@ -272,7 +266,7 @@ function setupVolumeSeries(
         time: p.time as Time,
         value: p.value,
         color: p.color,
-      })) as HistogramData<Time>[],
+      })) as HistogramData<Time>[]
   );
   return volumeSeries;
 }
@@ -284,7 +278,7 @@ function setupMovingAverages(
     periods: number[];
     values: Record<number, number[]>;
     type: "sma" | "ema";
-  },
+  }
 ): ISeriesApi<"Line">[] {
   const series: ISeriesApi<"Line">[] = [];
   const { periods, values, type } = options;
@@ -300,9 +294,8 @@ function setupMovingAverages(
     if (data.length > 0) {
       const maSeries = chart.addSeries(LineSeries, {
         color:
-          MOVING_AVERAGE_COLORS[type][
-            period as keyof typeof MOVING_AVERAGE_COLORS.sma
-          ] || MOVING_AVERAGE_COLORS[type][20],
+          MOVING_AVERAGE_COLORS[type][period as keyof typeof MOVING_AVERAGE_COLORS.sma] ||
+          MOVING_AVERAGE_COLORS[type][20],
         lineWidth: 1,
         title: `${type.toUpperCase()} ${period}`,
       });
@@ -310,7 +303,7 @@ function setupMovingAverages(
         data.map((d) => ({
           time: d.time as Time,
           value: d.value,
-        })) as LineData<Time>[],
+        })) as LineData<Time>[]
       );
       series.push(maSeries);
     }
@@ -321,7 +314,7 @@ function setupMovingAverages(
 function setupRSI(
   chart: IChartApi,
   ohlcData: OHLCData[],
-  rsiValues: number[],
+  rsiValues: number[]
 ): ISeriesApi<"Line"> | null {
   const rsiData = ohlcData
     .map((candle, idx) => ({ time: candle.time, value: rsiValues[idx] || NaN }))
@@ -339,7 +332,7 @@ function setupRSI(
     rsiData.map((d) => ({
       time: d.time as Time,
       value: d.value,
-    })) as LineData<Time>[],
+    })) as LineData<Time>[]
   );
   rsiSeries.priceScale().applyOptions({
     scaleMargins: { top: 0.1, bottom: 0.1 },
@@ -370,7 +363,7 @@ function setupMACD(
     macd: number;
     signal: number;
     histogram: number;
-  }>,
+  }>
 ): Array<ISeriesApi<"Line" | "Histogram">> {
   const series: Array<ISeriesApi<"Line" | "Histogram">> = [];
 
@@ -420,7 +413,7 @@ function setupMACD(
           time: d.time as Time,
           value: d.value,
           color: d.color,
-        })) as HistogramData<Time>[],
+        })) as HistogramData<Time>[]
       );
       series.push(histogramSeries);
     }
@@ -440,7 +433,7 @@ function setupBollingerBands(
     upper: number;
     middle: number;
     lower: number;
-  }>,
+  }>
 ): ISeriesApi<"Line">[] {
   const series: ISeriesApi<"Line">[] = [];
   const bands = ["upper", "middle", "lower"] as const;
@@ -471,9 +464,7 @@ function setupBollingerBands(
 function setupCurrentPriceLine(
   series: ISeriesApi<"Candlestick" | "Line">,
   currentPrice: number,
-  existingPriceLine: ReturnType<
-    ISeriesApi<"Candlestick" | "Line">["createPriceLine"]
-  > | null,
+  existingPriceLine: ReturnType<ISeriesApi<"Candlestick" | "Line">["createPriceLine"]> | null
 ): ReturnType<ISeriesApi<"Candlestick" | "Line">["createPriceLine"]> | null {
   if (existingPriceLine) {
     try {
@@ -503,11 +494,9 @@ function setupAllIndicators(
   options: {
     config: ChartConfig;
     indicators: ChartIndicators;
-    indicatorSeriesRef: React.MutableRefObject<
-      Array<ISeriesApi<"Line" | "Histogram">>
-    >;
+    indicatorSeriesRef: React.MutableRefObject<Array<ISeriesApi<"Line" | "Histogram">>>;
     volumeSeriesRef: React.MutableRefObject<ISeriesApi<"Histogram"> | null>;
-  },
+  }
 ) {
   const { config, indicators, indicatorSeriesRef, volumeSeriesRef } = options;
   // Volume is always shown
@@ -544,10 +533,7 @@ function setupAllIndicators(
     indicatorSeriesRef.current.push(...macdSeries);
   }
 
-  if (
-    config.indicators.bollingerBands &&
-    indicators.bollingerBands.length > 0
-  ) {
+  if (config.indicators.bollingerBands && indicators.bollingerBands.length > 0) {
     const bbSeries = setupBollingerBands(chart, indicators.bollingerBands);
     indicatorSeriesRef.current.push(...bbSeries);
   }
@@ -557,7 +543,7 @@ function applyPriceScaleConfiguration(
   series: ISeriesApi<"Candlestick" | "Line"> | null,
   ohlcData: OHLCData[],
   config: ChartConfig,
-  isMobile: boolean,
+  isMobile: boolean
 ) {
   if (!series || ohlcData.length === 0) return;
 
@@ -600,7 +586,7 @@ function getHoursBackForTimeframe(timeframe: string): number {
 function applyDefaultZoomLevel(
   timeScale: ReturnType<IChartApi["timeScale"]>,
   ohlcData: OHLCData[],
-  timeframe: string,
+  timeframe: string
 ) {
   try {
     if (ohlcData.length > 0) {
@@ -611,10 +597,7 @@ function applyDefaultZoomLevel(
       // Calculate range from the last candle time (not current time)
       // This ensures we show the last X hours of available data
       const to = lastCandleTime;
-      const from = Math.max(
-        lastCandleTime - hoursBack * SECONDS_PER_HOUR,
-        firstCandleTime,
-      );
+      const from = Math.max(lastCandleTime - hoursBack * SECONDS_PER_HOUR, firstCandleTime);
 
       // Only set range if it's valid
       if (from < to) {
@@ -658,12 +641,7 @@ interface OHLCDataPanelProps {
   isMobile?: boolean;
 }
 
-function OHLCDataPanel({
-  data,
-  change,
-  priceDecimals = 6,
-  isMobile = false,
-}: OHLCDataPanelProps) {
+function OHLCDataPanel({ data, change, priceDecimals = 6, isMobile = false }: OHLCDataPanelProps) {
   const [expanded, setExpanded] = useState(false);
 
   if (!data) return null;
@@ -736,7 +714,9 @@ function OHLCDataPanel({
           aria-label="Show OHLC stats"
         >
           OHLC
-          <span className="ml-1 text-[#868993] inline-block" aria-hidden>▸</span>
+          <span className="ml-1 text-[#868993] inline-block" aria-hidden>
+            ▸
+          </span>
         </button>
       ) : (
         <div
@@ -758,7 +738,9 @@ function OHLCDataPanel({
         >
           {showToggle && (
             <div className="flex items-center justify-end mb-1">
-              <span className="text-[#868993] text-xs" aria-hidden>▾</span>
+              <span className="text-[#868993] text-xs" aria-hidden>
+                ▾
+              </span>
             </div>
           )}
           {panelContent}
@@ -771,7 +753,7 @@ function OHLCDataPanel({
 function applyBarSpacing(
   timeScale: ReturnType<IChartApi["timeScale"]>,
   config: ChartConfig,
-  isMobile: boolean,
+  isMobile: boolean
 ) {
   const isCandlestick = config.chartType === "candlestick";
 
@@ -800,7 +782,7 @@ type CrosshairMoveParam = Parameters<Parameters<IChartApi["subscribeCrosshairMov
 
 function createCrosshairMoveHandler(
   ohlcDataRef: React.MutableRefObject<OHLCData[]>,
-  setHoveredData: React.Dispatch<React.SetStateAction<OHLCData | null>>,
+  setHoveredData: React.Dispatch<React.SetStateAction<OHLCData | null>>
 ) {
   return (param: CrosshairMoveParam) => {
     if (param.time && param.seriesData) {
@@ -829,7 +811,7 @@ function createWheelHandler(
   chartContainerRef: React.RefObject<HTMLDivElement | null>,
   chartRef: React.RefObject<IChartApi | null>,
   timeScale: ReturnType<IChartApi["timeScale"]>,
-  handleVisibleRangeChange: () => void,
+  handleVisibleRangeChange: () => void
 ) {
   return (e: WheelEvent) => {
     if (!chartContainerRef.current || !chartRef.current) return;
@@ -851,10 +833,7 @@ function createWheelHandler(
     const maxBarSpacing = currentOptions.maxBarSpacing ?? MAX_BAR_SPACING;
     const delta = e.deltaY * -0.01 * ZOOM_WHEEL_MULTIPLIER;
     let newBarSpacing = currentBarSpacing + delta;
-    newBarSpacing = Math.max(
-      minBarSpacing,
-      Math.min(maxBarSpacing, newBarSpacing),
-    );
+    newBarSpacing = Math.max(minBarSpacing, Math.min(maxBarSpacing, newBarSpacing));
 
     timeScale.applyOptions({ barSpacing: newBarSpacing });
     handleVisibleRangeChange();
@@ -863,7 +842,7 @@ function createWheelHandler(
 
 function setupResizeObserver(
   chartContainerRef: React.RefObject<HTMLDivElement | null>,
-  chartRef: React.RefObject<IChartApi | null>,
+  chartRef: React.RefObject<IChartApi | null>
 ) {
   const handleResize = () => {
     if (chartRef.current && chartContainerRef.current) {
@@ -912,9 +891,7 @@ export function LightweightChart({
   const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<"Candlestick" | "Line"> | null>(null);
   const volumeSeriesRef = useRef<ISeriesApi<"Histogram"> | null>(null);
-  const indicatorSeriesRef = useRef<Array<ISeriesApi<"Line" | "Histogram">>>(
-    [],
-  );
+  const indicatorSeriesRef = useRef<Array<ISeriesApi<"Line" | "Histogram">>>([]);
   const priceLineRef = useRef<ReturnType<
     ISeriesApi<"Candlestick" | "Line">["createPriceLine"]
   > | null>(null);
@@ -963,10 +940,7 @@ export function LightweightChart({
     timeScale.subscribeVisibleTimeRangeChange(handleVisibleRangeChange);
 
     // Subscribe to crosshair move to update hovered data
-    const handleCrosshairMove = createCrosshairMoveHandler(
-      ohlcDataRef,
-      setHoveredData,
-    );
+    const handleCrosshairMove = createCrosshairMoveHandler(ohlcDataRef, setHoveredData);
     chart.subscribeCrosshairMove(handleCrosshairMove);
 
     // Custom mouse wheel handler for faster zoom
@@ -974,7 +948,7 @@ export function LightweightChart({
       chartContainerRef,
       chartRef,
       timeScale,
-      handleVisibleRangeChange,
+      handleVisibleRangeChange
     );
     const container = chartContainerRef.current;
     if (container) {
@@ -982,10 +956,7 @@ export function LightweightChart({
     }
 
     // Setup ResizeObserver for container resizing
-    const { resizeObserver, handleResize } = setupResizeObserver(
-      chartContainerRef,
-      chartRef,
-    );
+    const { resizeObserver, handleResize } = setupResizeObserver(chartContainerRef, chartRef);
 
     return () => {
       resizeObserver.disconnect();
@@ -1007,8 +978,7 @@ export function LightweightChart({
     if (!chart) return;
     chart.applyOptions({
       localization: {
-        priceFormatter: (p: number) =>
-          Number.isFinite(p) ? p.toFixed(priceDecimals) : "—",
+        priceFormatter: (p: number) => (Number.isFinite(p) ? p.toFixed(priceDecimals) : "—"),
       },
     });
   }, [priceDecimals]);
@@ -1017,16 +987,9 @@ export function LightweightChart({
     if (!chartRef.current) return;
 
     const container = chartContainerRef.current;
-    if (
-      container &&
-      (container.clientWidth === 0 || container.clientHeight === 0)
-    ) {
+    if (container && (container.clientWidth === 0 || container.clientHeight === 0)) {
       const timer = setTimeout(() => {
-        if (
-          chartRef.current &&
-          container.clientWidth > 0 &&
-          container.clientHeight > 0
-        ) {
+        if (chartRef.current && container.clientWidth > 0 && container.clientHeight > 0) {
           chartRef.current.applyOptions({
             width: container.clientWidth,
             height: container.clientHeight,
@@ -1060,7 +1023,7 @@ export function LightweightChart({
       priceLineRef.current = setupCurrentPriceLine(
         seriesRef.current,
         currentPrice,
-        priceLineRef.current,
+        priceLineRef.current
       );
     }
 
@@ -1096,8 +1059,7 @@ export function LightweightChart({
 
     return { value: changeValue, percent };
   })();
-  const displayData =
-    hoveredData || (ohlcData.length > 0 ? ohlcData[ohlcData.length - 1] : null);
+  const displayData = hoveredData || (ohlcData.length > 0 ? ohlcData[ohlcData.length - 1] : null);
 
   return (
     <div className="h-full flex flex-col relative bg-[#131722]">
@@ -1116,7 +1078,11 @@ export function LightweightChart({
       />
 
       <div className="flex-1 relative min-h-[300px] sm:min-h-[400px]">
-        <div ref={chartContainerRef} className="w-full h-full min-h-[300px] sm:min-h-[400px] touch-manipulation" style={{ touchAction: 'none' }} />
+        <div
+          ref={chartContainerRef}
+          className="w-full h-full min-h-[300px] sm:min-h-[400px] touch-manipulation"
+          style={{ touchAction: "none" }}
+        />
       </div>
     </div>
   );

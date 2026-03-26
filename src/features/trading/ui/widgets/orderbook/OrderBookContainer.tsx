@@ -35,10 +35,7 @@ interface OrderBookContainerProps {
   onOrderClick: (order: OrderBookOrder) => void;
 }
 
-export default function OrderBookContainer({
-  filters,
-  onOrderClick,
-}: OrderBookContainerProps) {
+export default function OrderBookContainer({ filters, onOrderClick }: OrderBookContainerProps) {
   const { filters: contextFilters } = useOrderBookFilters();
   const { t, isDark } = useThemeClasses();
 
@@ -82,19 +79,15 @@ export default function OrderBookContainer({
     return myTrades.length > 0;
   }, [myTrades]);
 
-  const { filteredBuyOrders, filteredSellOrders, calculatePriceFn } =
-    useOrderBookFiltering(orderBookData, contextFilters);
+  const { filteredBuyOrders, filteredSellOrders, calculatePriceFn } = useOrderBookFiltering(
+    orderBookData,
+    contextFilters
+  );
 
-  const { sellSectionHeight, buySectionHeight, startResize } =
-    useOrderBookResize();
+  const { sellSectionHeight, buySectionHeight, startResize } = useOrderBookResize();
 
-  const {
-    hoveredOrder,
-    tooltipPosition,
-    tooltipVisible,
-    updateTooltipPosition,
-    hideTooltip,
-  } = useOrderBookTooltip();
+  const { hoveredOrder, tooltipPosition, tooltipVisible, updateTooltipPosition, hideTooltip } =
+    useOrderBookTooltip();
 
   // Helper function to get ticker symbol
   const getTickerSymbol = useCallback(
@@ -104,7 +97,7 @@ export default function OrderBookContainer({
       const tickerInfo = getCatTokenInfo(assetId);
       return tickerInfo?.ticker || assetId.slice(0, 8);
     },
-    [getCatTokenInfo, network],
+    [getCatTokenInfo, network]
   );
 
   // Calculate price deviation percentage for hovered order
@@ -125,12 +118,11 @@ export default function OrderBookContainer({
     filteredSellOrders,
     filteredBuyOrders,
     sellScrollRef,
-    buyScrollRef,
+    buyScrollRef
   );
 
   // Fetch detailed data for visible orders only
-  const { detailsMap, isLoading: isLoadingDetails } =
-    useOrderBookDetails(visibleOrderIds);
+  const { detailsMap, isLoading: isLoadingDetails } = useOrderBookDetails(visibleOrderIds);
 
   // Handle scroll behavior (auto-scroll, position restoration, infinite scroll)
   useOrderBookScroll({
@@ -157,7 +149,7 @@ export default function OrderBookContainer({
       bestSellOrder,
       bestBuyOrder,
       calculatePriceFn,
-      formatPriceForDisplay,
+      formatPriceForDisplay
     );
   }, [contextFilters, filteredSellOrders, filteredBuyOrders, calculatePriceFn]);
 
@@ -183,14 +175,9 @@ export default function OrderBookContainer({
         <div
           className={`mb-2 flex items-center gap-1.5 px-2 py-1 backdrop-blur-xl bg-blue-500/20 border border-blue-400/30 rounded-lg ${t.card}`}
         >
-          <User
-            className={`w-3 h-3 ${isDark ? "text-blue-400" : "text-blue-600"}`}
-          />
-          <span
-            className={`text-xs font-medium ${isDark ? "text-blue-400" : "text-blue-600"}`}
-          >
-            {myTrades.length} {myTrades.length === 1 ? "Trade" : "Trades"} for
-            this pair
+          <User className={`w-3 h-3 ${isDark ? "text-blue-400" : "text-blue-600"}`} />
+          <span className={`text-xs font-medium ${isDark ? "text-blue-400" : "text-blue-600"}`}>
+            {myTrades.length} {myTrades.length === 1 ? "Trade" : "Trades"} for this pair
           </span>
         </div>
       )}
@@ -235,10 +222,7 @@ export default function OrderBookContainer({
         </div>
 
         {/* Resize Handle / Market Price Separator */}
-        <OrderBookResizeHandle
-          averagePrice={averagePrice}
-          onMouseDown={startResize}
-        />
+        <OrderBookResizeHandle averagePrice={averagePrice} onMouseDown={startResize} />
 
         {/* Buy Orders Section */}
         <div
@@ -272,11 +256,7 @@ export default function OrderBookContainer({
         order={hoveredOrder}
         visible={tooltipVisible}
         position={tooltipPosition}
-        direction={
-          hoveredOrder && filteredBuyOrders.includes(hoveredOrder)
-            ? "top"
-            : "bottom"
-        }
+        direction={hoveredOrder && filteredBuyOrders.includes(hoveredOrder) ? "top" : "bottom"}
         priceDeviationPercent={priceDeviationPercent}
       />
     </div>

@@ -1,14 +1,7 @@
-'use client';
+"use client";
 
-import { usePathname } from 'next/navigation';
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-} from 'react';
+import { usePathname } from "next/navigation";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 
 /** Delay before showing the bar so fast navigations don't flash. */
 const SHOW_AFTER_MS = 120;
@@ -21,29 +14,25 @@ type NavigationProgressContextValue = {
   startNavigation: () => void;
 };
 
-const NavigationProgressContext = createContext<
-  NavigationProgressContextValue | undefined
->(undefined);
+const NavigationProgressContext = createContext<NavigationProgressContextValue | undefined>(
+  undefined
+);
 
 function isInternalLink(el: EventTarget | null): boolean {
   if (!el || !(el instanceof HTMLElement)) return false;
-  const anchor = el.closest?.('a');
+  const anchor = el.closest?.("a");
   if (!anchor || !anchor.href) return false;
   try {
     const url = new URL(anchor.href);
     if (url.origin !== window.location.origin) return false;
-    if (anchor.target === '_blank' || anchor.hasAttribute('download')) return false;
+    if (anchor.target === "_blank" || anchor.hasAttribute("download")) return false;
     return url.pathname !== window.location.pathname;
   } catch {
     return false;
   }
 }
 
-export function NavigationProgressProvider({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export function NavigationProgressProvider({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [isNavigating, setIsNavigating] = useState(false);
   const [showBar, setShowBar] = useState(false);
@@ -80,8 +69,8 @@ export function NavigationProgressProvider({
       if (!isInternalLink(e.target)) return;
       startNavigation();
     };
-    document.addEventListener('click', handleClick, true);
-    return () => document.removeEventListener('click', handleClick, true);
+    document.addEventListener("click", handleClick, true);
+    return () => document.removeEventListener("click", handleClick, true);
   }, [startNavigation]);
 
   useEffect(() => {
@@ -92,9 +81,7 @@ export function NavigationProgressProvider({
   }, []);
 
   return (
-    <NavigationProgressContext.Provider
-      value={{ isNavigating, startNavigation }}
-    >
+    <NavigationProgressContext.Provider value={{ isNavigating, startNavigation }}>
       {children}
       {showBar && (
         <div
@@ -112,9 +99,7 @@ export function NavigationProgressProvider({
 export function useNavigationProgress(): NavigationProgressContextValue {
   const ctx = useContext(NavigationProgressContext);
   if (ctx === undefined) {
-    throw new Error(
-      'useNavigationProgress must be used within NavigationProgressProvider',
-    );
+    throw new Error("useNavigationProgress must be used within NavigationProgressProvider");
   }
   return ctx;
 }

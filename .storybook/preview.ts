@@ -1,44 +1,41 @@
-import React from 'react'
-import { StoryWrapper } from './StoryWrapper'
-import '../src/app/globals.css'
+import React from "react";
+import { StoryWrapper } from "./StoryWrapper";
+import "../src/app/globals.css";
 // Import wallet connect package styles
-import '@maximedogawa/chia-wallet-connect-react/styles'
+import "@maximedogawa/chia-wallet-connect-react/styles";
 
 const preview = {
   parameters: {
     controls: {
       matchers: {
-       color: /(background|color)$/i,
-       date: /Date$/i,
+        color: /(background|color)$/i,
+        date: /Date$/i,
       },
     },
     backgrounds: {
-      default: 'light',
+      default: "light",
       values: [
         {
-          name: 'light',
-          value: '#ffffff',
+          name: "light",
+          value: "#ffffff",
         },
         {
-          name: 'dark',
-          value: '#0f172a',
+          name: "dark",
+          value: "#0f172a",
         },
       ],
     },
     nextjs: {
       appDirectory: true,
       navigation: {
-        pathname: '/dashboard',
+        pathname: "/dashboard",
         query: {},
       },
     },
   },
   decorators: [
     (Story: React.ComponentType) =>
-      React.createElement(
-        StoryWrapper,
-        { children: React.createElement(Story) }
-      ),
+      React.createElement(StoryWrapper, { children: React.createElement(Story) }),
   ],
 };
 

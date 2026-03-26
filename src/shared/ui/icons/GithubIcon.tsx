@@ -12,7 +12,7 @@ function GithubIcon() {
         fill="#fff"
       />
     </svg>
-  )
+  );
 }
 
-export default GithubIcon
+export default GithubIcon;

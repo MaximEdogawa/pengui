@@ -48,11 +48,10 @@ export default function OrderBookPaginationControls({
       onChange(newValue);
       setIsOpen(false);
     },
-    [onChange],
+    [onChange]
   );
 
-  const currentLabel =
-    PAGINATION_OPTIONS.find((opt) => opt.value === value)?.label || "50";
+  const currentLabel = PAGINATION_OPTIONS.find((opt) => opt.value === value)?.label || "50";
 
   return (
     <div className="relative">
@@ -94,9 +93,7 @@ export default function OrderBookPaginationControls({
         />
 
         {/* Content */}
-        <span className={`relative z-10 text-xs font-medium ${t.text}`}>
-          {currentLabel}
-        </span>
+        <span className={`relative z-10 text-xs font-medium ${t.text}`}>{currentLabel}</span>
         <ChevronDown
           className={`relative z-10 w-3 h-3 ${t.textSecondary} transition-transform ${isOpen ? "rotate-180" : ""}`}
         />
@@ -105,18 +102,13 @@ export default function OrderBookPaginationControls({
       {isOpen && (
         <>
           {/* Backdrop */}
-          <div
-            className="fixed inset-0 z-10"
-            onClick={() => setIsOpen(false)}
-            aria-hidden="true"
-          />
+          <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)} aria-hidden="true" />
 
           {/* Dropdown */}
           <div
             className={`absolute right-0 top-full mt-1 z-20 min-w-[80px] ${t.card} border ${t.border} rounded-md shadow-lg backdrop-blur-xl`}
             style={{
-              boxShadow:
-                "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
+              boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
             }}
             role="listbox"
           >

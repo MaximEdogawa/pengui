@@ -39,7 +39,7 @@ export function useAddLpReceiveAndSync(
   requestedAmount: string,
   xchIsOffered: boolean,
   setLpAmount: (v: string) => void,
-  onProgrammaticLpSet?: () => void,
+  onProgrammaticLpSet?: () => void
 ) {
   const addLpReceive = useMemo(() => {
     if (
@@ -106,12 +106,8 @@ export function useLiquidityHandlers({
 
   const handleAdd = async () => {
     if (!selectedPair) return;
-    const xch = xchIsOffered
-      ? parseFloat(offeredAmount) || 0
-      : parseFloat(requestedAmount) || 0;
-    const token = xchIsOffered
-      ? parseFloat(requestedAmount) || 0
-      : parseFloat(offeredAmount) || 0;
+    const xch = xchIsOffered ? parseFloat(offeredAmount) || 0 : parseFloat(requestedAmount) || 0;
+    const token = xchIsOffered ? parseFloat(requestedAmount) || 0 : parseFloat(offeredAmount) || 0;
     if (xch <= 0 || token <= 0) {
       setLiquidityError("Enter both Sell and Buy amounts");
       return;
@@ -121,11 +117,7 @@ export function useLiquidityHandlers({
     try {
       // Fetch fresh pair state so amounts match current pool reserves
       const freshPair = await tibetApi.getPair(selectedPair.pair_id);
-      if (
-        freshPair.xch_reserve <= 0 ||
-        freshPair.token_reserve <= 0 ||
-        freshPair.liquidity <= 0
-      ) {
+      if (freshPair.xch_reserve <= 0 || freshPair.token_reserve <= 0 || freshPair.liquidity <= 0) {
         setLiquidityError("Pool has no liquidity, cannot add");
         return;
       }
@@ -144,15 +136,11 @@ export function useLiquidityHandlers({
       const lpReceiveSmallest = Math.floor(
         Math.min(
           xchMojosToOffer / freshPair.xch_reserve,
-          tokenSmallestToOffer / freshPair.token_reserve,
-        ) * freshPair.liquidity,
+          tokenSmallestToOffer / freshPair.token_reserve
+        ) * freshPair.liquidity
       );
 
-      if (
-        xchMojosToOffer <= 0 ||
-        tokenSmallestToOffer <= 0 ||
-        lpReceiveSmallest <= 0
-      ) {
+      if (xchMojosToOffer <= 0 || tokenSmallestToOffer <= 0 || lpReceiveSmallest <= 0) {
         setLiquidityError("Amounts too small, increase XCH or token input");
         return;
       }
@@ -216,15 +204,9 @@ export function useLiquidityHandlers({
 
       let lpSmallest: number;
       if (xchDisplay > 0 && tokenDisplay > 0) {
-        const computed = lpToRemoveFromDesiredOutput(
-          freshPair,
-          xchDisplay,
-          tokenDisplay,
-        );
+        const computed = lpToRemoveFromDesiredOutput(freshPair, xchDisplay, tokenDisplay);
         if (computed == null || computed <= 0) {
-          setLiquidityError(
-            "Amounts should match pool ratio (use Sell and Buy)",
-          );
+          setLiquidityError("Amounts should match pool ratio (use Sell and Buy)");
           return;
         }
         lpSmallest = computed;
@@ -235,9 +217,7 @@ export function useLiquidityHandlers({
       const removeShare = lpSmallest / freshPair.liquidity;
       // Use floor so we never request more than the AMM formula yields
       const xchMojosExpected = Math.floor(freshPair.xch_reserve * removeShare);
-      const tokenSmallestExpected = Math.floor(
-        freshPair.token_reserve * removeShare,
-      );
+      const tokenSmallestExpected = Math.floor(freshPair.token_reserve * removeShare);
 
       if (xchMojosExpected <= 0 || tokenSmallestExpected <= 0) {
         setLiquidityError("LP amount too small to withdraw meaningful funds");

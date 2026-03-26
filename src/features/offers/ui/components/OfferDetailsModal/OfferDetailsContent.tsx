@@ -1,26 +1,26 @@
-'use client'
+"use client";
 
-import type { OfferDetails } from '@/entities/offer'
-import { Check, Copy, CheckCircle, ExternalLink } from 'lucide-react'
-import { Button } from '@/shared/ui'
-import type { ThemeClasses } from '@/shared/lib/theme'
-import { OfferStatusSection } from './OfferStatusSection'
-import { OfferAssetsSection } from './OfferAssetsSection'
-import { OfferInfoSection } from './OfferInfoSection'
+import type { OfferDetails } from "@/entities/offer";
+import { Check, Copy, CheckCircle, ExternalLink } from "lucide-react";
+import { Button } from "@/shared/ui";
+import type { ThemeClasses } from "@/shared/lib/theme";
+import { OfferStatusSection } from "./OfferStatusSection";
+import { OfferAssetsSection } from "./OfferAssetsSection";
+import { OfferInfoSection } from "./OfferInfoSection";
 
 interface OfferDetailsContentProps {
-  offer: OfferDetails
-  getStatusClass: (status: string) => string
-  formatDate: (date: Date) => string
-  getTickerSymbol: (assetId: string) => string
-  isCopied: boolean
-  uploadError: string
-  validationError: string
-  stateValidationError: string
-  dexieUrl: string | null
-  onCopyOfferString: () => void
-  onCopyOfferId: () => void
-  t: ThemeClasses
+  offer: OfferDetails;
+  getStatusClass: (status: string) => string;
+  formatDate: (date: Date) => string;
+  getTickerSymbol: (assetId: string) => string;
+  isCopied: boolean;
+  uploadError: string;
+  validationError: string;
+  stateValidationError: string;
+  dexieUrl: string | null;
+  onCopyOfferString: () => void;
+  onCopyOfferId: () => void;
+  t: ThemeClasses;
 }
 
 export function OfferDetailsContent({
@@ -62,7 +62,7 @@ export function OfferDetailsContent({
           <button
             onClick={onCopyOfferString}
             className={`absolute top-2 right-2 p-2 ${t.textSecondary} hover:${t.text}`}
-            title={isCopied ? 'Copied!' : 'Copy offer string'}
+            title={isCopied ? "Copied!" : "Copy offer string"}
           >
             {isCopied ? <Check size={16} /> : <Copy size={16} />}
           </button>
@@ -85,7 +85,12 @@ export function OfferDetailsContent({
                 traders.
               </p>
               {dexieUrl && (
-                <a href={dexieUrl} target="_blank" rel="noopener noreferrer" className="inline-flex">
+                <a
+                  href={dexieUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex"
+                >
                   <Button
                     variant="success"
                     icon={ExternalLink}
@@ -126,5 +131,5 @@ export function OfferDetailsContent({
         </div>
       )}
     </div>
-  )
+  );
 }

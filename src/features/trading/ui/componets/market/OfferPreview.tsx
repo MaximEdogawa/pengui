@@ -1,9 +1,6 @@
 "use client";
 
-import {
-  formatAssetAmount,
-  formatXchAmount,
-} from "@/shared/lib/utils/chia-units";
+import { formatAssetAmount, formatXchAmount } from "@/shared/lib/utils/chia-units";
 import { getDexieStatusDescription, type OfferAsset } from "@/entities/offer";
 import { TickerIcon, XchIcon } from "@/entities/asset";
 import { useThemeClasses, useNetwork } from "@/shared/hooks";
@@ -42,10 +39,7 @@ export default function OfferPreview({
     const isXch = !asset.assetId || ticker === "XCH" || ticker === "TXCH";
 
     return (
-      <span
-        key={asset.assetId || ticker}
-        className="inline-flex items-center gap-1"
-      >
+      <span key={asset.assetId || ticker} className="inline-flex items-center gap-1">
         {isXch ? (
           <XchIcon size={14} isTestnet={isTestnet} />
         ) : (
@@ -59,9 +53,7 @@ export default function OfferPreview({
   };
 
   return (
-    <div
-      className={`p-3 rounded-lg ${t.cardHover} backdrop-blur-xl border ${t.border}`}
-    >
+    <div className={`p-3 rounded-lg ${t.cardHover} backdrop-blur-xl border ${t.border}`}>
       <h4 className={`text-xs font-medium ${t.text} mb-2`}>Offer Preview</h4>
       <div className="space-y-1.5 text-xs">
         <div className="flex justify-between items-start">
@@ -69,10 +61,7 @@ export default function OfferPreview({
           <span className={`${t.text} flex flex-wrap gap-1 justify-end`}>
             {offerPreview.assetsOffered && offerPreview.assetsOffered.length > 0
               ? offerPreview.assetsOffered.map((a, idx) => (
-                  <span
-                    key={a.assetId || idx}
-                    className="inline-flex items-center gap-1"
-                  >
+                  <span key={a.assetId || idx} className="inline-flex items-center gap-1">
                     {renderAssetWithIcon(a)}
                     {idx < offerPreview.assetsOffered!.length - 1 && ","}
                   </span>
@@ -83,13 +72,9 @@ export default function OfferPreview({
         <div className="flex justify-between items-start">
           <span className={t.textSecondary}>You will pay:</span>
           <span className={`${t.text} flex flex-wrap gap-1 justify-end`}>
-            {offerPreview.assetsRequested &&
-            offerPreview.assetsRequested.length > 0
+            {offerPreview.assetsRequested && offerPreview.assetsRequested.length > 0
               ? offerPreview.assetsRequested.map((a, idx) => (
-                  <span
-                    key={a.assetId || idx}
-                    className="inline-flex items-center gap-1"
-                  >
+                  <span key={a.assetId || idx} className="inline-flex items-center gap-1">
                     {renderAssetWithIcon(a)}
                     {idx < offerPreview.assetsRequested!.length - 1 && ","}
                   </span>
@@ -98,50 +83,38 @@ export default function OfferPreview({
           </span>
         </div>
         {orderPrice !== null && (
-          <div
-            className={`flex justify-between border-t ${t.border} pt-1.5 mt-1.5`}
-          >
+          <div className={`flex justify-between border-t ${t.border} pt-1.5 mt-1.5`}>
             <span className={`text-xs ${t.textSecondary}`}>Price:</span>
             <span className={`text-xs font-mono ${t.text}`}>
               {formatPriceForDisplay(orderPrice)} {getPriceHeaderTicker()}
             </span>
           </div>
         )}
-        {priceDeviationPercent !== null &&
-          priceDeviationPercent !== undefined && (
-            <div
-              className={`flex justify-between border-t ${t.border} pt-1.5 mt-1.5`}
+        {priceDeviationPercent !== null && priceDeviationPercent !== undefined && (
+          <div className={`flex justify-between border-t ${t.border} pt-1.5 mt-1.5`}>
+            <span className={`text-xs ${t.textSecondary}`}>Price Range:</span>
+            <span
+              className={`text-xs font-mono ${t.text} cursor-help`}
+              title={`${priceDeviationPercent.toFixed(10)}%`}
             >
-              <span className={`text-xs ${t.textSecondary}`}>Price Range:</span>
-              <span
-                className={`text-xs font-mono ${t.text} cursor-help`}
-                title={`${priceDeviationPercent.toFixed(10)}%`}
-              >
-                {priceDeviationPercent < 0.01
-                  ? (() => {
-                      const formatted = priceDeviationPercent.toFixed(10);
-                      const trimmed = formatted.replace(/0+$/, "");
-                      return `${trimmed.endsWith(".") ? `${trimmed}0` : trimmed}%`;
-                    })()
-                  : `${priceDeviationPercent.toFixed(2)}%`}
-              </span>
-            </div>
-          )}
-        <div
-          className={`flex justify-between border-t ${t.border} pt-1.5 mt-1.5`}
-        >
+              {priceDeviationPercent < 0.01
+                ? (() => {
+                    const formatted = priceDeviationPercent.toFixed(10);
+                    const trimmed = formatted.replace(/0+$/, "");
+                    return `${trimmed.endsWith(".") ? `${trimmed}0` : trimmed}%`;
+                  })()
+                : `${priceDeviationPercent.toFixed(2)}%`}
+            </span>
+          </div>
+        )}
+        <div className={`flex justify-between border-t ${t.border} pt-1.5 mt-1.5`}>
           <span className={`font-medium ${t.text}`}>Fee:</span>
           <span className={`font-medium ${t.text}`}>
-            {formatXchAmount(
-              offerPreview.fee !== undefined ? offerPreview.fee : fee,
-            )}{" "}
-            XCH
+            {formatXchAmount(offerPreview.fee !== undefined ? offerPreview.fee : fee)} XCH
           </span>
         </div>
         {offerPreview.dexieStatus && (
-          <div
-            className={`flex justify-between border-t ${t.border} pt-1.5 mt-1.5`}
-          >
+          <div className={`flex justify-between border-t ${t.border} pt-1.5 mt-1.5`}>
             <span className={`font-medium ${t.text}`}>Status:</span>
             <span className={`font-medium ${t.text}`}>
               {getDexieStatusDescription(offerPreview.dexieStatus)}
@@ -149,9 +122,7 @@ export default function OfferPreview({
           </div>
         )}
         {offerPreview.creatorAddress && (
-          <div
-            className={`flex justify-between border-t ${t.border} pt-1.5 mt-1.5`}
-          >
+          <div className={`flex justify-between border-t ${t.border} pt-1.5 mt-1.5`}>
             <span className={`font-medium ${t.text}`}>Creator:</span>
             <span className={`font-medium ${t.text} text-xs font-mono`}>
               {offerPreview.creatorAddress.slice(0, 8)}...

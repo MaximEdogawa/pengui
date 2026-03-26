@@ -74,12 +74,17 @@ async function main() {
       status: 200,
       contentType: "application/json",
       bodyJson: (d) =>
-        typeof d === "object" && d != null && "status" in d && (d as { status: string }).status === "success" && "cats" in d,
+        typeof d === "object" &&
+        d != null &&
+        "status" in d &&
+        (d as { status: string }).status === "success" &&
+        "cats" in d,
       allow502: ALLOW_TOKENS_502,
     })
   );
 
-  const sampleIconUrl = "https://assets.spacescan.io/cat/f5cd9dccc98c1fd4f32b599324b6dd938c793c0e50af7581195aee603277bad8.webp";
+  const sampleIconUrl =
+    "https://assets.spacescan.io/cat/f5cd9dccc98c1fd4f32b599324b6dd938c793c0e50af7581195aee603277bad8.webp";
   results.push(
     await test(
       "GET /api/spacescan/icon",
@@ -96,7 +101,8 @@ async function main() {
     results.push({
       name: "GET /api/wasm/splash_wasm.js",
       ok:
-        (wasmJs.status === 200 && (wasmJs.ct ?? "").toLowerCase().includes("application/javascript")) ||
+        (wasmJs.status === 200 &&
+          (wasmJs.ct ?? "").toLowerCase().includes("application/javascript")) ||
         wasmJs.status === 404,
       detail:
         wasmJs.status === 404
@@ -127,7 +133,11 @@ async function main() {
             : `status ${wasmBg.status}`,
     });
   } catch (e) {
-    results.push({ name: "GET /api/wasm/splash_wasm_bg.wasm", ok: false, detail: (e as Error).message });
+    results.push({
+      name: "GET /api/wasm/splash_wasm_bg.wasm",
+      ok: false,
+      detail: (e as Error).message,
+    });
   }
 
   let failed = 0;
@@ -141,10 +151,14 @@ async function main() {
 
   console.log("");
   if (tokens502 && ALLOW_TOKENS_502) {
-    console.log("  Note: tokens returned 502 (server may not reach Space Scan). Deploy latest route (User-Agent + retries) or check server network.");
+    console.log(
+      "  Note: tokens returned 502 (server may not reach Space Scan). Deploy latest route (User-Agent + retries) or check server network."
+    );
   }
   if (failed > 0) {
-    console.log(`  ${failed} check(s) failed. Fix routes or run against a server that has the app + WASM built.`);
+    console.log(
+      `  ${failed} check(s) failed. Fix routes or run against a server that has the app + WASM built.`
+    );
     process.exit(1);
   }
   console.log("  All API proxy checks passed.");

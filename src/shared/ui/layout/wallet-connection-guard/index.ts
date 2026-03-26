@@ -1,1 +1,1 @@
-export { default as WalletConnectionGuard } from './WalletConnectionGuard'
+export { default as WalletConnectionGuard } from "./WalletConnectionGuard";

@@ -12,12 +12,7 @@ import type { TibetQuote } from "./tibetTypes";
  */
 export function computePriceImpactPercent(quote: TibetQuote): number | null {
   const { amount_in, amount_out, input_reserve, output_reserve } = quote;
-  if (
-    input_reserve <= 0 ||
-    output_reserve <= 0 ||
-    amount_in <= 0 ||
-    amount_out <= 0
-  ) {
+  if (input_reserve <= 0 || output_reserve <= 0 || amount_in <= 0 || amount_out <= 0) {
     return null;
   }
   const spotPrice = output_reserve / input_reserve;

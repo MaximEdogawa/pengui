@@ -4,10 +4,7 @@ import { useThemeClasses } from "@/shared/hooks";
 import { useResponsive } from "@/shared/hooks/useResponsive";
 import type { DexieOffer } from "@/entities/offer";
 import { TickerIcon, XchIcon } from "@/entities/asset";
-import {
-  formatAmountForDisplay,
-  formatPriceForDisplay,
-} from "@/features/trading/lib/formatAmount";
+import { formatAmountForDisplay, formatPriceForDisplay } from "@/features/trading/lib/formatAmount";
 import { TradeHistoryOfferItem } from "@/features/trading/hooks/useTradeHistory";
 
 interface TradeHistoryRowProps {
@@ -46,19 +43,15 @@ function formatOfferDateShort(offer: DexieOffer): string {
 function formatAssetAmount(
   amount: number | undefined | null,
   code: string,
-  maxDecimals?: number,
+  maxDecimals?: number
 ): string {
-  if (amount == null || typeof amount !== "number" || Number.isNaN(amount))
-    return "—";
+  if (amount == null || typeof amount !== "number" || Number.isNaN(amount)) return "—";
   return `${formatAmountForDisplay(amount, maxDecimals)} ${code || ""}`.trim();
 }
 
 const MOBILE_DECIMALS = 4;
 
-export default function TradeHistoryRow({
-  item,
-  onClick,
-}: TradeHistoryRowProps) {
+export default function TradeHistoryRow({ item, onClick }: TradeHistoryRowProps) {
   const { t, isDark } = useThemeClasses();
   const { isMobile } = useResponsive();
   const maxDecimals = isMobile ? MOBILE_DECIMALS : undefined;
@@ -67,10 +60,7 @@ export default function TradeHistoryRow({
   const requested = offer.requested?.[0];
   const offered = offer.offered?.[0];
   const price =
-    offer.price ??
-    (offered?.amount && requested?.amount
-      ? requested.amount / offered.amount
-      : 0);
+    offer.price ?? (offered?.amount && requested?.amount ? requested.amount / offered.amount : 0);
 
   const rowBgClass = isMyOffer
     ? isDark
@@ -81,9 +71,7 @@ export default function TradeHistoryRow({
   const mineTag = isMyOffer ? (
     <span
       className={`inline-flex items-center px-1 py-0.5 rounded text-[9px] sm:text-[10px] font-medium ${
-        isDark
-          ? "bg-blue-500/20 text-blue-400"
-          : "bg-blue-500/25 text-blue-600"
+        isDark ? "bg-blue-500/20 text-blue-400" : "bg-blue-500/25 text-blue-600"
       }`}
     >
       Mine
@@ -116,17 +104,11 @@ export default function TradeHistoryRow({
                     />
                   )}
                   <span className={`text-[10px] font-mono ${t.text} truncate`}>
-                    {formatAssetAmount(
-                      requested.amount,
-                      requested.code ?? "",
-                      maxDecimals,
-                    )}
+                    {formatAssetAmount(requested.amount, requested.code ?? "", maxDecimals)}
                   </span>
                 </>
               ) : (
-                <span className={`text-[10px] font-mono ${t.text} truncate`}>
-                  —
-                </span>
+                <span className={`text-[10px] font-mono ${t.text} truncate`}>—</span>
               )}
             </div>
             <span className={`text-[9px] ${t.textSecondary} flex-shrink-0`}>→</span>
@@ -144,17 +126,11 @@ export default function TradeHistoryRow({
                     />
                   )}
                   <span className={`text-[10px] font-mono ${t.text} truncate`}>
-                    {formatAssetAmount(
-                      offered.amount,
-                      offered.code ?? "",
-                      maxDecimals,
-                    )}
+                    {formatAssetAmount(offered.amount, offered.code ?? "", maxDecimals)}
                   </span>
                 </>
               ) : (
-                <span className={`text-[10px] font-mono ${t.text} truncate`}>
-                  —
-                </span>
+                <span className={`text-[10px] font-mono ${t.text} truncate`}>—</span>
               )}
             </div>
           </div>
@@ -164,9 +140,7 @@ export default function TradeHistoryRow({
         </div>
         {/* Row 2: Date + Status + Mine badge */}
         <div className="flex items-center justify-between gap-2 mt-0.5">
-          <span className={`text-[9px] ${t.textSecondary}`}>
-            {formatOfferDateShort(offer)}
-          </span>
+          <span className={`text-[9px] ${t.textSecondary}`}>{formatOfferDateShort(offer)}</span>
           <div className="flex items-center gap-1">
             <span className={`text-[9px] ${t.textSecondary}`}>{offerState}</span>
             {mineTag}
@@ -195,11 +169,7 @@ export default function TradeHistoryRow({
                 />
               )}
               <span className={`${t.text} truncate`}>
-                {formatAssetAmount(
-                  requested.amount,
-                  requested.code ?? "",
-                  maxDecimals,
-                )}
+                {formatAssetAmount(requested.amount, requested.code ?? "", maxDecimals)}
               </span>
             </>
           ) : (
@@ -220,11 +190,7 @@ export default function TradeHistoryRow({
                 />
               )}
               <span className={`${t.text} truncate`}>
-                {formatAssetAmount(
-                  offered.amount,
-                  offered.code ?? "",
-                  maxDecimals,
-                )}
+                {formatAssetAmount(offered.amount, offered.code ?? "", maxDecimals)}
               </span>
             </>
           ) : (
@@ -234,12 +200,8 @@ export default function TradeHistoryRow({
         <div className={`text-xs font-mono ${t.text} truncate`}>
           {formatPriceForDisplay(price, maxDecimals)}
         </div>
-        <div className={`text-xs ${t.text} col-span-2 truncate`}>
-          {formatOfferDate(offer)}
-        </div>
-        <div
-          className={`text-xs ${t.text} flex items-center gap-1.5 flex-wrap`}
-        >
+        <div className={`text-xs ${t.text} col-span-2 truncate`}>{formatOfferDate(offer)}</div>
+        <div className={`text-xs ${t.text} flex items-center gap-1.5 flex-wrap`}>
           <span>{offerState}</span>
           {mineTag}
         </div>

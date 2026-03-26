@@ -1,12 +1,12 @@
-'use client'
+"use client";
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState } from "react";
 
 interface UseBalanceLoadingProps {
-  isConnected: boolean
-  isLoading: boolean
-  hasBalance: boolean
-  delay?: number
+  isConnected: boolean;
+  isLoading: boolean;
+  hasBalance: boolean;
+  delay?: number;
 }
 
 /**
@@ -19,26 +19,26 @@ export function useBalanceLoading({
   hasBalance,
   delay = 300,
 }: UseBalanceLoadingProps) {
-  const [showInitialLoading, setShowInitialLoading] = useState(false)
-  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [showInitialLoading, setShowInitialLoading] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     if (isConnected && isLoading) {
       const timer = setTimeout(() => {
-        setShowInitialLoading(true)
-      }, delay)
-      return () => clearTimeout(timer)
+        setShowInitialLoading(true);
+      }, delay);
+      return () => clearTimeout(timer);
     } else {
-      setShowInitialLoading(false)
+      setShowInitialLoading(false);
     }
-  }, [isConnected, isLoading, delay])
+  }, [isConnected, isLoading, delay]);
 
   const showSpinner =
-    isLoading || isRefreshing || (showInitialLoading && isConnected && !hasBalance)
+    isLoading || isRefreshing || (showInitialLoading && isConnected && !hasBalance);
 
   return {
     showSpinner,
     isRefreshing,
     setIsRefreshing,
-  }
+  };
 }

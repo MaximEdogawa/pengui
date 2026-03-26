@@ -3,37 +3,37 @@
  * These types are used throughout the app for asset selection, offers, and wallet requests
  */
 
-import type { AssetAmount, AssetType } from '../offer/types'
+import type { AssetAmount, AssetType } from "../offer/types";
 
 /**
  * Dexie API Types
  * Raw ticker format from Dexie API
  */
 export interface DexieTicker {
-  ticker_id: string
-  base_currency: string
-  target_currency: string
-  base_code: string
-  target_code: string
-  base_name: string
-  target_name: string
-  last_price: number
-  current_avg_price: number
-  base_volume: number
-  target_volume: number
-  base_volume_7d: number
-  target_volume_7d: number
-  base_volume_30d: number
-  target_volume_30d: number
-  pool_id: string
-  bid: number | null
-  ask: number | null
-  high: number | null
-  low: number | null
-  high_7d: number | null
-  low_7d: number | null
-  high_30d: number | null
-  low_30d: number | null
+  ticker_id: string;
+  base_currency: string;
+  target_currency: string;
+  base_code: string;
+  target_code: string;
+  base_name: string;
+  target_name: string;
+  last_price: number;
+  current_avg_price: number;
+  base_volume: number;
+  target_volume: number;
+  base_volume_7d: number;
+  target_volume_7d: number;
+  base_volume_30d: number;
+  target_volume_30d: number;
+  pool_id: string;
+  bid: number | null;
+  ask: number | null;
+  high: number | null;
+  low: number | null;
+  high_7d: number | null;
+  low_7d: number | null;
+  high_30d: number | null;
+  low_30d: number | null;
 }
 
 /**
@@ -41,22 +41,22 @@ export interface DexieTicker {
  * Represents a trading pair with base and target currencies
  */
 export interface Ticker {
-  tickerId: string
-  baseCurrency: string // Asset ID of the base currency (CAT token asset ID)
-  targetCurrency: string // Asset ID of the target currency (usually XCH)
-  baseCode: string // Ticker symbol (e.g., "BYC03", "TDBX")
-  targetCode: string // Target currency code (e.g., "TXCH", "XCH")
-  baseName: string // Full name of the base currency
-  targetName: string // Full name of the target currency
-  lastPrice: number
-  currentAvgPrice: number
-  baseVolume: number
-  targetVolume: number
-  poolId: string
-  bid: number | null
-  ask: number | null
-  high: number | null
-  low: number | null
+  tickerId: string;
+  baseCurrency: string; // Asset ID of the base currency (CAT token asset ID)
+  targetCurrency: string; // Asset ID of the target currency (usually XCH)
+  baseCode: string; // Ticker symbol (e.g., "BYC03", "TDBX")
+  targetCode: string; // Target currency code (e.g., "TXCH", "XCH")
+  baseName: string; // Full name of the base currency
+  targetName: string; // Full name of the target currency
+  lastPrice: number;
+  currentAvgPrice: number;
+  baseVolume: number;
+  targetVolume: number;
+  poolId: string;
+  bid: number | null;
+  ask: number | null;
+  high: number | null;
+  low: number | null;
 }
 
 /**
@@ -64,11 +64,11 @@ export interface Ticker {
  * Used for asset selection and display throughout the app
  */
 export interface Asset {
-  assetId: string // The actual asset ID (base_currency from ticker)
-  ticker: string // Ticker symbol (base_code from ticker)
-  name: string // Full name (base_name from ticker)
-  symbol: string // Same as ticker for CAT tokens
-  type: AssetType
+  assetId: string; // The actual asset ID (base_currency from ticker)
+  ticker: string; // Ticker symbol (base_code from ticker)
+  name: string; // Full name (base_name from ticker)
+  symbol: string; // Same as ticker for CAT tokens
+  type: AssetType;
 }
 
 /**
@@ -76,11 +76,11 @@ export interface Asset {
  * This is the standard format used throughout the app
  */
 export interface BaseAsset {
-  assetId: string
-  amount: AssetAmount
-  type: AssetType
-  symbol?: string
-  name?: string
+  assetId: string;
+  amount: AssetAmount;
+  type: AssetType;
+  symbol?: string;
+  name?: string;
 }
 
 /**
@@ -88,8 +88,8 @@ export interface BaseAsset {
  * Used when sending requests to the wallet (assetId is empty string for XCH)
  */
 export interface WalletAsset {
-  assetId: string // Empty string for XCH, asset ID for CAT/NFT/Options
-  amount: number // Amount in smallest unit (mojos for XCH, smallest unit for CAT)
+  assetId: string; // Empty string for XCH, asset ID for CAT/NFT/Options
+  amount: number; // Amount in smallest unit (mojos for XCH, smallest unit for CAT)
 }
 
 /**
@@ -106,9 +106,9 @@ export function toWalletAsset(
   convertToSmallestUnit: (amount: number, type: AssetType) => number
 ): WalletAsset {
   return {
-    assetId: asset.type === 'xch' ? '' : asset.assetId,
+    assetId: asset.type === "xch" ? "" : asset.assetId,
     amount: convertToSmallestUnit(asset.amount, asset.type),
-  }
+  };
 }
 
 /**
@@ -118,15 +118,15 @@ export function toWalletAsset(
 export function fromWalletAsset(
   walletAsset: WalletAsset,
   convertFromSmallestUnit: (amount: number, type: AssetType) => number,
-  assetType: AssetType = 'cat' // Default to CAT if not specified
+  assetType: AssetType = "cat" // Default to CAT if not specified
 ): BaseAsset {
-  const resolvedType: AssetType = walletAsset.assetId === '' ? 'xch' : assetType
+  const resolvedType: AssetType = walletAsset.assetId === "" ? "xch" : assetType;
 
   return {
-    assetId: walletAsset.assetId || '',
+    assetId: walletAsset.assetId || "",
     amount: convertFromSmallestUnit(walletAsset.amount, resolvedType),
     type: resolvedType,
-  }
+  };
 }
 
 /**
@@ -139,8 +139,8 @@ export function tickerToAsset(ticker: Ticker): Asset {
     ticker: ticker.baseCode,
     name: ticker.baseName,
     symbol: ticker.baseCode,
-    type: 'cat', // Tickers from Dexie are always CAT tokens
-  }
+    type: "cat", // Tickers from Dexie are always CAT tokens
+  };
 }
 
 /**
@@ -154,7 +154,7 @@ export function assetToBaseAsset(asset: Asset, amount: AssetAmount = 0): BaseAss
     type: asset.type,
     symbol: asset.symbol,
     name: asset.name,
-  }
+  };
 }
 
 /**
@@ -169,7 +169,7 @@ export function toWalletAssets(
   assets: BaseAsset[],
   convertToSmallestUnit: (amount: number, type: AssetType) => number
 ): WalletAsset[] {
-  return assets.map((asset) => toWalletAsset(asset, convertToSmallestUnit))
+  return assets.map((asset) => toWalletAsset(asset, convertToSmallestUnit));
 }
 
 /**
@@ -184,9 +184,9 @@ export function toWalletAssets(
 export function fromWalletAssets(
   walletAssets: WalletAsset[],
   convertFromSmallestUnit: (amount: number, type: AssetType) => number,
-  assetType: AssetType = 'cat'
+  assetType: AssetType = "cat"
 ): BaseAsset[] {
   return walletAssets.map((walletAsset) =>
     fromWalletAsset(walletAsset, convertFromSmallestUnit, assetType)
-  )
+  );
 }

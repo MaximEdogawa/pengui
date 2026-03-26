@@ -1,19 +1,19 @@
-'use client'
+"use client";
 
-import type { SettledLoan } from '@/entities/loan'
-import type { ThemeClasses } from '@/shared/lib/theme'
+import type { SettledLoan } from "@/entities/loan";
+import type { ThemeClasses } from "@/shared/lib/theme";
 
 interface SettledLoanCardProps {
-  loan: SettledLoan
-  isDark: boolean
-  t: ThemeClasses
+  loan: SettledLoan;
+  isDark: boolean;
+  t: ThemeClasses;
 }
 
 export function SettledLoanCard({ loan, isDark, t }: SettledLoanCardProps) {
   return (
     <div
       className={`backdrop-blur-[40px] ${t.card} rounded-xl p-3 border ${t.border} transition-all duration-300 shadow-lg shadow-black/5 ${
-        isDark ? 'bg-white/[0.03]' : 'bg-white/30'
+        isDark ? "bg-white/[0.03]" : "bg-white/30"
       }`}
     >
       <div className="flex items-start justify-between mb-2">
@@ -24,7 +24,7 @@ export function SettledLoanCard({ loan, isDark, t }: SettledLoanCardProps) {
             </h4>
             <span
               className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                isDark ? 'bg-purple-500/20 text-purple-300' : 'bg-purple-100 text-purple-800'
+                isDark ? "bg-purple-500/20 text-purple-300" : "bg-purple-100 text-purple-800"
               }`}
             >
               Settled
@@ -35,7 +35,7 @@ export function SettledLoanCard({ loan, isDark, t }: SettledLoanCardProps) {
           </p>
         </div>
         <div className="text-right">
-          <p className={`text-lg font-bold ${isDark ? 'text-green-400' : 'text-green-600'}`}>
+          <p className={`text-lg font-bold ${isDark ? "text-green-400" : "text-green-600"}`}>
             +${loan.totalInterest.toLocaleString()}
           </p>
           <p className={`${t.textSecondary} text-[10px]`}>Interest earned</p>
@@ -66,5 +66,5 @@ export function SettledLoanCard({ loan, isDark, t }: SettledLoanCardProps) {
         </div>
       </div>
     </div>
-  )
+  );
 }

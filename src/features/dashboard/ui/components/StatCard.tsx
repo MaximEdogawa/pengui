@@ -1,20 +1,20 @@
-'use client'
+"use client";
 
-import type { LucideIcon } from 'lucide-react'
-import type { ThemeClasses } from '@/shared/lib/theme'
+import type { LucideIcon } from "lucide-react";
+import type { ThemeClasses } from "@/shared/lib/theme";
 
 interface StatCardProps {
-  icon: LucideIcon
-  iconBgColor: string
-  iconColor: string
-  arrowIcon?: LucideIcon
-  arrowColor: string
-  label: string
-  value: string
-  change: string
-  changeColor: string
-  isDark: boolean
-  t: ThemeClasses
+  icon: LucideIcon;
+  iconBgColor: string;
+  iconColor: string;
+  arrowIcon?: LucideIcon;
+  arrowColor: string;
+  label: string;
+  value: string;
+  change: string;
+  changeColor: string;
+  isDark: boolean;
+  t: ThemeClasses;
 }
 
 export function StatCard({
@@ -33,7 +33,7 @@ export function StatCard({
   return (
     <div
       className={`backdrop-blur-[40px] ${t.card} rounded-2xl p-3 border ${t.border} ${t.cardHover} transition-all duration-200 cursor-pointer shadow-lg shadow-black/5 ${
-        isDark ? 'bg-white/[0.03]' : 'bg-white/30'
+        isDark ? "bg-white/[0.03]" : "bg-white/30"
       }`}
     >
       <div className="flex items-center justify-between mb-2">
@@ -48,5 +48,5 @@ export function StatCard({
       <p className={`${t.text} text-xl font-semibold mb-1`}>{value}</p>
       <p className={`${changeColor} text-[10px] font-medium`}>{change}</p>
     </div>
-  )
+  );
 }

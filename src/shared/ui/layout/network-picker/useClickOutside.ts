@@ -1,11 +1,11 @@
-import { useEffect} from 'react'
+import { useEffect } from "react";
 
 interface UseClickOutsideProps {
-  isOpen: boolean
-  onClose: () => void
-  containerRef: React.RefObject<HTMLDivElement | null>
-  buttonRef: React.RefObject<HTMLButtonElement | null>
-  dropdownRef: React.RefObject<HTMLDivElement | null>
+  isOpen: boolean;
+  onClose: () => void;
+  containerRef: React.RefObject<HTMLDivElement | null>;
+  buttonRef: React.RefObject<HTMLButtonElement | null>;
+  dropdownRef: React.RefObject<HTMLDivElement | null>;
 }
 
 /**
@@ -20,7 +20,7 @@ export function useClickOutside({
 }: UseClickOutsideProps) {
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      const target = event.target as Node
+      const target = event.target as Node;
       if (
         dropdownRef.current &&
         !dropdownRef.current.contains(target) &&
@@ -29,13 +29,13 @@ export function useClickOutside({
         containerRef.current &&
         !containerRef.current.contains(target)
       ) {
-        onClose()
+        onClose();
       }
     }
 
     if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside)
-      return () => document.removeEventListener('mousedown', handleClickOutside)
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
     }
-  }, [isOpen, containerRef, buttonRef, dropdownRef, onClose])
+  }, [isOpen, containerRef, buttonRef, dropdownRef, onClose]);
 }

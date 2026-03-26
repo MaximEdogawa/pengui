@@ -1,17 +1,17 @@
-'use client'
+"use client";
 
-import { Loader2, Trash2 } from 'lucide-react'
-import type { OfferDetails } from '@/entities/offer'
-import { Button, Modal } from '@/shared/ui'
-import type { ThemeClasses } from '@/shared/lib/theme'
+import { Loader2, Trash2 } from "lucide-react";
+import type { OfferDetails } from "@/entities/offer";
+import { Button, Modal } from "@/shared/ui";
+import type { ThemeClasses } from "@/shared/lib/theme";
 
 interface DeleteOfferConfirmationProps {
-  offer: OfferDetails
-  isDeleting: boolean
-  deleteError: string
-  onConfirm: () => void
-  onCancel: () => void
-  t: ThemeClasses
+  offer: OfferDetails;
+  isDeleting: boolean;
+  deleteError: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+  t: ThemeClasses;
 }
 
 export function DeleteOfferConfirmation({
@@ -31,10 +31,8 @@ export function DeleteOfferConfirmation({
           the offer will be removed from your list.
         </p>
         <p className={`text-xs ${t.textSecondary} mb-4 font-mono break-all`}>
-          Offer ID:{' '}
-          {offer.tradeId
-            ? `${offer.tradeId.slice(0, 12)}...${offer.tradeId.slice(-8)}`
-            : 'Unknown'}
+          Offer ID:{" "}
+          {offer.tradeId ? `${offer.tradeId.slice(0, 12)}...${offer.tradeId.slice(-8)}` : "Unknown"}
         </p>
         {deleteError && (
           <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
@@ -57,11 +55,11 @@ export function DeleteOfferConfirmation({
                 Deleting...
               </>
             ) : (
-              'Delete Offer'
+              "Delete Offer"
             )}
           </Button>
         </div>
       </div>
     </Modal>
-  )
+  );
 }

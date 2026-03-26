@@ -20,7 +20,7 @@ export function formatSwapPrice(xchPerToken: number): string {
 /** Estimate XCH and token received when removing lpAmount (display units) of LP from pair */
 export function removeReceiveEstimate(
   pair: TibetApiPair,
-  lpDisplay: number,
+  lpDisplay: number
 ): { xch: number; token: number } | null {
   if (lpDisplay <= 0 || pair.liquidity <= 0) return null;
   const lpSmallest = lpDisplay * TOKEN_SMALLEST_PER_UNIT;
@@ -37,10 +37,9 @@ export function removeReceiveEstimate(
 export function lpToRemoveFromDesiredOutput(
   pair: TibetApiPair,
   xchDisplay: number,
-  tokenDisplay: number,
+  tokenDisplay: number
 ): number | null {
-  if (pair.liquidity <= 0 || pair.xch_reserve <= 0 || pair.token_reserve <= 0)
-    return null;
+  if (pair.liquidity <= 0 || pair.xch_reserve <= 0 || pair.token_reserve <= 0) return null;
   const xchMojos = Math.round(convertToSmallestUnit(xchDisplay, "xch"));
   const tokenSmallest = Math.round(convertToSmallestUnit(tokenDisplay, "cat"));
   if (xchMojos <= 0 && tokenSmallest <= 0) return null;

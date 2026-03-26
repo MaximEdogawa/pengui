@@ -1,14 +1,7 @@
 "use client";
 
 import { getThemeClasses } from "@/shared/lib/theme";
-import {
-  TrendingUp,
-  BookOpen,
-  BarChart3,
-  Activity,
-  Terminal,
-  type LucideIcon,
-} from "lucide-react";
+import { TrendingUp, BookOpen, BarChart3, Activity, Terminal, type LucideIcon } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 import { TradingLayout } from "@/widgets/trading-layout";
@@ -27,9 +20,7 @@ export default function TradingPage() {
   >("orderbook");
   const { theme: currentTheme, systemTheme } = useTheme();
 
-  const isDark =
-    currentTheme === "dark" ||
-    (currentTheme === "system" && systemTheme === "dark");
+  const isDark = currentTheme === "dark" || (currentTheme === "system" && systemTheme === "dark");
   const t = getThemeClasses(isDark);
 
   useEffect(() => {
@@ -73,9 +64,7 @@ function TradingPageContent({
   t,
 }: {
   activeView: "orderbook" | "chart" | "depth" | "trades" | "terminal";
-  setActiveView: (
-    view: "orderbook" | "chart" | "depth" | "trades" | "terminal",
-  ) => void;
+  setActiveView: (view: "orderbook" | "chart" | "depth" | "trades" | "terminal") => void;
   views: Array<{
     id: "orderbook" | "chart" | "depth" | "trades" | "terminal";
     icon: LucideIcon;

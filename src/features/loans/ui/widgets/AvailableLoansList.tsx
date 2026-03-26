@@ -1,14 +1,14 @@
-'use client'
+"use client";
 
-import { getThemeClasses } from '@/shared/lib/theme'
-import type { LoanOffer } from '@/entities/loan'
-import { useTheme } from 'next-themes'
-import LoanCard from './LoanCard'
+import { getThemeClasses } from "@/shared/lib/theme";
+import type { LoanOffer } from "@/entities/loan";
+import { useTheme } from "next-themes";
+import LoanCard from "./LoanCard";
 
 interface AvailableLoansListProps {
-  loans: LoanOffer[]
-  onTakeLoan: (loanId: number) => void
-  onViewDetails: (loanId: number) => void
+  loans: LoanOffer[];
+  onTakeLoan: (loanId: number) => void;
+  onViewDetails: (loanId: number) => void;
 }
 
 export default function AvailableLoansList({
@@ -16,20 +16,20 @@ export default function AvailableLoansList({
   onTakeLoan,
   onViewDetails,
 }: AvailableLoansListProps) {
-  const { theme: currentTheme, systemTheme } = useTheme()
-  const isDark = currentTheme === 'dark' || (currentTheme === 'system' && systemTheme === 'dark')
-  const t = getThemeClasses(isDark)
+  const { theme: currentTheme, systemTheme } = useTheme();
+  const isDark = currentTheme === "dark" || (currentTheme === "system" && systemTheme === "dark");
+  const t = getThemeClasses(isDark);
 
   if (loans.length === 0) {
     return (
       <div
         className={`backdrop-blur-[40px] ${t.card} rounded-xl p-6 border ${t.border} transition-all duration-300 shadow-lg shadow-black/5 ${
-          isDark ? 'bg-white/[0.03]' : 'bg-white/30'
+          isDark ? "bg-white/[0.03]" : "bg-white/30"
         } flex items-center justify-center`}
       >
         <p className={`${t.textSecondary} text-sm`}>No loans match your filters.</p>
       </div>
-    )
+    );
   }
 
   return (
@@ -49,5 +49,5 @@ export default function AvailableLoansList({
         ))}
       </div>
     </div>
-  )
+  );
 }

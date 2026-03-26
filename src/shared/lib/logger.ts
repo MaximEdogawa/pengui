@@ -1,10 +1,10 @@
-type LogLevel = 'debug' | 'info' | 'warn' | 'error'
+type LogLevel = "debug" | "info" | "warn" | "error";
 
 interface Logger {
-  debug(message: string, ...args: unknown[]): void
-  info(message: string, ...args: unknown[]): void
-  warn(message: string, ...args: unknown[]): void
-  error(message: string, ...args: unknown[]): void
+  debug(message: string, ...args: unknown[]): void;
+  info(message: string, ...args: unknown[]): void;
+  warn(message: string, ...args: unknown[]): void;
+  error(message: string, ...args: unknown[]): void;
 }
 
 // Patterns for messages that should be suppressed (too verbose/repetitive)
@@ -22,103 +22,103 @@ const SUPPRESSED_PATTERNS = [
   /Fetching order book/i,
   /Query: (all orders|\d+)/i,
   /\[trackEffectRun\] Potential infinite loop detected/i,
-]
+];
 
 // Rate limiting for repeated messages
-const RATE_LIMIT_WINDOW = 5000 // 5 seconds
-const MAX_MESSAGES_PER_WINDOW = 3
-const messageCounts = new Map<string, { count: number; resetTime: number }>()
+const RATE_LIMIT_WINDOW = 5000; // 5 seconds
+const MAX_MESSAGES_PER_WINDOW = 3;
+const messageCounts = new Map<string, { count: number; resetTime: number }>();
 
 class LoggerService implements Logger {
-  private readonly isDevelopment: boolean
+  private readonly isDevelopment: boolean;
 
   constructor() {
-    this.isDevelopment = process.env.NODE_ENV === 'development'
+    this.isDevelopment = process.env.NODE_ENV === "development";
   }
 
   private shouldLog(level: LogLevel): boolean {
     if (!this.isDevelopment) {
       // In production, only log errors and warnings
-      return level === 'error' || level === 'warn'
+      return level === "error" || level === "warn";
     }
-    return true
+    return true;
   }
 
   private isSuppressed(message: string): boolean {
-    return SUPPRESSED_PATTERNS.some((pattern) => pattern.test(message))
+    return SUPPRESSED_PATTERNS.some((pattern) => pattern.test(message));
   }
 
   private isRateLimited(message: string): boolean {
-    const now = Date.now()
-    const key = message.substring(0, 100) // Use first 100 chars as key
+    const now = Date.now();
+    const key = message.substring(0, 100); // Use first 100 chars as key
 
-    const entry = messageCounts.get(key)
+    const entry = messageCounts.get(key);
     if (!entry || now > entry.resetTime) {
-      messageCounts.set(key, { count: 1, resetTime: now + RATE_LIMIT_WINDOW })
-      return false
+      messageCounts.set(key, { count: 1, resetTime: now + RATE_LIMIT_WINDOW });
+      return false;
     }
 
-    entry.count++
+    entry.count++;
     if (entry.count > MAX_MESSAGES_PER_WINDOW) {
-      return true
+      return true;
     }
 
-    return false
+    return false;
   }
 
   private formatMessage(level: LogLevel, message: string): string {
-    const timestamp = new Date().toISOString()
+    const timestamp = new Date().toISOString();
     const emoji = {
-      debug: '🐛',
-      info: 'ℹ️',
-      warn: '⚠️',
-      error: '❌',
-    }[level]
+      debug: "🐛",
+      info: "ℹ️",
+      warn: "⚠️",
+      error: "❌",
+    }[level];
 
-    return `${emoji} [${timestamp}] ${level.toUpperCase()}: ${message}`
+    return `${emoji} [${timestamp}] ${level.toUpperCase()}: ${message}`;
   }
 
   debug(message: string, ...args: unknown[]): void {
-    if (!this.shouldLog('debug')) {
-      return
+    if (!this.shouldLog("debug")) {
+      return;
     }
 
     // Suppress debug messages that are too verbose
     if (this.isSuppressed(message) || this.isRateLimited(message)) {
-      return
+      return;
     }
 
     // eslint-disable-next-line no-console
-    console.debug(this.formatMessage('debug', message), ...args)
+    console.debug(this.formatMessage("debug", message), ...args);
   }
 
   info(message: string, ...args: unknown[]): void {
-    if (!this.shouldLog('info')) {
-      return
+    if (!this.shouldLog("info")) {
+      return;
     }
 
     // Suppress repetitive info messages
     if (this.isSuppressed(message) || this.isRateLimited(message)) {
-      return
+      return;
     }
 
     // eslint-disable-next-line no-console
-    console.info(this.formatMessage('info', message), ...args)
+    console.info(this.formatMessage("info", message), ...args);
   }
 
   warn(message: string, ...args: unknown[]): void {
-    if (this.shouldLog('warn')) {
+    if (this.shouldLog("warn")) {
       // eslint-disable-next-line no-console
-      console.warn(this.formatMessage('warn', message), ...args)
+      console.warn(this.formatMessage("warn", message), ...args);
     }
   }
 
   error(message: string, ...args: unknown[]): void {
-    if (this.shouldLog('error')) {
+    if (this.shouldLog("error")) {
       // eslint-disable-next-line no-console
-      console.error(this.formatMessage('error', message), ...args)
+      console.error(this.formatMessage("error", message), ...args);
     }
   }
 }
 
-export const logger = new LoggerService()
+export const logger = new LoggerService();

@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import NextLink from 'next/link';
-import { useMemo, type ComponentProps } from 'react';
-import { getConnectionSpeed } from '@/shared/lib/utils/networkQuality';
+import NextLink from "next/link";
+import { useMemo, type ComponentProps } from "react";
+import { getConnectionSpeed } from "@/shared/lib/utils/networkQuality";
 
 /**
  * Standard in-app navigation link.  Disables prefetching on slow connections
@@ -12,7 +12,7 @@ import { getConnectionSpeed } from '@/shared/lib/utils/networkQuality';
 export function AppLink(props: ComponentProps<typeof NextLink>) {
   const prefetch = useMemo(() => {
     if (props.prefetch !== undefined) return props.prefetch;
-    return getConnectionSpeed() !== 'slow';
+    return getConnectionSpeed() !== "slow";
   }, [props.prefetch]);
 
   return <NextLink {...props} prefetch={prefetch} />;

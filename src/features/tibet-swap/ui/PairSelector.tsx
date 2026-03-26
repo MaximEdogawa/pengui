@@ -33,9 +33,7 @@ function PairOptionRow({
           />
         }
       />
-      <span className="truncate">
-        XCH / {pair.asset_short_name || pair.asset_name}
-      </span>
+      <span className="truncate">XCH / {pair.asset_short_name || pair.asset_name}</span>
     </span>
   );
 }

@@ -1,10 +1,10 @@
-import { useCallback } from 'react'
-import type { UseOfferDetailsStateReturn } from './useOfferDetailsState'
+import { useCallback } from "react";
+import type { UseOfferDetailsStateReturn } from "./useOfferDetailsState";
 
 interface UseOfferDetailsCopyHandlersProps {
-  offerString: string
-  offerId: string
-  state: UseOfferDetailsStateReturn
+  offerString: string;
+  offerId: string;
+  state: UseOfferDetailsStateReturn;
 }
 
 /**
@@ -17,30 +17,30 @@ export function useOfferDetailsCopyHandlers({
 }: UseOfferDetailsCopyHandlersProps) {
   const copyOfferString = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(offerString)
-      state.setIsCopied(true)
+      await navigator.clipboard.writeText(offerString);
+      state.setIsCopied(true);
       setTimeout(() => {
-        state.setIsCopied(false)
-      }, 2000)
+        state.setIsCopied(false);
+      }, 2000);
     } catch {
       // Failed to copy
     }
-  }, [offerString, state])
+  }, [offerString, state]);
 
   const copyOfferId = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(offerId)
-      state.setIsCopied(true)
+      await navigator.clipboard.writeText(offerId);
+      state.setIsCopied(true);
       setTimeout(() => {
-        state.setIsCopied(false)
-      }, 2000)
+        state.setIsCopied(false);
+      }, 2000);
     } catch {
       // Failed to copy
     }
-  }, [offerId, state])
+  }, [offerId, state]);
 
   return {
     copyOfferString,
     copyOfferId,
-  }
+  };
 }

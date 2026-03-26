@@ -1,43 +1,43 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { logger } from '@/shared/lib/logger'
-import { isSpaceScanIconOrigin } from '@/shared/lib/constants/apiProxy'
+import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/shared/lib/logger";
+import { isSpaceScanIconOrigin } from "@/shared/lib/constants/apiProxy";
 
 /**
  * Proxy Space Scan token icons. Browser requests this to avoid CDN referrer/CORS blocking.
  * Server fetches from allowed Space Scan hosts only (SSRF protection) and streams the image.
  */
 export async function GET(request: NextRequest) {
-  const url = request.nextUrl.searchParams.get('url')
+  const url = request.nextUrl.searchParams.get("url");
   if (!url || !isSpaceScanIconOrigin(url)) {
-    return NextResponse.json({ error: 'Invalid or disallowed url' }, { status: 400 })
+    return NextResponse.json({ error: "Invalid or disallowed url" }, { status: 400 });
   }
   try {
-    const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 15_000)
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15_000);
     const res = await fetch(url, {
-      method: 'GET',
+      method: "GET",
       headers: {
-        Accept: 'image/*',
-        'User-Agent': 'PenguinPool/1.0 (Token Icon Proxy)',
+        Accept: "image/*",
+        "User-Agent": "PenguinPool/1.0 (Token Icon Proxy)",
       },
       signal: controller.signal,
       next: { revalidate: 86400 },
-    })
-    clearTimeout(timeout)
+    });
+    clearTimeout(timeout);
     if (!res.ok) {
-      return new NextResponse(null, { status: res.status })
+      return new NextResponse(null, { status: res.status });
     }
-    const contentType = res.headers.get('content-type') || 'image/webp'
-    const body = await res.arrayBuffer()
+    const contentType = res.headers.get("content-type") || "image/webp";
+    const body = await res.arrayBuffer();
     return new NextResponse(body, {
       status: 200,
       headers: {
-        'Content-Type': contentType,
-        'Cache-Control': 'public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800',
+        "Content-Type": contentType,
+        "Cache-Control": "public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800",
       },
-    })
+    });
   } catch (error) {
-    logger.error('[api/spacescan/icon]', url, error)
-    return NextResponse.json({ error: 'Failed to fetch icon' }, { status: 502 })
+    logger.error("[api/spacescan/icon]", url, error);
+    return NextResponse.json({ error: "Failed to fetch icon" }, { status: 502 });
   }
 }

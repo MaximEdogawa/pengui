@@ -21,28 +21,24 @@ export function parseTerminalCommand(line: string): TerminalCommand {
     case "filter": {
       const sub = args[0]?.toLowerCase();
       if (sub === "clear") return { type: "filter", sub: "clear" };
-      if (sub === "asset")
-        return { type: "filter", sub: "asset", value: args.slice(1).join(" ") };
+      if (sub === "asset") return { type: "filter", sub: "asset", value: args.slice(1).join(" ") };
       if (sub === "price") {
-        const { min, max } = args.slice(1).reduce<
-          { min: number | undefined; max: number | undefined }
-        >(
-          (acc, a) => {
-            if (a?.startsWith(">") && a.length > 1)
-              acc.min = Number(a.slice(1));
-            else if (a?.startsWith("<") && a.length > 1)
-              acc.max = Number(a.slice(1));
-            return acc;
-          },
-          { min: undefined, max: undefined },
-        );
+        const { min, max } = args
+          .slice(1)
+          .reduce<{ min: number | undefined; max: number | undefined }>(
+            (acc, a) => {
+              if (a?.startsWith(">") && a.length > 1) acc.min = Number(a.slice(1));
+              else if (a?.startsWith("<") && a.length > 1) acc.max = Number(a.slice(1));
+              return acc;
+            },
+            { min: undefined, max: undefined }
+          );
         return { type: "filter", sub: "price", min, max };
       }
       if (sub === "amount") {
         const minStr = args[1];
         const min = minStr ? Number(minStr) : undefined;
-        if (min !== undefined && !Number.isNaN(min))
-          return { type: "filter", sub: "amount", min };
+        if (min !== undefined && !Number.isNaN(min)) return { type: "filter", sub: "amount", min };
       }
       return { type: "unknown", raw: trimmed };
     }
@@ -50,8 +46,7 @@ export function parseTerminalCommand(line: string): TerminalCommand {
       const limit = args[0] ? Number(args[0]) : undefined;
       return {
         type: "list",
-        limit:
-          limit !== undefined && !Number.isNaN(limit) ? limit : undefined,
+        limit: limit !== undefined && !Number.isNaN(limit) ? limit : undefined,
       };
     }
     case "watch":

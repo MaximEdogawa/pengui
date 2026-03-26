@@ -6,10 +6,7 @@ import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import type { DexieOffer } from "@/entities/offer";
 import TradeHistoryRow from "./TradeHistoryRow";
 import { TradeHistoryOfferItem } from "@/features/trading/hooks/useTradeHistory";
-import {
-  SortConfig,
-  SortColumn,
-} from "@/features/trading/hooks/useTradeHistorySorting";
+import { SortConfig, SortColumn } from "@/features/trading/hooks/useTradeHistorySorting";
 import { OrderBookOrder } from "@/features/trading/lib/orderBookTypes";
 import { convertDexieOfferToOrderBookOrder } from "@/features/trading/lib/orderBookConverters";
 
@@ -40,17 +37,12 @@ export default function TradeHistoryTable({
     );
   };
 
-  const hoverClass =
-    t.text === "text-slate-700"
-      ? "hover:text-slate-800"
-      : "hover:text-slate-200";
+  const hoverClass = t.text === "text-slate-700" ? "hover:text-slate-800" : "hover:text-slate-200";
   const headerCellClass = `px-1.5 sm:px-3 py-1.5 sm:py-2 text-[10px] sm:text-xs font-medium ${t.textSecondary} cursor-pointer ${hoverClass} transition-colors flex items-center gap-0.5 sm:gap-1`;
 
   if (offers.length === 0) {
     return (
-      <div
-        className={`flex items-center justify-center h-full ${t.textSecondary}`}
-      >
+      <div className={`flex items-center justify-center h-full ${t.textSecondary}`}>
         <p className="text-sm">No offers found</p>
       </div>
     );
@@ -60,10 +52,7 @@ export default function TradeHistoryTable({
     if (!onOfferClick) return;
 
     const { offer } = item;
-    const orderBookOrder = convertDexieOfferToOrderBookOrder(
-      offer as DexieOffer,
-      network,
-    );
+    const orderBookOrder = convertDexieOfferToOrderBookOrder(offer as DexieOffer, network);
     onOfferClick(orderBookOrder);
   };
 
@@ -73,8 +62,7 @@ export default function TradeHistoryTable({
       <div
         className={`sm:hidden sticky top-0 z-10 backdrop-blur-xl ${t.card} border-b ${t.border} flex items-center gap-0.5 px-2 py-1`}
         style={{
-          boxShadow:
-            "0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)",
+          boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)",
         }}
       >
         {(
@@ -90,9 +78,7 @@ export default function TradeHistoryTable({
             key={col}
             onClick={() => onSort(col)}
             className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-medium transition-colors ${
-              sortConfig.column === col
-                ? `bg-white/10 dark:bg-white/10 ${t.text}`
-                : t.textSecondary
+              sortConfig.column === col ? `bg-white/10 dark:bg-white/10 ${t.text}` : t.textSecondary
             }`}
           >
             {label}
@@ -105,21 +91,14 @@ export default function TradeHistoryTable({
       <div
         className={`hidden sm:grid sticky top-0 z-10 backdrop-blur-xl ${t.card} border-b ${t.border} grid-cols-8 gap-2`}
         style={{
-          boxShadow:
-            "0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)",
+          boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)",
         }}
       >
-        <div
-          className={`${headerCellClass} col-span-2`}
-          onClick={() => onSort("requested")}
-        >
+        <div className={`${headerCellClass} col-span-2`} onClick={() => onSort("requested")}>
           Requested
           {getSortIcon("requested")}
         </div>
-        <div
-          className={`${headerCellClass} col-span-2`}
-          onClick={() => onSort("offered")}
-        >
+        <div className={`${headerCellClass} col-span-2`} onClick={() => onSort("offered")}>
           Offered
           {getSortIcon("offered")}
         </div>
@@ -127,10 +106,7 @@ export default function TradeHistoryTable({
           Price
           {getSortIcon("price")}
         </div>
-        <div
-          className={`${headerCellClass} col-span-2`}
-          onClick={() => onSort("date")}
-        >
+        <div className={`${headerCellClass} col-span-2`} onClick={() => onSort("date")}>
           Date
           {getSortIcon("date")}
         </div>

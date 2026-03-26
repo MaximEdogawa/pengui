@@ -1,31 +1,35 @@
-import type { Meta, StoryObj } from '@storybook/nextjs-vite'
-import { useState } from 'react'
-import { TokenDropdown } from '@/shared/ui'
+import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { useState } from "react";
+import { TokenDropdown } from "@/shared/ui";
 
 const meta = {
-  title: 'Components/Forms/TokenDropdown',
+  title: "Components/Forms/TokenDropdown",
   component: TokenDropdown,
   parameters: {
-    layout: 'centered',
+    layout: "centered",
   },
-  tags: ['autodocs'],
-} satisfies Meta<typeof TokenDropdown>
+  tags: ["autodocs"],
+} satisfies Meta<typeof TokenDropdown>;
 
-export default meta
-type Story = StoryObj<typeof meta>
+export default meta;
+type Story = StoryObj<typeof meta>;
 
 const mockTokens = [
-  { assetId: '0x1234567890abcdef1234567890abcdef12345678', ticker: 'USDT', name: 'Tether USD' },
-  { assetId: '0xabcdef1234567890abcdef1234567890abcdef12', ticker: 'USDC', name: 'USD Coin' },
-  { assetId: '0x9876543210fedcba9876543210fedcba98765432', ticker: 'DAI', name: 'Dai Stablecoin' },
-  { assetId: '', ticker: 'XCH', name: 'Chia' },
-  { assetId: '0x1111111111111111111111111111111111111111', ticker: 'WBTC', name: 'Wrapped Bitcoin' },
-  { assetId: '0x2222222222222222222222222222222222222222', ticker: 'ETH', name: 'Ethereum' },
-]
+  { assetId: "0x1234567890abcdef1234567890abcdef12345678", ticker: "USDT", name: "Tether USD" },
+  { assetId: "0xabcdef1234567890abcdef1234567890abcdef12", ticker: "USDC", name: "USD Coin" },
+  { assetId: "0x9876543210fedcba9876543210fedcba98765432", ticker: "DAI", name: "Dai Stablecoin" },
+  { assetId: "", ticker: "XCH", name: "Chia" },
+  {
+    assetId: "0x1111111111111111111111111111111111111111",
+    ticker: "WBTC",
+    name: "Wrapped Bitcoin",
+  },
+  { assetId: "0x2222222222222222222222222222222222222222", ticker: "ETH", name: "Ethereum" },
+];
 
 const TokenDropdownWrapper = () => {
-  const [isOpen, setIsOpen] = useState(true)
-  const [selectedToken, setSelectedToken] = useState<typeof mockTokens[0] | null>(null)
+  const [isOpen, setIsOpen] = useState(true);
+  const [selectedToken, setSelectedToken] = useState<(typeof mockTokens)[0] | null>(null);
 
   return (
     <div className="w-full max-w-md">
@@ -33,7 +37,7 @@ const TokenDropdownWrapper = () => {
         onClick={() => setIsOpen(!isOpen)}
         className="px-4 py-2 bg-blue-500 text-white rounded-lg mb-4"
       >
-        {isOpen ? 'Close' : 'Open'} Dropdown
+        {isOpen ? "Close" : "Open"} Dropdown
       </button>
       {selectedToken && (
         <p className="mb-4 text-sm text-gray-600 dark:text-gray-400">
@@ -44,15 +48,15 @@ const TokenDropdownWrapper = () => {
         tokens={mockTokens}
         isOpen={isOpen}
         onSelect={(token) => {
-          setSelectedToken(token)
-          setIsOpen(false)
+          setSelectedToken(token);
+          setIsOpen(false);
         }}
         onClose={() => setIsOpen(false)}
         searchValue=""
       />
     </div>
-  )
-}
+  );
+};
 
 export const Default: Story = {
   args: {
@@ -60,10 +64,10 @@ export const Default: Story = {
     isOpen: false,
     onSelect: () => {},
     onClose: () => {},
-    searchValue: '',
+    searchValue: "",
   },
   render: () => <TokenDropdownWrapper />,
-}
+};
 
 export const WithSearchValue: Story = {
   args: {
@@ -71,10 +75,10 @@ export const WithSearchValue: Story = {
     isOpen: false,
     onSelect: () => {},
     onClose: () => {},
-    searchValue: '',
+    searchValue: "",
   },
   render: () => {
-    const [isOpen, setIsOpen] = useState(true)
+    const [isOpen, setIsOpen] = useState(true);
 
     return (
       <div className="w-full max-w-md">
@@ -82,7 +86,7 @@ export const WithSearchValue: Story = {
           onClick={() => setIsOpen(!isOpen)}
           className="px-4 py-2 bg-blue-500 text-white rounded-lg mb-4"
         >
-          {isOpen ? 'Close' : 'Open'} Dropdown
+          {isOpen ? "Close" : "Open"} Dropdown
         </button>
         <TokenDropdown
           tokens={mockTokens}
@@ -92,9 +96,9 @@ export const WithSearchValue: Story = {
           searchValue="US"
         />
       </div>
-    )
+    );
   },
-}
+};
 
 export const EmptyList: Story = {
   args: {
@@ -102,10 +106,10 @@ export const EmptyList: Story = {
     isOpen: false,
     onSelect: () => {},
     onClose: () => {},
-    searchValue: '',
+    searchValue: "",
   },
   render: () => {
-    const [isOpen, setIsOpen] = useState(true)
+    const [isOpen, setIsOpen] = useState(true);
 
     return (
       <div className="w-full max-w-md">
@@ -113,7 +117,7 @@ export const EmptyList: Story = {
           onClick={() => setIsOpen(!isOpen)}
           className="px-4 py-2 bg-blue-500 text-white rounded-lg mb-4"
         >
-          {isOpen ? 'Close' : 'Open'} Dropdown
+          {isOpen ? "Close" : "Open"} Dropdown
         </button>
         <TokenDropdown
           tokens={[]}
@@ -123,6 +127,6 @@ export const EmptyList: Story = {
           searchValue=""
         />
       </div>
-    )
+    );
   },
-}
+};

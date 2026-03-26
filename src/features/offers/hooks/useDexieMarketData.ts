@@ -4,10 +4,7 @@ import { logger } from "@/shared/lib/logger";
 import { useMutation } from "@tanstack/react-query";
 import { useNetwork } from "@/shared/hooks/useNetwork";
 import { getDexieApiUrl } from "@/shared/lib/utils/networkUtils";
-import type {
-  DexieHistoricalTradesResponse,
-  DexieOrderBookResponse,
-} from "../lib/dexieTypes";
+import type { DexieHistoricalTradesResponse, DexieOrderBookResponse } from "../lib/dexieTypes";
 
 /**
  * Hook for Dexie market data operations (order book, historical trades)
@@ -177,13 +174,8 @@ export function useDexieMarketData() {
   return {
     getOrderBook: ({ tickerId, depth }: { tickerId: string; depth?: number }) =>
       getOrderBookMutation.mutateAsync({ tickerId, depth }),
-    getHistoricalTrades: ({
-      tickerId,
-      limit,
-    }: {
-      tickerId: string;
-      limit?: number;
-    }) => getHistoricalTradesMutation.mutateAsync({ tickerId, limit }),
+    getHistoricalTrades: ({ tickerId, limit }: { tickerId: string; limit?: number }) =>
+      getHistoricalTradesMutation.mutateAsync({ tickerId, limit }),
     getOrderBookMutation,
     getHistoricalTradesMutation,
     isGettingOrderBook: getOrderBookMutation.isPending,

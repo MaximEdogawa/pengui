@@ -1,40 +1,40 @@
-'use client'
+"use client";
 
-import { AppLink } from '@/shared/ui'
-import { PieChart as PieChartIcon, ArrowRight } from 'lucide-react'
-import type { ThemeClasses } from '@/shared/lib/theme'
-import { useWalletAssets } from '@/features/wallet'
-import { TickerIcon, XchIcon } from '@/entities/asset'
-import { isChiaNativeToken } from '@/shared/lib/constants/chia-assets'
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
-import { useMemo, useState, useCallback } from 'react'
-import { CardSkeleton } from './CardSkeleton'
-import { TibetLpPairIcon } from '@/features/tibet-swap/ui/TibetLpPairIcon'
-import { useTibetLpPairMap } from '@/features/tibet-swap/hooks/useTibetLpPairMap'
-import { getLpTicker } from '@/features/tibet-swap/lib/tibetUiUtils'
+import { AppLink } from "@/shared/ui";
+import { PieChart as PieChartIcon, ArrowRight } from "lucide-react";
+import type { ThemeClasses } from "@/shared/lib/theme";
+import { useWalletAssets } from "@/features/wallet";
+import { TickerIcon, XchIcon } from "@/entities/asset";
+import { isChiaNativeToken } from "@/shared/lib/constants/chia-assets";
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
+import { useMemo, useState, useCallback } from "react";
+import { CardSkeleton } from "./CardSkeleton";
+import { TibetLpPairIcon } from "@/features/tibet-swap/ui/TibetLpPairIcon";
+import { useTibetLpPairMap } from "@/features/tibet-swap/hooks/useTibetLpPairMap";
+import { getLpTicker } from "@/features/tibet-swap/lib/tibetUiUtils";
 
 interface PortfolioCardProps {
-  isDark: boolean
-  t: ThemeClasses
+  isDark: boolean;
+  t: ThemeClasses;
 }
 
 const CHART_COLORS = [
-  '#22d3ee', // cyan-400
-  '#3b82f6', // blue-500
-  '#a78bfa', // violet-400
-  '#f472b6', // pink-400
-  '#34d399', // emerald-400
-  '#fbbf24', // amber-400
-  '#fb923c', // orange-400
-  '#818cf8', // indigo-400
-]
+  "#22d3ee", // cyan-400
+  "#3b82f6", // blue-500
+  "#a78bfa", // violet-400
+  "#f472b6", // pink-400
+  "#34d399", // emerald-400
+  "#fbbf24", // amber-400
+  "#fb923c", // orange-400
+  "#818cf8", // indigo-400
+];
 
 interface PortfolioSlice {
-  assetId: string
-  name: string
-  ticker: string
-  value: number
-  percentage: number
+  assetId: string;
+  name: string;
+  ticker: string;
+  value: number;
+  percentage: number;
 }
 
 function CustomTooltip({
@@ -42,43 +42,43 @@ function CustomTooltip({
   payload,
   isDark,
 }: {
-  active?: boolean
-  payload?: Array<{ payload: PortfolioSlice }>
-  isDark: boolean
+  active?: boolean;
+  payload?: Array<{ payload: PortfolioSlice }>;
+  isDark: boolean;
 }) {
-  if (!active || !payload?.[0]) return null
-  const data = payload[0].payload
+  if (!active || !payload?.[0]) return null;
+  const data = payload[0].payload;
 
   return (
     <div
       className={`rounded-xl px-3 py-2 text-xs shadow-xl border backdrop-blur-xl ${
         isDark
-          ? 'bg-slate-900/90 border-white/10 text-white'
-          : 'bg-white/90 border-slate-200 text-slate-800'
+          ? "bg-slate-900/90 border-white/10 text-white"
+          : "bg-white/90 border-slate-200 text-slate-800"
       }`}
     >
       <p className="font-semibold">{data.name}</p>
       <p className="opacity-70">
-        {new Intl.NumberFormat('en-US', {
-          style: 'currency',
-          currency: 'USD',
+        {new Intl.NumberFormat("en-US", {
+          style: "currency",
+          currency: "USD",
           minimumFractionDigits: 2,
         }).format(data.value)}
       </p>
       <p className="opacity-50">{data.percentage.toFixed(1)}%</p>
     </div>
-  )
+  );
 }
 
 export function PortfolioCard({ isDark, t }: PortfolioCardProps) {
-  const { assets, isLoading } = useWalletAssets()
-  const lpMap = useTibetLpPairMap()
-  const [activeIndex, setActiveIndex] = useState<number | null>(null)
+  const { assets, isLoading } = useWalletAssets();
+  const lpMap = useTibetLpPairMap();
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
   const slices = useMemo<PortfolioSlice[]>(() => {
-    const withValue = assets.filter((a) => a.balanceUsd != null && a.balanceUsd > 0)
-    const total = withValue.reduce((s, a) => s + (a.balanceUsd ?? 0), 0)
-    if (total === 0) return []
+    const withValue = assets.filter((a) => a.balanceUsd != null && a.balanceUsd > 0);
+    const total = withValue.reduce((s, a) => s + (a.balanceUsd ?? 0), 0);
+    if (total === 0) return [];
 
     return withValue
       .map((a) => ({
@@ -86,29 +86,29 @@ export function PortfolioCard({ isDark, t }: PortfolioCardProps) {
         name: a.name,
         ticker: a.ticker,
         value: a.balanceUsd!,
-        percentage: ((a.balanceUsd! / total) * 100),
+        percentage: (a.balanceUsd! / total) * 100,
       }))
-      .sort((a, b) => b.value - a.value)
-  }, [assets])
+      .sort((a, b) => b.value - a.value);
+  }, [assets]);
 
   const onPieEnter = useCallback((_: unknown, index: number) => {
-    setActiveIndex(index)
-  }, [])
+    setActiveIndex(index);
+  }, []);
 
   const onPieLeave = useCallback(() => {
-    setActiveIndex(null)
-  }, [])
+    setActiveIndex(null);
+  }, []);
 
   if (isLoading) {
-    return <CardSkeleton isDark={isDark} t={t} lines={5} />
+    return <CardSkeleton isDark={isDark} t={t} lines={5} />;
   }
 
-  const isEmpty = slices.length === 0
+  const isEmpty = slices.length === 0;
 
   return (
     <div
       className={`backdrop-blur-[40px] ${t.card} rounded-2xl p-3 border ${t.border} transition-all duration-300 shadow-lg shadow-black/5 flex flex-col ${
-        isDark ? 'bg-white/[0.03]' : 'bg-white/30'
+        isDark ? "bg-white/[0.03]" : "bg-white/30"
       }`}
     >
       {/* Header */}
@@ -116,18 +116,16 @@ export function PortfolioCard({ isDark, t }: PortfolioCardProps) {
         <div className="flex items-center gap-2">
           <div
             className={`p-2 rounded-xl backdrop-blur-sm ${
-              isDark ? 'bg-blue-500/10' : 'bg-blue-600/15'
+              isDark ? "bg-blue-500/10" : "bg-blue-600/15"
             }`}
           >
             <PieChartIcon
-              className={isDark ? 'text-blue-400' : 'text-blue-700'}
+              className={isDark ? "text-blue-400" : "text-blue-700"}
               size={16}
               strokeWidth={2}
             />
           </div>
-          <p
-            className={`${t.textSecondary} text-[10px] font-medium uppercase tracking-wide`}
-          >
+          <p className={`${t.textSecondary} text-[10px] font-medium uppercase tracking-wide`}>
             Portfolio
           </p>
         </div>
@@ -166,7 +164,7 @@ export function PortfolioCard({ isDark, t }: PortfolioCardProps) {
                       key={i}
                       fill={CHART_COLORS[i % CHART_COLORS.length]}
                       opacity={activeIndex === null || activeIndex === i ? 1 : 0.4}
-                      style={{ transition: 'opacity 200ms' }}
+                      style={{ transition: "opacity 200ms" }}
                     />
                   ))}
                 </Pie>
@@ -181,11 +179,7 @@ export function PortfolioCard({ isDark, t }: PortfolioCardProps) {
               <div
                 key={slice.ticker}
                 className={`flex items-center justify-between rounded-lg px-2 py-1.5 transition-colors ${
-                  activeIndex === i
-                    ? isDark
-                      ? 'bg-white/[0.05]'
-                      : 'bg-white/50'
-                    : ''
+                  activeIndex === i ? (isDark ? "bg-white/[0.05]" : "bg-white/50") : ""
                 }`}
                 onMouseEnter={() => setActiveIndex(i)}
                 onMouseLeave={() => setActiveIndex(null)}
@@ -205,8 +199,8 @@ export function PortfolioCard({ isDark, t }: PortfolioCardProps) {
                   <span className="flex flex-col min-w-0">
                     <span className={`text-[11px] font-medium ${t.text} truncate leading-tight`}>
                       {(() => {
-                        const pair = lpMap.get(slice.assetId)
-                        return pair ? getLpTicker(pair) : slice.ticker
+                        const pair = lpMap.get(slice.assetId);
+                        return pair ? getLpTicker(pair) : slice.ticker;
                       })()}
                     </span>
                     {lpMap.has(slice.assetId) && (
@@ -225,5 +219,5 @@ export function PortfolioCard({ isDark, t }: PortfolioCardProps) {
         </div>
       )}
     </div>
-  )
+  );
 }

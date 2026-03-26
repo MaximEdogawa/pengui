@@ -33,8 +33,7 @@ function LoadingState() {
 }
 
 function ErrorState({ error }: { error?: unknown }) {
-  const errorMessage =
-    error instanceof Error ? error.message : error ? String(error) : null;
+  const errorMessage = error instanceof Error ? error.message : error ? String(error) : null;
 
   return (
     <div className="h-full flex flex-col items-center justify-center p-4 bg-[#131722]">
@@ -51,14 +50,8 @@ export default function PriceChart() {
   const { data: tickersData } = useTickers();
   const tickers = useMemo(() => tickersData?.data || [], [tickersData?.data]);
 
-  const {
-    ohlcData,
-    isLoadingOHLC,
-    isErrorOHLC,
-    ohlcError,
-    indicators,
-    isUsingSyntheticData,
-  } = usePriceChart({ config, isUserScrolling });
+  const { ohlcData, isLoadingOHLC, isErrorOHLC, ohlcError, indicators, isUsingSyntheticData } =
+    usePriceChart({ config, isUserScrolling });
 
   // Get ticker ID for my trades
   const tickerId = useMemo(() => {
@@ -125,9 +118,7 @@ export default function PriceChart() {
 
         <select
           value={config.timeframe}
-          onChange={(e) =>
-            updateConfig({ timeframe: e.target.value as Timeframe })
-          }
+          onChange={(e) => updateConfig({ timeframe: e.target.value as Timeframe })}
           className={`px-2 sm:px-3 py-1 sm:py-1.5 text-[10px] sm:text-xs font-medium rounded-md bg-[#1e222d] border border-[#2a2e39] text-[#d1d4dc] hover:bg-[#252936] focus:outline-none focus:ring-2 focus:ring-[#2962ff]/50 transition-colors`}
         >
           {TIMEFRAMES.map((tf) => (

@@ -1,38 +1,42 @@
-import type { Meta, StoryObj } from '@storybook/nextjs-vite'
-import { useState } from 'react'
-import { TokenSearchInput } from '@/shared/ui'
+import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { useState } from "react";
+import { TokenSearchInput } from "@/shared/ui";
 
 const meta = {
-  title: 'Components/Forms/TokenSearchInput',
+  title: "Components/Forms/TokenSearchInput",
   component: TokenSearchInput,
   parameters: {
-    layout: 'centered',
+    layout: "centered",
   },
-  tags: ['autodocs'],
-} satisfies Meta<typeof TokenSearchInput>
+  tags: ["autodocs"],
+} satisfies Meta<typeof TokenSearchInput>;
 
-export default meta
-type Story = StoryObj<typeof meta>
+export default meta;
+type Story = StoryObj<typeof meta>;
 
 const mockTokens = [
-  { assetId: '0x1234567890abcdef1234567890abcdef12345678', ticker: 'USDT', name: 'Tether USD' },
-  { assetId: '0xabcdef1234567890abcdef1234567890abcdef12', ticker: 'USDC', name: 'USD Coin' },
-  { assetId: '0x9876543210fedcba9876543210fedcba98765432', ticker: 'DAI', name: 'Dai Stablecoin' },
-  { assetId: '', ticker: 'XCH', name: 'Chia' },
-  { assetId: '0x1111111111111111111111111111111111111111', ticker: 'WBTC', name: 'Wrapped Bitcoin' },
-  { assetId: '0x2222222222222222222222222222222222222222', ticker: 'ETH', name: 'Ethereum' },
-]
+  { assetId: "0x1234567890abcdef1234567890abcdef12345678", ticker: "USDT", name: "Tether USD" },
+  { assetId: "0xabcdef1234567890abcdef1234567890abcdef12", ticker: "USDC", name: "USD Coin" },
+  { assetId: "0x9876543210fedcba9876543210fedcba98765432", ticker: "DAI", name: "Dai Stablecoin" },
+  { assetId: "", ticker: "XCH", name: "Chia" },
+  {
+    assetId: "0x1111111111111111111111111111111111111111",
+    ticker: "WBTC",
+    name: "Wrapped Bitcoin",
+  },
+  { assetId: "0x2222222222222222222222222222222222222222", ticker: "ETH", name: "Ethereum" },
+];
 
 const TokenSearchInputWrapper = () => {
-  const [value, setValue] = useState('')
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false)
-  const [selectedToken, setSelectedToken] = useState<typeof mockTokens[0] | null>(null)
+  const [value, setValue] = useState("");
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [selectedToken, setSelectedToken] = useState<(typeof mockTokens)[0] | null>(null);
 
   const filteredTokens = mockTokens.filter(
     (token) =>
       token.ticker.toLowerCase().includes(value.toLowerCase()) ||
       token.name?.toLowerCase().includes(value.toLowerCase())
-  )
+  );
 
   return (
     <div className="w-full max-w-md">
@@ -42,15 +46,15 @@ const TokenSearchInputWrapper = () => {
         onFocus={() => setIsDropdownOpen(true)}
         onBlur={() => {
           // Delay closing to allow dropdown clicks
-          setTimeout(() => setIsDropdownOpen(false), 200)
+          setTimeout(() => setIsDropdownOpen(false), 200);
         }}
         placeholder="Search tokens..."
         disabled={false}
         filteredTokens={filteredTokens}
         onSelectToken={(token) => {
-          setSelectedToken(token)
-          setValue(token.ticker)
-          setIsDropdownOpen(false)
+          setSelectedToken(token);
+          setValue(token.ticker);
+          setIsDropdownOpen(false);
         }}
         isDropdownOpen={isDropdownOpen}
         onCloseDropdown={() => setIsDropdownOpen(false)}
@@ -61,16 +65,16 @@ const TokenSearchInputWrapper = () => {
         </p>
       )}
     </div>
-  )
-}
+  );
+};
 
 export const Default: Story = {
   args: {
-    value: '',
+    value: "",
     onChange: () => {},
     onFocus: () => {},
     onBlur: () => {},
-    placeholder: '',
+    placeholder: "",
     disabled: false,
     filteredTokens: [],
     onSelectToken: () => {},
@@ -78,15 +82,15 @@ export const Default: Story = {
     onCloseDropdown: () => {},
   },
   render: () => <TokenSearchInputWrapper />,
-}
+};
 
 export const Disabled: Story = {
   args: {
-    value: '',
+    value: "",
     onChange: () => {},
     onFocus: () => {},
     onBlur: () => {},
-    placeholder: '',
+    placeholder: "",
     disabled: false,
     filteredTokens: [],
     onSelectToken: () => {},
@@ -94,7 +98,7 @@ export const Disabled: Story = {
     onCloseDropdown: () => {},
   },
   render: () => {
-    const [value, setValue] = useState('')
+    const [value, setValue] = useState("");
 
     return (
       <div className="w-full max-w-md">
@@ -111,17 +115,17 @@ export const Disabled: Story = {
           onCloseDropdown={() => {}}
         />
       </div>
-    )
+    );
   },
-}
+};
 
 export const WithInitialValue: Story = {
   args: {
-    value: '',
+    value: "",
     onChange: () => {},
     onFocus: () => {},
     onBlur: () => {},
-    placeholder: '',
+    placeholder: "",
     disabled: false,
     filteredTokens: [],
     onSelectToken: () => {},
@@ -129,14 +133,14 @@ export const WithInitialValue: Story = {
     onCloseDropdown: () => {},
   },
   render: () => {
-    const [value, setValue] = useState('USDT')
-    const [isDropdownOpen, setIsDropdownOpen] = useState(false)
+    const [value, setValue] = useState("USDT");
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
     const filteredTokens = mockTokens.filter(
       (token) =>
         token.ticker.toLowerCase().includes(value.toLowerCase()) ||
         token.name?.toLowerCase().includes(value.toLowerCase())
-    )
+    );
 
     return (
       <div className="w-full max-w-md">
@@ -149,13 +153,13 @@ export const WithInitialValue: Story = {
           disabled={false}
           filteredTokens={filteredTokens}
           onSelectToken={(token) => {
-            setValue(token.ticker)
-            setIsDropdownOpen(false)
+            setValue(token.ticker);
+            setIsDropdownOpen(false);
           }}
           isDropdownOpen={isDropdownOpen}
           onCloseDropdown={() => setIsDropdownOpen(false)}
         />
       </div>
-    )
+    );
   },
-}
+};

@@ -1,24 +1,24 @@
-import type { Meta, StoryObj } from '@storybook/nextjs-vite'
-import DashboardLayout from '@/widgets/dashboard-layout/ui/DashboardLayout'
+import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import DashboardLayout from "@/widgets/dashboard-layout/ui/DashboardLayout";
 
 const meta = {
-  title: 'Widgets/DashboardLayout/DashboardLayout',
+  title: "Widgets/DashboardLayout/DashboardLayout",
   component: DashboardLayout,
   parameters: {
-    layout: 'fullscreen',
+    layout: "fullscreen",
     nextjs: {
       appDirectory: true,
       navigation: {
-        pathname: '/dashboard',
+        pathname: "/dashboard",
         query: {},
       },
     },
   },
-  tags: ['autodocs'],
-} satisfies Meta<typeof DashboardLayout>
+  tags: ["autodocs"],
+} satisfies Meta<typeof DashboardLayout>;
 
-export default meta
-type Story = StoryObj<typeof meta>
+export default meta;
+type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
@@ -29,4 +29,4 @@ export const Default: Story = {
       </div>
     ),
   },
-}
+};

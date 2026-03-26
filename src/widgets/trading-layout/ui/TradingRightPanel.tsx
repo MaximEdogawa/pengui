@@ -1,10 +1,7 @@
 "use client";
 
 import { useThemeClasses } from "@/shared/hooks";
-import type {
-  OrderBookFilters,
-  OrderBookOrder,
-} from "@/features/trading/lib/orderBookTypes";
+import type { OrderBookFilters, OrderBookOrder } from "@/features/trading/lib/orderBookTypes";
 import CreateOfferForm from "@/features/trading/ui/componets/limit/CreateOfferForm";
 import LimitOfferTab from "./OfferTab";
 import MarketOfferTab from "@/features/trading/ui/widgets/market/MarketOfferContent";
@@ -61,12 +58,9 @@ export default function TradingRightPanel({
             ) : (
               <div className="space-y-4">
                 <div>
-                  <h3 className={`text-sm font-semibold ${t.text} mb-2`}>
-                    Market
-                  </h3>
+                  <h3 className={`text-sm font-semibold ${t.text} mb-2`}>Market</h3>
                   <p className={`text-xs ${t.textSecondary} mb-4`}>
-                    Click an offer from the order book to take it, or create a
-                    new offer manually.
+                    Click an offer from the order book to take it, or create a new offer manually.
                   </p>
                 </div>
 
@@ -96,12 +90,10 @@ export default function TradingRightPanel({
             ) : (
               <div className="space-y-4">
                 <div>
-                  <h3 className={`text-sm font-semibold ${t.text} mb-2`}>
-                    Create Offer
-                  </h3>
+                  <h3 className={`text-sm font-semibold ${t.text} mb-2`}>Create Offer</h3>
                   <p className={`text-xs ${t.textSecondary} mb-4`}>
-                    Create a new trading offer. Click an offer from the order
-                    book to use it as a template.
+                    Create a new trading offer. Click an offer from the order book to use it as a
+                    template.
                   </p>
                 </div>
 

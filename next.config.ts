@@ -1,31 +1,31 @@
-import type { NextConfig } from 'next'
-import packageJson from './package.json'
+import type { NextConfig } from "next";
+import packageJson from "./package.json";
 
 const nextConfig: NextConfig = {
-  output: 'standalone',
+  output: "standalone",
   compress: true,
   poweredByHeader: false,
-  transpilePackages: ['@maximedogawa/chia-wallet-connect-react', 'lightweight-charts'],
+  transpilePackages: ["@maximedogawa/chia-wallet-connect-react", "lightweight-charts"],
   turbopack: {
     root: __dirname,
   },
   compiler: {
-    removeConsole: process.env.NODE_ENV === 'production' ? { exclude: ['error', 'warn'] } : false,
+    removeConsole: process.env.NODE_ENV === "production" ? { exclude: ["error", "warn"] } : false,
   },
   experimental: {
     optimizePackageImports: [
-      'lucide-react',
-      '@radix-ui/react-toast',
-      '@tanstack/react-query',
-      'dexie',
-      'clsx',
-      'tailwind-merge',
-      'recharts',
-      'react-redux',
-      'zustand',
+      "lucide-react",
+      "@radix-ui/react-toast",
+      "@tanstack/react-query",
+      "dexie",
+      "clsx",
+      "tailwind-merge",
+      "recharts",
+      "react-redux",
+      "zustand",
     ],
     serverActions: {
-      bodySizeLimit: '2mb',
+      bodySizeLimit: "2mb",
     },
   },
   env: {
@@ -34,19 +34,15 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        source: '/:all*(svg|jpg|png|webp|avif|ico|woff|woff2)',
-        headers: [
-          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
-        ],
+        source: "/:all*(svg|jpg|png|webp|avif|ico|woff|woff2)",
+        headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
       },
       {
-        source: '/_next/static/:path*',
-        headers: [
-          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
-        ],
+        source: "/_next/static/:path*",
+        headers: [{ key: "Cache-Control", value: "public, max-age=31536000, immutable" }],
       },
-    ]
+    ];
   },
-}
+};
 
-export default nextConfig
+export default nextConfig;

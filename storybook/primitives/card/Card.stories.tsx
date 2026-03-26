@@ -1,28 +1,28 @@
-import type { Meta, StoryObj } from '@storybook/nextjs-vite'
-import { Card } from '@/shared/ui'
+import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { Card } from "@/shared/ui";
 
 const meta = {
-  title: 'Components/Primitives/Card',
+  title: "Components/Primitives/Card",
   component: Card,
   parameters: {
-    layout: 'centered',
+    layout: "centered",
   },
-  tags: ['autodocs'],
+  tags: ["autodocs"],
   argTypes: {
     className: {
-      control: 'text',
+      control: "text",
     },
   },
-} satisfies Meta<typeof Card>
+} satisfies Meta<typeof Card>;
 
-export default meta
-type Story = StoryObj<typeof meta>
+export default meta;
+type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
-    children: 'Card content goes here',
+    children: "Card content goes here",
   },
-}
+};
 
 export const WithMultipleChildren: Story = {
   args: {
@@ -36,11 +36,11 @@ export const WithMultipleChildren: Story = {
       </div>
     ),
   },
-}
+};
 
 export const WithCustomClassName: Story = {
   args: {
-    className: 'max-w-md',
+    className: "max-w-md",
     children: (
       <div>
         <h3 className="text-lg font-semibold mb-2">Custom Width Card</h3>
@@ -48,4 +48,4 @@ export const WithCustomClassName: Story = {
       </div>
     ),
   },
-}
+};

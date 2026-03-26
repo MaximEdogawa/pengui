@@ -1,25 +1,25 @@
-import type { Meta, StoryObj } from '@storybook/nextjs-vite'
-import { Modal, Button } from '@/shared/ui'
+import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { Modal, Button } from "@/shared/ui";
 
 const meta = {
-  title: 'Components/Primitives/Modal',
+  title: "Components/Primitives/Modal",
   component: Modal,
   parameters: {
-    layout: 'centered',
+    layout: "centered",
   },
-  tags: ['autodocs'],
+  tags: ["autodocs"],
   argTypes: {
     maxWidth: {
-      control: 'text',
+      control: "text",
     },
     closeOnOverlayClick: {
-      control: 'boolean',
+      control: "boolean",
     },
   },
-} satisfies Meta<typeof Modal>
+} satisfies Meta<typeof Modal>;
 
-export default meta
-type Story = StoryObj<typeof meta>
+export default meta;
+type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
@@ -32,12 +32,12 @@ export const Default: Story = {
       </div>
     ),
   },
-}
+};
 
 export const Small: Story = {
   args: {
     onClose: () => {},
-    maxWidth: 'max-w-md',
+    maxWidth: "max-w-md",
     children: (
       <div className="p-6">
         <h2 className="text-xl font-bold mb-4">Small Modal</h2>
@@ -45,12 +45,12 @@ export const Small: Story = {
       </div>
     ),
   },
-}
+};
 
 export const Large: Story = {
   args: {
     onClose: () => {},
-    maxWidth: 'max-w-7xl',
+    maxWidth: "max-w-7xl",
     children: (
       <div className="p-6">
         <h2 className="text-2xl font-bold mb-4">Large Modal</h2>
@@ -58,4 +58,4 @@ export const Large: Story = {
       </div>
     ),
   },
-}
+};

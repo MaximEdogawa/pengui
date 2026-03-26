@@ -1,18 +1,17 @@
-'use client'
+"use client";
 
-import type { OfferDetails } from '@/entities/offer'
-import { useCallback } from 'react'
-import { useCancelOffer } from '@/features/wallet'
-import { UseMyOffersSetters, UseMyOffersState } from './useMyOffersState'
-import { useOfferStorage } from './useOfferStorage'
-import { removeOfferFromState, updateOfferInState, updateOfferStatus } from './useMyOffersHandlers'
-
+import type { OfferDetails } from "@/entities/offer";
+import { useCallback } from "react";
+import { useCancelOffer } from "@/features/wallet";
+import { UseMyOffersSetters, UseMyOffersState } from "./useMyOffersState";
+import { useOfferStorage } from "./useOfferStorage";
+import { removeOfferFromState, updateOfferInState, updateOfferStatus } from "./useMyOffersHandlers";
 
 interface UseMyOffersSingleActionsProps {
-  state: UseMyOffersState & UseMyOffersSetters
-  refreshOffers: () => Promise<void>
-  cancelOfferMutation: ReturnType<typeof useCancelOffer>
-  offerStorage: ReturnType<typeof useOfferStorage>
+  state: UseMyOffersState & UseMyOffersSetters;
+  refreshOffers: () => Promise<void>;
+  cancelOfferMutation: ReturnType<typeof useCancelOffer>;
+  offerStorage: ReturnType<typeof useOfferStorage>;
 }
 
 export function useMyOffersSingleActions({
@@ -23,95 +22,97 @@ export function useMyOffersSingleActions({
 }: UseMyOffersSingleActionsProps) {
   const viewOffer = useCallback(
     (offer: OfferDetails | null) => {
-      state.setSelectedOffer(offer)
+      state.setSelectedOffer(offer);
     },
     [state]
-  )
+  );
 
   const cancelOffer = useCallback(
     (offer: OfferDetails) => {
-      state.setOfferToCancel(offer)
-      state.setCancelError('')
-      state.setShowCancelConfirmation(true)
+      state.setOfferToCancel(offer);
+      state.setCancelError("");
+      state.setShowCancelConfirmation(true);
     },
     [state]
-  )
+  );
 
   const confirmCancelOffer = useCallback(async () => {
-    if (!state.offerToCancel) return
+    if (!state.offerToCancel) return;
 
-    state.setIsCancelling(true)
-    state.setCancelError('')
+    state.setIsCancelling(true);
+    state.setCancelError("");
 
     try {
       // Check if offer can be cancelled (has tradeId and is not pending confirmation)
       if (!state.offerToCancel.tradeId || state.offerToCancel.pendingConfirmation) {
-        state.setCancelError('Cannot cancel offer: trade ID not available yet')
-        state.setIsCancelling(false)
-        return
+        state.setCancelError("Cannot cancel offer: trade ID not available yet");
+        state.setIsCancelling(false);
+        return;
       }
 
       await cancelOfferMutation.mutateAsync({
         id: state.offerToCancel.tradeId,
         feeInXch: state.offerToCancel.fee,
-      })
-      await offerStorage.updateOffer(state.offerToCancel.id, { status: 'cancelled' })
-      state.setShowCancelConfirmation(false)
-      state.setOfferToCancel(null)
-      await refreshOffers()
+      });
+      await offerStorage.updateOffer(state.offerToCancel.id, { status: "cancelled" });
+      state.setShowCancelConfirmation(false);
+      state.setOfferToCancel(null);
+      await refreshOffers();
     } catch (error) {
       state.setCancelError(
-        `Failed to cancel offer: ${error instanceof Error ? error.message : 'Unknown error'}`
-      )
+        `Failed to cancel offer: ${error instanceof Error ? error.message : "Unknown error"}`
+      );
     } finally {
-      state.setIsCancelling(false)
+      state.setIsCancelling(false);
     }
-  }, [state, cancelOfferMutation, offerStorage, refreshOffers])
+  }, [state, cancelOfferMutation, offerStorage, refreshOffers]);
 
   const handleCancelDialogClose = useCallback(() => {
-    state.setShowCancelConfirmation(false)
-    state.setOfferToCancel(null)
-    state.setCancelError('')
-  }, [state])
+    state.setShowCancelConfirmation(false);
+    state.setOfferToCancel(null);
+    state.setCancelError("");
+  }, [state]);
 
   const handleOfferTaken = useCallback(
     async (offer: OfferDetails) => {
-      state.setOffers((prev) => updateOfferStatus(prev, offer.id, 'completed'))
-      await refreshOffers()
+      state.setOffers((prev) => updateOfferStatus(prev, offer.id, "completed"));
+      await refreshOffers();
     },
     [refreshOffers, state]
-  )
+  );
 
   const handleOfferCancelled = useCallback(
     async (offer: OfferDetails) => {
-      state.setOffers((prev) => updateOfferStatus(prev, offer.id, 'cancelled'))
+      state.setOffers((prev) => updateOfferStatus(prev, offer.id, "cancelled"));
       if (state.selectedOffer && state.selectedOffer.id === offer.id) {
-        state.setSelectedOffer(null)
+        state.setSelectedOffer(null);
       }
-      await refreshOffers()
+      await refreshOffers();
     },
     [refreshOffers, state]
-  )
+  );
 
   const handleOfferDeleted = useCallback(
     async (offer: OfferDetails) => {
-      state.setOffers((prev) => removeOfferFromState(prev, offer.id))
+      state.setOffers((prev) => removeOfferFromState(prev, offer.id));
       if (state.selectedOffer && state.selectedOffer.id === offer.id) {
-        state.setSelectedOffer(null)
+        state.setSelectedOffer(null);
       }
-      await refreshOffers()
+      await refreshOffers();
     },
     [refreshOffers, state]
-  )
+  );
 
   const handleOfferUpdated = useCallback(
     async (offer: OfferDetails) => {
-      state.setOffers((prev) => updateOfferInState(prev, offer))
-      state.setSelectedOffer((prev) => (prev && prev.id === offer.id ? { ...prev, ...offer } : prev))
-      await refreshOffers()
+      state.setOffers((prev) => updateOfferInState(prev, offer));
+      state.setSelectedOffer((prev) =>
+        prev && prev.id === offer.id ? { ...prev, ...offer } : prev
+      );
+      await refreshOffers();
     },
     [refreshOffers, state]
-  )
+  );
 
   return {
     viewOffer,
@@ -122,5 +123,5 @@ export function useMyOffersSingleActions({
     handleOfferCancelled,
     handleOfferDeleted,
     handleOfferUpdated,
-  }
+  };
 }

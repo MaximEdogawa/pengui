@@ -21,9 +21,7 @@ export function PriceAdjustmentSection({
   const { t } = useThemeClasses();
 
   return (
-    <div
-      className={`space-y-3 p-3 rounded-lg ${t.cardHover} backdrop-blur-xl border ${t.border}`}
-    >
+    <div className={`space-y-3 p-3 rounded-lg ${t.cardHover} backdrop-blur-xl border ${t.border}`}>
       <h4 className={`text-xs font-medium ${t.text} mb-2`}>Price Adjustment</h4>
       <PriceAdjustmentSlider
         value={requestedAdjustment}

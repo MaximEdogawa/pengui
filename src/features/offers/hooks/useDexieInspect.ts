@@ -32,8 +32,7 @@ export function useDexieInspect() {
             id: dexieId,
             known: false,
             offer: null,
-            error_message:
-              result.error_message || `HTTP error! status: ${response.status}`,
+            error_message: result.error_message || `HTTP error! status: ${response.status}`,
           };
         }
 
@@ -62,10 +61,7 @@ export function useDexieInspect() {
     },
   });
 
-  const inspectOfferWithPolling = async (
-    dexieId: string,
-    maxAttempts: number = 30,
-  ) => {
+  const inspectOfferWithPolling = async (dexieId: string, maxAttempts: number = 30) => {
     if (!dexieId) throw new Error("Dexie ID is required for polling");
 
     let attempts = 0;

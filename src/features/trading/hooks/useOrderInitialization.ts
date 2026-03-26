@@ -40,17 +40,11 @@ export function useOrderInitialization({
 
     if (order) {
       useAsTemplateRef.current(order);
-      setRequestedAdjustmentRef.current(
-        initialPriceAdjustments?.requested || 0,
-      );
+      setRequestedAdjustmentRef.current(initialPriceAdjustments?.requested || 0);
       setOfferedAdjustmentRef.current(initialPriceAdjustments?.offered || 0);
     } else {
       setRequestedAdjustmentRef.current(0);
       setOfferedAdjustmentRef.current(0);
     }
-  }, [
-    order,
-    initialPriceAdjustments?.requested,
-    initialPriceAdjustments?.offered,
-  ]);
+  }, [order, initialPriceAdjustments?.requested, initialPriceAdjustments?.offered]);
 }

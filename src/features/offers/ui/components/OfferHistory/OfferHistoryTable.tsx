@@ -1,22 +1,22 @@
-'use client'
+"use client";
 
-import { Eye, X as XIcon } from 'lucide-react'
-import type { OfferDetails } from '@/entities/offer'
-import { TickerIcon, XchIcon } from '@/entities/asset'
-import { useNetwork } from '@/shared/hooks'
-import { formatAssetAmount } from '@/shared/lib/utils/chia-units'
-import type { ThemeClasses } from '@/shared/lib/theme'
+import { Eye, X as XIcon } from "lucide-react";
+import type { OfferDetails } from "@/entities/offer";
+import { TickerIcon, XchIcon } from "@/entities/asset";
+import { useNetwork } from "@/shared/hooks";
+import { formatAssetAmount } from "@/shared/lib/utils/chia-units";
+import type { ThemeClasses } from "@/shared/lib/theme";
 
 interface OfferHistoryTableProps {
-  offers: OfferDetails[]
-  getStatusClass: (status: string) => string
-  formatDate: (date: Date) => string
-  getTickerSymbol: (assetId: string) => string
-  isCopied: string | null | undefined
-  onCopyOfferString: (offerString: string) => Promise<void>
-  onViewOffer: (offer: OfferDetails) => void
-  onCancelOffer: (offer: OfferDetails) => void
-  t: ThemeClasses
+  offers: OfferDetails[];
+  getStatusClass: (status: string) => string;
+  formatDate: (date: Date) => string;
+  getTickerSymbol: (assetId: string) => string;
+  isCopied: string | null | undefined;
+  onCopyOfferString: (offerString: string) => Promise<void>;
+  onViewOffer: (offer: OfferDetails) => void;
+  onCancelOffer: (offer: OfferDetails) => void;
+  t: ThemeClasses;
 }
 
 export function OfferHistoryTable({
@@ -30,16 +30,16 @@ export function OfferHistoryTable({
   onCancelOffer,
   t,
 }: OfferHistoryTableProps) {
-  const { network } = useNetwork()
-  const isTestnet = network === 'testnet'
+  const { network } = useNetwork();
+  const isTestnet = network === "testnet";
 
   const renderAssetIcon = (assetId: string, ticker: string) => {
-    const isXch = !assetId || ticker === 'XCH' || ticker === 'TXCH'
+    const isXch = !assetId || ticker === "XCH" || ticker === "TXCH";
     if (isXch) {
-      return <XchIcon size={14} isTestnet={isTestnet} />
+      return <XchIcon size={14} isTestnet={isTestnet} />;
     }
-    return <TickerIcon assetId={assetId} ticker={ticker} size={14} />
-  }
+    return <TickerIcon assetId={assetId} ticker={ticker} size={14} />;
+  };
 
   return (
     <div className="hidden md:block overflow-x-auto">
@@ -49,12 +49,8 @@ export function OfferHistoryTable({
             <th className={`text-left py-3 px-4 text-sm font-medium ${t.textSecondary}`}>
               Offer String
             </th>
-            <th className={`text-left py-3 px-4 text-sm font-medium ${t.textSecondary}`}>
-              Status
-            </th>
-            <th className={`text-left py-3 px-4 text-sm font-medium ${t.textSecondary}`}>
-              Assets
-            </th>
+            <th className={`text-left py-3 px-4 text-sm font-medium ${t.textSecondary}`}>Status</th>
+            <th className={`text-left py-3 px-4 text-sm font-medium ${t.textSecondary}`}>Assets</th>
             <th className={`text-left py-3 px-4 text-sm font-medium ${t.textSecondary}`}>
               Created
             </th>
@@ -74,13 +70,13 @@ export function OfferHistoryTable({
                   onClick={() => onCopyOfferString(offer.offerString)}
                   className={`bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 px-2 py-1 rounded text-xs font-mono transition-all duration-300 cursor-pointer group relative overflow-hidden max-w-[200px] sm:max-w-[250px] ${
                     isCopied === offer.offerString
-                      ? 'bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-300'
-                      : ''
+                      ? "bg-green-100 dark:bg-green-900/20 text-green-800 dark:text-green-300"
+                      : ""
                   }`}
-                  title={isCopied === offer.offerString ? 'Copied!' : 'Click to copy offer string'}
+                  title={isCopied === offer.offerString ? "Copied!" : "Click to copy offer string"}
                 >
                   <span className="transition-all duration-300 truncate block">
-                    {offer.offerString?.slice(0, 12) || 'Unknown'}...
+                    {offer.offerString?.slice(0, 12) || "Unknown"}...
                   </span>
                 </button>
               </td>
@@ -94,7 +90,7 @@ export function OfferHistoryTable({
               <td className={`py-3 px-4 text-sm ${t.text}`}>
                 <div className="space-y-1">
                   {(offer.assetsOffered || []).slice(0, 2).map((asset, idx) => {
-                    const ticker = getTickerSymbol(asset.assetId)
+                    const ticker = getTickerSymbol(asset.assetId);
                     return (
                       <div
                         key={`offered-${asset.assetId}-${idx}`}
@@ -108,7 +104,7 @@ export function OfferHistoryTable({
                           {ticker}
                         </span>
                       </div>
-                    )
+                    );
                   })}
                   {(offer.assetsOffered || []).length > 2 && (
                     <div className={`text-xs ${t.textSecondary} font-medium`}>
@@ -129,7 +125,7 @@ export function OfferHistoryTable({
                     <Eye size={14} className="mr-1" />
                     View
                   </button>
-                  {offer.status === 'active' && (
+                  {offer.status === "active" && (
                     <button
                       onClick={() => onCancelOffer(offer)}
                       className={`text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 text-sm flex items-center`}
@@ -145,5 +141,5 @@ export function OfferHistoryTable({
         </tbody>
       </table>
     </div>
-  )
+  );
 }

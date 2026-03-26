@@ -1,29 +1,29 @@
-'use client'
+"use client";
 
-import { createContext, useContext, useCallback, useState, ReactNode } from 'react'
-import type { OrderBookOrder } from '../lib/orderBookTypes'
-import { useOrderBookOfferSubmission } from './useOrderBookOfferSubmission'
-import { logger } from '@/shared/lib/logger'
+import { createContext, useContext, useCallback, useState, ReactNode } from "react";
+import type { OrderBookOrder } from "../lib/orderBookTypes";
+import { useOrderBookOfferSubmission } from "./useOrderBookOfferSubmission";
+import { logger } from "@/shared/lib/logger";
 
 interface SelectedOrderContextType {
   // Selected orders
-  selectedOrderForTaking: OrderBookOrder | null
-  selectedOrderForMaking: OrderBookOrder | null
-  
+  selectedOrderForTaking: OrderBookOrder | null;
+  selectedOrderForMaking: OrderBookOrder | null;
+
   // Methods to select orders
-  selectOrderForTaking: (order: OrderBookOrder) => Promise<void>
-  selectOrderForMaking: (order: OrderBookOrder) => void
-  clearSelectedOrders: () => void
-  
+  selectOrderForTaking: (order: OrderBookOrder) => Promise<void>;
+  selectOrderForMaking: (order: OrderBookOrder) => void;
+  clearSelectedOrders: () => void;
+
   // Methods from useOrderBookOfferSubmission
-  resetForm: () => void
-  useAsTemplate: (order: OrderBookOrder) => void
+  resetForm: () => void;
+  useAsTemplate: (order: OrderBookOrder) => void;
 }
 
-const SelectedOrderContext = createContext<SelectedOrderContextType | undefined>(undefined)
+const SelectedOrderContext = createContext<SelectedOrderContextType | undefined>(undefined);
 
 interface SelectedOrderProviderProps {
-  children: ReactNode
+  children: ReactNode;
 }
 
 /**
@@ -31,10 +31,14 @@ interface SelectedOrderProviderProps {
  * Handles loading offers into market and limit tabs
  */
 export function SelectedOrderProvider({ children }: SelectedOrderProviderProps) {
-  const [selectedOrderForTaking, setSelectedOrderForTaking] = useState<OrderBookOrder | null>(null)
-  const [selectedOrderForMaking, setSelectedOrderForMaking] = useState<OrderBookOrder | null>(null)
-  
-  const { fillFromOrderBook, useAsTemplate: applyAsTemplate, resetForm: resetOfferForm } = useOrderBookOfferSubmission()
+  const [selectedOrderForTaking, setSelectedOrderForTaking] = useState<OrderBookOrder | null>(null);
+  const [selectedOrderForMaking, setSelectedOrderForMaking] = useState<OrderBookOrder | null>(null);
+
+  const {
+    fillFromOrderBook,
+    useAsTemplate: applyAsTemplate,
+    resetForm: resetOfferForm,
+  } = useOrderBookOfferSubmission();
 
   /**
    * Select an order for taking (taker mode)
@@ -43,18 +47,18 @@ export function SelectedOrderProvider({ children }: SelectedOrderProviderProps) 
   const selectOrderForTaking = useCallback(
     async (order: OrderBookOrder) => {
       if (!order || !order.id) {
-        logger.error('SelectedOrderProvider: Invalid order passed to selectOrderForTaking', order)
-        return
+        logger.error("SelectedOrderProvider: Invalid order passed to selectOrderForTaking", order);
+        return;
       }
 
-      setSelectedOrderForTaking(order)
-      setSelectedOrderForMaking(order)
-      
+      setSelectedOrderForTaking(order);
+      setSelectedOrderForMaking(order);
+
       // Fill the form from order book (swaps perspective for taker mode)
-      await fillFromOrderBook(order)
+      await fillFromOrderBook(order);
     },
     [fillFromOrderBook]
-  )
+  );
 
   /**
    * Select an order for making (maker mode)
@@ -63,24 +67,24 @@ export function SelectedOrderProvider({ children }: SelectedOrderProviderProps) 
   const selectOrderForMaking = useCallback(
     (order: OrderBookOrder) => {
       if (!order || !order.id) {
-        logger.error('SelectedOrderProvider: Invalid order passed to selectOrderForMaking', order)
-        return
+        logger.error("SelectedOrderProvider: Invalid order passed to selectOrderForMaking", order);
+        return;
       }
 
-      setSelectedOrderForMaking(order)
-      applyAsTemplate(order)
+      setSelectedOrderForMaking(order);
+      applyAsTemplate(order);
     },
     [applyAsTemplate]
-  )
+  );
 
   /**
    * Clear all selected orders and reset forms
    */
   const clearSelectedOrders = useCallback(() => {
-    setSelectedOrderForTaking(null)
-    setSelectedOrderForMaking(null)
-    resetOfferForm()
-  }, [resetOfferForm])
+    setSelectedOrderForTaking(null);
+    setSelectedOrderForMaking(null);
+    resetOfferForm();
+  }, [resetOfferForm]);
 
   const value: SelectedOrderContextType = {
     selectedOrderForTaking,
@@ -90,18 +94,18 @@ export function SelectedOrderProvider({ children }: SelectedOrderProviderProps) 
     clearSelectedOrders,
     resetForm: resetOfferForm,
     useAsTemplate: applyAsTemplate,
-  }
+  };
 
-  return <SelectedOrderContext.Provider value={value}>{children}</SelectedOrderContext.Provider>
+  return <SelectedOrderContext.Provider value={value}>{children}</SelectedOrderContext.Provider>;
 }
 
 /**
  * Hook to access the selected order context
  */
 export function useSelectedOrder(): SelectedOrderContextType {
-  const context = useContext(SelectedOrderContext)
+  const context = useContext(SelectedOrderContext);
   if (context === undefined) {
-    throw new Error('useSelectedOrder must be used within a SelectedOrderProvider')
+    throw new Error("useSelectedOrder must be used within a SelectedOrderProvider");
   }
-  return context
+  return context;
 }

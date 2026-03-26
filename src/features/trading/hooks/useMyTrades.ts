@@ -52,13 +52,9 @@ export function useMyTrades(filters?: MyTradesFilters) {
       if (!walletAddress) {
         return [];
       }
-      return myTradesService.getMyTradesForTicker(
-        tickerId,
-        walletAddress,
-        network,
-      );
+      return myTradesService.getMyTradesForTicker(tickerId, walletAddress, network);
     },
-    [walletAddress, network],
+    [walletAddress, network]
   );
 
   /**
@@ -68,7 +64,7 @@ export function useMyTrades(filters?: MyTradesFilters) {
     (tradeId: string): boolean => {
       return myTrades.some((trade) => trade.trade_id === tradeId);
     },
-    [myTrades],
+    [myTrades]
   );
 
   /**
@@ -81,12 +77,10 @@ export function useMyTrades(filters?: MyTradesFilters) {
       }
 
       return offers
-        .map((offer) =>
-          myTradesService.convertOfferToTrade(offer, walletAddress),
-        )
+        .map((offer) => myTradesService.convertOfferToTrade(offer, walletAddress))
         .filter((trade): trade is TradeHistoryItem => trade !== null);
     },
-    [walletAddress],
+    [walletAddress]
   );
 
   /**
@@ -96,7 +90,7 @@ export function useMyTrades(filters?: MyTradesFilters) {
     (apiTrades: DexieHistoricalTrade[]): Map<string, TradeHistoryItem> => {
       return myTradesService.identifyMyTrades(apiTrades, myTrades);
     },
-    [myTrades],
+    [myTrades]
   );
 
   /**
@@ -104,14 +98,9 @@ export function useMyTrades(filters?: MyTradesFilters) {
    */
   const getEntryPrice = useCallback(
     (tickerId: string, tradeType: "buy" | "sell"): number | null => {
-      return myTradesService.getEntryPrice(
-        tickerId,
-        walletAddress || "",
-        tradeType,
-        myTrades,
-      );
+      return myTradesService.getEntryPrice(tickerId, walletAddress || "", tradeType, myTrades);
     },
-    [walletAddress, myTrades],
+    [walletAddress, myTrades]
   );
 
   return {
@@ -127,11 +116,7 @@ export function useMyTrades(filters?: MyTradesFilters) {
       if (!walletAddress) return;
       setIsLoading(true);
       try {
-        const trades = await myTradesService.getMyTrades(
-          walletAddress,
-          network,
-          filters,
-        );
+        const trades = await myTradesService.getMyTrades(walletAddress, network, filters);
         setMyTrades(trades);
         setError(null);
       } catch (err) {

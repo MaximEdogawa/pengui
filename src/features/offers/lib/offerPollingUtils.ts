@@ -1,14 +1,14 @@
-import type { MutableRefObject } from 'react'
-import type { DexiePostOfferResponse } from '../lib/dexieTypes'
-import { calculateOfferState } from './dexieUtils'
-import type { OfferDetails, OfferStatus } from '@/entities/offer'
+import type { MutableRefObject } from "react";
+import type { DexiePostOfferResponse } from "../lib/dexieTypes";
+import { calculateOfferState } from "./dexieUtils";
+import type { OfferDetails, OfferStatus } from "@/entities/offer";
 
 /**
  * Extract date fields from Dexie offer response
  */
 export function extractOfferDateFields(result: DexiePostOfferResponse) {
   if (!result.success || !result.offer) {
-    return null
+    return null;
   }
 
   return {
@@ -20,7 +20,7 @@ export function extractOfferDateFields(result: DexiePostOfferResponse) {
     spentBlockIndex: result.offer.spent_block_index,
     knownTaker: result.offer.known_taker,
     offer: result.offer,
-  }
+  };
 }
 
 /**
@@ -29,13 +29,13 @@ export function extractOfferDateFields(result: DexiePostOfferResponse) {
 export function createUpdateKey(
   offerId: string,
   dateFields: {
-    dateFound: string | null | undefined
-    dateCompleted: string | null | undefined
-    datePending: string | null | undefined
-    dateExpiry: string | null | undefined
-    blockExpiry: number | null | undefined
-    spentBlockIndex: number | null | undefined
-    knownTaker: unknown | null | undefined
+    dateFound: string | null | undefined;
+    dateCompleted: string | null | undefined;
+    datePending: string | null | undefined;
+    dateExpiry: string | null | undefined;
+    blockExpiry: number | null | undefined;
+    spentBlockIndex: number | null | undefined;
+    knownTaker: unknown | null | undefined;
   }
 ): string {
   const {
@@ -46,28 +46,28 @@ export function createUpdateKey(
     blockExpiry,
     spentBlockIndex,
     knownTaker,
-  } = dateFields
+  } = dateFields;
 
-  return `${offerId}-${dateFound || ''}-${dateCompleted || ''}-${datePending || ''}-${dateExpiry || ''}-${blockExpiry || ''}-${spentBlockIndex || ''}-${knownTaker !== null && knownTaker !== undefined ? String(knownTaker) : ''}`
+  return `${offerId}-${dateFound || ""}-${dateCompleted || ""}-${datePending || ""}-${dateExpiry || ""}-${blockExpiry || ""}-${spentBlockIndex || ""}-${knownTaker !== null && knownTaker !== undefined ? String(knownTaker) : ""}`;
 }
 
 /**
  * Map calculated state to legacy status
  */
 export function mapStateToStatus(calculatedState: string, currentStatus: OfferStatus): OfferStatus {
-  if (calculatedState === 'Completed') {
-    return 'completed'
+  if (calculatedState === "Completed") {
+    return "completed";
   }
-  if (calculatedState === 'Cancelled' || calculatedState === 'Expired') {
-    return 'cancelled'
+  if (calculatedState === "Cancelled" || calculatedState === "Expired") {
+    return "cancelled";
   }
-  if (calculatedState === 'Pending') {
-    return 'pending'
+  if (calculatedState === "Pending") {
+    return "pending";
   }
-  if (calculatedState === 'Open') {
-    return 'active'
+  if (calculatedState === "Open") {
+    return "active";
   }
-  return currentStatus
+  return currentStatus;
 }
 
 /**
@@ -77,20 +77,20 @@ export function needsOfferUpdate(
   currentOffer: OfferDetails,
   calculatedState: string,
   dateFields: {
-    datePending: string | null | undefined
-    dateCompleted: string | null | undefined
-    dateFound: string | null | undefined
-    dateExpiry: string | null | undefined
+    datePending: string | null | undefined;
+    dateCompleted: string | null | undefined;
+    dateFound: string | null | undefined;
+    dateExpiry: string | null | undefined;
   }
 ): boolean {
-  const currentState = currentOffer.dexieStatus || currentOffer.state
+  const currentState = currentOffer.dexieStatus || currentOffer.state;
   return (
     currentState !== calculatedState ||
     currentOffer.datePending !== dateFields.datePending ||
     currentOffer.dateCompleted !== dateFields.dateCompleted ||
     currentOffer.dateFound !== dateFields.dateFound ||
     currentOffer.dateExpiry !== dateFields.dateExpiry
-  )
+  );
 }
 
 /**
@@ -98,9 +98,9 @@ export function needsOfferUpdate(
  */
 export function cleanupProcessedUpdates(processedUpdatesRef: MutableRefObject<Set<string>>) {
   if (processedUpdatesRef.current.size > 100) {
-    const entries = Array.from(processedUpdatesRef.current)
-    processedUpdatesRef.current.clear()
-    entries.slice(-50).forEach((key) => processedUpdatesRef.current.add(key))
+    const entries = Array.from(processedUpdatesRef.current);
+    processedUpdatesRef.current.clear();
+    entries.slice(-50).forEach((key) => processedUpdatesRef.current.add(key));
   }
 }
 
@@ -110,22 +110,22 @@ export function cleanupProcessedUpdates(processedUpdatesRef: MutableRefObject<Se
 export function prepareOfferUpdate(
   offerId: string,
   dateFields: {
-    dateFound: string | null | undefined
-    dateCompleted: string | null | undefined
-    datePending: string | null | undefined
-    dateExpiry: string | null | undefined
-    blockExpiry: number | null | undefined
-    spentBlockIndex: number | null | undefined
-    knownTaker: unknown | null | undefined
-    offer: unknown
+    dateFound: string | null | undefined;
+    dateCompleted: string | null | undefined;
+    datePending: string | null | undefined;
+    dateExpiry: string | null | undefined;
+    blockExpiry: number | null | undefined;
+    spentBlockIndex: number | null | undefined;
+    knownTaker: unknown | null | undefined;
+    offer: unknown;
   },
   calculatedState: string,
   newStatus: OfferStatus
 ): Partial<OfferDetails> {
   return {
     dexieOfferData: dateFields.offer,
-    dexieStatus: calculatedState as OfferDetails['dexieStatus'],
-    state: calculatedState as OfferDetails['state'],
+    dexieStatus: calculatedState as OfferDetails["dexieStatus"],
+    state: calculatedState as OfferDetails["state"],
     status: newStatus,
     dateFound: dateFields.dateFound || undefined,
     dateCompleted: dateFields.dateCompleted || undefined,
@@ -134,64 +134,62 @@ export function prepareOfferUpdate(
     blockExpiry: dateFields.blockExpiry || undefined,
     spentBlockIndex: dateFields.spentBlockIndex || undefined,
     knownTaker: dateFields.knownTaker,
-  }
+  };
 }
 
 /**
  * Configuration for processing offer updates
  */
 interface ProcessOfferUpdateConfig {
-  offerId: string
-  result: DexiePostOfferResponse
-  currentOffer: OfferDetails | undefined
-  processedUpdatesRef: MutableRefObject<Set<string>>
-  updateOffer: (offerId: string, updates: Partial<OfferDetails>) => Promise<void>
+  offerId: string;
+  result: DexiePostOfferResponse;
+  currentOffer: OfferDetails | undefined;
+  processedUpdatesRef: MutableRefObject<Set<string>>;
+  updateOffer: (offerId: string, updates: Partial<OfferDetails>) => Promise<void>;
 }
 
 /**
  * Process a single offer update from polling
  */
-export async function processOfferUpdate(
-  config: ProcessOfferUpdateConfig
-): Promise<void> {
-  const { offerId, result, currentOffer, processedUpdatesRef, updateOffer: updateOfferFn } = config
-  if (!currentOffer) return
+export async function processOfferUpdate(config: ProcessOfferUpdateConfig): Promise<void> {
+  const { offerId, result, currentOffer, processedUpdatesRef, updateOffer: updateOfferFn } = config;
+  if (!currentOffer) return;
 
-  const dateFields = extractOfferDateFields(result)
-  if (!dateFields) return
+  const dateFields = extractOfferDateFields(result);
+  if (!dateFields) return;
 
-  const updateKey = createUpdateKey(offerId, dateFields)
+  const updateKey = createUpdateKey(offerId, dateFields);
 
   // Skip if we've already processed this exact update
   if (processedUpdatesRef.current.has(updateKey)) {
-    return
+    return;
   }
 
   // Calculate the offer state from date fields
-  const calculatedState = calculateOfferState(dateFields.offer)
+  const calculatedState = calculateOfferState(dateFields.offer);
 
   // Map calculated state to legacy status
-  const newStatus = mapStateToStatus(calculatedState, currentOffer.status)
+  const newStatus = mapStateToStatus(calculatedState, currentOffer.status);
 
   // Check if we need to update
   if (!needsOfferUpdate(currentOffer, calculatedState, dateFields)) {
-    return
+    return;
   }
 
   // Mark this update as processed
-  processedUpdatesRef.current.add(updateKey)
+  processedUpdatesRef.current.add(updateKey);
 
   // Clean up old processed updates
-  cleanupProcessedUpdates(processedUpdatesRef)
+  cleanupProcessedUpdates(processedUpdatesRef);
 
   // Prepare update data
-  const updateData = prepareOfferUpdate(offerId, dateFields, calculatedState, newStatus)
+  const updateData = prepareOfferUpdate(offerId, dateFields, calculatedState, newStatus);
 
   // Update in IndexedDB
-  await updateOfferFn(offerId, updateData)
+  await updateOfferFn(offerId, updateData);
 
   // Trigger a refresh event so the UI updates
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent('offer-status-updated', { detail: { offerId } }))
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("offer-status-updated", { detail: { offerId } }));
   }
 }

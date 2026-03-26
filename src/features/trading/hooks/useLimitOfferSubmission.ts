@@ -5,10 +5,7 @@ import { useOfferStorage } from "@/features/offers/hooks/useOfferStorage";
 import { useOfferUpload } from "@/features/offers/hooks/useOfferUpload";
 import { useCreateOffer, useWalletAddress } from "@/features/wallet";
 import { logger } from "@/shared/lib/logger";
-import {
-  convertToSmallestUnit,
-  getMinimumFeeInXch,
-} from "@/shared/lib/utils/chia-units";
+import { convertToSmallestUnit, getMinimumFeeInXch } from "@/shared/lib/utils/chia-units";
 import { useQueryClient } from "@tanstack/react-query";
 import type { ExtendedAsset as ExtendedOfferAsset } from "@/shared/ui";
 import { useOrderBook } from "@/features/trading/hooks/useOrderBook";
@@ -45,8 +42,7 @@ export function useLimitOfferSubmission({
 }: UseLimitOfferSubmissionProps) {
   const createOfferMutation = useCreateOffer();
   const offerStorage = useOfferStorage();
-  const { uploadOfferToDexie, isUploading: isUploadingToDexie } =
-    useOfferUpload();
+  const { uploadOfferToDexie, isUploading: isUploadingToDexie } = useOfferUpload();
   const { data: walletAddress } = useWalletAddress();
   const queryClient = useQueryClient();
   const { refreshOrderBook } = useOrderBook();
@@ -74,7 +70,7 @@ export function useLimitOfferSubmission({
             ...asset,
             amount: Number(asset.amount) || 0,
           })),
-          convertToSmallestUnit,
+          convertToSmallestUnit
         );
 
         const requestAssets = toWalletAssets(
@@ -82,7 +78,7 @@ export function useLimitOfferSubmission({
             ...asset,
             amount: Number(asset.amount) || 0,
           })),
-          convertToSmallestUnit,
+          convertToSmallestUnit
         );
 
         const result = await createOfferMutation.mutateAsync({
@@ -147,8 +143,7 @@ export function useLimitOfferSubmission({
           }
         }, 1500);
       } catch (error) {
-        const errorMsg =
-          error instanceof Error ? error.message : "Unknown error occurred";
+        const errorMsg = error instanceof Error ? error.message : "Unknown error occurred";
         setErrorMessage(`Failed to create offer: ${errorMsg}`);
       } finally {
         setIsSubmitting(false);
@@ -173,7 +168,7 @@ export function useLimitOfferSubmission({
       setOfferedAdjustment,
       setFee,
       setFeeInput,
-    ],
+    ]
   );
 
   return {

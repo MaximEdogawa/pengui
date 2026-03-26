@@ -11,11 +11,7 @@ interface TakeOfferModalProps {
   order?: OrderBookOrder;
 }
 
-export default function TakeOfferModal({
-  onClose,
-  onOfferTaken,
-  order,
-}: TakeOfferModalProps) {
+export default function TakeOfferModal({ onClose, onOfferTaken, order }: TakeOfferModalProps) {
   const { t } = useThemeClasses();
 
   return (
@@ -33,12 +29,7 @@ export default function TakeOfferModal({
         </div>
 
         {/* Market Offer Content */}
-        <MarketOfferTab
-          order={order}
-          onOfferTaken={onOfferTaken}
-          onClose={onClose}
-          mode="modal"
-        />
+        <MarketOfferTab order={order} onOfferTaken={onOfferTaken} onClose={onClose} mode="modal" />
       </div>
     </Modal>
   );

@@ -5,26 +5,26 @@ import {
   type DexieOffer,
   type OfferState,
   type OfferStatus,
-} from '../types'
+} from "../types";
 
 /**
  * Calculate offer state from Dexie offer data
  * Re-export from types for convenience
  */
-export { calculateOfferState }
+export { calculateOfferState };
 
 /**
  * Convert offer state to app status
  */
 export function convertOfferStateToAppStatus(state: OfferState): OfferStatus {
-  return convertOfferStateToStatus(state)
+  return convertOfferStateToStatus(state);
 }
 
 /**
  * Convert app status to offer state
  */
 export function convertAppStatusToOfferState(status: OfferStatus): OfferState {
-  return convertStatusToOfferState(status)
+  return convertStatusToOfferState(status);
 }
 
 /**
@@ -32,18 +32,18 @@ export function convertAppStatusToOfferState(status: OfferStatus): OfferState {
  */
 export function validateOfferString(offerString: string): boolean {
   if (!offerString || offerString.trim().length === 0) {
-    return false
+    return false;
   }
 
-  const cleanOffer = offerString.trim()
+  const cleanOffer = offerString.trim();
   if (cleanOffer.length < 50) {
-    return false
+    return false;
   }
 
-  const isBase64 = /^[A-Za-z0-9+/]*={0,2}$/.test(cleanOffer)
-  const startsWithOffer = cleanOffer.startsWith('offer')
+  const isBase64 = /^[A-Za-z0-9+/]*={0,2}$/.test(cleanOffer);
+  const startsWithOffer = cleanOffer.startsWith("offer");
 
-  return isBase64 || startsWithOffer
+  return isBase64 || startsWithOffer;
 }
 
 /**
@@ -51,24 +51,24 @@ export function validateOfferString(offerString: string): boolean {
  */
 export function getOfferStateFromDexieOffer(offer: DexieOffer | null | undefined): OfferState {
   if (!offer) {
-    return 'Unknown'
+    return "Unknown";
   }
 
-  return calculateOfferState(offer)
+  return calculateOfferState(offer);
 }
 
 /**
  * Check if offer is active
  */
 export function isOfferActiveState(state: OfferState): boolean {
-  return state === 'Open' || state === 'Pending'
+  return state === "Open" || state === "Pending";
 }
 
 /**
  * Check if offer is finalized
  */
 export function isOfferFinalizedState(state: OfferState): boolean {
-  return state === 'Completed' || state === 'Cancelled' || state === 'Expired'
+  return state === "Completed" || state === "Cancelled" || state === "Expired";
 }
 
 /**
@@ -76,14 +76,14 @@ export function isOfferFinalizedState(state: OfferState): boolean {
  */
 export function canCancelOffer(state: OfferState | OfferStatus): boolean {
   const offerState: OfferState =
-    typeof state === 'string' &&
-    ['Open', 'Pending', 'Cancelling', 'Cancelled', 'Completed', 'Unknown', 'Expired'].includes(
+    typeof state === "string" &&
+    ["Open", "Pending", "Cancelling", "Cancelled", "Completed", "Unknown", "Expired"].includes(
       state
     )
       ? (state as OfferState)
-      : convertStatusToOfferState(state as OfferStatus)
+      : convertStatusToOfferState(state as OfferStatus);
 
-  return offerState === 'Open' || offerState === 'Pending'
+  return offerState === "Open" || offerState === "Pending";
 }
 
 /**
@@ -91,44 +91,44 @@ export function canCancelOffer(state: OfferState | OfferStatus): boolean {
  */
 export function canUploadToDexie(offerString: string | null | undefined): boolean {
   if (!offerString) {
-    return false
+    return false;
   }
 
-  return validateOfferString(offerString)
+  return validateOfferString(offerString);
 }
 
 /**
  * Get Dexie status description from status number
  */
 export function getDexieStatusDescription(status: number | string | OfferState): string {
-  if (typeof status === 'string') {
+  if (typeof status === "string") {
     // If it's already a string (OfferState), return it
     if (
-      ['Open', 'Pending', 'Cancelling', 'Cancelled', 'Completed', 'Unknown', 'Expired'].includes(
+      ["Open", "Pending", "Cancelling", "Cancelled", "Completed", "Unknown", "Expired"].includes(
         status
       )
     ) {
-      return status
+      return status;
     }
-    return status
+    return status;
   }
 
   switch (status) {
     case 0:
-      return 'Open'
+      return "Open";
     case 1:
-      return 'Pending'
+      return "Pending";
     case 2:
-      return 'Cancelling'
+      return "Cancelling";
     case 3:
-      return 'Cancelled'
+      return "Cancelled";
     case 4:
-      return 'Completed'
+      return "Completed";
     case 5:
-      return 'Unknown'
+      return "Unknown";
     case 6:
-      return 'Expired'
+      return "Expired";
     default:
-      return 'Unknown'
+      return "Unknown";
   }
 }

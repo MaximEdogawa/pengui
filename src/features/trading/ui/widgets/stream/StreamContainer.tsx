@@ -64,12 +64,12 @@ export default function StreamContainer({ onOfferClick }: StreamContainerProps) 
   // Only display offers matching the global asset pair filter
   const filteredOffers = useMemo(
     () => offers.filter((o) => offerMatchesPairFilter(o, buyAssets, sellAssets)),
-    [offers, buyAssets, sellAssets],
+    [offers, buyAssets, sellAssets]
   );
 
   const items: TradeHistoryOfferItem[] = useMemo(
     () => filteredOffers.map(toTradeHistoryItem),
-    [filteredOffers],
+    [filteredOffers]
   );
   const sortedOffers = useMemo(() => sortTrades(items), [items, sortTrades]);
 
@@ -120,11 +120,17 @@ export default function StreamContainer({ onOfferClick }: StreamContainerProps) 
           )}
           {relayUrl && (
             <>
-              <span className={`text-[9px] sm:text-[10px] ${t.textSecondary} truncate max-w-[180px] sm:max-w-none`} title={relayUrl}>
+              <span
+                className={`text-[9px] sm:text-[10px] ${t.textSecondary} truncate max-w-[180px] sm:max-w-none`}
+                title={relayUrl}
+              >
                 {relayUrl}
               </span>
               {!isConnected && wasm.status === "connecting" && (
-                <span className="text-[10px] text-amber-600 dark:text-amber-400" title="WebSocket is open but libp2p handshake has not completed. Check relay and browser console for [Splash] logs.">
+                <span
+                  className="text-[10px] text-amber-600 dark:text-amber-400"
+                  title="WebSocket is open but libp2p handshake has not completed. Check relay and browser console for [Splash] logs."
+                >
                   Handshake…
                 </span>
               )}
@@ -148,7 +154,9 @@ export default function StreamContainer({ onOfferClick }: StreamContainerProps) 
                 : "Stream is not configured."}
             </p>
             <p className="text-xs text-center max-w-sm">
-              {isConnected ? "New offers will appear here as they’re broadcast." : "Live offers will appear here once connected."}
+              {isConnected
+                ? "New offers will appear here as they’re broadcast."
+                : "Live offers will appear here once connected."}
             </p>
           </div>
         ) : (

@@ -37,8 +37,7 @@ export function useFormSubmission({
 }: UseFormSubmissionProps) {
   const createOfferMutation = useCreateOffer();
   const offerStorage = useOfferStorage();
-  const { uploadOfferToDexie, isUploading: isUploadingToDexie } =
-    useOfferUpload();
+  const { uploadOfferToDexie, isUploading: isUploadingToDexie } = useOfferUpload();
   const { data: walletAddress } = useWalletAddress();
   const queryClient = useQueryClient();
   const { refreshOrderBook } = useOrderBook();
@@ -67,7 +66,7 @@ export function useFormSubmission({
             ...asset,
             amount: Number(asset.amount) || 0,
           })),
-          convertToSmallestUnit,
+          convertToSmallestUnit
         );
 
         const requestAssets = toWalletAssets(
@@ -75,7 +74,7 @@ export function useFormSubmission({
             ...asset,
             amount: Number(asset.amount) || 0,
           })),
-          convertToSmallestUnit,
+          convertToSmallestUnit
         );
 
         // Create offer
@@ -144,8 +143,7 @@ export function useFormSubmission({
           }
         }, 1500);
       } catch (error) {
-        const errorMsg =
-          error instanceof Error ? error.message : "Unknown error occurred";
+        const errorMsg = error instanceof Error ? error.message : "Unknown error occurred";
         setErrorMessage(`Failed to create offer: ${errorMsg}`);
       } finally {
         setIsSubmitting(false);
@@ -166,7 +164,7 @@ export function useFormSubmission({
       resetForm,
       mode,
       onClose,
-    ],
+    ]
   );
 
   return {

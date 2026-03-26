@@ -37,9 +37,7 @@ export function useSwapTabConfirmSwap({
   const handleConfirmSwap = useCallback(async () => {
     if (!quote || !selectedPair || !modalPayAmount) return;
     const amountInNum = parseFloat(modalPayAmount) || 0;
-    const amountInMojos = xchIsOffered
-      ? Math.round(convertToSmallestUnit(amountInNum, "xch"))
-      : 0;
+    const amountInMojos = xchIsOffered ? Math.round(convertToSmallestUnit(amountInNum, "xch")) : 0;
     const amountInTokenSmallest = xchIsOffered
       ? 0
       : Math.round(convertToSmallestUnit(amountInNum, "cat"));
@@ -49,8 +47,7 @@ export function useSwapTabConfirmSwap({
     setSwapError("");
     setSwapSuccess(false);
     try {
-      const xchAssetId =
-        network === "testnet" ? CHIA_ASSET_IDS.TXCH : CHIA_ASSET_IDS.XCH;
+      const xchAssetId = network === "testnet" ? CHIA_ASSET_IDS.TXCH : CHIA_ASSET_IDS.XCH;
 
       // Tibet's server-computed amount_out is used as receiveAmount so the
       // offer amounts match exactly what Tibet expects when taking the offer.

@@ -1,45 +1,50 @@
-import { formatAssetAmount, formatXchAmount } from '@/shared/lib/utils/chia-units'
-import { TickerIcon, XchIcon } from '@/entities/asset'
-import { useNetwork } from '@/shared/hooks'
-import type { ThemeClasses } from '@/shared/lib/theme'
-import type { AssetType } from '@/entities/offer'
+import { formatAssetAmount, formatXchAmount } from "@/shared/lib/utils/chia-units";
+import { TickerIcon, XchIcon } from "@/entities/asset";
+import { useNetwork } from "@/shared/hooks";
+import type { ThemeClasses } from "@/shared/lib/theme";
+import type { AssetType } from "@/entities/offer";
 
 interface AssetPreview {
-  assetId: string
-  type: AssetType
-  amount: number
-  symbol?: string
+  assetId: string;
+  type: AssetType;
+  amount: number;
+  symbol?: string;
 }
 
 interface OfferPreviewProps {
-  offeredAssets: AssetPreview[]
-  requestedAssets: AssetPreview[]
-  fee: number
-  t: ThemeClasses
+  offeredAssets: AssetPreview[];
+  requestedAssets: AssetPreview[];
+  fee: number;
+  t: ThemeClasses;
 }
 
 /**
  * Extract offer preview section to reduce CreateOfferForm size
  */
 export function OfferPreview({ offeredAssets, requestedAssets, fee, t }: OfferPreviewProps) {
-  const { network } = useNetwork()
-  const isTestnet = network === 'testnet'
+  const { network } = useNetwork();
+  const isTestnet = network === "testnet";
 
   const renderAssetWithIcon = (asset: AssetPreview, index: number) => {
-    const ticker = asset.symbol || asset.type.toUpperCase()
-    const isXch = !asset.assetId || asset.type === 'xch' || ticker === 'XCH' || ticker === 'TXCH'
-    
+    const ticker = asset.symbol || asset.type.toUpperCase();
+    const isXch = !asset.assetId || asset.type === "xch" || ticker === "XCH" || ticker === "TXCH";
+
     return (
-      <span key={asset.assetId || `${asset.type}-${index}`} className="inline-flex items-center gap-1">
+      <span
+        key={asset.assetId || `${asset.type}-${index}`}
+        className="inline-flex items-center gap-1"
+      >
         {isXch ? (
           <XchIcon size={14} isTestnet={isTestnet} />
         ) : (
           <TickerIcon assetId={asset.assetId} ticker={ticker} size={14} />
         )}
-        <span>{formatAssetAmount(asset.amount, asset.type)} {ticker}</span>
+        <span>
+          {formatAssetAmount(asset.amount, asset.type)} {ticker}
+        </span>
       </span>
-    )
-  }
+    );
+  };
 
   return (
     <div className={`p-3 rounded-lg ${t.cardHover} backdrop-blur-xl border ${t.border}`}>
@@ -52,10 +57,10 @@ export function OfferPreview({ offeredAssets, requestedAssets, fee, t }: OfferPr
               ? offeredAssets.map((asset, idx) => (
                   <span key={asset.assetId || idx} className="inline-flex items-center gap-1">
                     {renderAssetWithIcon(asset, idx)}
-                    {idx < offeredAssets.length - 1 && ','}
+                    {idx < offeredAssets.length - 1 && ","}
                   </span>
                 ))
-              : 'No assets'}
+              : "No assets"}
           </span>
         </div>
         <div className="flex justify-between items-start">
@@ -65,10 +70,10 @@ export function OfferPreview({ offeredAssets, requestedAssets, fee, t }: OfferPr
               ? requestedAssets.map((asset, idx) => (
                   <span key={asset.assetId || idx} className="inline-flex items-center gap-1">
                     {renderAssetWithIcon(asset, idx)}
-                    {idx < requestedAssets.length - 1 && ','}
+                    {idx < requestedAssets.length - 1 && ","}
                   </span>
                 ))
-              : 'No assets'}
+              : "No assets"}
           </span>
         </div>
         <div className={`flex justify-between border-t ${t.border} pt-1.5 mt-1.5`}>
@@ -77,5 +82,5 @@ export function OfferPreview({ offeredAssets, requestedAssets, fee, t }: OfferPr
         </div>
       </div>
     </div>
-  )
+  );
 }

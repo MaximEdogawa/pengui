@@ -1,11 +1,11 @@
-'use client'
+"use client";
 
-import { X } from 'lucide-react'
-import type { ThemeClasses } from '@/shared/lib/theme'
+import { X } from "lucide-react";
+import type { ThemeClasses } from "@/shared/lib/theme";
 
 interface OfferDetailsHeaderProps {
-  onClose: () => void
-  t: ThemeClasses
+  onClose: () => void;
+  t: ThemeClasses;
 }
 
 export function OfferDetailsHeader({ onClose, t }: OfferDetailsHeaderProps) {
@@ -16,5 +16,5 @@ export function OfferDetailsHeader({ onClose, t }: OfferDetailsHeaderProps) {
         <X size={18} />
       </button>
     </div>
-  )
+  );
 }

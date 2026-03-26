@@ -1,1 +1,1 @@
-export { default as PenguinLogo } from './PenguinLogo'
+export { default as PenguinLogo } from "./PenguinLogo";

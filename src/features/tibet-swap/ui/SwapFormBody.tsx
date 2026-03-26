@@ -88,9 +88,7 @@ export function SwapFormBody({
   manualFeeXch,
   onManualFeeChange,
 }: SwapFormBodyProps) {
-  const [previewTab, setPreviewTab] = useState<"swap" | "remove" | "add">(
-    "swap",
-  );
+  const [previewTab, setPreviewTab] = useState<"swap" | "remove" | "add">("swap");
 
   const isOfferedNative = isXchTicker(offeredTicker);
   const isRequestedNative = isXchTicker(requestedTicker);
@@ -101,8 +99,7 @@ export function SwapFormBody({
         <div
           className={`rounded-md p-2 text-center text-xs ${t.card} border ${t.border} ${t.textSecondary}`}
         >
-          Select assets using the filter above (Sell and Buy) to set the swap
-          pair.
+          Select assets using the filter above (Sell and Buy) to set the swap pair.
         </div>
       </div>
     );
@@ -177,9 +174,7 @@ export function SwapFormBody({
         </p>
       )}
       {(liquiditySuccess || swapSuccess) && (
-        <p className="px-0.5 text-xs text-emerald-600 dark:text-emerald-400">
-          Done.
-        </p>
+        <p className="px-0.5 text-xs text-emerald-600 dark:text-emerald-400">Done.</p>
       )}
 
       <div className={`flex items-center gap-2 px-1 text-xs ${t.textSecondary}`}>
@@ -204,13 +199,7 @@ export function SwapFormBody({
           size="sm"
           className="w-full justify-center"
           onClick={onSubmitSwap}
-          disabled={
-            !selectedPair ||
-            !modalPayAmount ||
-            !quote ||
-            pairsLoading ||
-            isSwapPending
-          }
+          disabled={!selectedPair || !modalPayAmount || !quote || pairsLoading || isSwapPending}
           variant="info"
           icon={ArrowLeftRight}
         >
@@ -242,9 +231,7 @@ export function SwapFormBody({
         </div>
       </div>
 
-      <div
-        className={`overflow-hidden rounded-md border ${t.border} ${t.card} backdrop-blur-xl`}
-      >
+      <div className={`overflow-hidden rounded-md border ${t.border} ${t.card} backdrop-blur-xl`}>
         <div
           className="flex gap-0.5 bg-black/[0.02] p-0.5 dark:bg-white/[0.04]"
           role="tablist"

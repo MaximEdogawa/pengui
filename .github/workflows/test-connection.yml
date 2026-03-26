@@ -1,43 +1,43 @@
 name: Test SSH Connection
 
 on:
-    workflow_dispatch:
-        inputs:
-            environment:
-                description: "Connection Test"
-                required: true
-                type: choice
-                options:
-                    - production
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Connection Test"
+        required: true
+        type: choice
+        options:
+          - production
 
 env:
-    FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-    test-connection:
-        name: Test SSH Connection
-        runs-on: ubuntu-latest
-        steps:
-            - name: Test SSH Connection
-              uses: appleboy/ssh-action@v1.0.3
-              with:
-                  host: ${{ secrets.DEPLOY_HOST }}
-                  username: ${{ secrets.DEPLOY_USER }}
-                  key: ${{ secrets.DEPLOY_SSH_KEY }}
-                  port: 22
-                  debug: true
-                  script: |
-                      echo "✓ SSH connection successful!"
-                      echo "Current user: $(whoami)"
-                      echo "Home directory: $HOME"
-                      echo "Current directory: $(pwd)"
-                      echo "Server hostname: $(hostname)"
-                      echo "Docker installed: $(docker --version || echo 'Docker not found')"
-                      echo "Docker Compose installed: $(docker compose version || echo 'Docker Compose not found')"
+  test-connection:
+    name: Test SSH Connection
+    runs-on: ubuntu-latest
+    steps:
+      - name: Test SSH Connection
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: 22
+          debug: true
+          script: |
+            echo "✓ SSH connection successful!"
+            echo "Current user: $(whoami)"
+            echo "Home directory: $HOME"
+            echo "Current directory: $(pwd)"
+            echo "Server hostname: $(hostname)"
+            echo "Docker installed: $(docker --version || echo 'Docker not found')"
+            echo "Docker Compose installed: $(docker compose version || echo 'Docker Compose not found')"
 
-                      # Create pengui directory if it doesn't exist
-                      mkdir -p ~/pengui/deployment
-                      # Test write permissions
-                      touch ~/pengui/deployment/test.txt
-                      rm ~/pengui/deployment/test.txt
-                      echo "✓ Write permissions OK"
+            # Create pengui directory if it doesn't exist
+            mkdir -p ~/pengui/deployment
+            # Test write permissions
+            touch ~/pengui/deployment/test.txt
+            rm ~/pengui/deployment/test.txt
+            echo "✓ Write permissions OK"

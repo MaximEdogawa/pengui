@@ -1,34 +1,26 @@
-'use client'
+"use client";
 
-import {
-  ExternalLink,
-  Loader2,
-  Play,
-  RefreshCw,
-  Trash2,
-  Upload,
-  X,
-} from 'lucide-react'
-import type { OfferDetails } from '@/entities/offer'
-import { Button } from '@/shared/ui'
-import type { ThemeClasses } from '@/shared/lib/theme'
+import { ExternalLink, Loader2, Play, RefreshCw, Trash2, Upload, X } from "lucide-react";
+import type { OfferDetails } from "@/entities/offer";
+import { Button } from "@/shared/ui";
+import type { ThemeClasses } from "@/shared/lib/theme";
 
 interface OfferActionsProps {
-  offer: OfferDetails
-  isCancelling: boolean
-  isDeleting: boolean
-  isValidating: boolean
-  isStateValidating: boolean
-  isUploading: boolean
-  dexieUrl: string | null
-  onClose: () => void
-  onCancelOffer: () => void
-  onDeleteOffer: () => void
-  onUploadToDexie: () => void
-  onValidateOfferState: () => void
-  onStartStateValidation: () => void
-  onStopStateValidation: () => void
-  t: ThemeClasses
+  offer: OfferDetails;
+  isCancelling: boolean;
+  isDeleting: boolean;
+  isValidating: boolean;
+  isStateValidating: boolean;
+  isUploading: boolean;
+  dexieUrl: string | null;
+  onClose: () => void;
+  onCancelOffer: () => void;
+  onDeleteOffer: () => void;
+  onUploadToDexie: () => void;
+  onValidateOfferState: () => void;
+  onStartStateValidation: () => void;
+  onStopStateValidation: () => void;
+  t: ThemeClasses;
 }
 
 export function OfferActions({
@@ -65,10 +57,10 @@ export function OfferActions({
             Deleting...
           </>
         ) : (
-          'Delete'
+          "Delete"
         )}
       </Button>
-      {offer.status === 'active' && (
+      {offer.status === "active" && (
         <Button
           onClick={onCancelOffer}
           disabled={isCancelling}
@@ -81,7 +73,7 @@ export function OfferActions({
               Cancelling...
             </>
           ) : (
-            'Cancel'
+            "Cancel"
           )}
         </Button>
       )}
@@ -98,7 +90,7 @@ export function OfferActions({
               Uploading...
             </>
           ) : (
-            'Upload to Dexie'
+            "Upload to Dexie"
           )}
         </Button>
       )}
@@ -116,7 +108,7 @@ export function OfferActions({
                 Validating...
               </>
             ) : (
-              'Validate State'
+              "Validate State"
             )}
           </Button>
           <Button
@@ -131,16 +123,11 @@ export function OfferActions({
                 Stop Monitoring
               </>
             ) : (
-              'Monitor State'
+              "Monitor State"
             )}
           </Button>
           {dexieUrl && (
-            <a
-              href={dexieUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex"
-            >
+            <a href={dexieUrl} target="_blank" rel="noopener noreferrer" className="inline-flex">
               <Button
                 variant="success"
                 icon={ExternalLink}
@@ -154,5 +141,5 @@ export function OfferActions({
         </>
       )}
     </div>
-  )
+  );
 }

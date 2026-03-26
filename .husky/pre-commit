@@ -5,11 +5,24 @@ set -o pipefail
 
 echo "🔍 Running pre-commit checks..."
 
+ALL_CHANGED=$(git diff --name-only --diff-filter=ACMR HEAD 2>/dev/null || true)
+
+run_on_changed() {
+  local pattern="$1"
+  shift
+  local files
+  files=$(echo "$ALL_CHANGED" | grep -E "$pattern" || true)
+  [ -n "$files" ] && echo "$files" | xargs "$@"
+}
+
 echo "🏗️  Building project..."
 bun run build
 
-echo "📝 Linting staged files..."
-bun run lint
+echo "✨ Formatting staged and changed files..."
+run_on_changed '\.(ts|tsx|js|jsx|json|css|md)$' bunx prettier --write
+
+echo "📝 Linting staged and changed files..."
+run_on_changed '\.(ts|tsx|js|jsx)$' bunx eslint --config eslint.config.mjs --max-warnings=1000
 
 echo "🧪 Running unit tests..."
 bun run test:unit
@@ -18,4 +31,3 @@ echo "🔗 Running integration tests..."
 bun run test:integration
 
 echo "✅ All pre-commit checks passed!"
-

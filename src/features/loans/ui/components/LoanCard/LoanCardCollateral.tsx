@@ -1,15 +1,15 @@
-'use client'
+"use client";
 
-import { Shield } from 'lucide-react'
-import { getCollateralDisplay, getRiskLabel, getRiskColor } from '../../../lib/loanUtils'
-import { getCollateralAssetTypeColors } from '../../../lib/loanStatus'
-import type { LoanOffer, LoanAgreement } from '@/entities/loan'
-import type { ThemeClasses } from '@/shared/lib/theme'
+import { Shield } from "lucide-react";
+import { getCollateralDisplay, getRiskLabel, getRiskColor } from "../../../lib/loanUtils";
+import { getCollateralAssetTypeColors } from "../../../lib/loanStatus";
+import type { LoanOffer, LoanAgreement } from "@/entities/loan";
+import type { ThemeClasses } from "@/shared/lib/theme";
 
 interface LoanCardCollateralProps {
-  loan: LoanOffer | LoanAgreement
-  isDark: boolean
-  t: ThemeClasses
+  loan: LoanOffer | LoanAgreement;
+  isDark: boolean;
+  t: ThemeClasses;
 }
 
 export function LoanCardCollateral({ loan, isDark, t }: LoanCardCollateralProps) {
@@ -22,7 +22,7 @@ export function LoanCardCollateral({ loan, isDark, t }: LoanCardCollateralProps)
         </div>
         <span
           className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-full ${
-            isDark ? 'bg-white/10' : 'bg-white/80'
+            isDark ? "bg-white/10" : "bg-white/80"
           }`}
         >
           {getRiskLabel(loan.collateralRatio)}
@@ -38,20 +38,20 @@ export function LoanCardCollateral({ loan, isDark, t }: LoanCardCollateralProps)
       </div>
       <p className={`${t.text} text-xs font-semibold mb-1`}>{getCollateralDisplay(loan)}</p>
       {/* Progress bar */}
-      <div className={`w-full ${isDark ? 'bg-white/5' : 'bg-white/60'} rounded-full h-1`}>
+      <div className={`w-full ${isDark ? "bg-white/5" : "bg-white/60"} rounded-full h-1`}>
         <div
           className="h-1 rounded-full transition-all"
           style={{
             width: `${Math.min(loan.collateralRatio / 3, 100)}%`,
             backgroundColor:
               loan.collateralRatio < 130
-                ? '#dc2626'
+                ? "#dc2626"
                 : loan.collateralRatio < 170
-                  ? '#ca8a04'
-                  : '#16a34a',
+                  ? "#ca8a04"
+                  : "#16a34a",
           }}
         />
       </div>
     </div>
-  )
+  );
 }

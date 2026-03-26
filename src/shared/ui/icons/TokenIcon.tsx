@@ -12,9 +12,7 @@ import { useState, useEffect } from "react";
 
 // Generate color from string for fallback
 function stringToColor(str: string): string {
-  const hash = str
-    .split("")
-    .reduce((acc, char) => char.charCodeAt(0) + ((acc << 5) - acc), 0);
+  const hash = str.split("").reduce((acc, char) => char.charCodeAt(0) + ((acc << 5) - acc), 0);
   return `hsl(${Math.abs(hash % 360)}, ${65 + (Math.abs(hash >> 8) % 20)}%, ${45 + (Math.abs(hash >> 16) % 15)}%)`;
 }
 
@@ -118,7 +116,7 @@ export function XchIcon({
       className={className}
       style={{
         ...iconStyle(size),
-        backgroundColor: '#000000',
+        backgroundColor: "#000000",
       }}
     >
       <img

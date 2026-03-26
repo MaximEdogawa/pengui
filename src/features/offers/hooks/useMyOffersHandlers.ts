@@ -3,20 +3,20 @@
  * Extracted to reduce complexity and improve maintainability
  */
 
-import type { OfferDetails } from '@/entities/offer'
-import { logger } from '@/shared/lib/logger'
+import type { OfferDetails } from "@/entities/offer";
+import { logger } from "@/shared/lib/logger";
 
 /**
  * Create offer event for window dispatch
  */
 export function createOfferCreatedEvent(offer: OfferDetails): CustomEvent {
-  return new CustomEvent('offer-created', {
+  return new CustomEvent("offer-created", {
     detail: {
       offer,
       offerString: offer.offerString,
-      source: 'offer-page',
+      source: "offer-page",
     },
-  })
+  });
 }
 
 /**
@@ -25,16 +25,16 @@ export function createOfferCreatedEvent(offer: OfferDetails): CustomEvent {
 export function updateOfferStatus(
   offers: OfferDetails[],
   offerId: string,
-  status: 'completed' | 'cancelled'
+  status: "completed" | "cancelled"
 ): OfferDetails[] {
-  return offers.map((o) => (o.id === offerId ? { ...o, status } : o))
+  return offers.map((o) => (o.id === offerId ? { ...o, status } : o));
 }
 
 /**
  * Remove offer from state
  */
 export function removeOfferFromState(offers: OfferDetails[], offerId: string): OfferDetails[] {
-  return offers.filter((o) => o.id !== offerId)
+  return offers.filter((o) => o.id !== offerId);
 }
 
 /**
@@ -44,7 +44,7 @@ export function updateOfferInState(
   offers: OfferDetails[],
   updatedOffer: OfferDetails
 ): OfferDetails[] {
-  return offers.map((o) => (o.id === updatedOffer.id ? { ...o, ...updatedOffer } : o))
+  return offers.map((o) => (o.id === updatedOffer.id ? { ...o, ...updatedOffer } : o));
 }
 
 /**
@@ -53,20 +53,24 @@ export function updateOfferInState(
 export async function cancelSingleOffer(
   offer: OfferDetails,
   cancelOfferMutation: {
-    mutateAsync: (params: { id: string; feeInXch?: number; feeInMojos?: number }) => Promise<unknown>
+    mutateAsync: (params: {
+      id: string;
+      feeInXch?: number;
+      feeInMojos?: number;
+    }) => Promise<unknown>;
   },
-  updateOffer: (id: string, updates: { status: 'cancelled' }) => Promise<void>
+  updateOffer: (id: string, updates: { status: "cancelled" }) => Promise<void>
 ): Promise<void> {
   // Check if offer can be cancelled (has tradeId and is not pending confirmation)
   if (!offer.tradeId || offer.pendingConfirmation) {
-    throw new Error('Cannot cancel offer: trade ID not available yet')
+    throw new Error("Cannot cancel offer: trade ID not available yet");
   }
 
   await cancelOfferMutation.mutateAsync({
     id: offer.tradeId,
     feeInXch: offer.fee,
-  })
-  await updateOffer(offer.id, { status: 'cancelled' })
+  });
+  await updateOffer(offer.id, { status: "cancelled" });
 }
 
 /**
@@ -75,17 +79,21 @@ export async function cancelSingleOffer(
 export async function cancelAllActiveOffers(
   activeOffers: OfferDetails[],
   cancelOfferMutation: {
-    mutateAsync: (params: { id: string; feeInXch?: number; feeInMojos?: number }) => Promise<unknown>
+    mutateAsync: (params: {
+      id: string;
+      feeInXch?: number;
+      feeInMojos?: number;
+    }) => Promise<unknown>;
   },
-  updateOffer: (id: string, updates: { status: 'cancelled' }) => Promise<void>
+  updateOffer: (id: string, updates: { status: "cancelled" }) => Promise<void>
 ): Promise<void> {
   const cancelPromises = activeOffers.map(async (offer) => {
     try {
-      await cancelSingleOffer(offer, cancelOfferMutation, updateOffer)
+      await cancelSingleOffer(offer, cancelOfferMutation, updateOffer);
     } catch (error) {
-      logger.error(`Failed to cancel offer ${offer.id}:`, error)
+      logger.error(`Failed to cancel offer ${offer.id}:`, error);
     }
-  })
+  });
 
-  await Promise.allSettled(cancelPromises)
+  await Promise.allSettled(cancelPromises);
 }

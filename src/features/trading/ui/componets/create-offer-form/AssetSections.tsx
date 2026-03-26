@@ -1,19 +1,19 @@
-import { Plus } from 'lucide-react'
-import { AssetSelector, type ExtendedAsset as ExtendedOfferAsset, Button } from '@/shared/ui'
-import type { ThemeClasses } from '@/shared/lib/theme'
-import { useCatTokens } from '@/entities/asset'
-import { useMemo } from 'react'
+import { Plus } from "lucide-react";
+import { AssetSelector, type ExtendedAsset as ExtendedOfferAsset, Button } from "@/shared/ui";
+import type { ThemeClasses } from "@/shared/lib/theme";
+import { useCatTokens } from "@/entities/asset";
+import { useMemo } from "react";
 
 interface AssetSectionsProps {
-  extendedMakerAssets: ExtendedOfferAsset[]
-  extendedTakerAssets: ExtendedOfferAsset[]
-  updateOfferedAsset: (index: number, asset: ExtendedOfferAsset) => void
-  removeOfferedAsset: (index: number) => void
-  addOfferedAsset: () => void
-  updateRequestedAsset: (index: number, asset: ExtendedOfferAsset) => void
-  removeRequestedAsset: (index: number) => void
-  addRequestedAsset: () => void
-  t: ThemeClasses
+  extendedMakerAssets: ExtendedOfferAsset[];
+  extendedTakerAssets: ExtendedOfferAsset[];
+  updateOfferedAsset: (index: number, asset: ExtendedOfferAsset) => void;
+  removeOfferedAsset: (index: number) => void;
+  addOfferedAsset: () => void;
+  updateRequestedAsset: (index: number, asset: ExtendedOfferAsset) => void;
+  removeRequestedAsset: (index: number) => void;
+  addRequestedAsset: () => void;
+  t: ThemeClasses;
 }
 
 /**
@@ -30,25 +30,26 @@ export function AssetSections({
   addRequestedAsset,
   t,
 }: AssetSectionsProps) {
-  const { availableCatTokens, availableAssets, isLoading: isLoadingTickers } = useCatTokens()
+  const { availableCatTokens, availableAssets, isLoading: isLoadingTickers } = useCatTokens();
 
   // Prepare token data (icons are fetched on-demand by TokenIconAuto component)
-  const availableTokens = useMemo(() =>
-    availableAssets.length > 0
-      ? availableAssets.map((asset) => ({
-          assetId: asset.assetId,
-          ticker: asset.ticker,
-          symbol: asset.symbol,
-          name: asset.name,
-        }))
-      : availableCatTokens.map((token) => ({
-          assetId: token.assetId,
-          ticker: token.ticker,
-          symbol: token.symbol,
-          name: token.name,
-        })),
+  const availableTokens = useMemo(
+    () =>
+      availableAssets.length > 0
+        ? availableAssets.map((asset) => ({
+            assetId: asset.assetId,
+            ticker: asset.ticker,
+            symbol: asset.symbol,
+            name: asset.name,
+          }))
+        : availableCatTokens.map((token) => ({
+            assetId: token.assetId,
+            ticker: token.ticker,
+            symbol: token.symbol,
+            name: token.name,
+          })),
     [availableAssets, availableCatTokens]
-  )
+  );
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
@@ -56,7 +57,7 @@ export function AssetSections({
       <div
         className="p-2.5 sm:p-4 rounded-lg backdrop-blur-xl bg-white/5 dark:bg-black/5 border border-white/10 dark:border-white/5"
         style={{
-          boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
+          boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
         }}
       >
         <div className="mb-2 sm:mb-3">
@@ -91,7 +92,7 @@ export function AssetSections({
       <div
         className="p-2.5 sm:p-4 rounded-lg backdrop-blur-xl bg-white/5 dark:bg-black/5 border border-white/10 dark:border-white/5"
         style={{
-          boxShadow: '0 1px 2px rgba(0, 0, 0, 0.05)',
+          boxShadow: "0 1px 2px rgba(0, 0, 0, 0.05)",
         }}
       >
         <div className="mb-2 sm:mb-3">
@@ -122,5 +123,5 @@ export function AssetSections({
         </div>
       </div>
     </div>
-  )
+  );
 }

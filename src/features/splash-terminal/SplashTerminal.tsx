@@ -49,15 +49,11 @@ function buildPrompt(status: string, filterParams: TerminalFilterParams): string
   const parts: string[] = [];
   if (status === "connected") parts.push("Connected");
   else if (status === "connecting") parts.push("Connecting...");
-  else if (status === "error" || status === "disconnected")
-    parts.push(status);
+  else if (status === "error" || status === "disconnected") parts.push(status);
   if (filterParams.assetPair) parts.push(filterParams.assetPair);
-  if (filterParams.priceMin != null)
-    parts.push(`price>${filterParams.priceMin}`);
-  if (filterParams.priceMax != null)
-    parts.push(`price<${filterParams.priceMax}`);
-  if (filterParams.amountMin != null)
-    parts.push(`amount>${filterParams.amountMin}`);
+  if (filterParams.priceMin != null) parts.push(`price>${filterParams.priceMin}`);
+  if (filterParams.priceMax != null) parts.push(`price<${filterParams.priceMax}`);
+  if (filterParams.amountMin != null) parts.push(`amount>${filterParams.amountMin}`);
   const bracket = parts.length ? `[${parts.join(" | ")}]` : "";
   return `${bracket} > `;
 }
@@ -78,8 +74,7 @@ export default function SplashTerminal() {
   const { network } = useNetwork();
   const relayUrl = getDexieSplashRelayUrl(network);
   const { searchOffersMutation } = useDexieSearch();
-  const { setCachedOffers, appendCachedOffers } =
-    useTerminalOffersSync(filterParams);
+  const { setCachedOffers, appendCachedOffers } = useTerminalOffersSync(filterParams);
   const wasm = useSplashWasm();
   const statusRef = useRef(wasm.status);
   const filterParamsRef = useRef(filterParams);
@@ -117,11 +112,7 @@ export default function SplashTerminal() {
       const writeln = (s: string) => term.writeln(s);
       const writePromptLocal = (statusOverride?: string) =>
         term.write(
-          PROMPT_PREFIX +
-            buildPrompt(
-              statusOverride ?? statusRef.current,
-              filterParamsRef.current,
-            ),
+          PROMPT_PREFIX + buildPrompt(statusOverride ?? statusRef.current, filterParamsRef.current)
         );
 
       termRef.current = {
@@ -191,9 +182,7 @@ export default function SplashTerminal() {
                     priceMax: cmd.max ?? null,
                   }));
                   wasm.setFilterPrice(cmd.min ?? 0, cmd.max ?? 0);
-                  writeln(
-                    `Filter price: >${cmd.min ?? ""} <${cmd.max ?? ""}`,
-                  );
+                  writeln(`Filter price: >${cmd.min ?? ""} <${cmd.max ?? ""}`);
                 } else if (cmd.sub === "amount") {
                   setFilterParams((p) => ({
                     ...p,
@@ -221,7 +210,7 @@ export default function SplashTerminal() {
               case "stats": {
                 const s = wasm.getStats();
                 writeln(
-                  `Received: ${s.received} | Filtered: ${s.filtered} | Buffer: ${s.bufferLen}`,
+                  `Received: ${s.received} | Filtered: ${s.filtered} | Buffer: ${s.bufferLen}`
                 );
                 break;
               }
@@ -235,7 +224,7 @@ export default function SplashTerminal() {
                         .map((a) => `${a.code}:${a.amount}`)
                         .join(" ")}","${(o.requested ?? [])
                         .map((a) => `${a.code}:${a.amount}`)
-                        .join(" ")}"`,
+                        .join(" ")}"`
                   );
                   const csv = [header, ...rows].join("\n");
                   const blob = new Blob([csv], { type: "text/csv" });
@@ -293,9 +282,7 @@ export default function SplashTerminal() {
   if (!mounted) {
     return (
       <div className="flex h-full min-h-[200px] items-center justify-center rounded-lg bg-black/5 dark:bg-black/20">
-        <p className="text-sm text-gray-500 dark:text-gray-400">
-          Loading terminal...
-        </p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">Loading terminal...</p>
       </div>
     );
   }

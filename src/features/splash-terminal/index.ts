@@ -7,10 +7,7 @@ export {
   type UseSplashWasmResult,
   type SplashConnectionStatus,
 } from "./useSplashWasm";
-export {
-  SplashConnectionProvider,
-  useSplashConnection,
-} from "./SplashConnectionProvider";
+export { SplashConnectionProvider, useSplashConnection } from "./SplashConnectionProvider";
 export {
   useTerminalOffersSync,
   buildTerminalQueryKey,

@@ -52,9 +52,7 @@ export function useDexieSearch() {
   });
 
   const searchOffersMutation = useMutation({
-    mutationFn: async (
-      params: DexieOfferSearchParams = {},
-    ): Promise<DexieOfferSearchResponse> => {
+    mutationFn: async (params: DexieOfferSearchParams = {}): Promise<DexieOfferSearchResponse> => {
       const queryParams = buildOfferSearchParams(params);
       const url = `${dexieApiBaseUrl}/v1/offers?${queryParams.toString()}`;
 
@@ -68,9 +66,7 @@ export function useDexieSearch() {
       } catch (fetchError) {
         clearTimeout(timeoutId);
         if (fetchError instanceof Error && fetchError.name === "AbortError") {
-          throw new Error(
-            "Request timeout: The request took too long to complete",
-          );
+          throw new Error("Request timeout: The request took too long to complete");
         }
         // Handle network errors (connection issues, CORS, etc.)
         if (fetchError instanceof TypeError) {

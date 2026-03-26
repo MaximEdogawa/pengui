@@ -1,15 +1,15 @@
-import Image from 'next/image'
+import Image from "next/image";
 
 interface PenguinLogoProps {
-  size?: number
-  className?: string
-  fill?: boolean
-  priority?: boolean
+  size?: number;
+  className?: string;
+  fill?: boolean;
+  priority?: boolean;
 }
 
 export default function PenguinLogo({
   size = 48,
-  className = '',
+  className = "",
   fill = false,
   priority = false,
 }: PenguinLogoProps) {
@@ -22,7 +22,7 @@ export default function PenguinLogo({
         alt="Pengui Logo"
         className={`${className} object-contain`}
       />
-    )
+    );
   }
 
   return (
@@ -34,5 +34,5 @@ export default function PenguinLogo({
       alt="Pengui Logo"
       className={className}
     />
-  )
+  );
 }

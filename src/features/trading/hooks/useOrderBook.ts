@@ -14,10 +14,7 @@ import type {
 } from "../lib/orderBookTypes";
 import { convertDexieOfferToOrderBookOrder as _convertDexieOfferToOrderBookOrder } from "../lib/orderBookConverters";
 import { executeOrderBookQuery } from "../lib/orderBookQuery";
-import {
-  calculateRefetchInterval,
-  calculateStaleTime,
-} from "../lib/orderBookConfig";
+import { calculateRefetchInterval, calculateStaleTime } from "../lib/orderBookConfig";
 import { buildOrderBookSearchParams } from "../lib/orderBookParams";
 import { useSplashConnection } from "@/features/splash-terminal/SplashConnectionProvider";
 import { offerMatchesPairFilter } from "../lib/offerPairFilter";
@@ -43,10 +40,7 @@ export interface UseOrderBookOptions {
  * Pass `options.queryKeySuffix: 'chart'` for the price chart so it uses a
  * separate query that only runs when the Chart tab is open.
  */
-export function useOrderBook(
-  filters?: OrderBookFilters,
-  options?: UseOrderBookOptions,
-) {
+export function useOrderBook(filters?: OrderBookFilters, options?: UseOrderBookOptions) {
   const dexieDataService = useDexieDataService();
   const { network } = useNetwork();
   const splash = useSplashConnection();
@@ -66,9 +60,7 @@ export function useOrderBook(
   }, [filters]);
 
   // Create converter function with network context
-  const convertDexieOfferToOrderBookOrderWithNetwork = (
-    dexieOffer: DexieOffer,
-  ): OrderBookOrder => {
+  const convertDexieOfferToOrderBookOrderWithNetwork = (dexieOffer: DexieOffer): OrderBookOrder => {
     return _convertDexieOfferToOrderBookOrder(dexieOffer, network);
   };
 
@@ -80,7 +72,7 @@ export function useOrderBook(
     page: number,
     buyAsset?: string | null,
     sellAsset?: string | null,
-    pageSize?: number,
+    pageSize?: number
   ) => {
     return buildOrderBookSearchParams({
       page,
@@ -103,31 +95,20 @@ export function useOrderBook(
   }
 
   const fetchAllPagesInternal = async (
-    options: FetchAllPagesOptions = {},
+    options: FetchAllPagesOptions = {}
   ): Promise<{ orders: OrderBookOrder[]; total: number }> => {
-    const {
-      buyAsset,
-      sellAsset,
-      page = 0,
-      accumulatedOrders = [],
-      accumulatedTotal = 0,
-    } = options;
+    const { buyAsset, sellAsset, page = 0, accumulatedOrders = [], accumulatedTotal = 0 } = options;
 
     const params = buildSearchParams(page, buyAsset, sellAsset, 100);
     const response = await dexieDataService.searchOffers(params);
 
     if (response.success && Array.isArray(response.data)) {
       const orders = (response.data as DexieOffer[])
-        .filter(
-          (offer: DexieOffer) => offer && offer.offered && offer.requested,
-        )
+        .filter((offer: DexieOffer) => offer && offer.offered && offer.requested)
         .map(convertDexieOfferToOrderBookOrderWithNetwork);
 
       const newOrders = [...accumulatedOrders, ...orders];
-      const newTotal =
-        response.total != null
-          ? response.total
-          : accumulatedTotal + orders.length;
+      const newTotal = response.total != null ? response.total : accumulatedTotal + orders.length;
 
       if (response.data.length === 100) {
         return fetchAllPagesInternal({
@@ -163,13 +144,7 @@ export function useOrderBook(
       parts.splice(1, 0, options.queryKeySuffix);
     }
     return parts;
-  }, [
-    filters?.buyAsset,
-    filters?.sellAsset,
-    pagination,
-    network,
-    options?.queryKeySuffix,
-  ]);
+  }, [filters?.buyAsset, filters?.sellAsset, pagination, network, options?.queryKeySuffix]);
 
   // Subscribe to stream offers when connected and filters are set; merge later into query result
   useEffect(() => {
@@ -186,9 +161,7 @@ export function useOrderBook(
     const unsubscribe = splash.onOffers((offers) => {
       if (!offers.length) return;
 
-      const matching = offers.filter((o) =>
-        offerMatchesPairFilter(o, buyAssets, sellAssets),
-      );
+      const matching = offers.filter((o) => offerMatchesPairFilter(o, buyAssets, sellAssets));
       if (!matching.length) return;
 
       setStreamOrders((prev) => {
@@ -198,8 +171,7 @@ export function useOrderBook(
         }
         for (const dexieOffer of matching) {
           if (!dexieOffer.id) continue;
-          const converted =
-            convertDexieOfferToOrderBookOrderWithNetwork(dexieOffer);
+          const converted = convertDexieOfferToOrderBookOrderWithNetwork(dexieOffer);
           byId.set(converted.id, converted);
         }
         return Array.from(byId.values());

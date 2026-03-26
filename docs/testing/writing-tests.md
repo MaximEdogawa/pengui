@@ -5,72 +5,78 @@
 ### 1. Test Behavior, Not Implementation
 
 ✅ **Good:**
+
 ```typescript
-test('should format XCH amount with 6 decimals', () => {
-  expect(formatXchAmount(1)).toBe('1.000000')
-})
+test("should format XCH amount with 6 decimals", () => {
+  expect(formatXchAmount(1)).toBe("1.000000");
+});
 ```
 
 ❌ **Bad:**
+
 ```typescript
-test('should call toFixed with 6', () => {
+test("should call toFixed with 6", () => {
   // Testing implementation details
-})
+});
 ```
 
 ### 2. Use Descriptive Test Names
 
 ✅ **Good:**
+
 ```typescript
-test('should convert 1 XCH to 1 trillion mojos', () => {
-  expect(xchToMojos(1)).toBe(1_000_000_000_000)
-})
+test("should convert 1 XCH to 1 trillion mojos", () => {
+  expect(xchToMojos(1)).toBe(1_000_000_000_000);
+});
 ```
 
 ❌ **Bad:**
+
 ```typescript
-test('test xchToMojos', () => {
+test("test xchToMojos", () => {
   // Not descriptive
-})
+});
 ```
 
 ### 3. Arrange-Act-Assert Pattern
 
 ```typescript
-test('example', () => {
+test("example", () => {
   // Arrange - set up test data
-  const input = 1
-  const expected = 1_000_000_000_000
+  const input = 1;
+  const expected = 1_000_000_000_000;
 
   // Act - perform the action
-  const result = xchToMojos(input)
+  const result = xchToMojos(input);
 
   // Assert - verify the result
-  expect(result).toBe(expected)
-})
+  expect(result).toBe(expected);
+});
 ```
 
 ### 4. One Thing Per Test
 
 ✅ **Good:**
-```typescript
-test('should convert 1 XCH to mojos', () => {
-  expect(xchToMojos(1)).toBe(1_000_000_000_000)
-})
 
-test('should convert 0.5 XCH to mojos', () => {
-  expect(xchToMojos(0.5)).toBe(500_000_000_000)
-})
+```typescript
+test("should convert 1 XCH to mojos", () => {
+  expect(xchToMojos(1)).toBe(1_000_000_000_000);
+});
+
+test("should convert 0.5 XCH to mojos", () => {
+  expect(xchToMojos(0.5)).toBe(500_000_000_000);
+});
 ```
 
 ❌ **Bad:**
+
 ```typescript
-test('should convert XCH to mojos', () => {
-  expect(xchToMojos(1)).toBe(1_000_000_000_000)
-  expect(xchToMojos(0.5)).toBe(500_000_000_000)
-  expect(xchToMojos(0)).toBe(0)
+test("should convert XCH to mojos", () => {
+  expect(xchToMojos(1)).toBe(1_000_000_000_000);
+  expect(xchToMojos(0.5)).toBe(500_000_000_000);
+  expect(xchToMojos(0)).toBe(0);
   // Too many assertions in one test
-})
+});
 ```
 
 ## Unit Test Patterns
@@ -78,26 +84,26 @@ test('should convert XCH to mojos', () => {
 ### Testing Pure Functions
 
 ```typescript
-import { describe, it, expect } from 'bun:test'
-import { formatXchAmount } from './chia-units'
+import { describe, it, expect } from "bun:test";
+import { formatXchAmount } from "./chia-units";
 
-describe('formatXchAmount', () => {
-  it('should format with default precision', () => {
-    expect(formatXchAmount(1)).toBe('1.000000')
-  })
+describe("formatXchAmount", () => {
+  it("should format with default precision", () => {
+    expect(formatXchAmount(1)).toBe("1.000000");
+  });
 
-  it('should format with custom precision', () => {
-    expect(formatXchAmount(1, 2)).toBe('1.00')
-  })
+  it("should format with custom precision", () => {
+    expect(formatXchAmount(1, 2)).toBe("1.00");
+  });
 
-  it('should handle zero', () => {
-    expect(formatXchAmount(0)).toBe('0.000000')
-  })
+  it("should handle zero", () => {
+    expect(formatXchAmount(0)).toBe("0.000000");
+  });
 
-  it('should handle invalid input', () => {
-    expect(formatXchAmount(NaN)).toBe('0.000000')
-  })
-})
+  it("should handle invalid input", () => {
+    expect(formatXchAmount(NaN)).toBe("0.000000");
+  });
+});
 ```
 
 ### Testing React Components
@@ -133,23 +139,23 @@ describe('Button', () => {
 ### Testing React Hooks
 
 ```typescript
-import { describe, it, expect } from 'bun:test'
-import { renderHook } from '@testing-library/react'
-import { useResponsive } from './useResponsive'
+import { describe, it, expect } from "bun:test";
+import { renderHook } from "@testing-library/react";
+import { useResponsive } from "./useResponsive";
 
-describe('useResponsive', () => {
-  it('should detect mobile view', () => {
-    Object.defineProperty(window, 'innerWidth', {
+describe("useResponsive", () => {
+  it("should detect mobile view", () => {
+    Object.defineProperty(window, "innerWidth", {
       writable: true,
       configurable: true,
       value: 800,
-    })
+    });
 
-    const { result } = renderHook(() => useResponsive())
-    expect(result.current.isMobile).toBe(true)
-    expect(result.current.isDesktop).toBe(false)
-  })
-})
+    const { result } = renderHook(() => useResponsive());
+    expect(result.current.isMobile).toBe(true);
+    expect(result.current.isDesktop).toBe(false);
+  });
+});
 ```
 
 ## Integration Test Patterns
@@ -164,7 +170,7 @@ import LoginForm from './LoginForm'
 describe('Login Flow Integration', () => {
   it('should render all required elements', () => {
     render(<LoginForm />)
-    
+
     expect(screen.getByText(/pengui/i)).toBeInTheDocument()
     expect(screen.getByText(/connect your wallet/i)).toBeInTheDocument()
   })
@@ -176,24 +182,24 @@ describe('Login Flow Integration', () => {
 ### Using Page Objects
 
 ```typescript
-import { test, expect } from '@playwright/test'
-import { LoginPage } from '../page-objects/LoginPage'
+import { test, expect } from "@playwright/test";
+import { LoginPage } from "../page-objects/LoginPage";
 
-test('login flow', async ({ page }) => {
-  const loginPage = new LoginPage(page)
-  await loginPage.goto()
-  await loginPage.isVisible()
-})
+test("login flow", async ({ page }) => {
+  const loginPage = new LoginPage(page);
+  await loginPage.goto();
+  await loginPage.isVisible();
+});
 ```
 
 ### Waiting for Elements
 
 ```typescript
-test('waits for element', async ({ page }) => {
-  await page.goto('/dashboard')
+test("waits for element", async ({ page }) => {
+  await page.goto("/dashboard");
   // Use expect().toBeVisible() - it automatically waits
-  await expect(page.getByTestId('balance-card')).toBeVisible()
-})
+  await expect(page.getByTestId("balance-card")).toBeVisible();
+});
 ```
 
 ## Test Data
@@ -201,23 +207,23 @@ test('waits for element', async ({ page }) => {
 ### Using Factories
 
 ```typescript
-import { createUser, createAsset } from '@/test-utils'
+import { createUser, createAsset } from "@/test-utils";
 
-test('example', () => {
-  const user = createUser({ name: 'Test User' })
-  const asset = createAsset({ assetType: 'xch', balance: 1000 })
-})
+test("example", () => {
+  const user = createUser({ name: "Test User" });
+  const asset = createAsset({ assetType: "xch", balance: 1000 });
+});
 ```
 
 ### Using Fixtures (E2E)
 
 ```typescript
-import { testUsers } from '../fixtures/test-data'
+import { testUsers } from "../fixtures/test-data";
 
-test('example', async ({ page }) => {
-  const user = testUsers.mainnet
+test("example", async ({ page }) => {
+  const user = testUsers.mainnet;
   // Use user data
-})
+});
 ```
 
 ## Common Patterns
@@ -225,37 +231,37 @@ test('example', async ({ page }) => {
 ### Testing Edge Cases
 
 ```typescript
-describe('edge cases', () => {
-  it('should handle empty string', () => {
-    expect(parseAmount('')).toBe(0)
-  })
+describe("edge cases", () => {
+  it("should handle empty string", () => {
+    expect(parseAmount("")).toBe(0);
+  });
 
-  it('should handle null', () => {
-    expect(parseAmount(null)).toBe(0)
-  })
+  it("should handle null", () => {
+    expect(parseAmount(null)).toBe(0);
+  });
 
-  it('should handle very large numbers', () => {
-    expect(formatXchAmount(Number.MAX_SAFE_INTEGER)).toBeTruthy()
-  })
-})
+  it("should handle very large numbers", () => {
+    expect(formatXchAmount(Number.MAX_SAFE_INTEGER)).toBeTruthy();
+  });
+});
 ```
 
 ### Testing Error States
 
 ```typescript
-it('should handle invalid input gracefully', () => {
-  expect(() => parseAmount('invalid')).not.toThrow()
-  expect(parseAmount('invalid')).toBe(0)
-})
+it("should handle invalid input gracefully", () => {
+  expect(() => parseAmount("invalid")).not.toThrow();
+  expect(parseAmount("invalid")).toBe(0);
+});
 ```
 
 ### Testing Async Operations
 
 ```typescript
-it('should handle async operations', async () => {
-  const result = await fetchData()
-  expect(result).toBeDefined()
-})
+it("should handle async operations", async () => {
+  const result = await fetchData();
+  expect(result).toBeDefined();
+});
 ```
 
 ## Best Practices Summary

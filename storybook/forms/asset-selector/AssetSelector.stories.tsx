@@ -1,46 +1,46 @@
-import type { Meta, StoryObj } from '@storybook/nextjs-vite'
-import { AssetSelector } from '@/shared/ui'
+import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { AssetSelector } from "@/shared/ui";
 
 const meta = {
-  title: 'Components/Forms/AssetSelector',
+  title: "Components/Forms/AssetSelector",
   component: AssetSelector,
   parameters: {
-    layout: 'centered',
+    layout: "centered",
   },
-  tags: ['autodocs'],
-} satisfies Meta<typeof AssetSelector>
+  tags: ["autodocs"],
+} satisfies Meta<typeof AssetSelector>;
 
-export default meta
-type Story = StoryObj<typeof meta>
+export default meta;
+type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
     asset: {
-      type: 'xch',
+      type: "xch",
       amount: 0,
-      assetId: '',
+      assetId: "",
     },
     onUpdate: () => {},
     availableTokens: [
-      { assetId: '', ticker: 'XCH', symbol: 'XCH', name: 'Chia' },
-      { assetId: 'abc123', ticker: 'BYC03', symbol: 'BYC03', name: 'BYC03 Token' },
+      { assetId: "", ticker: "XCH", symbol: "XCH", name: "Chia" },
+      { assetId: "abc123", ticker: "BYC03", symbol: "BYC03", name: "BYC03 Token" },
     ],
     isLoadingTickers: false,
   },
-}
+};
 
 export const WithAmount: Story = {
   args: {
     asset: {
-      type: 'xch',
+      type: "xch",
       amount: 1.5,
-      assetId: '',
+      assetId: "",
     },
     onUpdate: () => {},
     availableTokens: [
-      { assetId: '', ticker: 'XCH', symbol: 'XCH', name: 'Chia' },
-      { assetId: 'abc123', ticker: 'BYC03', symbol: 'BYC03', name: 'BYC03 Token' },
+      { assetId: "", ticker: "XCH", symbol: "XCH", name: "Chia" },
+      { assetId: "abc123", ticker: "BYC03", symbol: "BYC03", name: "BYC03 Token" },
     ],
     isLoadingTickers: false,
   },
-}
+};

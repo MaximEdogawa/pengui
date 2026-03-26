@@ -6,9 +6,7 @@ import type { TibetQuoteParams } from "../lib/tibetTypes";
 
 export function useTibetQuote(params: TibetQuoteParams | null) {
   const api = useTibetApi();
-  const enabled =
-    !!params?.pair_id &&
-    (params.amount_in != null || params.amount_out != null);
+  const enabled = !!params?.pair_id && (params.amount_in != null || params.amount_out != null);
   return useQuery({
     queryKey: [TIBET_KEY, "quote", params],
     queryFn: () =>

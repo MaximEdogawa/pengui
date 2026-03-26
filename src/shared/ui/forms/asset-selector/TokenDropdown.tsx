@@ -1,7 +1,7 @@
 "use client";
 
 import { useThemeClasses } from "@/shared/hooks";
-import { AssetList } from '@/shared/ui'
+import { AssetList } from "@/shared/ui";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
@@ -39,7 +39,6 @@ export default function TokenDropdown({
     setMounted(true);
     return () => setMounted(false);
   }, []);
-
 
   // Reset selected index when tokens change
   useEffect(() => {
@@ -125,18 +124,11 @@ export default function TokenDropdown({
         {searchValue && (
           <div
             className={`px-3 py-2 border-b ${
-              isDark
-                ? "border-gray-700 bg-gray-800/50"
-                : "border-gray-200 bg-gray-50"
+              isDark ? "border-gray-700 bg-gray-800/50" : "border-gray-200 bg-gray-50"
             }`}
           >
-            <label
-              className={`text-xs font-medium ${isDark ? "text-gray-300" : "text-gray-700"}`}
-            >
-              Search:{" "}
-              <span className={isDark ? "text-white" : "text-gray-900"}>
-                {searchValue}
-              </span>
+            <label className={`text-xs font-medium ${isDark ? "text-gray-300" : "text-gray-700"}`}>
+              Search: <span className={isDark ? "text-white" : "text-gray-900"}>{searchValue}</span>
             </label>
           </div>
         )}
@@ -157,13 +149,15 @@ export default function TokenDropdown({
               {/* @ts-ignore */}
               <AssetList
                 label={searchValue ? `Results` : `Tokens`}
-                assets={tokens.map((t) => ({ id: t.assetId || '', code: t.ticker }))}
-                getTickerSymbol={(assetId: string, code?: string) => code || 'XCH'}
+                assets={tokens.map((t) => ({ id: t.assetId || "", code: t.ticker }))}
+                getTickerSymbol={(assetId: string, code?: string) => code || "XCH"}
                 onSelect={(assetId: string) => {
-                  const token = tokens.find((t) => (t.assetId || '') === assetId) || tokens.find((t) => t.ticker === assetId)
+                  const token =
+                    tokens.find((t) => (t.assetId || "") === assetId) ||
+                    tokens.find((t) => t.ticker === assetId);
                   if (token) {
-                    onSelect(token)
-                    onClose()
+                    onSelect(token);
+                    onClose();
                   }
                 }}
                 highlightedIndex={selectedIndex}

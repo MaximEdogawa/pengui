@@ -1,11 +1,6 @@
 "use client";
 
-import {
-  useEffect,
-  type Dispatch,
-  type RefObject,
-  type SetStateAction,
-} from "react";
+import { useEffect, type Dispatch, type RefObject, type SetStateAction } from "react";
 import type { OrderBookOrder } from "@/features/trading/lib/orderBookTypes";
 import type { TibetApiPair } from "../lib/tibetTypes";
 import { isXchTicker } from "../lib/tibetUiUtils";
@@ -36,8 +31,7 @@ export function useSwapTabOrderPrefill(options: UseSwapTabOrderPrefillOptions) {
   } = options;
   useEffect(() => {
     const order = selectedOrderForTaking;
-    if (!order?.id || !order.requesting?.length || !order.offering?.length)
-      return;
+    if (!order?.id || !order.requesting?.length || !order.offering?.length) return;
     if (!currentSell || !currentBuy) return;
     const req = order.requesting[0];
     const off = order.offering[0];
@@ -46,10 +40,7 @@ export function useSwapTabOrderPrefill(options: UseSwapTabOrderPrefillOptions) {
     if (!reqTicker || !offTicker) return;
 
     const orderSet = new Set([reqTicker, offTicker]);
-    const filterSet = new Set([
-      currentSell.toLowerCase(),
-      currentBuy.toLowerCase(),
-    ]);
+    const filterSet = new Set([currentSell.toLowerCase(), currentBuy.toLowerCase()]);
     if (
       orderSet.size !== 2 ||
       filterSet.size !== 2 ||
@@ -94,7 +85,7 @@ export function useSwapTabPairFromFilters(
   filters: { buyAsset?: string[]; sellAsset?: string[] } | undefined,
   allPairs: TibetApiPair[],
   selectedPair: TibetApiPair | null,
-  setSelectedPair: Dispatch<SetStateAction<TibetApiPair | null>>,
+  setSelectedPair: Dispatch<SetStateAction<TibetApiPair | null>>
 ) {
   useEffect(() => {
     const buy = filters?.buyAsset ?? [];
@@ -111,16 +102,9 @@ export function useSwapTabPairFromFilters(
       const tok = tokenTicker.toLowerCase();
       return pt === tok || pt.includes(tok) || tok.includes(pt);
     });
-    if (match && selectedPair?.pair_id !== match.pair_id)
-      setSelectedPair(match);
+    if (match && selectedPair?.pair_id !== match.pair_id) setSelectedPair(match);
     if (!match) setSelectedPair(null);
-  }, [
-    filters?.buyAsset,
-    filters?.sellAsset,
-    allPairs,
-    selectedPair?.pair_id,
-    setSelectedPair,
-  ]);
+  }, [filters?.buyAsset, filters?.sellAsset, allPairs, selectedPair?.pair_id, setSelectedPair]);
 }
 
 /** When LP remove amount is set, drive Sell/Buy amounts from pool estimate. */
@@ -136,9 +120,7 @@ export interface UseSwapTabLpRemoveAmountsSyncOptions {
   lpEditedByUserRef: RefObject<boolean>;
 }
 
-export function useSwapTabLpRemoveAmountsSync(
-  options: UseSwapTabLpRemoveAmountsSyncOptions,
-) {
+export function useSwapTabLpRemoveAmountsSync(options: UseSwapTabLpRemoveAmountsSyncOptions) {
   const {
     removeReceive,
     selectedPair,
@@ -156,12 +138,7 @@ export function useSwapTabLpRemoveAmountsSync(
       return;
     }
     if (!lpEditedByUserRef.current) return;
-    if (
-      !removeReceive ||
-      !selectedPair ||
-      lpAmount.trim() === "" ||
-      parseFloat(lpAmount) <= 0
-    )
+    if (!removeReceive || !selectedPair || lpAmount.trim() === "" || parseFloat(lpAmount) <= 0)
       return;
     amountsFromLpRef.current = true;
     const xchStr = removeReceive.xch.toFixed(6);

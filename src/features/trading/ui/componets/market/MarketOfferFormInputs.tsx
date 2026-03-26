@@ -1,12 +1,12 @@
-'use client'
+"use client";
 
-import { useThemeClasses } from '@/shared/hooks'
+import { useThemeClasses } from "@/shared/hooks";
 
 interface MarketOfferFormInputsProps {
-  order?: unknown
-  offerString: string
-  setOfferString: (value: string) => void
-  isSubmitting: boolean
+  order?: unknown;
+  offerString: string;
+  setOfferString: (value: string) => void;
+  isSubmitting: boolean;
 }
 
 export default function MarketOfferFormInputs({
@@ -15,11 +15,11 @@ export default function MarketOfferFormInputs({
   setOfferString,
   isSubmitting,
 }: MarketOfferFormInputsProps) {
-  const { t } = useThemeClasses()
+  const { t } = useThemeClasses();
 
   // Only show offer string input when no order is provided
   if (order) {
-    return null
+    return null;
   }
 
   return (
@@ -37,5 +37,5 @@ export default function MarketOfferFormInputs({
         Paste an offer string to take an offer from the marketplace.
       </p>
     </div>
-  )
+  );
 }

@@ -5,10 +5,7 @@ import { UserCircle, Palette, Shield, Settings, Info } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 import { ProfileHeader } from "@/features/profile/components/ProfileHeader";
-import {
-  ProfileTabs,
-  type TabId,
-} from "@/features/profile/components/ProfileTabs";
+import { ProfileTabs, type TabId } from "@/features/profile/components/ProfileTabs";
 import { ProfileTabContent } from "@/features/profile/components/ProfileTabContent";
 
 export default function ProfilePage() {
@@ -16,9 +13,7 @@ export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState<TabId>("profile");
   const { theme: currentTheme, systemTheme, setTheme } = useTheme();
 
-  const isDark =
-    currentTheme === "dark" ||
-    (currentTheme === "system" && systemTheme === "dark");
+  const isDark = currentTheme === "dark" || (currentTheme === "system" && systemTheme === "dark");
   const t = getThemeClasses(isDark);
 
   useEffect(() => {
@@ -47,12 +42,7 @@ export default function ProfilePage() {
         isDark={isDark}
         t={t}
       />
-      <ProfileTabContent
-        activeTab={activeTab}
-        isDark={isDark}
-        t={t}
-        onThemeChange={setTheme}
-      />
+      <ProfileTabContent activeTab={activeTab} isDark={isDark} t={t} onThemeChange={setTheme} />
     </div>
   );
 }

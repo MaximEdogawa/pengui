@@ -7,6 +7,7 @@ Unit tests test individual functions, utilities, hooks, and components in isolat
 ## When to Write Unit Tests
 
 Write unit tests for:
+
 - ✅ Pure functions (no side effects)
 - ✅ Utility functions (formatting, validation, calculations)
 - ✅ React hooks (custom hooks)
@@ -15,6 +16,7 @@ Write unit tests for:
 - ✅ Component rendering and basic interactions
 
 Don't write unit tests for:
+
 - ❌ Complex integration scenarios (use integration tests)
 - ❌ Full user workflows (use E2E tests)
 - ❌ External API calls (mock them)
@@ -24,15 +26,15 @@ Don't write unit tests for:
 ### Basic Test Structure
 
 ```typescript
-import { describe, it, expect } from 'bun:test'
-import { functionToTest } from './module'
+import { describe, it, expect } from "bun:test";
+import { functionToTest } from "./module";
 
-describe('functionToTest', () => {
-  it('should do something specific', () => {
-    const result = functionToTest(input)
-    expect(result).toBe(expectedOutput)
-  })
-})
+describe("functionToTest", () => {
+  it("should do something specific", () => {
+    const result = functionToTest(input);
+    expect(result).toBe(expectedOutput);
+  });
+});
 ```
 
 ### Testing React Components
@@ -64,23 +66,23 @@ describe('Button', () => {
 ### Testing React Hooks
 
 ```typescript
-import { describe, it, expect } from 'bun:test'
-import { renderHook } from '@testing-library/react'
-import { useResponsive } from './useResponsive'
+import { describe, it, expect } from "bun:test";
+import { renderHook } from "@testing-library/react";
+import { useResponsive } from "./useResponsive";
 
-describe('useResponsive', () => {
-  it('should detect mobile view', () => {
+describe("useResponsive", () => {
+  it("should detect mobile view", () => {
     // Mock window.innerWidth
-    Object.defineProperty(window, 'innerWidth', {
+    Object.defineProperty(window, "innerWidth", {
       writable: true,
       configurable: true,
       value: 800,
-    })
+    });
 
-    const { result } = renderHook(() => useResponsive())
-    expect(result.current.isMobile).toBe(true)
-  })
-})
+    const { result } = renderHook(() => useResponsive());
+    expect(result.current.isMobile).toBe(true);
+  });
+});
 ```
 
 ## Test Utilities
@@ -102,12 +104,12 @@ test('component with providers', () => {
 Use factories to create consistent test data:
 
 ```typescript
-import { createUser, createAsset } from '@/test-utils'
+import { createUser, createAsset } from "@/test-utils";
 
-test('example', () => {
-  const user = createUser({ name: 'Test User' })
-  const asset = createAsset({ assetType: 'xch', balance: 1000 })
-})
+test("example", () => {
+  const user = createUser({ name: "Test User" });
+  const asset = createAsset({ assetType: "xch", balance: 1000 });
+});
 ```
 
 ## Best Practices
@@ -124,30 +126,30 @@ test('example', () => {
 
 ```typescript
 // src/shared/lib/formatting/chia-units.test.ts
-import { describe, it, expect } from 'bun:test'
-import { xchToMojos, mojosToXch } from './chia-units'
+import { describe, it, expect } from "bun:test";
+import { xchToMojos, mojosToXch } from "./chia-units";
 
-describe('chia-units', () => {
-  describe('xchToMojos', () => {
-    it('should convert 1 XCH to 1 trillion mojos', () => {
-      expect(xchToMojos(1)).toBe(1_000_000_000_000)
-    })
+describe("chia-units", () => {
+  describe("xchToMojos", () => {
+    it("should convert 1 XCH to 1 trillion mojos", () => {
+      expect(xchToMojos(1)).toBe(1_000_000_000_000);
+    });
 
-    it('should convert 0.5 XCH correctly', () => {
-      expect(xchToMojos(0.5)).toBe(500_000_000_000)
-    })
+    it("should convert 0.5 XCH correctly", () => {
+      expect(xchToMojos(0.5)).toBe(500_000_000_000);
+    });
 
-    it('should handle zero', () => {
-      expect(xchToMojos(0)).toBe(0)
-    })
-  })
+    it("should handle zero", () => {
+      expect(xchToMojos(0)).toBe(0);
+    });
+  });
 
-  describe('mojosToXch', () => {
-    it('should convert mojos to XCH correctly', () => {
-      expect(mojosToXch(1_000_000_000_000)).toBe(1)
-    })
-  })
-})
+  describe("mojosToXch", () => {
+    it("should convert mojos to XCH correctly", () => {
+      expect(mojosToXch(1_000_000_000_000)).toBe(1);
+    });
+  });
+});
 ```
 
 ## Running Unit Tests

@@ -15,9 +15,7 @@ function mergeOffersIntoCache(prev: DexieOffer[] | undefined, offers: DexieOffer
   return Array.from(byId.values()).slice(-MAX_CACHED_OFFERS);
 }
 
-export function buildTerminalQueryKey(
-  filterParams: TerminalFilterParams,
-): unknown[] {
+export function buildTerminalQueryKey(filterParams: TerminalFilterParams): unknown[] {
   return [
     TERMINAL_OFFERS_QUERY_KEY,
     TERMINAL_QUERY_KEY,
@@ -34,20 +32,16 @@ export function useTerminalOffersSync(filterParams: TerminalFilterParams) {
 
   const setCachedOffers = useCallback(
     (offers: DexieOffer[]) => {
-      queryClient.setQueryData<DexieOffer[]>(key, (prev) =>
-        mergeOffersIntoCache(prev, offers),
-      );
+      queryClient.setQueryData<DexieOffer[]>(key, (prev) => mergeOffersIntoCache(prev, offers));
     },
-    [queryClient, key],
+    [queryClient, key]
   );
 
   const appendCachedOffers = useCallback(
     (offers: DexieOffer[]) => {
-      queryClient.setQueryData<DexieOffer[]>(key, (prev) =>
-        mergeOffersIntoCache(prev, offers),
-      );
+      queryClient.setQueryData<DexieOffer[]>(key, (prev) => mergeOffersIntoCache(prev, offers));
     },
-    [queryClient, key],
+    [queryClient, key]
   );
 
   return { setCachedOffers, appendCachedOffers, queryKey: key };

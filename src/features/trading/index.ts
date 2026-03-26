@@ -5,10 +5,7 @@
 
 // Model exports
 export { useOrderBook } from "./hooks/useOrderBook";
-export {
-  useOrderBookFilters,
-  OrderBookFiltersProvider,
-} from "./hooks/OrderBookFiltersProvider";
+export { useOrderBookFilters, OrderBookFiltersProvider } from "./hooks/OrderBookFiltersProvider";
 export { useOrderBookOfferSubmission } from "./hooks/useOrderBookOfferSubmission";
 
 // UI exports

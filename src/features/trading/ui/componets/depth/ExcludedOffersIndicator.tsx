@@ -29,8 +29,7 @@ export default function ExcludedOffersIndicator({
   const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const hasExcluded =
-    (excludedBids && excludedBids.length > 0) ||
-    (excludedAsks && excludedAsks.length > 0);
+    (excludedBids && excludedBids.length > 0) || (excludedAsks && excludedAsks.length > 0);
 
   // Find order matching a price level using shared utility
   const findOrder = useCallback(
@@ -38,7 +37,7 @@ export default function ExcludedOffersIndicator({
       const orders = isBid ? filteredBuyOrders : filteredSellOrders;
       return findOrderByPrice(price, orders, calculatePriceFn);
     },
-    [filteredBuyOrders, filteredSellOrders, calculatePriceFn],
+    [filteredBuyOrders, filteredSellOrders, calculatePriceFn]
   );
 
   // Simple click handler
@@ -50,9 +49,7 @@ export default function ExcludedOffersIndicator({
       }
 
       if (!calculatePriceFn) {
-        logger.error(
-          "ExcludedOffersIndicator: calculatePriceFn is not available",
-        );
+        logger.error("ExcludedOffersIndicator: calculatePriceFn is not available");
         return;
       }
 
@@ -69,7 +66,7 @@ export default function ExcludedOffersIndicator({
         });
       }
     },
-    [onOrderClick, calculatePriceFn, findOrder],
+    [onOrderClick, calculatePriceFn, findOrder]
   );
 
   // Close dropdown when clicking outside
@@ -94,8 +91,7 @@ export default function ExcludedOffersIndicator({
 
   if (!hasExcluded) return null;
 
-  const totalExcluded =
-    (excludedBids?.length || 0) + (excludedAsks?.length || 0);
+  const totalExcluded = (excludedBids?.length || 0) + (excludedAsks?.length || 0);
 
   return (
     <div className="absolute top-2 right-2 z-20">

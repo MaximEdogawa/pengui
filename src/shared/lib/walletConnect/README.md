@@ -38,12 +38,12 @@ This directory contains the implementation of all wallet queries for Sage wallet
 ## Usage Example
 
 ```tsx
-import { useSignClient, useWalletBalance, useSendTransaction } from '@/hooks'
+import { useSignClient, useWalletBalance, useSendTransaction } from "@/hooks";
 
 function WalletComponent() {
-  const { signClient, isInitialized } = useSignClient()
-  const { data: balance, isLoading } = useWalletBalance()
-  const sendTransaction = useSendTransaction()
+  const { signClient, isInitialized } = useSignClient();
+  const { data: balance, isLoading } = useWalletBalance();
+  const sendTransaction = useSendTransaction();
 
   const handleSend = async () => {
     try {
@@ -51,21 +51,21 @@ function WalletComponent() {
         walletId: 1,
         amount: 1000000,
         fee: 0,
-        address: 'xch1...',
-      })
+        address: "xch1...",
+      });
     } catch (error) {
-      console.error('Transaction failed:', error)
+      console.error("Transaction failed:", error);
     }
-  }
+  };
 
-  if (!isInitialized) return <div>Initializing...</div>
+  if (!isInitialized) return <div>Initializing...</div>;
 
   return (
     <div>
       <p>Balance: {balance?.confirmed}</p>
       <button onClick={handleSend}>Send Transaction</button>
     </div>
-  )
+  );
 }
 ```
 

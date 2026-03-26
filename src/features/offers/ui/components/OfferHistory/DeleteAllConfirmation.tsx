@@ -1,16 +1,16 @@
-'use client'
+"use client";
 
-import { Loader2, Trash2 } from 'lucide-react'
-import { Modal } from '@/shared/ui'
-import type { ThemeClasses } from '@/shared/lib/theme'
+import { Loader2, Trash2 } from "lucide-react";
+import { Modal } from "@/shared/ui";
+import type { ThemeClasses } from "@/shared/lib/theme";
 
 interface DeleteAllConfirmationProps {
-  isOpen: boolean
-  isDeleting: boolean
-  error: string | null
-  onConfirm: () => void
-  onClose: () => void
-  t: ThemeClasses
+  isOpen: boolean;
+  isDeleting: boolean;
+  error: string | null;
+  onConfirm: () => void;
+  onClose: () => void;
+  t: ThemeClasses;
 }
 
 export function DeleteAllConfirmation({
@@ -21,7 +21,7 @@ export function DeleteAllConfirmation({
   onClose,
   t,
 }: DeleteAllConfirmationProps) {
-  if (!isOpen) return null
+  if (!isOpen) return null;
 
   return (
     <Modal onClose={onClose} maxWidth="max-w-md" closeOnOverlayClick={false}>
@@ -63,5 +63,5 @@ export function DeleteAllConfirmation({
         </div>
       </div>
     </Modal>
-  )
+  );
 }

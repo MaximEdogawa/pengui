@@ -1,40 +1,43 @@
-'use client'
+"use client";
 
-import { getTransactions, type StoredTransaction } from '@/shared/lib/walletConnect/utils/transactionStorage'
-import { useEffect, useState } from 'react'
+import {
+  getTransactions,
+  type StoredTransaction,
+} from "@/shared/lib/walletConnect/utils/transactionStorage";
+import { useEffect, useState } from "react";
 
 /**
  * Hook to manage transaction history from localStorage
  * Automatically updates when transactions are saved
  */
 export function useTransactionHistory() {
-  const [transactions, setTransactions] = useState<StoredTransaction[]>([])
+  const [transactions, setTransactions] = useState<StoredTransaction[]>([]);
 
   useEffect(() => {
     const loadTransactions = () => {
-      setTransactions(getTransactions())
-    }
+      setTransactions(getTransactions());
+    };
 
-    loadTransactions()
+    loadTransactions();
 
     // Listen for storage changes (from other tabs/windows)
     const handleStorageChange = () => {
-      loadTransactions()
-    }
+      loadTransactions();
+    };
 
     // Listen for custom transaction events (from same window)
     const handleTransactionEvent = () => {
-      loadTransactions()
-    }
+      loadTransactions();
+    };
 
-    window.addEventListener('storage', handleStorageChange)
-    window.addEventListener('transactionSaved', handleTransactionEvent)
+    window.addEventListener("storage", handleStorageChange);
+    window.addEventListener("transactionSaved", handleTransactionEvent);
 
     return () => {
-      window.removeEventListener('storage', handleStorageChange)
-      window.removeEventListener('transactionSaved', handleTransactionEvent)
-    }
-  }, [])
+      window.removeEventListener("storage", handleStorageChange);
+      window.removeEventListener("transactionSaved", handleTransactionEvent);
+    };
+  }, []);
 
-  return transactions
+  return transactions;
 }

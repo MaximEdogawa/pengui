@@ -1,23 +1,23 @@
-'use client'
+"use client";
 
-import { useThemeClasses } from '@/shared/hooks'
-import { ReactNode } from 'react'
+import { useThemeClasses } from "@/shared/hooks";
+import { ReactNode } from "react";
 
 export interface CardProps {
-  children: ReactNode
-  className?: string
+  children: ReactNode;
+  className?: string;
 }
 
-export default function Card({ children, className = '' }: CardProps) {
-  const { isDark, t } = useThemeClasses()
+export default function Card({ children, className = "" }: CardProps) {
+  const { isDark, t } = useThemeClasses();
 
   return (
     <div
       className={`backdrop-blur-[40px] ${t.card} rounded-2xl p-3 border ${t.border} transition-all duration-300 shadow-lg shadow-black/5 ${
-        isDark ? 'bg-white/[0.03]' : 'bg-white/30'
+        isDark ? "bg-white/[0.03]" : "bg-white/30"
       } ${className}`}
     >
       {children}
     </div>
-  )
+  );
 }

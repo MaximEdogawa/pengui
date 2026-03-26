@@ -1,52 +1,52 @@
 // Offer types for the Penguin Pool application
 
 // Import shared asset types
-export type AssetAmount = number // Always use float numbers for precision
-export type AssetType = 'xch' | 'cat' | 'nft' | 'option'
+export type AssetAmount = number; // Always use float numbers for precision
+export type AssetType = "xch" | "cat" | "nft" | "option";
 
 // Base asset interface
 export interface BaseAsset {
-  assetId: string
-  amount: AssetAmount
-  type: AssetType
-  symbol?: string
-  name?: string
+  assetId: string;
+  amount: AssetAmount;
+  type: AssetType;
+  symbol?: string;
+  name?: string;
 }
 
-export type OfferAsset = BaseAsset
+export type OfferAsset = BaseAsset;
 
 // Offer state types matching the UI requirements
 export type OfferState =
-  | 'Open'
-  | 'Pending'
-  | 'Cancelling'
-  | 'Cancelled'
-  | 'Completed'
-  | 'Unknown'
-  | 'Expired'
+  | "Open"
+  | "Pending"
+  | "Cancelling"
+  | "Cancelled"
+  | "Completed"
+  | "Unknown"
+  | "Expired";
 
 // Legacy status types for backward compatibility
-export type OfferStatus = 'pending' | 'active' | 'completed' | 'cancelled' | 'expired' | 'failed'
+export type OfferStatus = "pending" | "active" | "completed" | "cancelled" | "expired" | "failed";
 
 export interface OfferRequest {
-  walletId: number
-  offer: string
-  fee?: AssetAmount
+  walletId: number;
+  offer: string;
+  fee?: AssetAmount;
 }
 
 export interface OfferResponse {
-  offer: string
-  tradeId: string
+  offer: string;
+  tradeId: string;
 }
 
 export interface TakeOfferRequest {
-  offer: string
-  fee?: number
+  offer: string;
+  fee?: number;
 }
 
 export interface TakeOfferResponse {
-  tradeId: string
-  success: boolean
+  tradeId: string;
+  success: boolean;
 }
 
 /**
@@ -54,133 +54,133 @@ export interface TakeOfferResponse {
  * Data structures for Dexie API responses
  */
 export interface DexieAsset {
-  id: string
-  code: string
-  name: string
-  amount: number
+  id: string;
+  code: string;
+  name: string;
+  amount: number;
 }
 
 export interface DexieOffer {
-  maker: string
-  id: string
-  status: number // Legacy field - we'll calculate state from dates instead
-  offer?: string // Original offer string (available in POST responses)
-  date_found: string
-  date_completed?: string | null
-  date_pending?: string | null
-  date_expiry?: string | null
-  block_expiry?: number | null
-  spent_block_index?: number | null
-  price: number
-  offered: DexieAsset[]
-  requested: DexieAsset[]
-  fees: number
-  known_taker?: unknown | null // null = cancelled, not null = completed
+  maker: string;
+  id: string;
+  status: number; // Legacy field - we'll calculate state from dates instead
+  offer?: string; // Original offer string (available in POST responses)
+  date_found: string;
+  date_completed?: string | null;
+  date_pending?: string | null;
+  date_expiry?: string | null;
+  block_expiry?: number | null;
+  spent_block_index?: number | null;
+  price: number;
+  offered: DexieAsset[];
+  requested: DexieAsset[];
+  fees: number;
+  known_taker?: unknown | null; // null = cancelled, not null = completed
 }
 
 export interface CancelOfferRequest {
-  tradeId: string
-  fee?: number
+  tradeId: string;
+  fee?: number;
 }
 
 export interface CancelOfferResponse {
-  success: boolean
+  success: boolean;
 }
 
 export interface OfferDetails {
-  id: string
-  tradeId?: string
-  pendingConfirmation?: boolean
-  offerString: string
-  status: OfferStatus // Legacy status for backward compatibility
-  state?: OfferState // New state field for UI indicators
-  createdAt: Date
-  expiresAt?: Date
-  assetsOffered: OfferAsset[]
-  assetsRequested: OfferAsset[]
-  fee: AssetAmount
-  creatorAddress?: string
-  dexieOfferId?: string
-  dexieStatus?: OfferState // Store the calculated state from Dexie
-  uploadedToDexie?: boolean
-  dexieOfferData?: unknown // Store the full Dexie response data
+  id: string;
+  tradeId?: string;
+  pendingConfirmation?: boolean;
+  offerString: string;
+  status: OfferStatus; // Legacy status for backward compatibility
+  state?: OfferState; // New state field for UI indicators
+  createdAt: Date;
+  expiresAt?: Date;
+  assetsOffered: OfferAsset[];
+  assetsRequested: OfferAsset[];
+  fee: AssetAmount;
+  creatorAddress?: string;
+  dexieOfferId?: string;
+  dexieStatus?: OfferState; // Store the calculated state from Dexie
+  uploadedToDexie?: boolean;
+  dexieOfferData?: unknown; // Store the full Dexie response data
 
   // Date fields for state calculation
-  dateFound?: string
-  dateCompleted?: string
-  datePending?: string
-  dateExpiry?: string
-  blockExpiry?: number
-  spentBlockIndex?: number
+  dateFound?: string;
+  dateCompleted?: string;
+  datePending?: string;
+  dateExpiry?: string;
+  blockExpiry?: number;
+  spentBlockIndex?: number;
 
   // Additional state indicators
-  knownTaker?: unknown // null = cancelled, not null = completed
+  knownTaker?: unknown; // null = cancelled, not null = completed
 }
 
 export interface CreateOfferForm {
-  assetsOffered: OfferAsset[]
-  assetsRequested: OfferAsset[]
-  fee: AssetAmount
-  memo?: string
-  expirationHours?: number
+  assetsOffered: OfferAsset[];
+  assetsRequested: OfferAsset[];
+  fee: AssetAmount;
+  memo?: string;
+  expirationHours?: number;
 }
 
 export interface OfferFilters {
-  status?: string
-  assetType?: AssetType
-  minAmount?: AssetAmount
-  maxAmount?: AssetAmount
+  status?: string;
+  assetType?: AssetType;
+  minAmount?: AssetAmount;
+  maxAmount?: AssetAmount;
 }
 
 export interface OfferSortOptions {
-  field: 'createdAt' | 'amount' | 'status' | 'expiresAt'
-  direction: 'asc' | 'desc'
+  field: "createdAt" | "amount" | "status" | "expiresAt";
+  direction: "asc" | "desc";
 }
 
 // Wallet request interfaces for better type safety
 export interface WalletOfferAsset {
-  assetId: string
-  amount: AssetAmount // Explicitly use float numbers
+  assetId: string;
+  amount: AssetAmount; // Explicitly use float numbers
 }
 
 export interface CreateOfferWalletRequest {
-  walletId: number
-  offerAssets: WalletOfferAsset[]
-  requestAssets: WalletOfferAsset[]
-  fee: number
+  walletId: number;
+  offerAssets: WalletOfferAsset[];
+  requestAssets: WalletOfferAsset[];
+  fee: number;
 }
 
 export interface CreateOfferWalletResponse {
-  success: boolean
-  offerId?: string
+  success: boolean;
+  offerId?: string;
   data?: {
-    offerId: string
-    offerString: string
-    fee: number
-    status: string
-  }
-  error?: string | null
+    offerId: string;
+    offerString: string;
+    fee: number;
+    status: string;
+  };
+  error?: string | null;
 }
 
 export interface TakeOfferWalletRequest {
-  offer: string
-  fee?: number
+  offer: string;
+  fee?: number;
 }
 
 export interface TakeOfferWalletResponse {
-  success: boolean
-  tradeId?: string
-  error?: string | null
+  success: boolean;
+  tradeId?: string;
+  error?: string | null;
 }
 
 export interface CancelOfferWalletRequest {
-  offerId: string
-  fee?: number
+  offerId: string;
+  fee?: number;
 }
 
 export interface CancelOfferWalletResponse {
-  success: boolean
-  error?: string | null
+  success: boolean;
+  error?: string | null;
 }
 
 /**
@@ -188,20 +188,20 @@ export interface CancelOfferWalletResponse {
  */
 export function convertOfferStateToStatus(offerState: OfferState): OfferStatus {
   switch (offerState) {
-    case 'Open':
-      return 'active'
-    case 'Pending':
-    case 'Cancelling':
-      return 'pending'
-    case 'Cancelled':
-      return 'cancelled'
-    case 'Completed':
-      return 'completed'
-    case 'Expired':
-      return 'expired'
-    case 'Unknown':
+    case "Open":
+      return "active";
+    case "Pending":
+    case "Cancelling":
+      return "pending";
+    case "Cancelled":
+      return "cancelled";
+    case "Completed":
+      return "completed";
+    case "Expired":
+      return "expired";
+    case "Unknown":
     default:
-      return 'failed'
+      return "failed";
   }
 }
 
@@ -210,19 +210,19 @@ export function convertOfferStateToStatus(offerState: OfferState): OfferStatus {
  */
 export function convertStatusToOfferState(status: OfferStatus): OfferState {
   switch (status) {
-    case 'active':
-      return 'Open'
-    case 'pending':
-      return 'Pending'
-    case 'cancelled':
-      return 'Cancelled'
-    case 'completed':
-      return 'Completed'
-    case 'expired':
-      return 'Expired'
-    case 'failed':
+    case "active":
+      return "Open";
+    case "pending":
+      return "Pending";
+    case "cancelled":
+      return "Cancelled";
+    case "completed":
+      return "Completed";
+    case "expired":
+      return "Expired";
+    case "failed":
     default:
-      return 'Unknown'
+      return "Unknown";
   }
 }
 
@@ -231,21 +231,21 @@ export function convertStatusToOfferState(status: OfferStatus): OfferState {
  */
 export function getOfferStateDisplayText(state: OfferState): string {
   switch (state) {
-    case 'Open':
-      return 'Open'
-    case 'Pending':
-      return 'Pending'
-    case 'Cancelling':
-      return 'Cancelling'
-    case 'Cancelled':
-      return 'Cancelled'
-    case 'Completed':
-      return 'Completed'
-    case 'Expired':
-      return 'Expired'
-    case 'Unknown':
+    case "Open":
+      return "Open";
+    case "Pending":
+      return "Pending";
+    case "Cancelling":
+      return "Cancelling";
+    case "Cancelled":
+      return "Cancelled";
+    case "Completed":
+      return "Completed";
+    case "Expired":
+      return "Expired";
+    case "Unknown":
     default:
-      return 'Unknown'
+      return "Unknown";
   }
 }
 
@@ -254,21 +254,21 @@ export function getOfferStateDisplayText(state: OfferState): string {
  */
 export function getOfferStateClass(state: OfferState): string {
   switch (state) {
-    case 'Open':
-      return 'offer-state-open'
-    case 'Pending':
-      return 'offer-state-pending'
-    case 'Cancelling':
-      return 'offer-state-cancelling'
-    case 'Cancelled':
-      return 'offer-state-cancelled'
-    case 'Completed':
-      return 'offer-state-completed'
-    case 'Expired':
-      return 'offer-state-expired'
-    case 'Unknown':
+    case "Open":
+      return "offer-state-open";
+    case "Pending":
+      return "offer-state-pending";
+    case "Cancelling":
+      return "offer-state-cancelling";
+    case "Cancelled":
+      return "offer-state-cancelled";
+    case "Completed":
+      return "offer-state-completed";
+    case "Expired":
+      return "offer-state-expired";
+    case "Unknown":
     default:
-      return 'offer-state-unknown'
+      return "offer-state-unknown";
   }
 }
 
@@ -277,36 +277,36 @@ export function getOfferStateClass(state: OfferState): string {
  * Data structures for Dexie API responses
  */
 export interface DexieAsset {
-  id: string
-  code: string
-  name: string
-  amount: number
+  id: string;
+  code: string;
+  name: string;
+  amount: number;
 }
 
 export interface DexieOffer {
-  id: string
-  status: number // Legacy field - we'll calculate state from dates instead
-  offer?: string // Original offer string (available in POST responses)
-  date_found: string
-  date_completed?: string | null
-  date_pending?: string | null
-  date_expiry?: string | null
-  block_expiry?: number | null
-  spent_block_index?: number | null
-  price: number
-  offered: DexieAsset[]
-  requested: DexieAsset[]
-  fees: number
-  known_taker?: unknown | null // null = cancelled, not null = completed
+  id: string;
+  status: number; // Legacy field - we'll calculate state from dates instead
+  offer?: string; // Original offer string (available in POST responses)
+  date_found: string;
+  date_completed?: string | null;
+  date_pending?: string | null;
+  date_expiry?: string | null;
+  block_expiry?: number | null;
+  spent_block_index?: number | null;
+  price: number;
+  offered: DexieAsset[];
+  requested: DexieAsset[];
+  fees: number;
+  known_taker?: unknown | null; // null = cancelled, not null = completed
 }
 
 /** Map Dexie API status (2=Pending, 3=Cancelled, 4=Completed, 6=Expired) when date-based logic is inconclusive. */
 function dexieStatusToState(status: number): OfferState | null {
-  if (status === 4) return 'Completed'
-  if (status === 3) return 'Cancelled'
-  if (status === 6) return 'Expired'
-  if (status === 2) return 'Pending'
-  return null
+  if (status === 4) return "Completed";
+  if (status === 3) return "Cancelled";
+  if (status === 6) return "Expired";
+  if (status === 2) return "Pending";
+  return null;
 }
 
 /**
@@ -328,93 +328,99 @@ export function calculateOfferState(
   currentBlockHeight?: number | null
 ): OfferState {
   // Extract and normalize data
-  const dateFound = offer.date_found ? new Date(offer.date_found) : null
-  const dateCompleted = offer.date_completed ? new Date(offer.date_completed) : null
-  const datePending = offer.date_pending ? new Date(offer.date_pending) : null
-  const dateExpiry = offer.date_expiry ? new Date(offer.date_expiry) : null
-  const blockExpiry = offer.block_expiry
-  const spentBlockIndex = offer.spent_block_index
+  const dateFound = offer.date_found ? new Date(offer.date_found) : null;
+  const dateCompleted = offer.date_completed ? new Date(offer.date_completed) : null;
+  const datePending = offer.date_pending ? new Date(offer.date_pending) : null;
+  const dateExpiry = offer.date_expiry ? new Date(offer.date_expiry) : null;
+  const blockExpiry = offer.block_expiry;
+  const spentBlockIndex = offer.spent_block_index;
   const apiStatus =
-    typeof (offer as { status?: number }).status === 'number' ? (offer as { status: number }).status : null
+    typeof (offer as { status?: number }).status === "number"
+      ? (offer as { status: number }).status
+      : null;
 
   // Helper functions
   const isCancelled = (spentBlockIndex: number | null | undefined): boolean => {
-    return spentBlockIndex !== null && spentBlockIndex !== undefined
-  }
+    return spentBlockIndex !== null && spentBlockIndex !== undefined;
+  };
 
-  const isCompleted = (dateCompleted: Date | null): boolean => dateCompleted !== null
+  const isCompleted = (dateCompleted: Date | null): boolean => dateCompleted !== null;
 
   const isPending = (datePending: Date | null): boolean => {
-    return datePending !== null
-  }
+    return datePending !== null;
+  };
 
   const isExpiredByDate = (dateExpiry: Date | null): boolean => {
-    if (!dateExpiry) return false
-    const now = new Date()
-    return dateExpiry < now
-  }
+    if (!dateExpiry) return false;
+    const now = new Date();
+    return dateExpiry < now;
+  };
 
   const isExpiredByBlock = (
     blockExpiry: number | null | undefined,
     currentBlockHeight: number | null | undefined
   ): boolean => {
-    if (blockExpiry === null || blockExpiry === undefined) return false
-    if (currentBlockHeight === null || currentBlockHeight === undefined) return false
-    return currentBlockHeight >= blockExpiry
-  }
+    if (blockExpiry === null || blockExpiry === undefined) return false;
+    if (currentBlockHeight === null || currentBlockHeight === undefined) return false;
+    return currentBlockHeight >= blockExpiry;
+  };
 
   const isWithinExpiry = (
     dateExpiry: Date | null,
     blockExpiry: number | null | undefined,
     currentBlockHeight: number | null | undefined
   ): boolean => {
-    const now = new Date()
-    const isWithinDateExpiry = !dateExpiry || dateExpiry >= now
-    const hasValidBlockExpiry = blockExpiry !== null && blockExpiry !== undefined
+    const now = new Date();
+    const isWithinDateExpiry = !dateExpiry || dateExpiry >= now;
+    const hasValidBlockExpiry = blockExpiry !== null && blockExpiry !== undefined;
     const isWithinBlockExpiry =
       !hasValidBlockExpiry ||
       currentBlockHeight === null ||
       currentBlockHeight === undefined ||
-      currentBlockHeight < blockExpiry
+      currentBlockHeight < blockExpiry;
 
-    return isWithinDateExpiry && isWithinBlockExpiry
-  }
+    return isWithinDateExpiry && isWithinBlockExpiry;
+  };
 
   const isOpen = (
     dateFound: Date | null,
     dateCompleted: Date | null,
     expiryConfig: {
-      dateExpiry: Date | null
-      blockExpiry: number | null | undefined
-      currentBlockHeight: number | null | undefined
+      dateExpiry: Date | null;
+      blockExpiry: number | null | undefined;
+      currentBlockHeight: number | null | undefined;
     }
   ): boolean => {
-    if (!dateFound || dateCompleted) return false
-    return isWithinExpiry(expiryConfig.dateExpiry, expiryConfig.blockExpiry, expiryConfig.currentBlockHeight)
-  }
+    if (!dateFound || dateCompleted) return false;
+    return isWithinExpiry(
+      expiryConfig.dateExpiry,
+      expiryConfig.blockExpiry,
+      expiryConfig.currentBlockHeight
+    );
+  };
 
   // 1. CANCELLED: spent_block_index exists (coin was spent, offer cancelled) - highest priority
-  if (isCancelled(spentBlockIndex)) return 'Cancelled'
+  if (isCancelled(spentBlockIndex)) return "Cancelled";
 
   // 2. COMPLETED: date_completed exists (known_taker may be omitted in compact API responses)
-  if (isCompleted(dateCompleted)) return 'Completed'
+  if (isCompleted(dateCompleted)) return "Completed";
 
   // 3. PENDING: date_pending exists (but only if not cancelled or completed)
-  if (isPending(datePending)) return 'Pending'
+  if (isPending(datePending)) return "Pending";
 
   // 4. EXPIRED: Check if offer has expired based on date or block height
-  if (isExpiredByDate(dateExpiry)) return 'Expired'
-  if (isExpiredByBlock(blockExpiry, currentBlockHeight)) return 'Expired'
+  if (isExpiredByDate(dateExpiry)) return "Expired";
+  if (isExpiredByBlock(blockExpiry, currentBlockHeight)) return "Expired";
 
   // 5. OPEN: date_found exists, no completion, no spending, within expiry (if any)
   if (isOpen(dateFound, dateCompleted, { dateExpiry, blockExpiry, currentBlockHeight })) {
-    const mapped = apiStatus !== null ? dexieStatusToState(apiStatus) : null
-    if (mapped) return mapped
-    return 'Open'
+    const mapped = apiStatus !== null ? dexieStatusToState(apiStatus) : null;
+    if (mapped) return mapped;
+    return "Open";
   }
 
   // 6. Fallback: Dexie offer.status when date-based logic yields Unknown (e.g. compact response missing dates)
-  const mapped = apiStatus !== null ? dexieStatusToState(apiStatus) : null
-  if (mapped) return mapped
-  return 'Unknown'
+  const mapped = apiStatus !== null ? dexieStatusToState(apiStatus) : null;
+  if (mapped) return mapped;
+  return "Unknown";
 }

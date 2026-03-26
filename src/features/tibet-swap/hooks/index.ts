@@ -19,7 +19,4 @@ export {
   useSwapTabPairFromFilters,
   useSwapTabLpRemoveAmountsSync,
 } from "./useSwapTabSyncEffects";
-export {
-  useSwapTabConfirmSwap,
-  type UseSwapTabConfirmSwapOptions,
-} from "./useSwapTabConfirmSwap";
+export { useSwapTabConfirmSwap, type UseSwapTabConfirmSwapOptions } from "./useSwapTabConfirmSwap";

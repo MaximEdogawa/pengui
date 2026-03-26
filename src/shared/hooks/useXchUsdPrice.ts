@@ -1,8 +1,8 @@
-'use client'
+"use client";
 
-import { useTickers } from '@/entities/asset/hooks/useTickers'
-import { useNetwork } from '@/shared/hooks/useNetwork'
-import { useMemo } from 'react'
+import { useTickers } from "@/entities/asset/hooks/useTickers";
+import { useNetwork } from "@/shared/hooks/useNetwork";
+import { useMemo } from "react";
 
 /**
  * XCH/USD price derived from the BYC (Bytecash) / XCH pair on Dexie.
@@ -11,28 +11,28 @@ import { useMemo } from 'react'
  * is worth.  Inverting it gives the XCH price in USD: `1 / last_price`.
  */
 export function useXchUsdPrice(): {
-  priceUsd: number | null
-  isLoading: boolean
-  isError: boolean
+  priceUsd: number | null;
+  isLoading: boolean;
+  isError: boolean;
 } {
-  const { network } = useNetwork()
-  const { data, isLoading, isError } = useTickers()
+  const { network } = useNetwork();
+  const { data, isLoading, isError } = useTickers();
 
   const priceUsd = useMemo(() => {
-    if (!data?.success || !Array.isArray(data.data)) return null
+    if (!data?.success || !Array.isArray(data.data)) return null;
 
-    const xchTarget = network === 'testnet' ? 'TXCH' : 'XCH'
+    const xchTarget = network === "testnet" ? "TXCH" : "XCH";
 
     for (const t of data.data) {
-      if (t.base_code !== 'BYC') continue
-      if (t.target_code !== xchTarget && t.target_code !== 'XCH') continue
+      if (t.base_code !== "BYC") continue;
+      if (t.target_code !== xchTarget && t.target_code !== "XCH") continue;
 
-      const price = Number(t.last_price)
-      if (price > 0 && !isNaN(price)) return 1 / price
+      const price = Number(t.last_price);
+      if (price > 0 && !isNaN(price)) return 1 / price;
     }
 
-    return null
-  }, [data, network])
+    return null;
+  }, [data, network]);
 
-  return { priceUsd, isLoading, isError }
+  return { priceUsd, isLoading, isError };
 }

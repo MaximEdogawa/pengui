@@ -1,1 +1,1 @@
-export { CopyableLongHexString as CopyableHexString } from './CopyableHexString'
+export { CopyableLongHexString as CopyableHexString } from "./CopyableHexString";

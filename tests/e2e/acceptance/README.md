@@ -10,6 +10,7 @@ Acceptance tests validate complete user stories and feature functionality. These
 ## Test Organization
 
 Acceptance tests are organized by feature area:
+
 - `auth-features.spec.ts` - Authentication and login flows
 - `wallet-features.spec.ts` - Wallet connection and management
 - Add more as features are developed

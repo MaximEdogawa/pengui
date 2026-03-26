@@ -1,23 +1,23 @@
-import { Check, Copy } from 'lucide-react'
-import { useCallback, useState } from 'react'
-import { copyToClipboard } from '@/shared/lib/utils/clipboard'
+import { Check, Copy } from "lucide-react";
+import { useCallback, useState } from "react";
+import { copyToClipboard } from "@/shared/lib/utils/clipboard";
 
 interface CopyableFieldProps {
-  label: string
-  value: string
-  className?: string
+  label: string;
+  value: string;
+  className?: string;
 }
 
-export function CopyableField({ label, value, className = '' }: CopyableFieldProps) {
-  const [copied, setCopied] = useState(false)
+export function CopyableField({ label, value, className = "" }: CopyableFieldProps) {
+  const [copied, setCopied] = useState(false);
 
   const handleCopy = useCallback(async () => {
-    const result = await copyToClipboard(value)
+    const result = await copyToClipboard(value);
     if (result.success) {
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     }
-  }, [value])
+  }, [value]);
 
   return (
     <div>
@@ -41,9 +41,11 @@ export function CopyableField({ label, value, className = '' }: CopyableFieldPro
           )}
         </button>
       </div>
-      <div className={`text-xs font-mono text-gray-900 dark:text-white break-all bg-gray-50 dark:bg-gray-800/50 p-2 rounded ${className}`}>
+      <div
+        className={`text-xs font-mono text-gray-900 dark:text-white break-all bg-gray-50 dark:bg-gray-800/50 p-2 rounded ${className}`}
+      >
         {value}
       </div>
     </div>
-  )
+  );
 }

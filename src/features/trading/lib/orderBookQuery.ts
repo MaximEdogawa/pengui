@@ -1,10 +1,6 @@
 import { logger } from "@/shared/lib/logger";
 import type { DexieOffer } from "@/entities/offer";
-import type {
-  OrderBookFilters,
-  OrderBookOrder,
-  OrderBookPagination,
-} from "./orderBookTypes";
+import type { OrderBookFilters, OrderBookOrder, OrderBookPagination } from "./orderBookTypes";
 import {
   fetchBidirectionalPair,
   fetchSingleFilter,
@@ -19,9 +15,7 @@ import { deduplicateOrders, sortOrdersByPrice } from "./orderBookSorting";
 /**
  * Determine which fetch strategy to use based on filters
  */
-function determineFetchStrategy(
-  filters?: OrderBookFilters,
-): "bidirectional" | "single" | "all" {
+function determineFetchStrategy(filters?: OrderBookFilters): "bidirectional" | "single" | "all" {
   if (
     filters?.buyAsset &&
     filters.buyAsset.length > 0 &&
@@ -45,7 +39,7 @@ function determineFetchStrategy(
  * Execute bidirectional pair fetch
  */
 async function executeBidirectionalFetch(
-  config: BidirectionalPairConfig,
+  config: BidirectionalPairConfig
 ): Promise<{ orders: OrderBookOrder[]; total: number; hasMore: boolean }> {
   return fetchBidirectionalPair(config);
 }
@@ -54,7 +48,7 @@ async function executeBidirectionalFetch(
  * Execute single filter fetch
  */
 async function executeSingleFilterFetch(
-  config: SingleFilterConfig,
+  config: SingleFilterConfig
 ): Promise<{ orders: OrderBookOrder[]; total: number; hasMore: boolean }> {
   return fetchSingleFilter(config);
 }
@@ -63,7 +57,7 @@ async function executeSingleFilterFetch(
  * Execute all orders fetch
  */
 async function executeAllOrdersFetch(
-  config: AllOrdersConfig,
+  config: AllOrdersConfig
 ): Promise<{ orders: OrderBookOrder[]; total: number; hasMore: boolean }> {
   return fetchAllOrders(config);
 }
@@ -79,7 +73,7 @@ export interface OrderBookQueryConfig {
     page: number,
     buyAsset?: string | null,
     sellAsset?: string | null,
-    pageSize?: number,
+    pageSize?: number
   ) => {
     requested?: string | null;
     offered?: string | null;
@@ -99,7 +93,7 @@ export interface OrderBookQueryConfig {
  * Process and return order book query result
  */
 export async function executeOrderBookQuery(
-  config: OrderBookQueryConfig,
+  config: OrderBookQueryConfig
 ): Promise<{ orders: OrderBookOrder[]; total: number; hasMore: boolean }> {
   const {
     filters,

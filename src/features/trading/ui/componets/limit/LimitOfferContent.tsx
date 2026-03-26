@@ -1,10 +1,7 @@
 "use client";
 
 import type { OfferDetails } from "@/entities/offer";
-import {
-  assetInputAmounts,
-  getMinimumFeeInXch,
-} from "@/shared/lib/utils/chia-units";
+import { assetInputAmounts, getMinimumFeeInXch } from "@/shared/lib/utils/chia-units";
 import { useCallback, useMemo, useState } from "react";
 import type { OrderBookOrder } from "@/features/trading/lib/orderBookTypes";
 import { useOrderBookOfferSubmission } from "@/features/trading/hooks/useOrderBookOfferSubmission";
@@ -32,14 +29,8 @@ export default function MakerOfferContent({
   onClose,
   mode = "inline",
 }: MakerOfferContentProps) {
-  const {
-    makerAssets,
-    setMakerAssets,
-    takerAssets,
-    setTakerAssets,
-    useAsTemplate,
-    resetForm,
-  } = useOrderBookOfferSubmission();
+  const { makerAssets, setMakerAssets, takerAssets, setTakerAssets, useAsTemplate, resetForm } =
+    useOrderBookOfferSubmission();
 
   const [fee, setFee] = useState(getMinimumFeeInXch());
   const [feeInput, setFeeInput] = useState<string | undefined>(undefined);
@@ -67,12 +58,7 @@ export default function MakerOfferContent({
     addRequestedAsset,
     removeRequestedAsset,
     updateRequestedAsset,
-  } = useAssetManagement(
-    makerAssets,
-    setMakerAssets,
-    takerAssets,
-    setTakerAssets,
-  );
+  } = useAssetManagement(makerAssets, setMakerAssets, takerAssets, setTakerAssets);
 
   const extendedMakerAssets: ExtendedOfferAsset[] = useMemo(
     () =>
@@ -84,7 +70,7 @@ export default function MakerOfferContent({
         searchQuery: asset.searchQuery || "",
         showDropdown: asset.showDropdown || false,
       })),
-    [makerAssets],
+    [makerAssets]
   );
 
   const extendedTakerAssets: ExtendedOfferAsset[] = useMemo(
@@ -97,7 +83,7 @@ export default function MakerOfferContent({
         searchQuery: asset.searchQuery || "",
         showDropdown: asset.showDropdown || false,
       })),
-    [takerAssets],
+    [takerAssets]
   );
 
   const isFormValid = useMemo(() => {
@@ -105,10 +91,10 @@ export default function MakerOfferContent({
       extendedMakerAssets.length > 0 &&
       extendedTakerAssets.length > 0 &&
       extendedMakerAssets.every(
-        (asset) => asset.amount > 0 && (asset.type === "xch" || asset.assetId),
+        (asset) => asset.amount > 0 && (asset.type === "xch" || asset.assetId)
       ) &&
       extendedTakerAssets.every(
-        (asset) => asset.amount > 0 && (asset.type === "xch" || asset.assetId),
+        (asset) => asset.amount > 0 && (asset.type === "xch" || asset.assetId)
       ) &&
       fee >= 0
     );
@@ -122,26 +108,21 @@ export default function MakerOfferContent({
     }
   }, []);
 
-  const {
-    handleSubmit,
-    isSubmitting,
-    isUploadingToDexie,
-    errorMessage,
-    successMessage,
-  } = useLimitOfferSubmission({
-    extendedMakerAssets,
-    extendedTakerAssets,
-    fee,
-    isFormValid,
-    onOfferCreated,
-    resetForm,
-    mode,
-    onClose,
-    setRequestedAdjustment,
-    setOfferedAdjustment,
-    setFee,
-    setFeeInput,
-  });
+  const { handleSubmit, isSubmitting, isUploadingToDexie, errorMessage, successMessage } =
+    useLimitOfferSubmission({
+      extendedMakerAssets,
+      extendedTakerAssets,
+      fee,
+      isFormValid,
+      onOfferCreated,
+      resetForm,
+      mode,
+      onClose,
+      setRequestedAdjustment,
+      setOfferedAdjustment,
+      setFee,
+      setFeeInput,
+    });
 
   const containerClass = mode === "modal" ? "space-y-4" : "space-y-3";
 
@@ -187,7 +168,7 @@ export default function MakerOfferContent({
           onFeeBlur={() => {
             const parsed = assetInputAmounts.parse(
               feeInput !== undefined ? feeInput : fee?.toString() || "",
-              "xch",
+              "xch"
             );
             setFee(parsed >= 0 ? parsed : getMinimumFeeInXch());
             setFeeInput(undefined);
@@ -203,10 +184,7 @@ export default function MakerOfferContent({
           isFormValid={isFormValid}
         />
 
-        <FormMessages
-          errorMessage={errorMessage}
-          successMessage={successMessage}
-        />
+        <FormMessages errorMessage={errorMessage} successMessage={successMessage} />
       </form>
 
       {order && <OrderDetailsCollapsible order={order} mode={mode} />}

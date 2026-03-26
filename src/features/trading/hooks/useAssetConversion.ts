@@ -1,13 +1,13 @@
-import { useMemo } from 'react'
-import type { ExtendedAsset as ExtendedOfferAsset } from '@/shared/ui'
+import { useMemo } from "react";
+import type { ExtendedAsset as ExtendedOfferAsset } from "@/shared/ui";
 
 interface AssetItem {
-  assetId: string
-  amount: number
-  type: 'xch' | 'cat' | 'nft'
-  symbol: string
-  searchQuery?: string
-  showDropdown?: boolean
+  assetId: string;
+  amount: number;
+  type: "xch" | "cat" | "nft";
+  symbol: string;
+  searchQuery?: string;
+  showDropdown?: boolean;
 }
 
 /**
@@ -20,36 +20,36 @@ export function useAssetConversion(
   const extendedMakerAssets: ExtendedOfferAsset[] = useMemo(
     () =>
       adjustedMakerAssets.map((asset) => {
-        const extended = asset as ExtendedOfferAsset
+        const extended = asset as ExtendedOfferAsset;
         return {
           assetId: asset.assetId,
           amount: asset.amount,
           type: asset.type,
           symbol: asset.symbol,
-          searchQuery: extended.searchQuery || '',
+          searchQuery: extended.searchQuery || "",
           showDropdown: extended.showDropdown || false,
           _amountInput: extended._amountInput,
-        }
+        };
       }),
     [adjustedMakerAssets]
-  )
+  );
 
   const extendedTakerAssets: ExtendedOfferAsset[] = useMemo(
     () =>
       adjustedTakerAssets.map((asset) => {
-        const extended = asset as ExtendedOfferAsset
+        const extended = asset as ExtendedOfferAsset;
         return {
           assetId: asset.assetId,
           amount: asset.amount,
           type: asset.type,
           symbol: asset.symbol,
-          searchQuery: extended.searchQuery || '',
+          searchQuery: extended.searchQuery || "",
           showDropdown: extended.showDropdown || false,
           _amountInput: extended._amountInput,
-        }
+        };
       }),
     [adjustedTakerAssets]
-  )
+  );
 
-  return { extendedMakerAssets, extendedTakerAssets }
+  return { extendedMakerAssets, extendedTakerAssets };
 }

@@ -1,26 +1,26 @@
-'use client'
+"use client";
 
-import { Clock } from 'lucide-react'
-import type { CreateLoanForm } from '@/entities/loan'
-import type { ThemeClasses } from '@/shared/lib/theme'
+import { Clock } from "lucide-react";
+import type { CreateLoanForm } from "@/entities/loan";
+import type { ThemeClasses } from "@/shared/lib/theme";
 
 interface LoanTermsSectionProps {
-  formData: CreateLoanForm
-  interestRateValue: number
-  onUpdate: (updates: Partial<CreateLoanForm>) => void
-  onInterestRateChange: (value: number) => void
-  isDark: boolean
-  t: ThemeClasses
+  formData: CreateLoanForm;
+  interestRateValue: number;
+  onUpdate: (updates: Partial<CreateLoanForm>) => void;
+  onInterestRateChange: (value: number) => void;
+  isDark: boolean;
+  t: ThemeClasses;
 }
 
 const durationOptions = [
-  { label: '3 months', value: '3' },
-  { label: '6 months', value: '6' },
-  { label: '12 months', value: '12' },
-  { label: '18 months', value: '18' },
-  { label: '24 months', value: '24' },
-  { label: '36 months', value: '36' },
-]
+  { label: "3 months", value: "3" },
+  { label: "6 months", value: "6" },
+  { label: "12 months", value: "12" },
+  { label: "18 months", value: "18" },
+  { label: "24 months", value: "24" },
+  { label: "36 months", value: "36" },
+];
 
 export function LoanTermsSection({
   formData,
@@ -33,15 +33,11 @@ export function LoanTermsSection({
   return (
     <div
       className={`rounded-xl p-3 border ${
-        isDark ? 'bg-white/5 border-white/10' : 'bg-white/20 border-white/30'
+        isDark ? "bg-white/5 border-white/10" : "bg-white/20 border-white/30"
       }`}
     >
       <div className="flex items-center gap-2 mb-3">
-        <Clock
-          className={isDark ? 'text-cyan-400' : 'text-cyan-700'}
-          size={14}
-          strokeWidth={2}
-        />
+        <Clock className={isDark ? "text-cyan-400" : "text-cyan-700"} size={14} strokeWidth={2} />
         <h3 className={`${t.text} text-sm font-semibold`}>Loan Terms</h3>
       </div>
 
@@ -64,9 +60,7 @@ export function LoanTermsSection({
               <span className={`${t.textSecondary} text-[10px]`}>0%</span>
               <div className="text-center">
                 <span
-                  className={`text-xl font-bold ${
-                    isDark ? 'text-green-400' : 'text-green-600'
-                  }`}
+                  className={`text-xl font-bold ${isDark ? "text-green-400" : "text-green-600"}`}
                 >
                   {formData.interestRate}%
                 </span>
@@ -86,10 +80,10 @@ export function LoanTermsSection({
             onChange={(e) => onUpdate({ duration: e.target.value })}
             className={`w-full px-2 py-1.5 rounded-lg text-xs ${
               isDark
-                ? 'bg-white/5 border border-white/10 text-white'
-                : 'bg-white/40 border border-white/60 text-slate-800'
+                ? "bg-white/5 border border-white/10 text-white"
+                : "bg-white/40 border border-white/60 text-slate-800"
             } backdrop-blur-xl focus:outline-none focus:ring-2 ${
-              isDark ? 'focus:ring-cyan-400/30' : 'focus:ring-cyan-600/30'
+              isDark ? "focus:ring-cyan-400/30" : "focus:ring-cyan-600/30"
             }`}
           >
             {durationOptions.map((opt) => (
@@ -108,17 +102,17 @@ export function LoanTermsSection({
             type="date"
             value={formData.validUntil}
             onChange={(e) => onUpdate({ validUntil: e.target.value })}
-            min={new Date().toISOString().split('T')[0]}
+            min={new Date().toISOString().split("T")[0]}
             className={`w-full px-2 py-1.5 rounded-lg text-xs ${
               isDark
-                ? 'bg-white/5 border border-white/10 text-white'
-                : 'bg-white/40 border border-white/60 text-slate-800'
+                ? "bg-white/5 border border-white/10 text-white"
+                : "bg-white/40 border border-white/60 text-slate-800"
             } backdrop-blur-xl focus:outline-none focus:ring-2 ${
-              isDark ? 'focus:ring-cyan-400/30' : 'focus:ring-cyan-600/30'
+              isDark ? "focus:ring-cyan-400/30" : "focus:ring-cyan-600/30"
             }`}
           />
         </div>
       </div>
     </div>
-  )
+  );
 }

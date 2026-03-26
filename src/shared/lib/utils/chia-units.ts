@@ -8,11 +8,11 @@
  * CAT tokens use whole units (no standard smallest unit like mojos)
  */
 
-import type { AssetAmount, AssetType } from '@/entities/offer'
+import type { AssetAmount, AssetType } from "@/entities/offer";
 
 // Constants for Chia unit conversion
-export const MOJOS_PER_XCH = 1_000_000_000_000
-export const XCH_PER_MOJO = 1 / MOJOS_PER_XCH
+export const MOJOS_PER_XCH = 1_000_000_000_000;
+export const XCH_PER_MOJO = 1 / MOJOS_PER_XCH;
 
 /**
  * Convert XCH amount to mojos
@@ -20,7 +20,7 @@ export const XCH_PER_MOJO = 1 / MOJOS_PER_XCH
  * @returns Amount in mojos (rounded to nearest integer)
  */
 export function xchToMojos(xchAmount: AssetAmount): number {
-  return Math.round(xchAmount * MOJOS_PER_XCH)
+  return Math.round(xchAmount * MOJOS_PER_XCH);
 }
 
 /**
@@ -30,12 +30,12 @@ export function xchToMojos(xchAmount: AssetAmount): number {
  */
 export function mojosToXch(mojosAmount: number | string | bigint): AssetAmount {
   const mojos =
-    typeof mojosAmount === 'string'
+    typeof mojosAmount === "string"
       ? BigInt(mojosAmount)
-      : typeof mojosAmount === 'bigint'
+      : typeof mojosAmount === "bigint"
         ? mojosAmount
-        : BigInt(mojosAmount)
-  return Number(mojos) * XCH_PER_MOJO
+        : BigInt(mojosAmount);
+  return Number(mojos) * XCH_PER_MOJO;
 }
 
 /**
@@ -46,14 +46,14 @@ export function mojosToXch(mojosAmount: number | string | bigint): AssetAmount {
  */
 export function formatXchAmount(xchAmount: AssetAmount, precision: number = 6): string {
   // Ensure amount is a number
-  const numAmount = typeof xchAmount === 'string' ? parseFloat(xchAmount) : xchAmount
+  const numAmount = typeof xchAmount === "string" ? parseFloat(xchAmount) : xchAmount;
 
   // Handle invalid numbers
   if (isNaN(numAmount)) {
-    return '0'.padEnd(precision + 2, '0') // Return "0.000000" for 6 precision
+    return "0".padEnd(precision + 2, "0"); // Return "0.000000" for 6 precision
   }
 
-  return numAmount.toFixed(precision)
+  return numAmount.toFixed(precision);
 }
 
 /**
@@ -66,7 +66,7 @@ export function formatMojosAsXch(
   mojosAmount: number | string | bigint,
   precision: number = 6
 ): string {
-  return formatXchAmount(mojosToXch(mojosAmount), precision)
+  return formatXchAmount(mojosToXch(mojosAmount), precision);
 }
 
 /**
@@ -74,7 +74,7 @@ export function formatMojosAsXch(
  * @returns Minimum fee in XCH
  */
 export function getMinimumFeeInXch(): AssetAmount {
-  return 0.000001
+  return 0.000001;
 }
 
 /**
@@ -83,8 +83,8 @@ export function getMinimumFeeInXch(): AssetAmount {
  * @returns true if valid, false otherwise
  */
 export function isValidChiaAddress(address: string): boolean {
-  const chiaAddressRegex = /^(xch|txch)1[a-z0-9]{58}$/
-  return chiaAddressRegex.test(address.trim())
+  const chiaAddressRegex = /^(xch|txch)1[a-z0-9]{58}$/;
+  return chiaAddressRegex.test(address.trim());
 }
 
 /**
@@ -100,25 +100,25 @@ export function formatAssetAmount(
   precision: number = 6
 ): string {
   // Ensure amount is a number
-  const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount
+  const numAmount = typeof amount === "string" ? parseFloat(amount) : amount;
 
   // Handle invalid numbers
   if (isNaN(numAmount)) {
-    return '0'
+    return "0";
   }
 
   switch (assetType.toLowerCase()) {
-    case 'xch':
-      return formatXchAmount(numAmount, precision)
-    case 'cat':
+    case "xch":
+      return formatXchAmount(numAmount, precision);
+    case "cat":
       // CAT tokens can have decimal places, show 3 decimal places for precision
-      return numAmount.toFixed(3)
-    case 'nft':
+      return numAmount.toFixed(3);
+    case "nft":
       // NFTs are whole numbers
-      return Math.floor(numAmount).toString()
+      return Math.floor(numAmount).toString();
     default:
       // Default to 2 decimal places for unknown tokens
-      return numAmount.toFixed(2)
+      return numAmount.toFixed(2);
   }
 }
 
@@ -130,18 +130,18 @@ export function formatAssetAmount(
  */
 export function convertToSmallestUnit(amount: AssetAmount, assetType: AssetType): number {
   switch (assetType.toLowerCase()) {
-    case 'xch':
-      return xchToMojos(amount)
-    case 'cat':
+    case "xch":
+      return xchToMojos(amount);
+    case "cat":
       // CAT tokens need conversion to smallest unit (1 CAT = 1000 smallest units)
       // This ensures 1:1 mapping: user inputs 1, wallet shows 1
-      return Math.round(amount * 1000)
-    case 'nft':
+      return Math.round(amount * 1000);
+    case "nft":
       // NFTs are whole numbers
-      return Math.floor(amount)
+      return Math.floor(amount);
     default:
       // Default to exact amount for unknown tokens
-      return amount
+      return amount;
   }
 }
 
@@ -156,30 +156,30 @@ export function convertFromSmallestUnit(
   assetType: AssetType
 ): AssetAmount {
   switch (assetType.toLowerCase()) {
-    case 'xch':
-      return mojosToXch(amount)
-    case 'cat': {
+    case "xch":
+      return mojosToXch(amount);
+    case "cat": {
       const catAmount =
-        typeof amount === 'string'
+        typeof amount === "string"
           ? parseFloat(amount)
-          : typeof amount === 'bigint'
+          : typeof amount === "bigint"
             ? Number(amount)
-            : amount
-      return catAmount / 1000
+            : amount;
+      return catAmount / 1000;
     }
-    case 'nft':
-      return typeof amount === 'string'
+    case "nft":
+      return typeof amount === "string"
         ? parseFloat(amount)
-        : typeof amount === 'bigint'
+        : typeof amount === "bigint"
           ? Number(amount)
-          : amount
+          : amount;
     default:
       // Default to exact amount for unknown tokens
-      return typeof amount === 'string'
+      return typeof amount === "string"
         ? parseFloat(amount)
-        : typeof amount === 'bigint'
+        : typeof amount === "bigint"
           ? Number(amount)
-          : amount
+          : amount;
   }
 }
 
@@ -199,43 +199,43 @@ export const assetInputAmounts = {
    * @returns true if valid input format
    */
   isValid(value: string, assetType?: AssetType): boolean {
-    if (value === '') return true
+    if (value === "") return true;
 
     // Never allow negative numbers (no minus sign)
-    if (value.includes('-')) return false
+    if (value.includes("-")) return false;
 
     // For NFT: only allow natural numbers (integers, no decimals)
-    if (assetType?.toLowerCase() === 'nft') {
-      return /^\d+$/.test(value) // Only digits, no decimal point
+    if (assetType?.toLowerCase() === "nft") {
+      return /^\d+$/.test(value); // Only digits, no decimal point
     }
 
     // Digits with at most one decimal separator (. or ,) — iOS often uses "," on decimal keyboards
-    const sepCount = (value.match(/[.,]/g) || []).length
-    if (sepCount > 1 || (value.includes('.') && value.includes(','))) {
-      return false
+    const sepCount = (value.match(/[.,]/g) || []).length;
+    if (sepCount > 1 || (value.includes(".") && value.includes(","))) {
+      return false;
     }
     if (!/^\d*[.,]?\d*$/.test(value)) {
-      return false
+      return false;
     }
 
     // Check decimal precision based on asset type
-    const type = assetType?.toLowerCase()
-    if (type === 'xch') {
+    const type = assetType?.toLowerCase();
+    if (type === "xch") {
       // XCH: up to 12 decimal places (mojo precision: 1 XCH = 1,000,000,000,000 mojos)
-      const decimalPart = value.split(/[.,]/)[1]
+      const decimalPart = value.split(/[.,]/)[1];
       if (decimalPart && decimalPart.length > 12) {
-        return false
+        return false;
       }
-    } else if (type === 'cat') {
+    } else if (type === "cat") {
       // CAT tokens: up to 3 decimal places
-      const decimalPart = value.split(/[.,]/)[1]
+      const decimalPart = value.split(/[.,]/)[1];
       if (decimalPart && decimalPart.length > 3) {
-        return false
+        return false;
       }
     }
     // For other types or undefined, allow any decimal precision (backward compatibility)
 
-    return true
+    return true;
   },
 
   /**
@@ -247,30 +247,30 @@ export const assetInputAmounts = {
    * @returns Parsed number or 0 if invalid (always a safe number)
    */
   parse(value: string, assetType?: AssetType): AssetAmount {
-    if (value === '' || value === '.' || value === ',') {
-      return 0
+    if (value === "" || value === "." || value === ",") {
+      return 0;
     }
 
     // For NFT: parse as integer (natural numbers only)
-    if (assetType?.toLowerCase() === 'nft') {
-      const parsed = parseInt(value, 10)
+    if (assetType?.toLowerCase() === "nft") {
+      const parsed = parseInt(value, 10);
       // Safely convert: ensure it's a valid number, non-negative, and finite
       if (isNaN(parsed) || !isFinite(parsed) || parsed < 0) {
-        return 0
+        return 0;
       }
-      return Math.max(0, Math.floor(parsed)) // Ensure non-negative integer
+      return Math.max(0, Math.floor(parsed)); // Ensure non-negative integer
     }
 
     // For tokens: parse as float (comma as decimal separator for locales / iOS keyboards)
-    const normalized = value.replace(',', '.')
-    const parsed = parseFloat(normalized)
+    const normalized = value.replace(",", ".");
+    const parsed = parseFloat(normalized);
     // Safely convert: ensure it's a valid number, non-negative, and finite
     if (isNaN(parsed) || !isFinite(parsed) || parsed < 0) {
-      return 0
+      return 0;
     }
-    return parsed
+    return parsed;
   },
-}
+};
 
 /**
  * Format asset amount for input display (preserves user input format)
@@ -281,39 +281,39 @@ export const assetInputAmounts = {
  */
 export function formatAssetAmountForInput(amount: AssetAmount, assetType: AssetType): string {
   // Ensure amount is a number
-  const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount
+  const numAmount = typeof amount === "string" ? parseFloat(amount) : amount;
 
   // Handle invalid numbers
   if (isNaN(numAmount) || numAmount === 0) {
-    return ''
+    return "";
   }
 
   // Check if it's mathematically a whole number (not just an integer representation)
   // Use a small epsilon to handle floating point precision issues
-  const isWholeNumber = Math.abs(numAmount - Math.round(numAmount)) < 0.0000001
+  const isWholeNumber = Math.abs(numAmount - Math.round(numAmount)) < 0.0000001;
 
   // For whole numbers, return without decimals
   if (isWholeNumber) {
-    return Math.round(numAmount).toString()
+    return Math.round(numAmount).toString();
   }
 
   // For decimal numbers, format based on asset type but remove only trailing zeros
   // This preserves significant decimal places like 1.01 and 1.0 (if user typed it)
   switch (assetType.toLowerCase()) {
-    case 'xch':
+    case "xch":
       // Format with up to 12 decimal places (mojo precision), remove only trailing zeros
       // 1 XCH = 1,000,000,000,000 mojos (12 zeros)
-      return numAmount.toFixed(12).replace(/\.?0+$/, '')
-    case 'cat':
+      return numAmount.toFixed(12).replace(/\.?0+$/, "");
+    case "cat":
       // Format with up to 3 decimal places, remove only trailing zeros
       // But preserve format if user typed something like "1.0"
-      return numAmount.toFixed(3).replace(/\.?0+$/, '')
-    case 'nft':
+      return numAmount.toFixed(3).replace(/\.?0+$/, "");
+    case "nft":
       // NFTs are whole numbers
-      return Math.floor(numAmount).toString()
+      return Math.floor(numAmount).toString();
     default:
       // Format with up to 2 decimal places, remove only trailing zeros
-      return numAmount.toFixed(2).replace(/\.?0+$/, '')
+      return numAmount.toFixed(2).replace(/\.?0+$/, "");
   }
 }
 
@@ -324,13 +324,13 @@ export function formatAssetAmountForInput(amount: AssetAmount, assetType: AssetT
  */
 export function getAmountPlaceholder(assetType: AssetType): string {
   switch (assetType.toLowerCase()) {
-    case 'xch':
-      return '0.000000'
-    case 'cat':
-      return '0.000'
-    case 'nft':
-      return '0'
+    case "xch":
+      return "0.000000";
+    case "cat":
+      return "0.000";
+    case "nft":
+      return "0";
     default:
-      return '0.00'
+      return "0.00";
   }
 }

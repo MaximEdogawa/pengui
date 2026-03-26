@@ -7,26 +7,31 @@ This document details the fixes applied to resolve issues with WalletConnect off
 ## Issues Identified
 
 ### 1. **Parameter Mismatch in `cancelOffer`**
+
 - **Problem**: The wallet expects `tradeId` parameter, but the app was passing `id`
 - **Impact**: Wallet rejected all cancel offer requests
 - **Error**: Generic "Request failed" errors (code 4001)
 
 ### 2. **Fee Format Mismatch**
+
 - **Problem**: Wallet expects fees in mojos (smallest unit), but app was passing fees in XCH
 - **Impact**: Wallet rejected requests with incorrect fee format
 - **Example**: App passed `0.000001` XCH, but wallet expected `1000000` mojos
 
 ### 3. **Response Handling Issues**
+
 - **Problem**: Wallet responses had inconsistent structures - some returned `error: null` on success, others returned `success: true`
 - **Impact**: App incorrectly treated successful requests as failures
 - **Error**: "Failed to take market offer - no tradeId returned" even when offer was successful
 
 ### 4. **Session Validation Missing**
+
 - **Problem**: Requests were sent without verifying session was active and chainId was valid
 - **Impact**: Requests failed with "without any listeners" errors
 - **Error**: "Error: emitting session_request: [...] without any listeners"
 
 ### 5. **Error Message Extraction**
+
 - **Problem**: Error messages from wallet were deeply nested and not properly extracted
 - **Impact**: Users saw generic "[object Object]" errors instead of meaningful messages
 - **Error**: "Take offer error: [object Object]"
@@ -38,6 +43,7 @@ This document details the fixes applied to resolve issues with WalletConnect off
 **Location**: `src/shared/lib/walletConnect/repositories/walletQueries.repository.ts`
 
 **Fix**:
+
 ```typescript
 export async function cancelOffer(
   params: CancelOfferRequest,
@@ -48,18 +54,19 @@ export async function cancelOffer(
   const walletParams = {
     tradeId: params.id, // ✅ Map id to tradeId for wallet compatibility
     ...(feeInMojos !== undefined && { fee: feeInMojos }),
-  }
-  
+  };
+
   return await makeWalletRequest<CancelOfferResponse>(
     SageMethods.CHIA_CANCEL_OFFER,
     walletParams,
     signClient,
     session
-  )
+  );
 }
 ```
 
 **Key Changes**:
+
 - Map `params.id` to `tradeId` in the wallet request
 - Wallet API expects `tradeId`, not `id`
 
@@ -68,6 +75,7 @@ export async function cancelOffer(
 **Location**: `src/shared/lib/walletConnect/repositories/walletQueries.repository.ts`
 
 **Fix**:
+
 ```typescript
 /**
  * Convert fee to mojos based on explicit unit
@@ -75,12 +83,12 @@ export async function cancelOffer(
  */
 function convertFeeToMojos(feeInXch?: number, feeInMojos?: number): number | undefined {
   if (feeInMojos !== undefined && feeInMojos !== null) {
-    return feeInMojos
+    return feeInMojos;
   }
   if (feeInXch !== undefined && feeInXch !== null && feeInXch > 0) {
-    return xchToMojos(feeInXch)
+    return xchToMojos(feeInXch);
   }
-  return undefined
+  return undefined;
 }
 
 export async function takeOffer(
@@ -89,33 +97,35 @@ export async function takeOffer(
   session: WalletConnectSession
 ): Promise<{ success: boolean; data?: TakeOfferResponse; error?: string }> {
   // Validate offer parameter - reject if not a string or if whitespace-only
-  const trimmedOffer = typeof params.offer === 'string' ? params.offer.trim() : ''
+  const trimmedOffer = typeof params.offer === "string" ? params.offer.trim() : "";
   if (!trimmedOffer) {
-    return { success: false, error: 'Invalid offer parameter: offer must be a non-empty string' }
+    return { success: false, error: "Invalid offer parameter: offer must be a non-empty string" };
   }
 
-  const feeInMojos = convertFeeToMojos(params.feeInXch, params.feeInMojos)
+  const feeInMojos = convertFeeToMojos(params.feeInXch, params.feeInMojos);
   const walletParams = {
     offer: trimmedOffer,
     ...(feeInMojos !== undefined && { fee: feeInMojos }),
-  }
-  
+  };
+
   return await makeWalletRequest<TakeOfferResponse>(
     SageMethods.CHIA_TAKE_OFFER,
     walletParams,
     signClient,
     session
-  )
+  );
 }
 ```
 
 **Key Changes**:
+
 - Created `convertFeeToMojos` helper function with explicit unit parameters
 - Prefers `feeInMojos` when provided, otherwise converts `feeInXch` to mojos
 - Validates and trims offer parameter before processing
 - Applied to both `takeOffer` and `cancelOffer`
 
 **Conversion Logic**:
+
 - 1 XCH = 1,000,000,000,000 mojos
 - If fee < 1,000,000,000,000 → assume XCH, convert to mojos
 - If fee >= 1,000,000,000,000 → assume already in mojos
@@ -125,67 +135,76 @@ export async function takeOffer(
 **Location**: `src/shared/lib/walletConnect/repositories/walletQueries.repository.ts`
 
 **Fix**:
+
 ```typescript
 function processWalletRequestResult<T>(
-  result: T | { error: Record<string, unknown> } | { error: string } | { success?: boolean; error?: unknown },
+  result:
+    | T
+    | { error: Record<string, unknown> }
+    | { error: string }
+    | { success?: boolean; error?: unknown },
   method: string
 ): { success: boolean; data?: T; error?: string } {
   // Handle null/undefined result
   if (!result) {
-    return { success: false, error: 'Wallet returned an empty response' }
+    return { success: false, error: "Wallet returned an empty response" };
   }
 
   // Check if result has a success property first (most reliable indicator)
-  if (typeof result === 'object' && 'success' in result) {
-    const successValue = (result as { success?: boolean }).success
+  if (typeof result === "object" && "success" in result) {
+    const successValue = (result as { success?: boolean }).success;
     if (successValue === true) {
-      return { success: true, data: result as T }
+      return { success: true, data: result as T };
     }
     if (successValue === false) {
-      const errorMessage = 
-        'error' in result && result.error
-          ? (typeof result.error === 'string' ? result.error : String(result.error))
-          : 'Wallet request failed'
-      return { success: false, error: errorMessage }
+      const errorMessage =
+        "error" in result && result.error
+          ? typeof result.error === "string"
+            ? result.error
+            : String(result.error)
+          : "Wallet request failed";
+      return { success: false, error: errorMessage };
     }
   }
 
   // Check if result has an error property (but only treat as error if it's truthy)
-  if (typeof result === 'object' && 'error' in result) {
-    const errorObj = result.error
-    
+  if (typeof result === "object" && "error" in result) {
+    const errorObj = result.error;
+
     // ✅ If error is null, undefined, empty string, or false, treat as success
     // (some wallets return error: null or error: false on success)
-    if (errorObj === null || errorObj === undefined || errorObj === '' || errorObj === false) {
-      return { success: true, data: result as T }
+    if (errorObj === null || errorObj === undefined || errorObj === "" || errorObj === false) {
+      return { success: true, data: result as T };
     }
 
     // If error is a truthy value, extract the error message
     const errorMessage =
-      typeof errorObj === 'string'
+      typeof errorObj === "string"
         ? errorObj
-        : typeof errorObj === 'object' && errorObj !== null && 'message' in errorObj
+        : typeof errorObj === "object" && errorObj !== null && "message" in errorObj
           ? String(errorObj.message)
-          : String(errorObj)
-    
+          : String(errorObj);
+
     // Special case: Some wallets return error messages that are actually warnings
     // Check if the result also has success indicators (like tradeId for takeOffer)
-    if (method.includes('takeOffer') || method.includes('TakeOffer')) {
-      const hasTradeId = result && typeof result === 'object' && ('tradeId' in result || 'data' in result)
+    if (method.includes("takeOffer") || method.includes("TakeOffer")) {
+      const hasTradeId =
+        result && typeof result === "object" && ("tradeId" in result || "data" in result);
       if (hasTradeId) {
-        return { success: true, data: result as T }
+        return { success: true, data: result as T };
       }
     }
-    
-    return { success: false, error: errorMessage }
+
+    return { success: false, error: errorMessage };
   }
 
   // Default: treat as success if no error indicators found
-  return { success: true, data: result as T }
+  return { success: true, data: result as T };
 }
 ```
 
 **Key Changes**:
+
 - Check `success` property first (most reliable)
 - Treat `error: null`, `error: false`, or `error: ''` as success
 - Special handling for `takeOffer` - check for `tradeId` even if error field exists
@@ -196,6 +215,7 @@ function processWalletRequestResult<T>(
 **Location**: `src/shared/lib/walletConnect/repositories/walletQueries.repository.ts`
 
 **Fix**:
+
 ```typescript
 export async function makeWalletRequest<T>(
   method: string,
@@ -205,27 +225,27 @@ export async function makeWalletRequest<T>(
 ): Promise<{ success: boolean; data?: T; error?: string }> {
   try {
     // ✅ Validate session connection
-    const connectionValidation = validateSessionConnection(signClient, session)
+    const connectionValidation = validateSessionConnection(signClient, session);
     if (!connectionValidation.isValid) {
-      return { success: false, error: connectionValidation.error }
+      return { success: false, error: connectionValidation.error };
     }
 
     // ✅ Ensure SignClient is ready - check if it has active sessions
     if (signClient) {
-      const activeSessions = signClient.session.getAll()
-      const hasActiveSession = activeSessions.some(s => s.topic === session.topic)
+      const activeSessions = signClient.session.getAll();
+      const hasActiveSession = activeSessions.some((s) => s.topic === session.topic);
       if (!hasActiveSession) {
-        return { success: false, error: 'Session not found in active WalletConnect sessions' }
+        return { success: false, error: "Session not found in active WalletConnect sessions" };
       }
     }
 
     // ✅ Validate and get chainId
-    const chainIdValidation = validateChainId(signClient!, session)
+    const chainIdValidation = validateChainId(signClient!, session);
     if (!chainIdValidation.isValid) {
-      return { success: false, error: chainIdValidation.error }
+      return { success: false, error: chainIdValidation.error };
     }
 
-    const validChainId = chainIdValidation.validChainId || session.chainId
+    const validChainId = chainIdValidation.validChainId || session.chainId;
 
     // Execute request with timeout
     const result = await executeWalletRequest<T>({
@@ -234,22 +254,24 @@ export async function makeWalletRequest<T>(
       method,
       data,
       validChainId,
-    })
+    });
 
-    return processWalletRequestResult(result, method)
+    return processWalletRequestResult(result, method);
   } catch (error) {
-    return handleWalletRequestError(error, method)
+    return handleWalletRequestError(error, method);
   }
 }
 ```
 
 **Key Changes**:
+
 - Validate session connection before making request
 - Verify session exists in active SignClient sessions
 - Validate chainId against session's supported chains
 - Return early with clear error messages if validation fails
 
 **Additional Validation in `executeWalletRequest`**:
+
 ```typescript
 async function executeWalletRequest<T>({
   signClient,
@@ -257,18 +279,20 @@ async function executeWalletRequest<T>({
   method,
   data,
   validChainId,
-}: ExecuteWalletRequestOptions): Promise<T | { error: Record<string, unknown> } | { error: string }> {
+}: ExecuteWalletRequestOptions): Promise<
+  T | { error: Record<string, unknown> } | { error: string }
+> {
   // ✅ Verify session is still active before making request
-  const activeSessions = signClient.session.getAll()
-  const activeSession = activeSessions.find(s => s.topic === session.topic)
+  const activeSessions = signClient.session.getAll();
+  const activeSession = activeSessions.find((s) => s.topic === session.topic);
   if (!activeSession) {
-    return { error: `Session ${session.topic} is not active` }
+    return { error: `Session ${session.topic} is not active` };
   }
 
   // ✅ Verify the chainId is in the session's supported chains
-  const sessionChains = activeSession.namespaces?.chia?.chains || []
+  const sessionChains = activeSession.namespaces?.chia?.chains || [];
   if (sessionChains.length > 0 && !sessionChains.includes(validChainId)) {
-    return { error: `ChainId ${validChainId} not in session chains [${sessionChains.join(', ')}]` }
+    return { error: `ChainId ${validChainId} not in session chains [${sessionChains.join(", ")}]` };
   }
 
   // ... rest of request execution
@@ -280,64 +304,67 @@ async function executeWalletRequest<T>({
 **Location**: `src/shared/lib/walletConnect/repositories/walletErrorHandler.ts`
 
 **Fix**:
+
 ```typescript
 export function extractErrorInfo(error: unknown): ExtractedError {
-  let errorMessage = 'Unknown error'
-  let errorCode: number | undefined
+  let errorMessage = "Unknown error";
+  let errorCode: number | undefined;
 
   if (error instanceof Error) {
-    errorMessage = error.message
-    if ('code' in error && typeof (error as any).code === 'number') {
-      errorCode = (error as any).code
+    errorMessage = error.message;
+    if ("code" in error && typeof (error as any).code === "number") {
+      errorCode = (error as any).code;
     }
-  } else if (error && typeof error === 'object' && !(error instanceof Error)) {
-    const errorObj = error as Record<string, unknown>
-    
+  } else if (error && typeof error === "object" && !(error instanceof Error)) {
+    const errorObj = error as Record<string, unknown>;
+
     // ✅ Check for nested error object
-    if ('error' in errorObj && errorObj.error && typeof errorObj.error === 'object') {
-      const nestedError = errorObj.error as Record<string, unknown>
-      if ('message' in nestedError && typeof nestedError.message === 'string') {
-        errorMessage = nestedError.message
+    if ("error" in errorObj && errorObj.error && typeof errorObj.error === "object") {
+      const nestedError = errorObj.error as Record<string, unknown>;
+      if ("message" in nestedError && typeof nestedError.message === "string") {
+        errorMessage = nestedError.message;
       }
-      if ('code' in nestedError && typeof nestedError.code === 'number') {
-        errorCode = nestedError.code
+      if ("code" in nestedError && typeof nestedError.code === "number") {
+        errorCode = nestedError.code;
       }
     }
-    
+
     // ✅ Check top-level message
-    if ('message' in errorObj && typeof errorObj.message === 'string') {
-      errorMessage = errorObj.message
+    if ("message" in errorObj && typeof errorObj.message === "string") {
+      errorMessage = errorObj.message;
     }
-    
+
     // ✅ Check for code
-    if ('code' in errorObj && typeof errorObj.code === 'number') {
-      errorCode = errorObj.code
+    if ("code" in errorObj && typeof errorObj.code === "number") {
+      errorCode = errorObj.code;
     }
-  } else if (typeof error === 'string') {
-    errorMessage = error
+  } else if (typeof error === "string") {
+    errorMessage = error;
   }
 
-  return { message: errorMessage, code: errorCode }
+  return { message: errorMessage, code: errorCode };
 }
 ```
 
 **Key Changes**:
+
 - Extract error messages from nested error objects
 - Check for error codes at multiple levels
 - Handle both Error instances and plain objects
 - Provide fallback error messages
 
 **Enhanced Error Code 4001 Handling**:
+
 ```typescript
 function handleErrorCode4001(errorMessage: string): { success: false; error: string } | null {
   // Provide more context-specific error messages
-  if (errorMessage === 'Request failed' || errorMessage === '[object Object]') {
+  if (errorMessage === "Request failed" || errorMessage === "[object Object]") {
     return {
       success: false,
-      error: 'Wallet rejected the request. Please check the offer details and try again.',
-    }
+      error: "Wallet rejected the request. Please check the offer details and try again.",
+    };
   }
-  return null
+  return null;
 }
 ```
 
@@ -346,44 +373,46 @@ function handleErrorCode4001(errorMessage: string): { success: false; error: str
 **Location**: `src/features/trading/ui/market/hooks/useMarketOfferSubmission.ts`
 
 **Fix**:
+
 ```typescript
 const handleSubmit = useCallback(
   async (values: MarketOfferFormValues) => {
     try {
-      formState.setErrorMessage(null)
-      formState.setIsSubmitting(true)
+      formState.setErrorMessage(null);
+      formState.setIsSubmitting(true);
 
       const result = await takeOfferMutation.mutateAsync({
         offer: values.offer,
         fee: values.fee,
-      })
+      });
 
       // ✅ Improved success check - handle various response structures
-      const tradeId = result?.tradeId || result?.data?.tradeId
-      const isSuccess = result?.success || result?.data?.success
+      const tradeId = result?.tradeId || result?.data?.tradeId;
+      const isSuccess = result?.success || result?.data?.success;
 
       if (tradeId || (isSuccess && result)) {
         // Success - offer was taken
-        formState.setSuccessMessage('Market offer taken successfully!')
-        formState.resetForm()
-        
+        formState.setSuccessMessage("Market offer taken successfully!");
+        formState.resetForm();
+
         // Invalidate offers query to refresh the list
-        queryClient.invalidateQueries({ queryKey: ['offers'] })
+        queryClient.invalidateQueries({ queryKey: ["offers"] });
       } else {
-        throw new Error('Failed to take market offer - no tradeId returned')
+        throw new Error("Failed to take market offer - no tradeId returned");
       }
     } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : 'Unknown error occurred'
-      formState.setErrorMessage(`Failed to take market offer: ${errorMsg}`)
+      const errorMsg = error instanceof Error ? error.message : "Unknown error occurred";
+      formState.setErrorMessage(`Failed to take market offer: ${errorMsg}`);
     } finally {
-      formState.setIsSubmitting(false)
+      formState.setIsSubmitting(false);
     }
   },
   [takeOfferMutation, formState, queryClient]
-)
+);
 ```
 
 **Key Changes**:
+
 - Check for `tradeId` at multiple levels (`result.tradeId` or `result.data.tradeId`)
 - Check for `success` flag at multiple levels
 - Handle cases where wallet returns success but no immediate `tradeId` (pending offers)
@@ -391,12 +420,14 @@ const handleSubmit = useCallback(
 ## Testing the Fixes
 
 ### Before Fixes
+
 - ❌ All `takeOffer` requests failed with "Request failed" (code 4001)
 - ❌ All `cancelOffer` requests failed with parameter errors
 - ❌ Users saw "[object Object]" error messages
 - ❌ "without any listeners" errors in console
 
 ### After Fixes
+
 - ✅ `takeOffer` requests succeed when offer is valid
 - ✅ `cancelOffer` requests succeed when tradeId is valid
 - ✅ Clear error messages shown to users

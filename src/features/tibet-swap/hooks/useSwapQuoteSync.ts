@@ -2,11 +2,7 @@
 
 import { useMemo, useEffect, useRef } from "react";
 import { useTibetQuote } from "./useTibetQuote";
-import {
-  convertToSmallestUnit,
-  MOJOS_PER_XCH,
-  mojosToXch,
-} from "@/shared/lib/utils/chia-units";
+import { convertToSmallestUnit, MOJOS_PER_XCH, mojosToXch } from "@/shared/lib/utils/chia-units";
 import type { TibetApiPair } from "../lib/tibetTypes";
 import { computePriceImpactPercent } from "../lib/priceImpact";
 import {
@@ -102,16 +98,12 @@ export function useSwapQuoteSync({
   useEffect(() => {
     if (!quote || skipQuoteSync) return;
     const driverStr =
-      amountDriver === "offered"
-        ? offeredAmountRef.current
-        : requestedAmountRef.current;
+      amountDriver === "offered" ? offeredAmountRef.current : requestedAmountRef.current;
     if (isIntermediateAmountInput(driverStr)) return;
 
     const timer = window.setTimeout(() => {
       const driverNow =
-        amountDriver === "offered"
-          ? offeredAmountRef.current
-          : requestedAmountRef.current;
+        amountDriver === "offered" ? offeredAmountRef.current : requestedAmountRef.current;
       if (isIntermediateAmountInput(driverNow)) return;
       if (!quote || skipQuoteSync) return;
       if (amountDriver === "offered" && quote.amount_out > 0) {
@@ -150,9 +142,7 @@ export function useSwapQuoteSync({
       : quote && quote.amount_in > 0
         ? xchIsOffered
           ? mojosToXch(quote.amount_in).toFixed(6)
-          : formatTibetCatAmountForInput(
-              quote.amount_in / TOKEN_SMALLEST_PER_UNIT,
-            )
+          : formatTibetCatAmountForInput(quote.amount_in / TOKEN_SMALLEST_PER_UNIT)
         : "";
 
   const priceLine = useMemo(() => {
@@ -160,15 +150,11 @@ export function useSwapQuoteSync({
     const tokenName = selectedPair.asset_short_name || selectedPair.asset_name;
     if (xchIsOffered) {
       const xchPerToken =
-        quote.amount_in /
-        MOJOS_PER_XCH /
-        (quote.amount_out / TOKEN_SMALLEST_PER_UNIT);
+        quote.amount_in / MOJOS_PER_XCH / (quote.amount_out / TOKEN_SMALLEST_PER_UNIT);
       return `1 ${tokenName} = ${formatSwapPrice(xchPerToken)} XCH`;
     }
     const tokenPerXch =
-      quote.amount_out /
-      MOJOS_PER_XCH /
-      (quote.amount_in / TOKEN_SMALLEST_PER_UNIT);
+      quote.amount_out / MOJOS_PER_XCH / (quote.amount_in / TOKEN_SMALLEST_PER_UNIT);
     return `1 XCH = ${formatSwapPrice(tokenPerXch)} ${tokenName}`;
   }, [selectedPair, quote, xchIsOffered]);
 
@@ -177,8 +163,7 @@ export function useSwapQuoteSync({
       ? (100 / selectedPair.inverse_fee).toFixed(2)
       : "—";
 
-  const priceImpactPercent =
-    quote != null ? computePriceImpactPercent(quote) : null;
+  const priceImpactPercent = quote != null ? computePriceImpactPercent(quote) : null;
 
   return {
     quote,

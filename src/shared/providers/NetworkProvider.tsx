@@ -1,22 +1,9 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
-import {
-  useWalletConnectionState,
-  useAppSelector,
-} from "@maximedogawa/chia-wallet-connect-react";
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-  useCallback,
-} from "react";
-import {
-  chainIdToNetwork,
-  networkToChainId,
-} from "@/shared/lib/utils/networkUtils";
+import { useWalletConnectionState, useAppSelector } from "@maximedogawa/chia-wallet-connect-react";
+import { createContext, useContext, useEffect, useRef, useState, useCallback } from "react";
+import { chainIdToNetwork, networkToChainId } from "@/shared/lib/utils/networkUtils";
 import {
   getStoredNetwork,
   setStoredNetwork,
@@ -40,9 +27,7 @@ const NetworkContext = createContext<NetworkContextType | undefined>(undefined);
 export function NetworkProvider({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
   const { isConnected, walletConnectSession } = useWalletConnectionState();
-  const selectedSession = useAppSelector(
-    (state) => state.walletConnect?.selectedSession,
-  );
+  const selectedSession = useAppSelector((state) => state.walletConnect?.selectedSession);
   const [network, setNetworkState] = useState<Network>(() => {
     const stored = getStoredNetwork();
     if (!hasNetworkPreference()) {
@@ -111,7 +96,7 @@ export function NetworkProvider({ children }: { children: React.ReactNode }) {
       // Invalidate Dexie API data (pairs, tickers, offers)
       queryClient.invalidateQueries({ queryKey: ["dexie"] });
     },
-    [queryClient],
+    [queryClient]
   );
 
   useEffect(() => {
@@ -256,11 +241,7 @@ export function NetworkProvider({ children }: { children: React.ReactNode }) {
                 chainId: walletChainId,
                 fingerprint:
                   accounts && accounts.length > 0
-                    ? parseInt(
-                        accounts[0].split(":")[
-                          accounts[0].split(":").length - 1
-                        ] || "0",
-                      )
+                    ? parseInt(accounts[0].split(":")[accounts[0].split(":").length - 1] || "0")
                     : 0,
                 topic: sessionData.topic,
                 isConnected: true,
@@ -292,7 +273,7 @@ export function NetworkProvider({ children }: { children: React.ReactNode }) {
       walletConnectSession,
       selectedSession,
       applyNetworkChange,
-    ],
+    ]
   );
 
   const value: NetworkContextType = {
@@ -302,9 +283,7 @@ export function NetworkProvider({ children }: { children: React.ReactNode }) {
     isTestnet: network === "testnet",
   };
 
-  return (
-    <NetworkContext.Provider value={value}>{children}</NetworkContext.Provider>
-  );
+  return <NetworkContext.Provider value={value}>{children}</NetworkContext.Provider>;
 }
 
 export function useNetwork(): NetworkContextType {

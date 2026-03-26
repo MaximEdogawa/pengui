@@ -3,55 +3,55 @@
  * Provides adaptive configuration so the app degrades gracefully on 3G / slow connections.
  */
 
-export type ConnectionSpeed = 'slow' | 'medium' | 'fast'
+export type ConnectionSpeed = "slow" | "medium" | "fast";
 
 interface NetworkConnection {
-  effectiveType?: string
-  downlink?: number
-  rtt?: number
-  saveData?: boolean
-  addEventListener?: (type: string, listener: () => void) => void
-  removeEventListener?: (type: string, listener: () => void) => void
+  effectiveType?: string;
+  downlink?: number;
+  rtt?: number;
+  saveData?: boolean;
+  addEventListener?: (type: string, listener: () => void) => void;
+  removeEventListener?: (type: string, listener: () => void) => void;
 }
 
 function getConnection(): NetworkConnection | null {
-  if (typeof navigator === 'undefined') return null
+  if (typeof navigator === "undefined") return null;
   return (
     (navigator as unknown as { connection?: NetworkConnection }).connection ??
     (navigator as unknown as { mozConnection?: NetworkConnection }).mozConnection ??
     (navigator as unknown as { webkitConnection?: NetworkConnection }).webkitConnection ??
     null
-  )
+  );
 }
 
 export function getConnectionSpeed(): ConnectionSpeed {
-  const conn = getConnection()
-  if (!conn) return 'fast'
+  const conn = getConnection();
+  if (!conn) return "fast";
 
-  if (conn.saveData) return 'slow'
+  if (conn.saveData) return "slow";
 
-  const etype = conn.effectiveType
-  if (etype === 'slow-2g' || etype === '2g' || etype === '3g') return 'slow'
-  if (etype === '4g' && (conn.downlink ?? 10) < 2) return 'medium'
-  if (etype === '4g') return 'fast'
+  const etype = conn.effectiveType;
+  if (etype === "slow-2g" || etype === "2g" || etype === "3g") return "slow";
+  if (etype === "4g" && (conn.downlink ?? 10) < 2) return "medium";
+  if (etype === "4g") return "fast";
 
-  if (typeof conn.rtt === 'number' && conn.rtt > 500) return 'slow'
-  if (typeof conn.rtt === 'number' && conn.rtt > 200) return 'medium'
+  if (typeof conn.rtt === "number" && conn.rtt > 500) return "slow";
+  if (typeof conn.rtt === "number" && conn.rtt > 200) return "medium";
 
-  return 'fast'
+  return "fast";
 }
 
 export interface AdaptiveConfig {
-  batchSize: number
-  batchDelayMs: number
-  maxCatsToCheck: number
-  fetchTimeoutMs: number
-  retryCount: number
-  retryDelay: number
-  healthCheckIntervalMs: number
-  healthCheckPingTimeoutMs: number
-  staleTimeMs: number
-  gcTimeMs: number
+  batchSize: number;
+  batchDelayMs: number;
+  maxCatsToCheck: number;
+  fetchTimeoutMs: number;
+  retryCount: number;
+  retryDelay: number;
+  healthCheckIntervalMs: number;
+  healthCheckPingTimeoutMs: number;
+  staleTimeMs: number;
+  gcTimeMs: number;
 }
 
 const CONFIGS: Record<ConnectionSpeed, AdaptiveConfig> = {
@@ -91,16 +91,16 @@ const CONFIGS: Record<ConnectionSpeed, AdaptiveConfig> = {
     staleTimeMs: 60 * 1000,
     gcTimeMs: 5 * 60 * 1000,
   },
-}
+};
 
 export function getAdaptiveConfig(): AdaptiveConfig {
-  return CONFIGS[getConnectionSpeed()]
+  return CONFIGS[getConnectionSpeed()];
 }
 
 export function onConnectionChange(cb: (speed: ConnectionSpeed) => void): () => void {
-  const conn = getConnection()
-  if (!conn?.addEventListener) return () => {}
-  const handler = () => cb(getConnectionSpeed())
-  conn.addEventListener('change', handler)
-  return () => conn.removeEventListener?.('change', handler)
+  const conn = getConnection();
+  if (!conn?.addEventListener) return () => {};
+  const handler = () => cb(getConnectionSpeed());
+  conn.addEventListener("change", handler);
+  return () => conn.removeEventListener?.("change", handler);
 }

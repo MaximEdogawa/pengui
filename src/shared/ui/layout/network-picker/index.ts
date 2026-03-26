@@ -1,1 +1,1 @@
-export { default as NetworkPicker } from './NetworkPicker'
+export { default as NetworkPicker } from "./NetworkPicker";

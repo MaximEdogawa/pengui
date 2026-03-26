@@ -27,11 +27,7 @@ export function extractErrorInfo(error: unknown): ExtractedError {
     const errorObj = error as Record<string, unknown>;
 
     // Check for nested error object
-    if (
-      "error" in errorObj &&
-      errorObj.error &&
-      typeof errorObj.error === "object"
-    ) {
+    if ("error" in errorObj && errorObj.error && typeof errorObj.error === "object") {
       const nestedError = errorObj.error as Record<string, unknown>;
       if ("message" in nestedError && typeof nestedError.message === "string") {
         errorMessage = nestedError.message;
@@ -61,7 +57,7 @@ export function extractErrorInfo(error: unknown): ExtractedError {
  * Handle error code 4001 (user rejection or request failure)
  */
 export function handleErrorCode4001(
-  errorMessage: string,
+  errorMessage: string
 ): { success: false; error: string } | null {
   const lowerMessage = errorMessage.toLowerCase();
   const isUserRejection =
@@ -127,20 +123,14 @@ export function isRelayError(errorMessage: string): boolean {
  * Check if error is a session ping error (non-critical)
  */
 export function isSessionPingError(errorMessage: string): boolean {
-  return (
-    errorMessage.includes("session_ping") ||
-    errorMessage.includes("without any listeners")
-  );
+  return errorMessage.includes("session_ping") || errorMessage.includes("without any listeners");
 }
 
 /**
  * Check if error indicates session was deleted
  */
 export function isSessionDeletedError(errorMessage: string): boolean {
-  return (
-    errorMessage.includes("Missing or invalid") ||
-    errorMessage.includes("recently deleted")
-  );
+  return errorMessage.includes("Missing or invalid") || errorMessage.includes("recently deleted");
 }
 
 /**
@@ -148,7 +138,7 @@ export function isSessionDeletedError(errorMessage: string): boolean {
  */
 export function handleWalletRequestError(
   error: unknown,
-  method: string,
+  method: string
 ): { success: false; error: string } {
   const { message: errorMessage, code: errorCode } = extractErrorInfo(error);
 
@@ -187,13 +177,10 @@ export function handleWalletRequestError(
 
   // Handle session deletion — do NOT auto-clear; user must click Disconnect to go to login
   if (isSessionDeletedError(errorMessage)) {
-    logger.info(
-      "Wallet session expired; user can disconnect from wallet menu to reconnect",
-    );
+    logger.info("Wallet session expired; user can disconnect from wallet menu to reconnect");
     return {
       success: false,
-      error:
-        "Wallet session expired. Use Disconnect in the wallet menu to reconnect.",
+      error: "Wallet session expired. Use Disconnect in the wallet menu to reconnect.",
     };
   }
 

@@ -1,32 +1,25 @@
-import type { StorybookConfig } from '@storybook/nextjs-vite';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import type { StorybookConfig } from "@storybook/nextjs-vite";
+import path from "path";
+import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const config: StorybookConfig = {
-  "stories": [
-    "../storybook/**/*.stories.@(js|jsx|mjs|ts|tsx)"
-  ],
-  "addons": [
-    "@storybook/addon-a11y",
-    "@storybook/addon-docs"
-  ],
-  "framework": "@storybook/nextjs-vite",
-  "staticDirs": [
-    "../public"
-  ],
+  stories: ["../storybook/**/*.stories.@(js|jsx|mjs|ts|tsx)"],
+  addons: ["@storybook/addon-a11y", "@storybook/addon-docs"],
+  framework: "@storybook/nextjs-vite",
+  staticDirs: ["../public"],
   async viteFinal(config) {
     if (config.resolve) {
       config.resolve.alias = {
         ...config.resolve.alias,
-        '@': path.resolve(__dirname, '../src'),
-        '@/widgets': path.resolve(__dirname, '../src/widgets'),
-        '@/features': path.resolve(__dirname, '../src/features'),
-        '@/entities': path.resolve(__dirname, '../src/entities'),
-        '@/shared': path.resolve(__dirname, '../src/shared'),
+        "@": path.resolve(__dirname, "../src"),
+        "@/widgets": path.resolve(__dirname, "../src/widgets"),
+        "@/features": path.resolve(__dirname, "../src/features"),
+        "@/entities": path.resolve(__dirname, "../src/entities"),
+        "@/shared": path.resolve(__dirname, "../src/shared"),
         // Mock Next.js navigation for Storybook
-        'next/navigation': path.resolve(__dirname, './mocks/next-navigation.ts'),
+        "next/navigation": path.resolve(__dirname, "./mocks/next-navigation.ts"),
       };
     }
     // Suppress warnings for 'use client' directives (expected in Storybook builds)

@@ -27,12 +27,7 @@ export function generateDepthPath({
 
   // Guard against division by zero
   const range = priceRange.max - priceRange.min;
-  if (
-    range === 0 ||
-    !isFinite(range) ||
-    maxVolume <= 0 ||
-    !isFinite(maxVolume)
-  ) {
+  if (range === 0 || !isFinite(range) || maxVolume <= 0 || !isFinite(maxVolume)) {
     return "";
   }
 
@@ -70,8 +65,7 @@ export function generateDepthPath({
     if (bestBid) {
       const bestBidX = ((bestBid - priceRange.min) / range) * chartWidth;
       const highestBid = levels[0];
-      const highestBidY =
-        chartHeight - (highestBid.cumulativeVolume / maxVolume) * chartHeight;
+      const highestBidY = chartHeight - (highestBid.cumulativeVolume / maxVolume) * chartHeight;
 
       // Draw to best bid x position at the current y height
       points.push(`L ${bestBidX} ${highestBidY}`);
@@ -92,8 +86,7 @@ export function generateDepthPath({
 
       // Vertical line up to first ask level
       const firstAsk = levels[0];
-      const firstAskY =
-        chartHeight - (firstAsk.cumulativeVolume / maxVolume) * chartHeight;
+      const firstAskY = chartHeight - (firstAsk.cumulativeVolume / maxVolume) * chartHeight;
       points.push(`L ${bestAskX} ${firstAskY}`);
     } else {
       // Fallback: start from center (mid-price) at the bottom
@@ -152,7 +145,7 @@ export function generateDepthPath({
 export function generatePriceLabels(
   priceRange: { min: number; max: number },
   chartWidth: number,
-  numLabels: number = 8,
+  numLabels: number = 8
 ): Array<{ price: number; x: number }> {
   const labels: Array<{ price: number; x: number }> = [];
   const range = priceRange.max - priceRange.min;
@@ -168,7 +161,7 @@ export function generatePriceLabels(
   const optimalSpacing = isSmallRange ? 80 : 100;
   const calculatedNumLabels = Math.max(
     isSmallRange ? 5 : 3,
-    Math.min(numLabels, Math.floor(chartWidth / optimalSpacing)),
+    Math.min(numLabels, Math.floor(chartWidth / optimalSpacing))
   );
 
   // Use a smarter algorithm to pick nice round numbers
@@ -209,10 +202,7 @@ export function generatePriceLabels(
     });
 
   // Always include min and max if they're not already included
-  if (
-    labels.length === 0 ||
-    Math.abs(labels[0].price - priceRange.min) > 0.00000001
-  ) {
+  if (labels.length === 0 || Math.abs(labels[0].price - priceRange.min) > 0.00000001) {
     labels.unshift({ price: priceRange.min, x: 0 });
   }
   if (

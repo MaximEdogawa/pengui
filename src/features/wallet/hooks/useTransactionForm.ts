@@ -1,88 +1,98 @@
-'use client'
+"use client";
 
-import { convertToSmallestUnit, getMinimumFeeInXch, isValidChiaAddress, xchToMojos } from '@/shared/lib/utils/chia-units'
-import type { AssetType } from '@/entities/offer'
-import { useMemo, useState } from 'react'
+import {
+  convertToSmallestUnit,
+  getMinimumFeeInXch,
+  isValidChiaAddress,
+  xchToMojos,
+} from "@/shared/lib/utils/chia-units";
+import type { AssetType } from "@/entities/offer";
+import { useMemo, useState } from "react";
 
 interface UseTransactionFormProps {
-  availableBalance: number
-  assetId?: string
-  ticker?: string
-  isXch?: boolean
+  availableBalance: number;
+  assetId?: string;
+  ticker?: string;
+  isXch?: boolean;
 }
 
-export function useTransactionForm({ availableBalance, assetId, ticker = 'XCH', isXch = true }: UseTransactionFormProps) {
-  const [recipientAddress, setRecipientAddress] = useState('')
-  const [amount, setAmount] = useState('')
-  const [fee, setFee] = useState('0.000001')
-  const [memo, setMemo] = useState('')
-  const [addressError, setAddressError] = useState('')
-  const [amountError, setAmountError] = useState('')
-  const [feeError, setFeeError] = useState('')
+export function useTransactionForm({
+  availableBalance,
+  assetId,
+  ticker = "XCH",
+  isXch = true,
+}: UseTransactionFormProps) {
+  const [recipientAddress, setRecipientAddress] = useState("");
+  const [amount, setAmount] = useState("");
+  const [fee, setFee] = useState("0.000001");
+  const [memo, setMemo] = useState("");
+  const [addressError, setAddressError] = useState("");
+  const [amountError, setAmountError] = useState("");
+  const [feeError, setFeeError] = useState("");
 
-  const assetType: AssetType = isXch ? 'xch' : 'cat'
+  const assetType: AssetType = isXch ? "xch" : "cat";
 
   const validateAddress = () => {
-    const trimmed = recipientAddress.trim()
+    const trimmed = recipientAddress.trim();
     if (!trimmed) {
-      setAddressError('')
-      return false
+      setAddressError("");
+      return false;
     }
     if (!isValidChiaAddress(trimmed)) {
-      setAddressError('Invalid Chia address format')
-      return false
+      setAddressError("Invalid Chia address format");
+      return false;
     }
-    setAddressError('')
-    return true
-  }
+    setAddressError("");
+    return true;
+  };
 
   const validateAmount = () => {
-    const amountNum = parseFloat(amount)
+    const amountNum = parseFloat(amount);
 
     if (!amount || amountNum <= 0) {
-      setAmountError('Amount must be greater than 0')
-      return false
+      setAmountError("Amount must be greater than 0");
+      return false;
     }
 
     if (isXch) {
-      const feeNum = parseFloat(fee || '0')
-      const total = amountNum + feeNum
+      const feeNum = parseFloat(fee || "0");
+      const total = amountNum + feeNum;
       if (total > availableBalance) {
         setAmountError(
           `Insufficient balance. Total (${total.toFixed(6)}) exceeds available (${availableBalance.toFixed(6)} ${ticker})`
-        )
-        return false
+        );
+        return false;
       }
     } else {
       if (amountNum > availableBalance) {
         setAmountError(
           `Insufficient balance. ${amountNum} exceeds available ${availableBalance} ${ticker}`
-        )
-        return false
+        );
+        return false;
       }
     }
 
-    setAmountError('')
-    return true
-  }
+    setAmountError("");
+    return true;
+  };
 
   const validateFee = () => {
-    const feeNum = parseFloat(fee || '0')
-    const minFee = getMinimumFeeInXch()
+    const feeNum = parseFloat(fee || "0");
+    const minFee = getMinimumFeeInXch();
 
     if (!fee || feeNum <= 0) {
-      setFeeError('Fee must be greater than 0')
-      return false
+      setFeeError("Fee must be greater than 0");
+      return false;
     }
 
     if (feeNum < minFee) {
-      setFeeError(`Minimum fee is ${minFee} XCH`)
-      return false
+      setFeeError(`Minimum fee is ${minFee} XCH`);
+      return false;
     }
 
-    setFeeError('')
-    return true
-  }
+    setFeeError("");
+    return true;
+  };
 
   const isFormValid = useMemo(() => {
     return (
@@ -94,18 +104,18 @@ export function useTransactionForm({ availableBalance, assetId, ticker = 'XCH', 
       !feeError &&
       parseFloat(amount) > 0 &&
       parseFloat(fee) > 0
-    )
-  }, [recipientAddress, amount, fee, addressError, amountError, feeError])
+    );
+  }, [recipientAddress, amount, fee, addressError, amountError, feeError]);
 
   const resetForm = () => {
-    setRecipientAddress('')
-    setAmount('')
-    setFee('0.000001')
-    setMemo('')
-    setAddressError('')
-    setAmountError('')
-    setFeeError('')
-  }
+    setRecipientAddress("");
+    setAmount("");
+    setFee("0.000001");
+    setMemo("");
+    setAddressError("");
+    setAmountError("");
+    setFeeError("");
+  };
 
   const getTransactionParams = () => {
     return {
@@ -115,8 +125,8 @@ export function useTransactionForm({ availableBalance, assetId, ticker = 'XCH', 
       fee: xchToMojos(parseFloat(fee)),
       memos: memo.trim() ? [memo.trim()] : undefined,
       ...(!isXch && assetId ? { assetId } : {}),
-    }
-  }
+    };
+  };
 
   return {
     recipientAddress,
@@ -137,5 +147,5 @@ export function useTransactionForm({ availableBalance, assetId, ticker = 'XCH', 
     resetForm,
     getTransactionParams,
     assetType,
-  }
+  };
 }

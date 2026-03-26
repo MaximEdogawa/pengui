@@ -17,10 +17,7 @@ import { TransactionStatus } from "@/entities/transaction";
 import { logger } from "@/shared/lib/logger";
 import { saveTransaction } from "@/shared/lib/walletConnect/utils/transactionStorage";
 import FormInput from "./shared/FormInput";
-import {
-  useRefreshBalance,
-  useSendTransaction,
-} from "../hooks/useWalletQueries";
+import { useRefreshBalance, useSendTransaction } from "../hooks/useWalletQueries";
 import { useTransactionForm } from "../hooks/useTransactionForm";
 
 interface SendTransactionFormProps {
@@ -30,11 +27,7 @@ interface SendTransactionFormProps {
   isXch?: boolean;
 }
 
-const getButtonClasses = (
-  isFormValid: boolean | string,
-  isPending: boolean,
-  isDark: boolean,
-) => {
+const getButtonClasses = (isFormValid: boolean | string, isPending: boolean, isDark: boolean) => {
   if (!isFormValid || isPending) {
     return "opacity-50 cursor-not-allowed";
   }
@@ -46,7 +39,7 @@ const getButtonClasses = (
 export default function SendTransactionForm({
   availableBalance,
   assetId,
-  ticker = 'XCH',
+  ticker = "XCH",
   isXch = true,
 }: SendTransactionFormProps) {
   const { isDark, t } = useThemeClasses();
@@ -84,12 +77,7 @@ export default function SendTransactionForm({
 
   const handleSendTransaction = async () => {
     setTransactionStatus({ type: null, message: "" });
-    if (
-      !validateAddress() ||
-      !validateAmount() ||
-      !validateFee() ||
-      !isConnected
-    ) {
+    if (!validateAddress() || !validateAmount() || !validateFee() || !isConnected) {
       if (!isConnected) {
         setTransactionStatus({
           type: "error",
@@ -122,8 +110,7 @@ export default function SendTransactionForm({
       window.dispatchEvent(new Event("transactionSaved"));
       setTimeout(() => refreshBalance(), 2000);
     } catch (error) {
-      const errorMsg =
-        error instanceof Error ? error.message : "Unknown error occurred";
+      const errorMsg = error instanceof Error ? error.message : "Unknown error occurred";
       setTransactionStatus({
         type: "error",
         message: `Transaction failed: ${errorMsg}`,
@@ -178,13 +165,11 @@ export default function SendTransactionForm({
           if (amountError) validateAmount();
         }}
         onBlur={() => {
-          const inputValue =
-            amountInput !== undefined ? amountInput : amount || "";
+          const inputValue = amountInput !== undefined ? amountInput : amount || "";
           const parsed = assetInputAmounts.parse(inputValue, assetType);
           setAmount(parsed > 0 ? parsed.toString() : "");
           const formatted = formatAssetAmountForInput(parsed, assetType);
-          const shouldPreserveInput =
-            inputValue.includes(".") && inputValue !== formatted;
+          const shouldPreserveInput = inputValue.includes(".") && inputValue !== formatted;
           setAmountInput(shouldPreserveInput ? inputValue : undefined);
           validateAmount();
         }}
@@ -192,7 +177,9 @@ export default function SendTransactionForm({
         error={amountError}
         helperText={
           availableBalance > 0 ? (
-            <span>Available: {formatAssetAmountForInput(availableBalance, assetType)} {ticker}</span>
+            <span>
+              Available: {formatAssetAmountForInput(availableBalance, assetType)} {ticker}
+            </span>
           ) : undefined
         }
       />
@@ -200,9 +187,7 @@ export default function SendTransactionForm({
         label={
           <>
             Fee (XCH){" "}
-            <span className="text-[10px]">
-              (min: {formatXchAmount(getMinimumFeeInXch())})
-            </span>
+            <span className="text-[10px]">(min: {formatXchAmount(getMinimumFeeInXch())})</span>
           </>
         }
         type="text"
@@ -226,7 +211,7 @@ export default function SendTransactionForm({
         onBlur={() => {
           const parsed = assetInputAmounts.parse(
             feeInput !== undefined ? feeInput : fee || "",
-            "xch",
+            "xch"
           );
           setFee(parsed > 0 ? parsed.toString() : "");
           setFeeInput(undefined);
@@ -242,17 +227,14 @@ export default function SendTransactionForm({
         onChange={(e) => setMemo(e.target.value)}
         placeholder="Optional memo"
       />
-      <TransactionStatus
-        type={transactionStatus.type}
-        message={transactionStatus.message}
-      />
+      <TransactionStatus type={transactionStatus.type} message={transactionStatus.message} />
       <button
         onClick={handleSendTransaction}
         disabled={!isFormValid || sendTransactionMutation.isPending}
         className={`w-full px-6 py-3 rounded-xl backdrop-blur-xl ${getButtonClasses(
           isFormValid,
           sendTransactionMutation.isPending,
-          isDark,
+          isDark
         )} transition-all duration-200 font-medium flex items-center justify-center gap-2`}
       >
         {sendTransactionMutation.isPending ? (

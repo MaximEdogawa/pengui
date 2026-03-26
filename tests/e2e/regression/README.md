@@ -19,9 +19,9 @@ When a bug is fixed:
 ## Test Naming Convention
 
 ```typescript
-test('BUG-123: App crashes when wallet disconnects', async ({ page }) => {
+test("BUG-123: App crashes when wallet disconnects", async ({ page }) => {
   // Test that verifies the bug is fixed
-})
+});
 ```
 
 ## Running Regression Tests

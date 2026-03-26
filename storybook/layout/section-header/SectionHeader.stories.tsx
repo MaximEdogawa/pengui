@@ -1,62 +1,62 @@
-import type { Meta, StoryObj } from '@storybook/nextjs-vite'
-import { SectionHeader } from '@/shared/ui'
-import { Wallet, History, Settings as SettingsIcon, TrendingUp } from 'lucide-react'
+import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { SectionHeader } from "@/shared/ui";
+import { Wallet, History, Settings as SettingsIcon, TrendingUp } from "lucide-react";
 
 const meta = {
-  title: 'Components/Layout/SectionHeader',
+  title: "Components/Layout/SectionHeader",
   component: SectionHeader,
   parameters: {
-    layout: 'centered',
+    layout: "centered",
   },
-  tags: ['autodocs'],
+  tags: ["autodocs"],
   argTypes: {
     icon: {
       control: false,
     },
     title: {
-      control: 'text',
+      control: "text",
     },
     iconSize: {
-      control: 'number',
+      control: "number",
     },
   },
-} satisfies Meta<typeof SectionHeader>
+} satisfies Meta<typeof SectionHeader>;
 
-export default meta
-type Story = StoryObj<typeof meta>
+export default meta;
+type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
     icon: Wallet,
-    title: 'Wallet',
+    title: "Wallet",
   },
-}
+};
 
 export const RecentTransactions: Story = {
   args: {
     icon: History,
-    title: 'Recent Transactions',
+    title: "Recent Transactions",
   },
-}
+};
 
 export const Settings: Story = {
   args: {
     icon: SettingsIcon,
-    title: 'Settings',
+    title: "Settings",
   },
-}
+};
 
 export const Analytics: Story = {
   args: {
     icon: TrendingUp,
-    title: 'Analytics',
+    title: "Analytics",
   },
-}
+};
 
 export const CustomIconSize: Story = {
   args: {
     icon: Wallet,
-    title: 'Custom Icon Size',
+    title: "Custom Icon Size",
     iconSize: 20,
   },
-}
+};

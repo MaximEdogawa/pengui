@@ -1,24 +1,21 @@
-'use client'
+"use client";
 
-import { useThemeClasses } from '@/shared/hooks'
-import { Search } from 'lucide-react'
+import { useThemeClasses } from "@/shared/hooks";
+import { Search } from "lucide-react";
 
 interface WalletFilterBarProps {
-  searchQuery: string
-  onSearchChange: (value: string) => void
+  searchQuery: string;
+  onSearchChange: (value: string) => void;
 }
 
-export default function WalletFilterBar({
-  searchQuery,
-  onSearchChange,
-}: WalletFilterBarProps) {
-  const { isDark, t } = useThemeClasses()
+export default function WalletFilterBar({ searchQuery, onSearchChange }: WalletFilterBarProps) {
+  const { isDark, t } = useThemeClasses();
 
   return (
     <div
       className={`sticky top-0 z-10 py-2 -mx-3 px-3 ${
-        isDark ? 'bg-black/40' : 'bg-white/50'
-      } backdrop-blur-sm border-b ${t.border ?? 'border-transparent'}`}
+        isDark ? "bg-black/40" : "bg-white/50"
+      } backdrop-blur-sm border-b ${t.border ?? "border-transparent"}`}
     >
       <div className="relative">
         <Search
@@ -35,5 +32,5 @@ export default function WalletFilterBar({
         />
       </div>
     </div>
-  )
+  );
 }

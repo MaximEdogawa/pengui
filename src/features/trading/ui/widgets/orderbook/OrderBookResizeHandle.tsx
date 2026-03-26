@@ -1,6 +1,6 @@
 interface OrderBookResizeHandleProps {
-  averagePrice: string
-  onMouseDown: (event: React.MouseEvent) => void
+  averagePrice: string;
+  onMouseDown: (event: React.MouseEvent) => void;
 }
 
 export default function OrderBookResizeHandle({
@@ -22,7 +22,7 @@ export default function OrderBookResizeHandle({
           className="px-1 py-0 rounded-md backdrop-blur-md bg-blue-500/10 dark:bg-blue-400/10 border border-blue-400/20 dark:border-blue-300/20 transition-all duration-200 hover:bg-blue-500/15 dark:hover:bg-blue-400/15 hover:border-blue-400/30 dark:hover:border-blue-300/30 flex items-center mr-0 sm:mr-1"
           style={{
             boxShadow:
-              '0 0 0 0.5px rgba(59, 130, 246, 0.2), 0 1px 2px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(147, 197, 253, 0.2), 0 0 8px rgba(59, 130, 246, 0.2), 0 0 12px rgba(59, 130, 246, 0.1)',
+              "0 0 0 0.5px rgba(59, 130, 246, 0.2), 0 1px 2px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(147, 197, 253, 0.2), 0 0 8px rgba(59, 130, 246, 0.2), 0 0 12px rgba(59, 130, 246, 0.1)",
           }}
         >
           <span className="text-[10px] sm:text-[11px] font-semibold text-gray-800 dark:text-gray-100 font-mono tabular-nums leading-none max-w-[120px] sm:max-w-none truncate inline-block">
@@ -34,5 +34,5 @@ export default function OrderBookResizeHandle({
       {/* Invisible larger hit area for easier dragging */}
       <div className="absolute inset-0 w-full h-6 -top-2 cursor-row-resize" />
     </div>
-  )
+  );
 }

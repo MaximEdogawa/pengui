@@ -1,41 +1,41 @@
-'use client'
+"use client";
 
-import { formatAddress } from '@/shared/lib/utils/addressUtils'
-import { useThemeClasses } from '@/shared/hooks'
-import { useWalletConnectionState } from '@maximedogawa/chia-wallet-connect-react'
-import { Wallet, Copy } from 'lucide-react'
-import { useState } from 'react'
+import { formatAddress } from "@/shared/lib/utils/addressUtils";
+import { useThemeClasses } from "@/shared/hooks";
+import { useWalletConnectionState } from "@maximedogawa/chia-wallet-connect-react";
+import { Wallet, Copy } from "lucide-react";
+import { useState } from "react";
 
 export default function WalletAddress() {
-  const [isAddressCopied, setIsAddressCopied] = useState(false)
-  const { isDark, t } = useThemeClasses()
-  const { isConnected, address } = useWalletConnectionState()
+  const [isAddressCopied, setIsAddressCopied] = useState(false);
+  const { isDark, t } = useThemeClasses();
+  const { isConnected, address } = useWalletConnectionState();
 
   const copyAddress = async () => {
-    if (!address) return
+    if (!address) return;
     try {
-      await navigator.clipboard.writeText(address)
-      setIsAddressCopied(true)
-      setTimeout(() => setIsAddressCopied(false), 2000)
+      await navigator.clipboard.writeText(address);
+      setIsAddressCopied(true);
+      setTimeout(() => setIsAddressCopied(false), 2000);
     } catch {
       // Failed to copy
     }
-  }
+  };
 
   if (!isConnected || !address) {
-    return null
+    return null;
   }
 
   return (
     <div
       className={`backdrop-blur-xl ${
-        isDark ? 'bg-white/[0.03] border-white/5' : 'bg-white/50 border-cyan-200/30'
+        isDark ? "bg-white/[0.03] border-white/5" : "bg-white/50 border-cyan-200/30"
       } rounded-xl p-3 border transition-all duration-200`}
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3 min-w-0 flex-1">
           <div
-            className={`p-2 rounded-xl ${isDark ? 'bg-white/5' : 'bg-white/30'} backdrop-blur-sm`}
+            className={`p-2 rounded-xl ${isDark ? "bg-white/5" : "bg-white/30"} backdrop-blur-sm`}
           >
             <Wallet className={`${t.textSecondary}`} size={16} strokeWidth={2} />
           </div>
@@ -55,10 +55,10 @@ export default function WalletAddress() {
         </button>
       </div>
       {isAddressCopied && (
-        <p className={`${isDark ? 'text-emerald-400' : 'text-emerald-600'} text-xs mt-2`}>
+        <p className={`${isDark ? "text-emerald-400" : "text-emerald-600"} text-xs mt-2`}>
           Address copied!
         </p>
       )}
     </div>
-  )
+  );
 }

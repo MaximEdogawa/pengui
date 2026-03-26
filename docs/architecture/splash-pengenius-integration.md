@@ -27,11 +27,11 @@ This doc describes how pengui implements the Splash network using **libp2p in th
 
 ## Scripts (package.json)
 
-| Script       | Description |
-|-------------|-------------|
+| Script       | Description                                                                 |
+| ------------ | --------------------------------------------------------------------------- |
 | `build:wasm` | Build splash-wasm and write to `public/wasm/`. Requires Rust and wasm-pack. |
-| `build:all`  | Run `build:wasm` then `build` (full app build including WASM). |
-| `build`      | Next.js build only. Run `build:wasm` first if you changed the WASM crate. |
+| `build:all`  | Run `build:wasm` then `build` (full app build including WASM).              |
+| `build`      | Next.js build only. Run `build:wasm` first if you changed the WASM crate.   |
 
 ## References
 

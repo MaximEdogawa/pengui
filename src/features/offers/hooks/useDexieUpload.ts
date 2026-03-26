@@ -4,10 +4,7 @@ import { logger } from "@/shared/lib/logger";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNetwork } from "@/shared/hooks/useNetwork";
 import { getDexieApiUrl } from "@/shared/lib/utils/networkUtils";
-import type {
-  DexiePostOfferParams,
-  DexiePostOfferResponse,
-} from "../lib/dexieTypes";
+import type { DexiePostOfferParams, DexiePostOfferResponse } from "../lib/dexieTypes";
 
 const DEXIE_KEY = "dexie";
 
@@ -20,9 +17,7 @@ export function useDexieUpload() {
   const dexieApiBaseUrl = getDexieApiUrl(network);
 
   const postOfferMutation = useMutation({
-    mutationFn: async (
-      params: DexiePostOfferParams,
-    ): Promise<DexiePostOfferResponse> => {
+    mutationFn: async (params: DexiePostOfferParams): Promise<DexiePostOfferResponse> => {
       try {
         const response = await fetch(`${dexieApiBaseUrl}/v1/offers`, {
           method: "POST",

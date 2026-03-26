@@ -2,10 +2,7 @@
 
 import { useMemo, useState, useCallback } from "react";
 import type { MarketDepthData } from "@/features/trading/lib/chartTypes";
-import type {
-  OrderBookFilters,
-  OrderBookOrder,
-} from "@/features/trading/lib/orderBookTypes";
+import type { OrderBookFilters, OrderBookOrder } from "@/features/trading/lib/orderBookTypes";
 import { useDepthChartData, useMaxSpreadPercent } from "./useDepthChartData";
 import { findOrderByPrice } from "@/features/trading/lib/utils/orderPriceMatching";
 import SpreadControls from "./SpreadControls";
@@ -51,17 +48,17 @@ export default function MarketDepthChart({
   const [tooltip, setTooltip] = useState<TooltipData | null>(null);
   const [hoveredPrice, setHoveredPrice] = useState<number | null>(null);
 
-  const [maxSpreadPercent, setMaxSpreadPercent, resetMaxSpreadPercent] =
-    useMaxSpreadPercent(depthData, filters);
+  const [maxSpreadPercent, setMaxSpreadPercent, resetMaxSpreadPercent] = useMaxSpreadPercent(
+    depthData,
+    filters
+  );
 
   const chartData = useDepthChartData({ depthData, maxSpreadPercent });
-  const { priceRange, visibleBids, visibleAsks, maxVolume, midPrice } =
-    chartData;
+  const { priceRange, visibleBids, visibleAsks, maxVolume, midPrice } = chartData;
 
   // Use full container width and height, accounting only for label space
   const chartWidth = width - CHART_PADDING.left - CHART_PADDING.right;
-  const chartHeight =
-    height - CHART_PADDING.top - CHART_PADDING.bottom - SPREAD_INDICATOR_HEIGHT;
+  const chartHeight = height - CHART_PADDING.top - CHART_PADDING.bottom - SPREAD_INDICATOR_HEIGHT;
 
   const centerX = useMemo(() => {
     const range = priceRange.max - priceRange.min;
@@ -75,8 +72,7 @@ export default function MarketDepthChart({
     (e: React.MouseEvent<SVGSVGElement>) => {
       const rect = e.currentTarget.getBoundingClientRect();
       const x = e.clientX - rect.left - CHART_PADDING.left;
-      const y =
-        e.clientY - rect.top - CHART_PADDING.top - SPREAD_INDICATOR_HEIGHT;
+      const y = e.clientY - rect.top - CHART_PADDING.top - SPREAD_INDICATOR_HEIGHT;
 
       if (x < 0 || x > chartWidth || y < 0 || y > chartHeight) {
         setTooltip(null);
@@ -105,29 +101,23 @@ export default function MarketDepthChart({
       if (isLeft) {
         closestLevel = visibleBids.reduce(
           (closest, bid) => {
-            if (
-              !closest ||
-              Math.abs(bid.price - price) < Math.abs(closest.price - price)
-            ) {
+            if (!closest || Math.abs(bid.price - price) < Math.abs(closest.price - price)) {
               return bid;
             }
             return closest;
           },
-          null as (typeof visibleBids)[0] | null,
+          null as (typeof visibleBids)[0] | null
         );
         side = "bid";
       } else {
         closestLevel = visibleAsks.reduce(
           (closest, ask) => {
-            if (
-              !closest ||
-              Math.abs(ask.price - price) < Math.abs(closest.price - price)
-            ) {
+            if (!closest || Math.abs(ask.price - price) < Math.abs(closest.price - price)) {
               return ask;
             }
             return closest;
           },
-          null as (typeof visibleAsks)[0] | null,
+          null as (typeof visibleAsks)[0] | null
         );
         side = "ask";
       }
@@ -147,15 +137,7 @@ export default function MarketDepthChart({
         setHoveredPrice(null);
       }
     },
-    [
-      chartWidth,
-      chartHeight,
-      priceRange.min,
-      priceRange.max,
-      visibleBids,
-      visibleAsks,
-      centerX,
-    ],
+    [chartWidth, chartHeight, priceRange.min, priceRange.max, visibleBids, visibleAsks, centerX]
   );
 
   const handleMouseLeave = useCallback(() => {
@@ -176,8 +158,7 @@ export default function MarketDepthChart({
       const price = hoveredPrice;
       const isBid =
         depthData.bestBid && depthData.bestAsk
-          ? price <= depthData.bestBid ||
-            (price < depthData.bestAsk && price <= depthData.bestBid)
+          ? price <= depthData.bestBid || (price < depthData.bestAsk && price <= depthData.bestBid)
           : depthData.bestBid
             ? price <= depthData.bestBid
             : false;

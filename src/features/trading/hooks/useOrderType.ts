@@ -2,17 +2,14 @@ import { useMemo } from "react";
 import { useCatTokens } from "@/entities/asset";
 import { getNativeTokenTickerForNetwork } from "@/shared/lib/config/environment";
 import { useNetwork } from "@/shared/hooks/useNetwork";
-import {
-  OrderBookFilters,
-  OrderBookOrder,
-} from "@/features/trading/lib/orderBookTypes";
+import { OrderBookFilters, OrderBookOrder } from "@/features/trading/lib/orderBookTypes";
 
 /**
  * Extract order type detection logic to reduce complexity
  */
 export function useOrderType(
   order: OrderBookOrder | undefined,
-  filters: OrderBookFilters | undefined,
+  filters: OrderBookFilters | undefined
 ): "buy" | "sell" | null {
   const { network } = useNetwork();
   const { getCatTokenInfo } = useCatTokens();
@@ -41,24 +38,20 @@ export function useOrderType(
     const requestingIsBuyAsset = order.requesting.some((asset) =>
       buyAssets.some(
         (filterAsset) =>
-          getTickerSymbol(asset.id, asset.code).toLowerCase() ===
-            filterAsset.toLowerCase() ||
+          getTickerSymbol(asset.id, asset.code).toLowerCase() === filterAsset.toLowerCase() ||
           asset.id.toLowerCase() === filterAsset.toLowerCase() ||
-          (asset.code &&
-            asset.code.toLowerCase() === filterAsset.toLowerCase()),
-      ),
+          (asset.code && asset.code.toLowerCase() === filterAsset.toLowerCase())
+      )
     );
 
     // Check if offering side matches buy asset
     const offeringIsBuyAsset = order.offering.some((asset) =>
       buyAssets.some(
         (filterAsset) =>
-          getTickerSymbol(asset.id, asset.code).toLowerCase() ===
-            filterAsset.toLowerCase() ||
+          getTickerSymbol(asset.id, asset.code).toLowerCase() === filterAsset.toLowerCase() ||
           asset.id.toLowerCase() === filterAsset.toLowerCase() ||
-          (asset.code &&
-            asset.code.toLowerCase() === filterAsset.toLowerCase()),
-      ),
+          (asset.code && asset.code.toLowerCase() === filterAsset.toLowerCase())
+      )
     );
 
     // From maker's perspective (Limit tab):
