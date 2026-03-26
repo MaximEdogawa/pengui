@@ -35,9 +35,7 @@ export function SwapTabContent({ mode }: SwapTabContentProps = {}) {
   const [selectedPair, setSelectedPair] = useState<TibetApiPair | null>(null);
   const [offeredAmount, setOfferedAmount] = useState("");
   const [requestedAmount, setRequestedAmount] = useState("");
-  const [amountDriver, setAmountDriver] = useState<"offered" | "requested">(
-    "offered",
-  );
+  const [amountDriver, setAmountDriver] = useState<"offered" | "requested">("offered");
   const [lpAmount, setLpAmount] = useState("");
   const [liquidityError, setLiquidityError] = useState("");
   const [liquiditySuccess, setLiquiditySuccess] = useState(false);
@@ -55,7 +53,6 @@ export function SwapTabContent({ mode }: SwapTabContentProps = {}) {
   const markLpProgrammatic = useCallback(() => {
     lpAmountEditedByUserRef.current = false;
   }, []);
-
 
   const nativeTicker = getNativeTokenTickerForNetwork(network);
   const isTestnet = network === "testnet";
@@ -88,23 +85,17 @@ export function SwapTabContent({ mode }: SwapTabContentProps = {}) {
     (isXchTicker(offeredTicker) || isXchTicker(requestedTicker));
 
   const xchIsOffered = isXchTicker(offeredTicker);
-  const {
-    quote,
-    modalPayAmount,
-    priceLine,
-    priceImpactPercent,
-    liquidityFeePercent,
-  } = useSwapQuoteSync({
-    selectedPair,
-    amountDriver,
-    xchIsOffered,
-    offeredAmount,
-    requestedAmount,
-    setOfferedAmount,
-    setRequestedAmount,
-    skipQuoteSync:
-      lpAmount.trim() !== "" && lpAmountEditedByUserRef.current,
-  });
+  const { quote, modalPayAmount, priceLine, priceImpactPercent, liquidityFeePercent } =
+    useSwapQuoteSync({
+      selectedPair,
+      amountDriver,
+      xchIsOffered,
+      offeredAmount,
+      requestedAmount,
+      setOfferedAmount,
+      setRequestedAmount,
+      skipQuoteSync: lpAmount.trim() !== "" && lpAmountEditedByUserRef.current,
+    });
 
   const removeReceive = useMemo(() => {
     if (!selectedPair) return null;
@@ -112,15 +103,14 @@ export function SwapTabContent({ mode }: SwapTabContentProps = {}) {
     return removeReceiveEstimate(selectedPair, lp);
   }, [selectedPair, lpAmount]);
 
-  const { addLpReceive, amountsFromLpRef, lpJustSetFromAmountsRef } =
-    useAddLpReceiveAndSync(
-      selectedPair,
-      offeredAmount,
-      requestedAmount,
-      xchIsOffered,
-      setLpAmount,
-      markLpProgrammatic,
-    );
+  const { addLpReceive, amountsFromLpRef, lpJustSetFromAmountsRef } = useAddLpReceiveAndSync(
+    selectedPair,
+    offeredAmount,
+    requestedAmount,
+    xchIsOffered,
+    setLpAmount,
+    markLpProgrammatic
+  );
 
   useSwapTabLpRemoveAmountsSync({
     removeReceive,
@@ -134,8 +124,7 @@ export function SwapTabContent({ mode }: SwapTabContentProps = {}) {
     lpEditedByUserRef: lpAmountEditedByUserRef,
   });
 
-  const tokenName =
-    selectedPair?.asset_short_name || selectedPair?.asset_name || "Token";
+  const tokenName = selectedPair?.asset_short_name || selectedPair?.asset_name || "Token";
 
   const { handleAdd, handleRemove, isLiquidityPending } = useLiquidityHandlers({
     network,
@@ -224,8 +213,8 @@ export function SwapTabContent({ mode }: SwapTabContentProps = {}) {
         <div
           className={`rounded-md p-2 text-center text-xs ${t.card} border ${t.border} ${t.textSecondary}`}
         >
-          Select assets using the filter above (Sell and Buy) to set the pair
-          and see swap, add, and remove.
+          Select assets using the filter above (Sell and Buy) to set the pair and see swap, add, and
+          remove.
         </div>
       )}
     </div>

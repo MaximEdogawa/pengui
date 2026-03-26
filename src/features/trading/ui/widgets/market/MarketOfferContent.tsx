@@ -11,10 +11,7 @@ import {
 } from "@/shared/lib/utils/chia-units";
 import { logger } from "@/shared/lib/logger";
 import { useEffect } from "react";
-import type {
-  OrderBookFilters,
-  OrderBookOrder,
-} from "../../../lib/orderBookTypes";
+import type { OrderBookFilters, OrderBookOrder } from "../../../lib/orderBookTypes";
 import { useMarketOfferForm } from "@/features/trading/hooks/useMarketOfferForm";
 import { useOfferParsing } from "@/features/trading/hooks/useOfferParsing";
 import { useOrderPrice } from "@/features/trading/hooks/useOrderPrice";
@@ -45,23 +42,13 @@ export default function MarketOfferTab({
 
   // Use extracted hooks
   const formState = useMarketOfferForm();
-  const {
-    offerPreview,
-    parseError,
-    fetchedOfferString,
-    isLoadingOfferString,
-    offerDetailsQuery,
-  } = useOfferParsing({
-    order,
-    offerString: formState.offerString,
-  });
-  const {
-    orderType,
-    orderPrice,
-    priceDeviationPercent,
-    getPriceHeaderTicker,
-    getTickerSymbol,
-  } = useOrderPrice(order, filters);
+  const { offerPreview, parseError, fetchedOfferString, isLoadingOfferString, offerDetailsQuery } =
+    useOfferParsing({
+      order,
+      offerString: formState.offerString,
+    });
+  const { orderType, orderPrice, priceDeviationPercent, getPriceHeaderTicker, getTickerSymbol } =
+    useOrderPrice(order, filters);
 
   // Update offer string when query data changes
   useEffect(() => {
@@ -85,12 +72,7 @@ export default function MarketOfferTab({
       formState.setErrorMessage(errorMsg);
       logger.error("Error fetching offer details:", offerDetailsQuery.error);
     }
-  }, [
-    offerDetailsQuery.isError,
-    offerDetailsQuery.error,
-    order?.id,
-    formState,
-  ]);
+  }, [offerDetailsQuery.isError, offerDetailsQuery.error, order?.id, formState]);
 
   const isFormValid =
     formState.offerString.trim().length > 0 &&
@@ -155,8 +137,8 @@ export default function MarketOfferTab({
             disabled={formState.isSubmitting}
           />
           <p className={`mt-1 text-xs ${t.textSecondary}`}>
-            Fee can be 0 for free transactions (minimum:{" "}
-            {formatXchAmount(getMinimumFeeInXch())} XCH)
+            Fee can be 0 for free transactions (minimum: {formatXchAmount(getMinimumFeeInXch())}{" "}
+            XCH)
           </p>
         </div>
 

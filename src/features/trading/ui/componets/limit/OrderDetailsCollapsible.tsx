@@ -8,10 +8,7 @@ interface OrderDetailsCollapsibleProps {
   mode: "modal" | "inline";
 }
 
-export function OrderDetailsCollapsible({
-  order,
-  mode,
-}: OrderDetailsCollapsibleProps) {
+export function OrderDetailsCollapsible({ order, mode }: OrderDetailsCollapsibleProps) {
   const { t } = useThemeClasses();
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -31,12 +28,7 @@ export function OrderDetailsCollapsible({
           stroke="currentColor"
           viewBox="0 0 24 24"
         >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M19 9l-7 7-7-7"
-          />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
       </button>
       {isExpanded && (

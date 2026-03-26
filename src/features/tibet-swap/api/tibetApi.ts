@@ -16,7 +16,7 @@ export interface TibetApiClientOptions {
 }
 
 function buildQueryString(
-  params: Record<string, string | number | boolean | undefined | null>,
+  params: Record<string, string | number | boolean | undefined | null>
 ): string {
   const search = new URLSearchParams();
 
@@ -37,7 +37,7 @@ async function tibetFetch<T>(
     method?: string;
     body?: unknown;
     query?: Record<string, string | number | boolean | undefined | null>;
-  },
+  }
 ): Promise<T> {
   const url = `${baseUrl}${path}${options?.query ? buildQueryString(options.query) : ""}`;
   const res = await fetch(url, {
@@ -57,23 +57,15 @@ async function tibetFetch<T>(
 
 export interface TibetApiClient {
   getTokens: () => Promise<TibetToken[]>;
-  getPairs: (params?: {
-    skip?: number;
-    limit?: number;
-  }) => Promise<TibetApiPair[]>;
+  getPairs: (params?: { skip?: number; limit?: number }) => Promise<TibetApiPair[]>;
   getToken: (assetId: string) => Promise<TibetToken>;
   getPair: (launcherId: string) => Promise<TibetApiPair>;
   getRouter: (params?: { rcat?: boolean }) => Promise<TibetRouter>;
   getQuote: (params: TibetQuoteParams) => Promise<TibetQuote>;
-  createOffer: (
-    pairId: string,
-    body: TibetCreateOfferBody,
-  ) => Promise<TibetOfferResponse>;
+  createOffer: (pairId: string, body: TibetCreateOfferBody) => Promise<TibetOfferResponse>;
 }
 
-export function createTibetApiClient({
-  baseUrl,
-}: TibetApiClientOptions): TibetApiClient {
+export function createTibetApiClient({ baseUrl }: TibetApiClientOptions): TibetApiClient {
   const getTokens = () => tibetFetch<TibetToken[]>(baseUrl, "/tokens");
 
   const getPairs = (params?: { skip?: number; limit?: number }) =>
@@ -85,10 +77,7 @@ export function createTibetApiClient({
     tibetFetch<TibetToken>(baseUrl, `/token/${encodeURIComponent(assetId)}`);
 
   const getPair = (launcherId: string) =>
-    tibetFetch<TibetApiPair>(
-      baseUrl,
-      `/pair/${encodeURIComponent(launcherId)}`,
-    );
+    tibetFetch<TibetApiPair>(baseUrl, `/pair/${encodeURIComponent(launcherId)}`);
 
   const getRouter = (params?: { rcat?: boolean }) =>
     tibetFetch<TibetRouter>(baseUrl, "/router", {
@@ -96,31 +85,22 @@ export function createTibetApiClient({
     });
 
   const getQuote = (params: TibetQuoteParams) => {
-    const { pair_id, amount_in, amount_out, xch_is_input, estimate_fee } =
-      params;
-    return tibetFetch<TibetQuote>(
-      baseUrl,
-      `/quote/${encodeURIComponent(pair_id)}`,
-      {
-        query: {
-          amount_in: amount_in ?? undefined,
-          amount_out: amount_out ?? undefined,
-          xch_is_input: xch_is_input ?? true,
-          estimate_fee: estimate_fee ?? false,
-        },
+    const { pair_id, amount_in, amount_out, xch_is_input, estimate_fee } = params;
+    return tibetFetch<TibetQuote>(baseUrl, `/quote/${encodeURIComponent(pair_id)}`, {
+      query: {
+        amount_in: amount_in ?? undefined,
+        amount_out: amount_out ?? undefined,
+        xch_is_input: xch_is_input ?? true,
+        estimate_fee: estimate_fee ?? false,
       },
-    );
+    });
   };
 
   const createOffer = (pairId: string, body: TibetCreateOfferBody) =>
-    tibetFetch<TibetOfferResponse>(
-      baseUrl,
-      `/offer/${encodeURIComponent(pairId)}`,
-      {
-        method: "POST",
-        body,
-      },
-    );
+    tibetFetch<TibetOfferResponse>(baseUrl, `/offer/${encodeURIComponent(pairId)}`, {
+      method: "POST",
+      body,
+    });
 
   return {
     getTokens,

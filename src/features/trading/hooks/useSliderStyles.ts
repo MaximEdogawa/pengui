@@ -1,38 +1,34 @@
-import { useEffect } from 'react'
+import { useEffect } from "react";
 
 /**
  * Extract style injection logic to reduce SleekPriceSlider size
  */
-export function useSliderStyles(
-  sliderId: string,
-  styleId: string,
-  sliderColor: string
-) {
+export function useSliderStyles(sliderId: string, styleId: string, sliderColor: string) {
   // Escape ID for use in CSS selectors (useId can produce IDs with colons)
   const escapeCSSId = (id: string): string => {
-    if (typeof CSS !== 'undefined' && CSS.escape) {
-      return CSS.escape(id)
+    if (typeof CSS !== "undefined" && CSS.escape) {
+      return CSS.escape(id);
     }
     // Fallback: escape special characters manually
     return id.replace(/[^a-zA-Z0-9_-]/g, (char) => {
-      const code = char.charCodeAt(0)
+      const code = char.charCodeAt(0);
       if (code <= 0xff) {
-        return `\\${code.toString(16).padStart(2, '0')} `
+        return `\\${code.toString(16).padStart(2, "0")} `;
       }
-      return `\\${code.toString(16)} `
-    })
-  }
+      return `\\${code.toString(16)} `;
+    });
+  };
 
-  const cssEscapedSliderId = escapeCSSId(sliderId)
+  const cssEscapedSliderId = escapeCSSId(sliderId);
 
   // Inject slider styles
   useEffect(() => {
-    let styleElement = document.getElementById(styleId) as HTMLStyleElement | null
+    let styleElement = document.getElementById(styleId) as HTMLStyleElement | null;
 
     if (!styleElement) {
-      styleElement = document.createElement('style')
-      styleElement.id = styleId
-      document.head.appendChild(styleElement)
+      styleElement = document.createElement("style");
+      styleElement.id = styleId;
+      document.head.appendChild(styleElement);
     }
 
     styleElement.textContent = `
@@ -65,15 +61,15 @@ export function useSliderStyles(
         transform: scale(1.2);
         box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.25);
       }
-    `
+    `;
 
     return () => {
-      const element = document.getElementById(styleId)
+      const element = document.getElementById(styleId);
       if (element) {
-        element.remove()
+        element.remove();
       }
-    }
-  }, [sliderColor, cssEscapedSliderId, styleId])
+    };
+  }, [sliderColor, cssEscapedSliderId, styleId]);
 
-  return cssEscapedSliderId
+  return cssEscapedSliderId;
 }

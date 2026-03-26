@@ -2,40 +2,40 @@
 
 const mockRouter = {
   push: (path: string, options?: { scroll?: boolean }) => {
-    console.log('[Storybook Mock] Router.push:', path, options)
+    console.log("[Storybook Mock] Router.push:", path, options);
   },
   replace: (path: string) => {
-    console.log('[Storybook Mock] Router.replace:', path)
+    console.log("[Storybook Mock] Router.replace:", path);
   },
   refresh: () => {
-    console.log('[Storybook Mock] Router.refresh')
+    console.log("[Storybook Mock] Router.refresh");
   },
   back: () => {
-    console.log('[Storybook Mock] Router.back')
+    console.log("[Storybook Mock] Router.back");
   },
   forward: () => {
-    console.log('[Storybook Mock] Router.forward')
+    console.log("[Storybook Mock] Router.forward");
   },
   prefetch: (path: string) => {
-    console.log('[Storybook Mock] Router.prefetch:', path)
+    console.log("[Storybook Mock] Router.prefetch:", path);
   },
-}
+};
 
-let mockPathname = '/dashboard'
+let mockPathname = "/dashboard";
 
 export function useRouter() {
-  return mockRouter
+  return mockRouter;
 }
 
 export function usePathname() {
-  return mockPathname
+  return mockPathname;
 }
 
 export function useSearchParams() {
-  return new URLSearchParams()
+  return new URLSearchParams();
 }
 
 // Allow setting pathname for different stories
 export function setMockPathname(pathname: string) {
-  mockPathname = pathname
+  mockPathname = pathname;
 }

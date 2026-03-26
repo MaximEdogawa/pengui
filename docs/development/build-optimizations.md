@@ -60,13 +60,14 @@ Total Build Time: ~6.2 seconds
    - Consider further splitting these components
 
 2. **Dynamic Imports**: Use `next/dynamic` for heavy components that aren't immediately needed:
+
    ```tsx
-   const HeavyComponent = dynamic(() => import('./HeavyComponent'), {
+   const HeavyComponent = dynamic(() => import("./HeavyComponent"), {
      loading: () => <Loading />,
-   })
+   });
    ```
 
-3. **Reduce Bundle Size**: 
+3. **Reduce Bundle Size**:
    - Analyze bundle with `@next/bundle-analyzer`
    - Remove unused dependencies
    - Use tree-shaking effectively

@@ -1,9 +1,9 @@
-import type { ThemeClasses } from '@/shared/lib/theme'
+import type { ThemeClasses } from "@/shared/lib/theme";
 
 interface FormMessagesProps {
-  errorMessage: string
-  successMessage: string
-  t: ThemeClasses
+  errorMessage: string;
+  successMessage: string;
+  t: ThemeClasses;
 }
 
 /**
@@ -28,5 +28,5 @@ export function FormMessages({ errorMessage, successMessage, t }: FormMessagesPr
         </div>
       )}
     </>
-  )
+  );
 }

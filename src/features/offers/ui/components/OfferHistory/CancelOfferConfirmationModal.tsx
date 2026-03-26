@@ -1,18 +1,18 @@
-'use client'
+"use client";
 
-import type { OfferDetails } from '@/entities/offer'
-import { Button, Modal } from '@/shared/ui'
-import { Loader2, X } from 'lucide-react'
-import type { ThemeClasses } from '@/shared/lib/theme'
+import type { OfferDetails } from "@/entities/offer";
+import { Button, Modal } from "@/shared/ui";
+import { Loader2, X } from "lucide-react";
+import type { ThemeClasses } from "@/shared/lib/theme";
 
 interface CancelOfferConfirmationModalProps {
-  offer: OfferDetails
-  isDark: boolean
-  t: ThemeClasses
-  onConfirm: () => void
-  onClose: () => void
-  isCancelling: boolean
-  cancelError: string
+  offer: OfferDetails;
+  isDark: boolean;
+  t: ThemeClasses;
+  onConfirm: () => void;
+  onClose: () => void;
+  isCancelling: boolean;
+  cancelError: string;
 }
 
 export function CancelOfferConfirmationModal({
@@ -32,10 +32,8 @@ export function CancelOfferConfirmationModal({
           Are you sure you want to cancel this offer? This action cannot be undone.
         </p>
         <p className={`text-xs ${t.textSecondary} mb-4 font-mono break-all`}>
-          Offer ID:{' '}
-          {offer.tradeId
-            ? `${offer.tradeId.slice(0, 12)}...${offer.tradeId.slice(-8)}`
-            : 'Unknown'}
+          Offer ID:{" "}
+          {offer.tradeId ? `${offer.tradeId.slice(0, 12)}...${offer.tradeId.slice(-8)}` : "Unknown"}
         </p>
         {cancelError && (
           <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md">
@@ -58,11 +56,11 @@ export function CancelOfferConfirmationModal({
                 Cancelling...
               </>
             ) : (
-              'Cancel Offer'
+              "Cancel Offer"
             )}
           </Button>
         </div>
       </div>
     </Modal>
-  )
+  );
 }

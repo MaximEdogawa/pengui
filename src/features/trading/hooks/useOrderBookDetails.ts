@@ -1,19 +1,19 @@
-'use client'
+"use client";
 
-import { useDexieDataService } from '@/features/offers/api/useDexieDataService'
-import type { DexieOffer } from '@/entities/offer'
-import { useNetwork } from '@/shared/hooks/useNetwork'
-import { useQueries } from '@tanstack/react-query'
-import { useMemo } from 'react'
+import { useDexieDataService } from "@/features/offers/api/useDexieDataService";
+import type { DexieOffer } from "@/entities/offer";
+import { useNetwork } from "@/shared/hooks/useNetwork";
+import { useQueries } from "@tanstack/react-query";
+import { useMemo } from "react";
 
-const MAX_DETAILED_ORDERS = 20
-const DETAIL_CACHE_TIME = 5 * 60 * 1000 // 2 minutes
+const MAX_DETAILED_ORDERS = 20;
+const DETAIL_CACHE_TIME = 5 * 60 * 1000; // 2 minutes
 
 interface OrderDetail {
-  orderId: string
-  offerString: string
-  fullMakerAddress: string
-  offer: DexieOffer
+  orderId: string;
+  offerString: string;
+  fullMakerAddress: string;
+  offer: DexieOffer;
 }
 
 /**
@@ -27,30 +27,30 @@ interface OrderDetail {
  * - TanStack Query automatically deduplicates identical queries
  */
 export function useOrderBookDetails(visibleOrderIds: string[]) {
-  const dexieDataService = useDexieDataService()
-  const { network } = useNetwork()
+  const dexieDataService = useDexieDataService();
+  const { network } = useNetwork();
 
   // Limit to max 50 orders and deduplicate
   const limitedOrderIds = useMemo(() => {
-    const unique = Array.from(new Set(visibleOrderIds))
-    return unique.slice(0, MAX_DETAILED_ORDERS)
-  }, [visibleOrderIds])
+    const unique = Array.from(new Set(visibleOrderIds));
+    return unique.slice(0, MAX_DETAILED_ORDERS);
+  }, [visibleOrderIds]);
 
   // Use useQueries for individual queries - better cache reuse
   const detailQueries = useQueries({
     queries: limitedOrderIds.map((orderId) => ({
-      queryKey: ['orderBookDetails', orderId, network], // Individual key per order with network
+      queryKey: ["orderBookDetails", orderId, network], // Individual key per order with network
       queryFn: async (): Promise<OrderDetail> => {
-        const response = await dexieDataService.inspectOffer(orderId)
+        const response = await dexieDataService.inspectOffer(orderId);
         if (response.success && response.offer) {
           return {
             orderId,
-            offerString: response.offer.offer || '',
-            fullMakerAddress: response.offer.id || '',
+            offerString: response.offer.offer || "",
+            fullMakerAddress: response.offer.id || "",
             offer: response.offer,
-          }
+          };
         }
-        throw new Error(`Failed to fetch details for order ${orderId}`)
+        throw new Error(`Failed to fetch details for order ${orderId}`);
       },
       staleTime: DETAIL_CACHE_TIME,
       gcTime: 10 * 60 * 1000, // 10 minutes
@@ -59,40 +59,40 @@ export function useOrderBookDetails(visibleOrderIds: string[]) {
       retry: 2,
       retryDelay: 1000,
     })),
-  })
+  });
 
   // Create a map of orderId -> detailed data for easy lookup
   const detailsMap = useMemo(() => {
     const map = new Map<
       string,
       {
-        offerString?: string
-        fullMakerAddress?: string
-        offer?: unknown
+        offerString?: string;
+        fullMakerAddress?: string;
+        offer?: unknown;
       }
-    >()
+    >();
 
     detailQueries.forEach((query, index) => {
-      const orderId = limitedOrderIds[index]
+      const orderId = limitedOrderIds[index];
       if (query.data && orderId) {
         map.set(orderId, {
           offerString: query.data.offerString,
           fullMakerAddress: query.data.fullMakerAddress,
           offer: query.data.offer,
-        })
+        });
       }
-    })
+    });
 
-    return map
-  }, [detailQueries, limitedOrderIds])
+    return map;
+  }, [detailQueries, limitedOrderIds]);
 
   // Aggregate loading and error states
-  const isLoading = detailQueries.some((query) => query.isLoading)
-  const hasError = detailQueries.some((query) => query.isError)
+  const isLoading = detailQueries.some((query) => query.isLoading);
+  const hasError = detailQueries.some((query) => query.isError);
 
   return {
     detailsMap,
     isLoading,
     hasError,
-  }
+  };
 }

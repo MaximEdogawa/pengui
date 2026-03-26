@@ -37,17 +37,14 @@ export function useOfferDetailsHandlers({
   });
 
   // Extract validation handlers
-  const {
-    handleValidateOfferState,
-    handleStartStateValidation,
-    handleStopStateValidation,
-  } = useOfferDetailsValidationHandlers({
-    offer,
-    onOfferUpdated,
-    onOfferDeleted,
-    onClose,
-    state,
-  });
+  const { handleValidateOfferState, handleStartStateValidation, handleStopStateValidation } =
+    useOfferDetailsValidationHandlers({
+      offer,
+      onOfferUpdated,
+      onOfferDeleted,
+      onClose,
+      state,
+    });
 
   const cancelOffer = useCallback(() => {
     state.setShowCancelConfirmation(true);
@@ -78,8 +75,7 @@ export function useOfferDetailsHandlers({
       await onOfferCancelled(updatedOffer);
       state.setShowCancelConfirmation(false);
     } catch (error) {
-      const errorMsg =
-        error instanceof Error ? error.message : "Unknown error occurred";
+      const errorMsg = error instanceof Error ? error.message : "Unknown error occurred";
       state.setCancelError(`Failed to cancel offer: ${errorMsg}`);
     } finally {
       state.setIsCancelling(false);
@@ -99,8 +95,7 @@ export function useOfferDetailsHandlers({
       await onOfferDeleted(offer);
       state.setShowDeleteConfirmation(false);
     } catch (error) {
-      const errorMsg =
-        error instanceof Error ? error.message : "Unknown error occurred";
+      const errorMsg = error instanceof Error ? error.message : "Unknown error occurred";
       state.setDeleteError(`Failed to delete offer: ${errorMsg}`);
     } finally {
       state.setIsDeleting(false);
@@ -126,8 +121,7 @@ export function useOfferDetailsHandlers({
       };
       await onOfferUpdated(updatedOffer);
     } catch (error) {
-      const errorMsg =
-        error instanceof Error ? error.message : "Unknown error occurred";
+      const errorMsg = error instanceof Error ? error.message : "Unknown error occurred";
       state.setUploadError(`Failed to upload to Dexie: ${errorMsg}`);
     }
   }, [offer, uploadOfferToDexie, onOfferUpdated, state]);

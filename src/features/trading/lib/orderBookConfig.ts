@@ -1,4 +1,4 @@
-import type { OrderBookPagination } from './orderBookTypes'
+import type { OrderBookPagination } from "./orderBookTypes";
 
 /**
  * Calculate refetch interval based on pagination
@@ -10,8 +10,8 @@ export function calculateRefetchInterval(pagination: OrderBookPagination): numbe
     50: 30 * 1000, // 30 seconds
     100: 60 * 1000, // 60 seconds
     all: false, // No auto-refetch
-  }
-  return intervals[pagination]
+  };
+  return intervals[pagination];
 }
 
 /**
@@ -24,6 +24,6 @@ export function calculateStaleTime(pagination: OrderBookPagination): number {
     50: 15 * 1000, // 15 seconds
     100: 30 * 1000, // 30 seconds
     all: 60 * 1000, // 60 seconds
-  }
-  return staleTimes[pagination]
+  };
+  return staleTimes[pagination];
 }

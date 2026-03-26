@@ -1,10 +1,10 @@
-import { NetworkPicker, SafeConnectButton, PenguinLogo } from '@/shared/ui'
-import type { ThemeClasses } from '@/shared/lib/theme'
+import { NetworkPicker, SafeConnectButton, PenguinLogo } from "@/shared/ui";
+import type { ThemeClasses } from "@/shared/lib/theme";
 
 interface HeaderProps {
-  t: ThemeClasses
-  isDark: boolean
-  onMenuClick: () => void
+  t: ThemeClasses;
+  isDark: boolean;
+  onMenuClick: () => void;
 }
 
 export function Header({ t, isDark, onMenuClick }: HeaderProps) {
@@ -18,7 +18,7 @@ export function Header({ t, isDark, onMenuClick }: HeaderProps) {
           onClick={onMenuClick}
           className={`
             p-1.5 rounded-xl transition-colors duration-200 touch-manipulation
-            ${isDark ? 'hover:bg-white/5 active:bg-white/10' : 'hover:bg-black/5 active:bg-black/10'}
+            ${isDark ? "hover:bg-white/5 active:bg-white/10" : "hover:bg-black/5 active:bg-black/10"}
           `}
         >
           <div className="w-9 h-9 lg:w-7 lg:h-7 rounded-full overflow-hidden flex items-center justify-center">
@@ -43,5 +43,5 @@ export function Header({ t, isDark, onMenuClick }: HeaderProps) {
         </div>
       </div>
     </header>
-  )
+  );
 }

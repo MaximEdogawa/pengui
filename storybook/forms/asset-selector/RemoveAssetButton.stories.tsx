@@ -1,25 +1,25 @@
-import type { Meta, StoryObj } from '@storybook/nextjs-vite'
-import { RemoveAssetButton } from '@/shared/ui'
+import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { RemoveAssetButton } from "@/shared/ui";
 
 const meta = {
-  title: 'Components/Forms/RemoveAssetButton',
+  title: "Components/Forms/RemoveAssetButton",
   component: RemoveAssetButton,
   parameters: {
-    layout: 'centered',
+    layout: "centered",
   },
-  tags: ['autodocs'],
-} satisfies Meta<typeof RemoveAssetButton>
+  tags: ["autodocs"],
+} satisfies Meta<typeof RemoveAssetButton>;
 
-export default meta
-type Story = StoryObj<typeof meta>
+export default meta;
+type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
     onRemove: () => {
-      console.log('Remove clicked')
+      console.log("Remove clicked");
     },
   },
-}
+};
 
 export const InContext: Story = {
   args: {
@@ -30,9 +30,9 @@ export const InContext: Story = {
       <span className="text-sm">Asset Name</span>
       <RemoveAssetButton
         onRemove={() => {
-          console.log('Remove clicked')
+          console.log("Remove clicked");
         }}
       />
     </div>
   ),
-}
+};

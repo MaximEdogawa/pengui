@@ -2,7 +2,7 @@
  * Network filtering utilities for offers
  */
 
-import type { StoredOffer } from '@/shared/lib/database/indexedDB'
+import type { StoredOffer } from "@/shared/lib/database/indexedDB";
 
 /**
  * Filter offers by network
@@ -13,15 +13,15 @@ import type { StoredOffer } from '@/shared/lib/database/indexedDB'
  */
 export function filterOffersByNetwork(
   offers: StoredOffer[],
-  network: 'mainnet' | 'testnet'
+  network: "mainnet" | "testnet"
 ): StoredOffer[] {
   return offers.filter((offer) => {
     // If offer doesn't have network field (old data), include it for mainnet only
     if (!offer.network) {
-      return network === 'mainnet'
+      return network === "mainnet";
     }
-    return offer.network === network
-  })
+    return offer.network === network;
+  });
 }
 
 /**
@@ -30,10 +30,10 @@ export function filterOffersByNetwork(
  * @param network - The network to match against
  * @returns true if the offer matches the network
  */
-export function offerMatchesNetwork(offer: StoredOffer, network: 'mainnet' | 'testnet'): boolean {
+export function offerMatchesNetwork(offer: StoredOffer, network: "mainnet" | "testnet"): boolean {
   // If offer doesn't have network field (old data), it matches mainnet only
   if (!offer.network) {
-    return network === 'mainnet'
+    return network === "mainnet";
   }
-  return offer.network === network
+  return offer.network === network;
 }

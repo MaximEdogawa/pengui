@@ -1,13 +1,13 @@
-import { formatXchAmount, getMinimumFeeInXch } from '@/shared/lib/utils/chia-units'
-import type { ThemeClasses } from '@/shared/lib/theme'
+import { formatXchAmount, getMinimumFeeInXch } from "@/shared/lib/utils/chia-units";
+import type { ThemeClasses } from "@/shared/lib/theme";
 
 interface FeeInputProps {
-  feeDisplayValue: string
-  handleFeeChange: (value: string) => void
-  handleFeeBlur: () => void
-  feePlaceholder: string
-  isSubmitting: boolean
-  t: ThemeClasses
+  feeDisplayValue: string;
+  handleFeeChange: (value: string) => void;
+  handleFeeBlur: () => void;
+  feePlaceholder: string;
+  isSubmitting: boolean;
+  t: ThemeClasses;
 }
 
 /**
@@ -23,9 +23,7 @@ export function FeeInput({
 }: FeeInputProps) {
   return (
     <div>
-      <label className={`block text-xs font-medium ${t.text} mb-1.5`}>
-        Transaction Fee (XCH)
-      </label>
+      <label className={`block text-xs font-medium ${t.text} mb-1.5`}>Transaction Fee (XCH)</label>
       <input
         type="text"
         inputMode="decimal"
@@ -41,5 +39,5 @@ export function FeeInput({
         Fee can be 0 for free transactions (minimum: {formatXchAmount(getMinimumFeeInXch())} XCH)
       </p>
     </div>
-  )
+  );
 }

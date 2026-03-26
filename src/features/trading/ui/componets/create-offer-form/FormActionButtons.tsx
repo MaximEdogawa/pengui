@@ -29,22 +29,12 @@ export function FormActionButtons({
   return (
     <div className="flex flex-wrap justify-end gap-2">
       {mode === "modal" && onClose && (
-        <Button
-          type="button"
-          onClick={onClose}
-          variant="secondary"
-          disabled={isSubmitting}
-        >
+        <Button type="button" onClick={onClose} variant="secondary" disabled={isSubmitting}>
           Cancel
         </Button>
       )}
       {mode === "inline" && order && onOpenModal && (
-        <Button
-          type="button"
-          onClick={onOpenModal}
-          variant="secondary"
-          disabled={isSubmitting}
-        >
+        <Button type="button" onClick={onOpenModal} variant="secondary" disabled={isSubmitting}>
           Create New Offer
         </Button>
       )}

@@ -7,6 +7,7 @@ Integration tests verify that multiple components, services, or features work to
 ## When to Write Integration Tests
 
 Write integration tests for:
+
 - ✅ Complete user flows (login, transaction creation)
 - ✅ Component interactions
 - ✅ State management + UI integration
@@ -14,6 +15,7 @@ Write integration tests for:
 - ✅ Feature workflows
 
 Don't write integration tests for:
+
 - ❌ Individual component rendering (use unit tests)
 - ❌ Full browser-based workflows (use E2E tests)
 - ❌ External service integration (use E2E tests)
@@ -30,7 +32,7 @@ import LoginForm from '@/features/auth/login/ui/LoginForm'
 describe('Login Flow Integration', () => {
   it('should render login form with all required elements', () => {
     render(<LoginForm />)
-    
+
     expect(screen.getByText(/pengui/i)).toBeInTheDocument()
     expect(screen.getByText(/connect your wallet/i)).toBeInTheDocument()
   })
@@ -40,18 +42,18 @@ describe('Login Flow Integration', () => {
 ### Testing Feature Workflows
 
 ```typescript
-describe('Transaction Flow Integration', () => {
-  it('should create transaction with valid data', () => {
+describe("Transaction Flow Integration", () => {
+  it("should create transaction with valid data", () => {
     const transaction = createTransaction({
-      type: 'income',
+      type: "income",
       amount: 100,
-      assetType: 'xch',
-    })
+      assetType: "xch",
+    });
 
-    expect(transaction.type).toBe('income')
-    expect(transaction.amount).toBe(100)
-  })
-})
+    expect(transaction.type).toBe("income");
+    expect(transaction.amount).toBe(100);
+  });
+});
 ```
 
 ## Mocking External Dependencies
@@ -59,27 +61,27 @@ describe('Transaction Flow Integration', () => {
 ### Mocking Wallet Connection
 
 ```typescript
-import { createMockWalletConnection } from '@/test-utils/mocks/wallet'
+import { createMockWalletConnection } from "@/test-utils/mocks/wallet";
 
-test('wallet connection flow', () => {
+test("wallet connection flow", () => {
   const mockConnection = createMockWalletConnection({
     isConnected: true,
-    address: 'xch1test...',
-  })
-  
+    address: "xch1test...",
+  });
+
   // Test with mocked wallet connection
-})
+});
 ```
 
 ### Mocking API Calls
 
 ```typescript
-import { createMockApiResponse } from '@/test-utils/mocks/api'
+import { createMockApiResponse } from "@/test-utils/mocks/api";
 
-test('API integration', () => {
-  const mockResponse = createMockApiResponse({ data: 'test' })
+test("API integration", () => {
+  const mockResponse = createMockApiResponse({ data: "test" });
   // Use mock response in test
-})
+});
 ```
 
 ## Best Practices
@@ -125,9 +127,9 @@ bun run test tests/integration/auth/login-flow.test.tsx
 
 ## Integration vs Unit vs E2E
 
-| Aspect | Unit | Integration | E2E |
-|--------|------|-------------|-----|
-| Scope | Single function/component | Multiple components | Full application |
-| Speed | Very fast (ms) | Fast (seconds) | Slow (minutes) |
-| Dependencies | Mocked | Partially mocked | Real |
-| When to use | Pure functions, utilities | Feature flows | User workflows |
+| Aspect       | Unit                      | Integration         | E2E              |
+| ------------ | ------------------------- | ------------------- | ---------------- |
+| Scope        | Single function/component | Multiple components | Full application |
+| Speed        | Very fast (ms)            | Fast (seconds)      | Slow (minutes)   |
+| Dependencies | Mocked                    | Partially mocked    | Real             |
+| When to use  | Pure functions, utilities | Feature flows       | User workflows   |

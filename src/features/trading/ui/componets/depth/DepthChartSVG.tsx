@@ -57,16 +57,7 @@ export default function DepthChartSVG({
         bestBid,
         bestAsk,
       }),
-    [
-      visibleBids,
-      priceRange,
-      chartWidth,
-      chartHeight,
-      maxVolume,
-      centerX,
-      bestBid,
-      bestAsk,
-    ],
+    [visibleBids, priceRange, chartWidth, chartHeight, maxVolume, centerX, bestBid, bestAsk]
   );
 
   const askPath = useMemo(
@@ -82,21 +73,12 @@ export default function DepthChartSVG({
         bestBid,
         bestAsk,
       }),
-    [
-      visibleAsks,
-      priceRange,
-      chartWidth,
-      chartHeight,
-      maxVolume,
-      centerX,
-      bestBid,
-      bestAsk,
-    ],
+    [visibleAsks, priceRange, chartWidth, chartHeight, maxVolume, centerX, bestBid, bestAsk]
   );
 
   const priceLabels = useMemo(
     () => generatePriceLabels(priceRange, chartWidth, 8),
-    [priceRange, chartWidth],
+    [priceRange, chartWidth]
   );
 
   return (
@@ -157,17 +139,9 @@ export default function DepthChartSVG({
         {/* Hover indicator line (vertical) */}
         {hoveredPrice !== null && (
           <line
-            x1={
-              ((hoveredPrice - priceRange.min) /
-                (priceRange.max - priceRange.min)) *
-              chartWidth
-            }
+            x1={((hoveredPrice - priceRange.min) / (priceRange.max - priceRange.min)) * chartWidth}
             y1={0}
-            x2={
-              ((hoveredPrice - priceRange.min) /
-                (priceRange.max - priceRange.min)) *
-              chartWidth
-            }
+            x2={((hoveredPrice - priceRange.min) / (priceRange.max - priceRange.min)) * chartWidth}
             y2={chartHeight}
             stroke="#2962ff"
             strokeWidth={1}

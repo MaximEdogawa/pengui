@@ -3,10 +3,7 @@
 import { useNetwork } from "@/shared/hooks/useNetwork";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import type {
-  OrderBookPagination,
-  SuggestionItem,
-} from "../lib/orderBookTypes";
+import type { OrderBookPagination, SuggestionItem } from "../lib/orderBookTypes";
 import {
   useOrderBookFilterStore,
   useHasActiveFilters,
@@ -24,60 +21,32 @@ export function useOrderBookFilters() {
   // Get state from Zustand store (reactive)
   const filters = useOrderBookFilterStore((state) => state.filters);
   const searchValue = useOrderBookFilterStore((state) => state.searchValue);
-  const filteredSuggestions = useOrderBookFilterStore(
-    (state) => state.filteredSuggestions,
-  );
+  const filteredSuggestions = useOrderBookFilterStore((state) => state.filteredSuggestions);
   const assetsSwapped = useOrderBookFilterStore((state) => state.assetsSwapped);
-  const showFilterPane = useOrderBookFilterStore(
-    (state) => state.showFilterPane,
-  );
+  const showFilterPane = useOrderBookFilterStore((state) => state.showFilterPane);
   const savedNetwork = useOrderBookFilterStore((state) => state.savedNetwork);
   const hasActiveFilters = useHasActiveFilters();
   const hasHydrated = useHasHydrated();
-  const userClearedFilters = useOrderBookFilterStore(
-    (state) => state.userClearedFilters,
-  );
+  const userClearedFilters = useOrderBookFilterStore((state) => state.userClearedFilters);
 
   // Get action functions directly from store (these are stable references)
-  const storeSetSearchValue = useOrderBookFilterStore(
-    (state) => state.setSearchValue,
-  );
+  const storeSetSearchValue = useOrderBookFilterStore((state) => state.setSearchValue);
   const storeSetFilteredSuggestions = useOrderBookFilterStore(
-    (state) => state.setFilteredSuggestions,
+    (state) => state.setFilteredSuggestions
   );
   const storeAddFilter = useOrderBookFilterStore((state) => state.addFilter);
-  const storeRemoveFilter = useOrderBookFilterStore(
-    (state) => state.removeFilter,
-  );
-  const storeClearAllFilters = useOrderBookFilterStore(
-    (state) => state.clearAllFilters,
-  );
-  const storeSwapBuySellAssets = useOrderBookFilterStore(
-    (state) => state.swapBuySellAssets,
-  );
-  const storeToggleFilterPane = useOrderBookFilterStore(
-    (state) => state.toggleFilterPane,
-  );
-  const storeSetShowFilterPane = useOrderBookFilterStore(
-    (state) => state.setShowFilterPane,
-  );
-  const storeSetPagination = useOrderBookFilterStore(
-    (state) => state.setPagination,
-  );
+  const storeRemoveFilter = useOrderBookFilterStore((state) => state.removeFilter);
+  const storeClearAllFilters = useOrderBookFilterStore((state) => state.clearAllFilters);
+  const storeSwapBuySellAssets = useOrderBookFilterStore((state) => state.swapBuySellAssets);
+  const storeToggleFilterPane = useOrderBookFilterStore((state) => state.toggleFilterPane);
+  const storeSetShowFilterPane = useOrderBookFilterStore((state) => state.setShowFilterPane);
+  const storeSetPagination = useOrderBookFilterStore((state) => state.setPagination);
 
   // Get actions directly from store for network change handling
-  const storeClearFiltersForNetwork = useOrderBookFilterStore(
-    (state) => state.clearAllFilters,
-  );
-  const setSavedNetwork = useOrderBookFilterStore(
-    (state) => state.setSavedNetwork,
-  );
-  const storeSetBuyAsset = useOrderBookFilterStore(
-    (state) => state.setBuyAsset,
-  );
-  const storeSetSellAsset = useOrderBookFilterStore(
-    (state) => state.setSellAsset,
-  );
+  const storeClearFiltersForNetwork = useOrderBookFilterStore((state) => state.clearAllFilters);
+  const setSavedNetwork = useOrderBookFilterStore((state) => state.setSavedNetwork);
+  const storeSetBuyAsset = useOrderBookFilterStore((state) => state.setBuyAsset);
+  const storeSetSellAsset = useOrderBookFilterStore((state) => state.setSellAsset);
 
   // Handle network changes - clear ALL filters when network changes
   // Wait for hydration to complete before making network-based decisions
@@ -162,14 +131,7 @@ export function useOrderBookFilters() {
     }, 50);
 
     return () => clearTimeout(timeoutId);
-  }, [
-    buyAssetKey,
-    sellAssetKey,
-    statusKey,
-    filters.pagination,
-    queryClient,
-    hasHydrated,
-  ]);
+  }, [buyAssetKey, sellAssetKey, statusKey, filters.pagination, queryClient, hasHydrated]);
 
   // Return filters as a new object reference when filters change to ensure reactivity
   const memoizedFilters = useMemo(
@@ -179,7 +141,7 @@ export function useOrderBookFilters() {
       status: filters.status ? [...filters.status] : [],
       pagination: filters.pagination || DEFAULT_PAGINATION,
     }),
-    [filters.buyAsset, filters.sellAsset, filters.status, filters.pagination],
+    [filters.buyAsset, filters.sellAsset, filters.status, filters.pagination]
   );
 
   // Prefetch price data when filters change
@@ -190,28 +152,28 @@ export function useOrderBookFilters() {
     (value: string) => {
       storeSetSearchValue(value);
     },
-    [storeSetSearchValue],
+    [storeSetSearchValue]
   );
 
   const setFilteredSuggestions = useCallback(
     (suggestions: SuggestionItem[]) => {
       storeSetFilteredSuggestions(suggestions);
     },
-    [storeSetFilteredSuggestions],
+    [storeSetFilteredSuggestions]
   );
 
   const addFilter = useCallback(
     (column: "buyAsset" | "sellAsset" | "status", value: string) => {
       storeAddFilter(column, value);
     },
-    [storeAddFilter],
+    [storeAddFilter]
   );
 
   const removeFilter = useCallback(
     (column: "buyAsset" | "sellAsset" | "status", value: string) => {
       storeRemoveFilter(column, value);
     },
-    [storeRemoveFilter],
+    [storeRemoveFilter]
   );
 
   const clearAllFilters = useCallback(() => {
@@ -230,28 +192,28 @@ export function useOrderBookFilters() {
     (show: boolean) => {
       storeSetShowFilterPane(show);
     },
-    [storeSetShowFilterPane],
+    [storeSetShowFilterPane]
   );
 
   const setPagination = useCallback(
     (pagination: OrderBookPagination) => {
       storeSetPagination(pagination);
     },
-    [storeSetPagination],
+    [storeSetPagination]
   );
 
   const setBuyAsset = useCallback(
     (assets: string[]) => {
       storeSetBuyAsset(assets);
     },
-    [storeSetBuyAsset],
+    [storeSetBuyAsset]
   );
 
   const setSellAsset = useCallback(
     (assets: string[]) => {
       storeSetSellAsset(assets);
     },
-    [storeSetSellAsset],
+    [storeSetSellAsset]
   );
 
   // Refresh function (placeholder - actual refresh handled by useOrderBook hook)

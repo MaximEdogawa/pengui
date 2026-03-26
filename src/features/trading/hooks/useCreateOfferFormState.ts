@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useState } from "react";
 
 interface UseCreateOfferFormStateProps {
-  initialPriceAdjustments?: { requested: number; offered: number }
+  initialPriceAdjustments?: { requested: number; offered: number };
 }
 
 /**
@@ -11,29 +11,29 @@ export function useCreateOfferFormState({ initialPriceAdjustments }: UseCreateOf
   // Price adjustment sliders
   const [requestedAdjustment, setRequestedAdjustment] = useState(
     initialPriceAdjustments?.requested || 0
-  )
-  const [offeredAdjustment, setOfferedAdjustment] = useState(initialPriceAdjustments?.offered || 0)
+  );
+  const [offeredAdjustment, setOfferedAdjustment] = useState(initialPriceAdjustments?.offered || 0);
 
   // Manual edit tracking - prevents sliders from overwriting manual edits
   const [manuallyEdited, setManuallyEdited] = useState<{
-    requested: Set<number>
-    offered: Set<number>
-  }>({ requested: new Set(), offered: new Set() })
+    requested: Set<number>;
+    offered: Set<number>;
+  }>({ requested: new Set(), offered: new Set() });
 
   // Base amounts (from order or when slider was last at 0)
   const [baseAmounts, setBaseAmounts] = useState<{
-    requested: number[]
-    offered: number[]
-  }>({ requested: [], offered: [] })
+    requested: number[];
+    offered: number[];
+  }>({ requested: [], offered: [] });
 
   // Expiration settings
-  const [expirationEnabled, setExpirationEnabled] = useState(false)
-  const [expirationDays, setExpirationDays] = useState(1)
-  const [expirationHours, setExpirationHours] = useState(0)
-  const [expirationMinutes, setExpirationMinutes] = useState(0)
+  const [expirationEnabled, setExpirationEnabled] = useState(false);
+  const [expirationDays, setExpirationDays] = useState(1);
+  const [expirationHours, setExpirationHours] = useState(0);
+  const [expirationMinutes, setExpirationMinutes] = useState(0);
 
   // UI state
-  const [isDetailedViewExpanded, setIsDetailedViewExpanded] = useState(false)
+  const [isDetailedViewExpanded, setIsDetailedViewExpanded] = useState(false);
 
   return {
     requestedAdjustment,
@@ -54,5 +54,5 @@ export function useCreateOfferFormState({ initialPriceAdjustments }: UseCreateOf
     setExpirationMinutes,
     isDetailedViewExpanded,
     setIsDetailedViewExpanded,
-  }
+  };
 }

@@ -16,6 +16,7 @@ Smoke tests are quick checks that verify critical paths work. These tests should
 ## Adding New Smoke Tests
 
 When adding new smoke tests, ensure they:
+
 - Test critical user paths only
 - Complete in < 30 seconds each
 - Don't require complex setup or mocking

@@ -1,12 +1,12 @@
-import { Button } from '@/shared/ui'
-import { Loader2, Plus } from 'lucide-react'
+import { Button } from "@/shared/ui";
+import { Loader2, Plus } from "lucide-react";
 
 interface FormActionsProps {
-  mode: 'modal' | 'inline'
-  onClose?: () => void
-  isSubmitting: boolean
-  isUploadingToDexie: boolean
-  isFormValid: boolean
+  mode: "modal" | "inline";
+  onClose?: () => void;
+  isSubmitting: boolean;
+  isUploadingToDexie: boolean;
+  isFormValid: boolean;
 }
 
 export function FormActions({
@@ -18,7 +18,7 @@ export function FormActions({
 }: FormActionsProps) {
   return (
     <div className="flex flex-wrap justify-end gap-2">
-      {mode === 'modal' && onClose && (
+      {mode === "modal" && onClose && (
         <Button type="button" onClick={onClose} variant="secondary" disabled={isSubmitting}>
           Cancel
         </Button>
@@ -32,12 +32,12 @@ export function FormActions({
         {isSubmitting || isUploadingToDexie ? (
           <>
             <Loader2 size={12} className="animate-spin" />
-            {isUploadingToDexie ? 'Uploading...' : 'Creating...'}
+            {isUploadingToDexie ? "Uploading..." : "Creating..."}
           </>
         ) : (
-          'Create Offer'
+          "Create Offer"
         )}
       </Button>
     </div>
-  )
+  );
 }

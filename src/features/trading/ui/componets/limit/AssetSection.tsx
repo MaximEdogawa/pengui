@@ -1,17 +1,17 @@
-import { AssetSelector, type ExtendedAsset as ExtendedOfferAsset, Button } from '@/shared/ui'
-import { Plus } from 'lucide-react'
-import { useThemeClasses } from '@/shared/hooks'
-import { useCatTokens } from '@/entities/asset'
-import { useMemo } from 'react'
+import { AssetSelector, type ExtendedAsset as ExtendedOfferAsset, Button } from "@/shared/ui";
+import { Plus } from "lucide-react";
+import { useThemeClasses } from "@/shared/hooks";
+import { useCatTokens } from "@/entities/asset";
+import { useMemo } from "react";
 
 interface AssetSectionProps {
-  title: string
-  description: string
-  assets: ExtendedOfferAsset[]
-  onAdd: () => void
-  onUpdate: (index: number, asset: ExtendedOfferAsset) => void
-  onRemove: (index: number) => void
-  prefix: string
+  title: string;
+  description: string;
+  assets: ExtendedOfferAsset[];
+  onAdd: () => void;
+  onUpdate: (index: number, asset: ExtendedOfferAsset) => void;
+  onRemove: (index: number) => void;
+  prefix: string;
 }
 
 export function AssetSection({
@@ -23,26 +23,27 @@ export function AssetSection({
   onRemove,
   prefix,
 }: AssetSectionProps) {
-  const { t } = useThemeClasses()
-  const { availableCatTokens, availableAssets, isLoading: isLoadingTickers } = useCatTokens()
+  const { t } = useThemeClasses();
+  const { availableCatTokens, availableAssets, isLoading: isLoadingTickers } = useCatTokens();
 
   // Prepare token data (icons are fetched on-demand by TokenIconAuto component)
-  const availableTokens = useMemo(() => 
-    availableAssets.length > 0
-      ? availableAssets.map((asset) => ({
-          assetId: asset.assetId,
-          ticker: asset.ticker,
-          symbol: asset.symbol,
-          name: asset.name,
-        }))
-      : availableCatTokens.map((token) => ({
-          assetId: token.assetId,
-          ticker: token.ticker,
-          symbol: token.symbol,
-          name: token.name,
-        })),
+  const availableTokens = useMemo(
+    () =>
+      availableAssets.length > 0
+        ? availableAssets.map((asset) => ({
+            assetId: asset.assetId,
+            ticker: asset.ticker,
+            symbol: asset.symbol,
+            name: asset.name,
+          }))
+        : availableCatTokens.map((token) => ({
+            assetId: token.assetId,
+            ticker: token.ticker,
+            symbol: token.symbol,
+            name: token.name,
+          })),
     [availableAssets, availableCatTokens]
-  )
+  );
 
   return (
     <div className="space-y-2 sm:space-y-3">
@@ -66,5 +67,5 @@ export function AssetSection({
         </Button>
       </div>
     </div>
-  )
+  );
 }

@@ -1,16 +1,16 @@
-import type { Meta, StoryObj } from '@storybook/nextjs-vite'
-import { GithubIcon, XIcon } from '@/shared/ui'
+import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { GithubIcon, XIcon } from "@/shared/ui";
 
 const meta = {
-  title: 'Components/Icons',
+  title: "Components/Icons",
   parameters: {
-    layout: 'centered',
+    layout: "centered",
   },
-  tags: ['autodocs'],
-} satisfies Meta
+  tags: ["autodocs"],
+} satisfies Meta;
 
-export default meta
-type Story = StoryObj<typeof meta>
+export default meta;
+type Story = StoryObj<typeof meta>;
 
 export const GithubIconStory: Story = {
   render: () => (
@@ -18,7 +18,7 @@ export const GithubIconStory: Story = {
       <GithubIcon />
     </div>
   ),
-}
+};
 
 export const XIconStory: Story = {
   render: () => (
@@ -26,7 +26,7 @@ export const XIconStory: Story = {
       <XIcon />
     </div>
   ),
-}
+};
 
 export const AllIcons: Story = {
   render: () => (
@@ -41,7 +41,7 @@ export const AllIcons: Story = {
       </div>
     </div>
   ),
-}
+};
 
 export const IconsOnLightBackground: Story = {
   render: () => (
@@ -60,4 +60,4 @@ export const IconsOnLightBackground: Story = {
       </div>
     </div>
   ),
-}
+};

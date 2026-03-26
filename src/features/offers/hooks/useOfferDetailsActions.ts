@@ -1,13 +1,13 @@
-import type { OfferDetails } from '@/entities/offer'
-import { useOfferDetailsState } from './useOfferDetailsState'
-import { useOfferDetailsHandlers } from './useOfferDetailsHandlers'
+import type { OfferDetails } from "@/entities/offer";
+import { useOfferDetailsState } from "./useOfferDetailsState";
+import { useOfferDetailsHandlers } from "./useOfferDetailsHandlers";
 
 interface UseOfferDetailsActionsProps {
-  offer: OfferDetails
-  onOfferCancelled: (offer: OfferDetails) => void
-  onOfferDeleted: (offer: OfferDetails) => void
-  onOfferUpdated: (offer: OfferDetails) => void
-  onClose: () => void
+  offer: OfferDetails;
+  onOfferCancelled: (offer: OfferDetails) => void;
+  onOfferDeleted: (offer: OfferDetails) => void;
+  onOfferUpdated: (offer: OfferDetails) => void;
+  onClose: () => void;
 }
 
 export function useOfferDetailsActions({
@@ -17,7 +17,7 @@ export function useOfferDetailsActions({
   onOfferUpdated,
   onClose,
 }: UseOfferDetailsActionsProps) {
-  const state = useOfferDetailsState()
+  const state = useOfferDetailsState();
   const handlers = useOfferDetailsHandlers({
     offer,
     onOfferCancelled,
@@ -25,7 +25,7 @@ export function useOfferDetailsActions({
     onOfferUpdated,
     onClose,
     state,
-  })
+  });
 
   return {
     isCancelling: state.isCancelling,
@@ -53,5 +53,5 @@ export function useOfferDetailsActions({
     handleStopStateValidation: handlers.handleStopStateValidation,
     setShowCancelConfirmation: state.setShowCancelConfirmation,
     setShowDeleteConfirmation: state.setShowDeleteConfirmation,
-  }
+  };
 }

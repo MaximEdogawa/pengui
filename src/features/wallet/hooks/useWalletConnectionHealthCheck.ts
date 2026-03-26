@@ -28,19 +28,14 @@ export function useWalletConnectionHealthCheck() {
     isCheckingRef.current = true;
     try {
       const activeSessions = signClient.session.getAll();
-      const activeSession = activeSessions.find(
-        (s) => s.topic === session.topic,
-      );
+      const activeSession = activeSessions.find((s) => s.topic === session.topic);
       if (!activeSession) {
         logger.warn("Wallet health check: session no longer exists locally");
         return false;
       }
       const pingPromise = signClient.ping({ topic: session.topic });
       const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(
-          () => reject(new Error("Ping timeout")),
-          netCfg.healthCheckPingTimeoutMs,
-        ),
+        setTimeout(() => reject(new Error("Ping timeout")), netCfg.healthCheckPingTimeoutMs)
       );
       await Promise.race([pingPromise, timeoutPromise]);
       return true;
@@ -79,12 +74,8 @@ export function useWalletConnectionHealthCheck() {
   // When health check detects connection lost, only notify; do NOT auto-redirect (user must click Disconnect)
   useEffect(() => {
     if (!connectionLost) return;
-    toast.error(
-      "Wallet connection lost. Use Disconnect in the wallet menu to reconnect.",
-    );
-    logger.info(
-      "Wallet connection lost; user can disconnect from wallet menu to reconnect",
-    );
+    toast.error("Wallet connection lost. Use Disconnect in the wallet menu to reconnect.");
+    logger.info("Wallet connection lost; user can disconnect from wallet menu to reconnect");
   }, [connectionLost]);
 
   useEffect(() => {

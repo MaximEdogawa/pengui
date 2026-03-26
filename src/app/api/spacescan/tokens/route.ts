@@ -1,24 +1,24 @@
-import { NextResponse } from 'next/server'
-import { logger } from '@/shared/lib/logger'
-import { SPACESCAN_API_TOKENS_URL } from '@/shared/lib/constants/apiProxy'
+import { NextResponse } from "next/server";
+import { logger } from "@/shared/lib/logger";
+import { SPACESCAN_API_TOKENS_URL } from "@/shared/lib/constants/apiProxy";
 
-const FETCH_TIMEOUT_MS = 15_000
-const MAX_RETRIES = 2
+const FETCH_TIMEOUT_MS = 15_000;
+const MAX_RETRIES = 2;
 
 async function fetchTokensOnce(): Promise<Response> {
-  const controller = new AbortController()
-  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   const res = await fetch(SPACESCAN_API_TOKENS_URL, {
-    method: 'GET',
+    method: "GET",
     headers: {
-      Accept: 'application/json',
-      'User-Agent': 'PenguinPool/1.0 (Token List Proxy)',
+      Accept: "application/json",
+      "User-Agent": "PenguinPool/1.0 (Token List Proxy)",
     },
     signal: controller.signal,
     next: { revalidate: 3600 },
-  })
-  clearTimeout(timeout)
-  return res
+  });
+  clearTimeout(timeout);
+  return res;
 }
 
 /**
@@ -27,48 +27,39 @@ async function fetchTokensOnce(): Promise<Response> {
  * Retries up to MAX_RETRIES on fetch failure to handle transient network issues.
  */
 export async function GET() {
-  let lastError: unknown
-  const attempts = [0, 1, 2] as const
+  let lastError: unknown;
+  const attempts = [0, 1, 2] as const;
   for (const attempt of attempts) {
     try {
-      const res = await fetchTokensOnce()
+      const res = await fetchTokensOnce();
       if (res.ok) {
-        const data = await res.json()
+        const data = await res.json();
         return NextResponse.json(data, {
           headers: {
-            'Cache-Control': 'public, s-maxage=3600, stale-while-revalidate=86400',
+            "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400",
           },
-        })
+        });
       }
-      const isRetryable = res.status >= 500 || res.status === 403
+      const isRetryable = res.status >= 500 || res.status === 403;
       if (!isRetryable || attempt === MAX_RETRIES) {
-        const status = res.status === 403 ? 502 : res.status
-        const message =
-          res.status === 403
-            ? 'Upstream tokens unavailable'
-            : res.statusText
-        return NextResponse.json(
-          { status: 'error', message },
-          { status }
-        )
+        const status = res.status === 403 ? 502 : res.status;
+        const message = res.status === 403 ? "Upstream tokens unavailable" : res.statusText;
+        return NextResponse.json({ status: "error", message }, { status });
       }
-      await new Promise((r) => setTimeout(r, 500 * (attempt + 1)))
+      await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
     } catch (error) {
-      lastError = error
+      lastError = error;
       if (attempt < MAX_RETRIES) {
-        await new Promise((r) => setTimeout(r, 500 * (attempt + 1)))
+        await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
       } else {
-        logger.error('[api/spacescan/tokens]', error)
+        logger.error("[api/spacescan/tokens]", error);
         return NextResponse.json(
-          { status: 'error', message: 'Failed to fetch tokens' },
+          { status: "error", message: "Failed to fetch tokens" },
           { status: 502 }
-        )
+        );
       }
     }
   }
-  logger.error('[api/spacescan/tokens]', lastError)
-  return NextResponse.json(
-    { status: 'error', message: 'Failed to fetch tokens' },
-    { status: 502 }
-  )
+  logger.error("[api/spacescan/tokens]", lastError);
+  return NextResponse.json({ status: "error", message: "Failed to fetch tokens" }, { status: 502 });
 }

@@ -1,12 +1,12 @@
-'use client'
+"use client";
 
-import type { OfferDetails } from '@/entities/offer'
-import type { ThemeClasses } from '@/shared/lib/theme'
+import type { OfferDetails } from "@/entities/offer";
+import type { ThemeClasses } from "@/shared/lib/theme";
 
 interface OfferInfoSectionProps {
-  offer: OfferDetails
-  formatDate: (date: Date) => string
-  t: ThemeClasses
+  offer: OfferDetails;
+  formatDate: (date: Date) => string;
+  t: ThemeClasses;
 }
 
 export function OfferInfoSection({ offer, formatDate, t }: OfferInfoSectionProps) {
@@ -23,7 +23,7 @@ export function OfferInfoSection({ offer, formatDate, t }: OfferInfoSectionProps
       <div>
         <h4 className={`text-xs font-medium ${t.textSecondary} mb-1`}>Creator Address</h4>
         <p className={`text-xs ${t.text} font-mono break-all`}>
-          {offer.creatorAddress || 'Unknown'}
+          {offer.creatorAddress || "Unknown"}
         </p>
       </div>
       {offer.expiresAt && (
@@ -33,5 +33,5 @@ export function OfferInfoSection({ offer, formatDate, t }: OfferInfoSectionProps
         </div>
       )}
     </div>
-  )
+  );
 }

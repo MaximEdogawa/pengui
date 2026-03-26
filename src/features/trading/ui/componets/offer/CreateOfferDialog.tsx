@@ -4,10 +4,7 @@ import type { OfferDetails } from "@/entities/offer";
 import { Modal } from "@/shared/ui";
 import { X } from "lucide-react";
 import { useThemeClasses } from "@/shared/hooks";
-import {
-  OrderBookFilters,
-  OrderBookOrder,
-} from "@/features/trading/lib/orderBookTypes";
+import { OrderBookFilters, OrderBookOrder } from "@/features/trading/lib/orderBookTypes";
 import CreateOfferForm from "../limit/CreateOfferForm";
 
 interface CreateOfferModalProps {

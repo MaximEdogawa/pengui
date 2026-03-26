@@ -1,12 +1,12 @@
-import { useThemeClasses } from '@/shared/hooks'
+import { useThemeClasses } from "@/shared/hooks";
 
 interface FormMessagesProps {
-  errorMessage: string
-  successMessage: string
+  errorMessage: string;
+  successMessage: string;
 }
 
 export function FormMessages({ errorMessage, successMessage }: FormMessagesProps) {
-  const { t } = useThemeClasses()
+  const { t } = useThemeClasses();
 
   return (
     <>
@@ -25,5 +25,5 @@ export function FormMessages({ errorMessage, successMessage }: FormMessagesProps
         </div>
       )}
     </>
-  )
+  );
 }

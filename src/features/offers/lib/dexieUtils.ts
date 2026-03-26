@@ -1,19 +1,19 @@
-import {  type OfferState } from '@/entities/offer'
+import { type OfferState } from "@/entities/offer";
 
-export { calculateOfferState } from '@/entities/offer'
+export { calculateOfferState } from "@/entities/offer";
 
 export function isOfferCompleted(state: OfferState): boolean {
-  return state === 'Completed'
+  return state === "Completed";
 }
 
 export function isOfferCancelled(state: OfferState): boolean {
-  return state === 'Cancelled'
+  return state === "Cancelled";
 }
 
 export function isOfferActive(state: OfferState): boolean {
-  return state === 'Open' || state === 'Pending'
+  return state === "Open" || state === "Pending";
 }
 
 export function isOfferFinalized(state: OfferState): boolean {
-  return state === 'Completed' || state === 'Cancelled' || state === 'Expired'
+  return state === "Completed" || state === "Cancelled" || state === "Expired";
 }

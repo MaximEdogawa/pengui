@@ -1,21 +1,21 @@
-import { useThemeClasses } from '@/shared/hooks'
+import { useThemeClasses } from "@/shared/hooks";
 import {
   formatAssetAmountForInput,
   formatXchAmount,
   getAmountPlaceholder,
   getMinimumFeeInXch,
-} from '@/shared/lib/utils/chia-units'
+} from "@/shared/lib/utils/chia-units";
 
 interface FeeInputProps {
-  fee: number
-  feeInput: string | undefined
-  onFeeChange: (value: string) => void
-  onFeeBlur: () => void
-  isSubmitting: boolean
+  fee: number;
+  feeInput: string | undefined;
+  onFeeChange: (value: string) => void;
+  onFeeBlur: () => void;
+  isSubmitting: boolean;
 }
 
 export function FeeInput({ fee, feeInput, onFeeChange, onFeeBlur, isSubmitting }: FeeInputProps) {
-  const { t } = useThemeClasses()
+  const { t } = useThemeClasses();
 
   return (
     <div>
@@ -28,12 +28,12 @@ export function FeeInput({ fee, feeInput, onFeeChange, onFeeBlur, isSubmitting }
           feeInput !== undefined
             ? feeInput
             : fee && fee > 0
-              ? formatAssetAmountForInput(fee, 'xch')
-              : ''
+              ? formatAssetAmountForInput(fee, "xch")
+              : ""
         }
         onChange={(e) => onFeeChange(e.target.value)}
         onBlur={onFeeBlur}
-        placeholder={getAmountPlaceholder('xch')}
+        placeholder={getAmountPlaceholder("xch")}
         className={`w-full px-2 py-1.5 border rounded-lg text-xs ${t.input} ${t.border} backdrop-blur-xl`}
         disabled={isSubmitting}
       />
@@ -41,5 +41,5 @@ export function FeeInput({ fee, feeInput, onFeeChange, onFeeBlur, isSubmitting }
         Fee can be 0 for free transactions (minimum: {formatXchAmount(getMinimumFeeInXch())} XCH)
       </p>
     </div>
-  )
+  );
 }

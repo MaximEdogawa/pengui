@@ -28,9 +28,7 @@ export function PriceAdjustmentSliders({
       }}
     >
       <div className="flex items-center justify-between mb-1.5">
-        <h4
-          className={`text-[10px] font-medium ${t.textSecondary} uppercase tracking-wide`}
-        >
+        <h4 className={`text-[10px] font-medium ${t.textSecondary} uppercase tracking-wide`}>
           Price Adjustment
         </h4>
         <button

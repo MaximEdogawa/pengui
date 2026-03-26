@@ -84,9 +84,7 @@ export function getRequiredNamespaces(network: "mainnet" | "testnet") {
 export function getSignClientConfig() {
   return {
     projectId: process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID || "",
-    relayUrl:
-      process.env.NEXT_PUBLIC_WALLET_CONNECT_RELAY_URL ||
-      "wss://relay.walletconnect.com",
+    relayUrl: process.env.NEXT_PUBLIC_WALLET_CONNECT_RELAY_URL || "wss://relay.walletconnect.com",
     metadata: {
       name: environment.wallet.walletConnect.metadata.name,
       description: environment.wallet.walletConnect.metadata.description,

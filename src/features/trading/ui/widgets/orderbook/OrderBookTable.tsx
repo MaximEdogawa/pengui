@@ -24,11 +24,7 @@ interface OrderBookTableProps {
     sellAsset?: string[];
   };
   onClick: (order: OrderBookOrder) => void;
-  onHover: (
-    event: React.MouseEvent,
-    order: OrderBookOrder,
-    orderType: "buy" | "sell",
-  ) => void;
+  onHover: (event: React.MouseEvent, order: OrderBookOrder, orderType: "buy" | "sell") => void;
   onMouseLeave: () => void;
   detailsMap?: Map<
     string,
@@ -58,7 +54,7 @@ const isSingleAssetPair = (order: OrderBookOrder): boolean => {
 // Helper function to get price header ticker
 const getPriceHeaderTicker = (
   filters?: { buyAsset?: string[]; sellAsset?: string[] },
-  network: "mainnet" | "testnet" = "mainnet",
+  network: "mainnet" | "testnet" = "mainnet"
 ): string => {
   if (filters?.buyAsset && filters.buyAsset.length > 0) {
     return filters.buyAsset[0];
@@ -73,7 +69,7 @@ const getPriceHeaderTicker = (
 const createCalculateOrderPrice = (
   getTickerSymbol: (assetId: string, code?: string) => string,
   filters?: { buyAsset?: string[]; sellAsset?: string[] },
-  maxDecimals?: number,
+  maxDecimals?: number
 ) => {
   return (order: OrderBookOrder): string => {
     if (isSingleAssetPair(order)) {
@@ -96,25 +92,19 @@ const createCalculateOrderPrice = (
         ) {
           const requestingIsBuyAsset = filters.buyAsset.some(
             (filterAsset) =>
-              getTickerSymbol(
-                requestingAsset.id,
-                requestingAsset.code,
-              ).toLowerCase() === filterAsset.toLowerCase() ||
+              getTickerSymbol(requestingAsset.id, requestingAsset.code).toLowerCase() ===
+                filterAsset.toLowerCase() ||
               requestingAsset.id.toLowerCase() === filterAsset.toLowerCase() ||
               (requestingAsset.code &&
-                requestingAsset.code.toLowerCase() ===
-                  filterAsset.toLowerCase()),
+                requestingAsset.code.toLowerCase() === filterAsset.toLowerCase())
           );
 
           const offeringIsBuyAsset = filters.buyAsset.some(
             (filterAsset) =>
-              getTickerSymbol(
-                offeringAsset.id,
-                offeringAsset.code,
-              ).toLowerCase() === filterAsset.toLowerCase() ||
+              getTickerSymbol(offeringAsset.id, offeringAsset.code).toLowerCase() ===
+                filterAsset.toLowerCase() ||
               offeringAsset.id.toLowerCase() === filterAsset.toLowerCase() ||
-              (offeringAsset.code &&
-                offeringAsset.code.toLowerCase() === filterAsset.toLowerCase()),
+              (offeringAsset.code && offeringAsset.code.toLowerCase() === filterAsset.toLowerCase())
           );
 
           if (requestingIsBuyAsset && !offeringIsBuyAsset) {
@@ -144,7 +134,7 @@ const createCalculateOrderPrice = (
 const calculateBestPrice = (
   orders: OrderBookOrder[],
   orderType: "buy" | "sell",
-  getNumericPrice: (order: OrderBookOrder) => number,
+  getNumericPrice: (order: OrderBookOrder) => number
 ): number | null => {
   if (orders.length === 0) return null;
 
@@ -167,7 +157,7 @@ const calculateBestPrice = (
 // Helper to create price count map
 const createPriceCountMap = (
   orders: OrderBookOrder[],
-  getNumericPrice: (order: OrderBookOrder) => number,
+  getNumericPrice: (order: OrderBookOrder) => number
 ): Map<string, number> => {
   const countMap = new Map<string, number>();
 
@@ -223,36 +213,34 @@ export default function OrderBookTable({
       const tickerInfo = getCatTokenInfo(assetId);
       return tickerInfo?.ticker || assetId.slice(0, 8);
     },
-    [getCatTokenInfo, network],
+    [getCatTokenInfo, network]
   );
 
   const calculateOrderPrice = useCallback(
     (order: OrderBookOrder) =>
       createCalculateOrderPrice(getTickerSymbol, filters, maxDecimals)(order),
-    [filters, getTickerSymbol, maxDecimals],
+    [filters, getTickerSymbol, maxDecimals]
   );
 
   const textColorClass =
-    orderType === "sell"
-      ? "text-red-600 dark:text-red-400"
-      : "text-green-600 dark:text-green-400";
+    orderType === "sell" ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400";
 
   // Calculate numeric price for an order (for comparison)
   const getNumericPrice = useCallback(
     (order: OrderBookOrder): number => {
       return calculateOrderPriceNumeric(order, filters, { getTickerSymbol });
     },
-    [filters, getTickerSymbol],
+    [filters, getTickerSymbol]
   );
 
   const bestPrice = useMemo(
     () => calculateBestPrice(orders, orderType, getNumericPrice),
-    [orders, orderType, getNumericPrice],
+    [orders, orderType, getNumericPrice]
   );
 
   const priceCountMap = useMemo(
     () => createPriceCountMap(orders, getNumericPrice),
-    [orders, getNumericPrice],
+    [orders, getNumericPrice]
   );
 
   // ── New-order highlight animation ────────────────────────────────────
@@ -317,15 +305,11 @@ export default function OrderBookTable({
         }
       `}</style>
 
-      <div
-        className={`${justifyEnd ? "flex flex-col justify-end min-h-full" : ""}`}
-      >
+      <div className={`${justifyEnd ? "flex flex-col justify-end min-h-full" : ""}`}>
         {isLoading && (
           <div className="flex justify-center items-center py-8">
             <Loader2 className="w-5 h-5 animate-spin text-gray-400 dark:text-gray-500" />
-            <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
-              Loading orders...
-            </span>
+            <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">Loading orders...</span>
           </div>
         )}
 
@@ -345,21 +329,14 @@ export default function OrderBookTable({
                 style={
                   stickyHeader
                     ? {
-                        boxShadow:
-                          "0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)",
+                        boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06)",
                       }
                     : undefined
                 }
               >
-                <div className="col-span-1 text-left flex items-center">
-                  Count
-                </div>
-                <div className="col-span-3 text-right flex items-center justify-end">
-                  Buy
-                </div>
-                <div className="col-span-3 text-right flex items-center justify-end">
-                  Sell
-                </div>
+                <div className="col-span-1 text-left flex items-center">Count</div>
+                <div className="col-span-3 text-right flex items-center justify-end">Buy</div>
+                <div className="col-span-3 text-right flex items-center justify-end">Sell</div>
                 <div className="col-span-5 text-right flex items-center justify-end">
                   <div className="flex items-center gap-1">
                     <span className="text-[9px] opacity-70">
@@ -465,10 +442,7 @@ export function OrderBookTableHeader({ filters }: OrderBookTableHeaderProps) {
             Price
           </span>
           {streamActive && (
-            <span
-              className="ml-1 inline-flex items-center"
-              title="Live stream active"
-            >
+            <span className="ml-1 inline-flex items-center" title="Live stream active">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_0_3px_rgba(16,185,129,0.4)]" />
             </span>
           )}
@@ -486,11 +460,7 @@ interface OrderBookTableRowProps {
     sellAsset?: string[];
   };
   onClick: (order: OrderBookOrder) => void;
-  onHover: (
-    event: React.MouseEvent,
-    order: OrderBookOrder,
-    orderType: "buy" | "sell",
-  ) => void;
+  onHover: (event: React.MouseEvent, order: OrderBookOrder, orderType: "buy" | "sell") => void;
   onMouseLeave: () => void;
   detailedData?: {
     offerString?: string;
@@ -617,9 +587,7 @@ function OrderBookTableRow({
       />
 
       {/* Mine background tint */}
-      {isMine && (
-        <div className="absolute inset-0 bg-blue-400/[0.06] dark:bg-blue-400/[0.08]" />
-      )}
+      {isMine && <div className="absolute inset-0 bg-blue-400/[0.06] dark:bg-blue-400/[0.08]" />}
 
       <div className="relative grid grid-cols-12 gap-1 sm:gap-2 px-2 sm:px-2 py-2 sm:py-1.5 items-center">
         {/* Count - smallest, left aligned */}
@@ -631,9 +599,7 @@ function OrderBookTableRow({
               isFinite(numericPrice) && !isNaN(numericPrice) && numericPrice > 0
                 ? numericPrice.toFixed(8)
                 : "";
-            const count = normalizedPrice
-              ? priceCountMap.get(normalizedPrice) || 1
-              : 1;
+            const count = normalizedPrice ? priceCountMap.get(normalizedPrice) || 1 : 1;
             return count;
           })()}
         </div>
@@ -650,9 +616,7 @@ function OrderBookTableRow({
                 <span className="text-right tabular-nums truncate">
                   {formatAmountForDisplay(item.amount || 0, maxDecimals)}
                 </span>
-                <span className="flex-shrink-0">
-                  {item.code || getTickerSymbol(item.id)}
-                </span>
+                <span className="flex-shrink-0">{item.code || getTickerSymbol(item.id)}</span>
               </div>
             ))}
           </div>
@@ -670,9 +634,7 @@ function OrderBookTableRow({
                 <span className="text-right tabular-nums truncate">
                   {formatAmountForDisplay(item.amount || 0, maxDecimals)}
                 </span>
-                <span className="flex-shrink-0">
-                  {item.code || getTickerSymbol(item.id)}
-                </span>
+                <span className="flex-shrink-0">{item.code || getTickerSymbol(item.id)}</span>
               </div>
             ))}
           </div>
@@ -689,10 +651,7 @@ function OrderBookTableRow({
             {isLoadingDetails && !detailedData && (
               <Loader2 className="w-3 h-3 animate-spin text-gray-400 mr-1 flex-shrink-0" />
             )}
-            <span
-              className="tabular-nums truncate"
-              title={calculateOrderPrice(order)}
-            >
+            <span className="tabular-nums truncate" title={calculateOrderPrice(order)}>
               {calculateOrderPrice(order)}
             </span>
           </div>

@@ -1,17 +1,17 @@
-'use client'
+"use client";
 
-import { getThemeClasses } from '@/shared/lib/theme'
-import type { LoanOffer, SettledLoan } from '@/entities/loan'
-import { useTheme } from 'next-themes'
-import { useState } from 'react'
-import { MyCreatedLoansStats } from '../components/MyCreatedLoans/MyCreatedLoansStats'
-import { MyCreatedLoansFilters } from '../components/MyCreatedLoans/MyCreatedLoansFilters'
-import { MyCreatedLoansContent } from '../components/MyCreatedLoans/MyCreatedLoansContent'
+import { getThemeClasses } from "@/shared/lib/theme";
+import type { LoanOffer, SettledLoan } from "@/entities/loan";
+import { useTheme } from "next-themes";
+import { useState } from "react";
+import { MyCreatedLoansStats } from "../components/MyCreatedLoans/MyCreatedLoansStats";
+import { MyCreatedLoansFilters } from "../components/MyCreatedLoans/MyCreatedLoansFilters";
+import { MyCreatedLoansContent } from "../components/MyCreatedLoans/MyCreatedLoansContent";
 
 interface MyCreatedLoansProps {
-  loans?: LoanOffer[]
-  settledLoans?: SettledLoan[]
-  onViewDetails?: (loanId: number) => void
+  loans?: LoanOffer[];
+  settledLoans?: SettledLoan[];
+  onViewDetails?: (loanId: number) => void;
 }
 
 export default function MyCreatedLoans({
@@ -19,12 +19,12 @@ export default function MyCreatedLoans({
   settledLoans = [],
   onViewDetails,
 }: MyCreatedLoansProps) {
-  const [statusFilter, setStatusFilter] = useState<'all' | 'available' | 'funded' | 'settled'>(
-    'all'
-  )
-  const { theme: currentTheme, systemTheme } = useTheme()
-  const isDark = currentTheme === 'dark' || (currentTheme === 'system' && systemTheme === 'dark')
-  const t = getThemeClasses(isDark)
+  const [statusFilter, setStatusFilter] = useState<"all" | "available" | "funded" | "settled">(
+    "all"
+  );
+  const { theme: currentTheme, systemTheme } = useTheme();
+  const isDark = currentTheme === "dark" || (currentTheme === "system" && systemTheme === "dark");
+  const t = getThemeClasses(isDark);
 
   return (
     <div className="space-y-2">
@@ -46,5 +46,5 @@ export default function MyCreatedLoans({
         t={t}
       />
     </div>
-  )
+  );
 }

@@ -1,16 +1,16 @@
-'use client'
+"use client";
 
-import { Ban, Loader2 } from 'lucide-react'
-import { Modal } from '@/shared/ui'
-import type { ThemeClasses } from '@/shared/lib/theme'
+import { Ban, Loader2 } from "lucide-react";
+import { Modal } from "@/shared/ui";
+import type { ThemeClasses } from "@/shared/lib/theme";
 
 interface CancelAllConfirmationProps {
-  isOpen: boolean
-  isCancelling: boolean
-  error: string | null
-  onConfirm: () => void
-  onClose: () => void
-  t: ThemeClasses
+  isOpen: boolean;
+  isCancelling: boolean;
+  error: string | null;
+  onConfirm: () => void;
+  onClose: () => void;
+  t: ThemeClasses;
 }
 
 export function CancelAllConfirmation({
@@ -21,7 +21,7 @@ export function CancelAllConfirmation({
   onClose,
   t,
 }: CancelAllConfirmationProps) {
-  if (!isOpen) return null
+  if (!isOpen) return null;
 
   return (
     <Modal onClose={onClose} maxWidth="max-w-md" closeOnOverlayClick={false}>
@@ -62,5 +62,5 @@ export function CancelAllConfirmation({
         </div>
       </div>
     </Modal>
-  )
+  );
 }

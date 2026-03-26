@@ -3,14 +3,14 @@
  * Mimics the app's provider structure for testing
  */
 
-import React, { type ReactElement } from 'react'
-import { render, type RenderOptions, cleanup } from '@testing-library/react'
-import { Provider } from 'react-redux'
-import { PersistGate } from 'redux-persist/integration/react'
-import { store, persistor } from '@maximedogawa/chia-wallet-connect-react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { NetworkProvider } from '@/shared/providers/NetworkProvider'
-import { ThemeProvider } from 'next-themes'
+import React, { type ReactElement } from "react";
+import { render, type RenderOptions, cleanup } from "@testing-library/react";
+import { Provider } from "react-redux";
+import { PersistGate } from "redux-persist/integration/react";
+import { store, persistor } from "@maximedogawa/chia-wallet-connect-react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { NetworkProvider } from "@/shared/providers/NetworkProvider";
+import { ThemeProvider } from "next-themes";
 
 // Create a test QueryClient with default options
 function createTestQueryClient() {
@@ -24,12 +24,12 @@ function createTestQueryClient() {
         retry: false,
       },
     },
-  })
+  });
 }
 
 interface AllTheProvidersProps {
-  children: React.ReactNode
-  queryClient?: QueryClient
+  children: React.ReactNode;
+  queryClient?: QueryClient;
 }
 
 export function AllTheProviders({
@@ -46,11 +46,11 @@ export function AllTheProviders({
         </PersistGate>
       </Provider>
     </ThemeProvider>
-  )
+  );
 }
 
-interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
-  queryClient?: QueryClient
+interface CustomRenderOptions extends Omit<RenderOptions, "wrapper"> {
+  queryClient?: QueryClient;
 }
 
 export function renderWithProviders(
@@ -59,13 +59,13 @@ export function renderWithProviders(
 ) {
   const Wrapper = ({ children }: { children: React.ReactNode }) => (
     <AllTheProviders queryClient={queryClient}>{children}</AllTheProviders>
-  )
+  );
 
-  return render(ui, { wrapper: Wrapper, ...renderOptions })
+  return render(ui, { wrapper: Wrapper, ...renderOptions });
 }
 
 // Re-export everything from @testing-library/react
-export * from '@testing-library/react'
+export * from "@testing-library/react";
 
 // Override render method
-export { renderWithProviders as render, cleanup }
+export { renderWithProviders as render, cleanup };

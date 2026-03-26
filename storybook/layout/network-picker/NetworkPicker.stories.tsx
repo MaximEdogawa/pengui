@@ -1,19 +1,19 @@
-import type { Meta, StoryObj } from '@storybook/nextjs-vite'
-import { NetworkPicker } from '@/shared/ui'
+import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { NetworkPicker } from "@/shared/ui";
 
 const meta = {
-  title: 'Components/Layout/NetworkPicker',
+  title: "Components/Layout/NetworkPicker",
   component: NetworkPicker,
   parameters: {
-    layout: 'centered',
+    layout: "centered",
   },
-  tags: ['autodocs'],
-} satisfies Meta<typeof NetworkPicker>
+  tags: ["autodocs"],
+} satisfies Meta<typeof NetworkPicker>;
 
-export default meta
-type Story = StoryObj<typeof meta>
+export default meta;
+type Story = StoryObj<typeof meta>;
 
-export const Default: Story = {}
+export const Default: Story = {};
 
 export const InContainer: Story = {
   render: () => (
@@ -23,4 +23,4 @@ export const InContainer: Story = {
       </div>
     </div>
   ),
-}
+};

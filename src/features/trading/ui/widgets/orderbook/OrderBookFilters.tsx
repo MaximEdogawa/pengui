@@ -69,9 +69,7 @@ export default function OrderBookFilters({
     const suggestions: SuggestionItem[] = [];
     const nativeTicker = getNativeTokenTickerForNetwork(network).toLowerCase();
     const normalizedSearch =
-      lowerSearch === "xch" || lowerSearch === "txch"
-        ? nativeTicker
-        : lowerSearch;
+      lowerSearch === "xch" || lowerSearch === "txch" ? nativeTicker : lowerSearch;
     const addedTickers = new Set<string>();
 
     availableCatTokens.forEach((token) => {
@@ -103,30 +101,21 @@ export default function OrderBookFilters({
 
     setFilteredSuggestions(suggestions);
     setShowSuggestions(suggestions.length > 0);
-  }, [
-    searchValue,
-    availableCatTokens,
-    filters,
-    setFilteredSuggestions,
-    network,
-  ]);
+  }, [searchValue, availableCatTokens, filters, setFilteredSuggestions, network]);
 
   const triggerCallback = useCallback(
     () => setTimeout(() => onFiltersChange?.(), 0),
-    [onFiltersChange],
+    [onFiltersChange]
   );
 
   const handleSuggestionClick = useCallback(
     (suggestion: SuggestionItem) => {
-      addFilter(
-        suggestion.column as "buyAsset" | "sellAsset" | "status",
-        suggestion.value,
-      );
+      addFilter(suggestion.column as "buyAsset" | "sellAsset" | "status", suggestion.value);
       setSearchValue("");
       setShowSuggestions(false);
       triggerCallback();
     },
-    [addFilter, setSearchValue, triggerCallback],
+    [addFilter, setSearchValue, triggerCallback]
   );
 
   const handleRemoveFilter = useCallback(
@@ -134,17 +123,14 @@ export default function OrderBookFilters({
       removeFilter(column, value);
       triggerCallback();
     },
-    [removeFilter, triggerCallback],
+    [removeFilter, triggerCallback]
   );
 
   // Close suggestions when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
-      if (
-        suggestionsRef.current?.contains(target) ||
-        searchInputRef.current?.contains(target)
-      ) {
+      if (suggestionsRef.current?.contains(target) || searchInputRef.current?.contains(target)) {
         return;
       }
       setShowSuggestions(false);
@@ -170,9 +156,7 @@ export default function OrderBookFilters({
             type="text"
             value={searchValue}
             onChange={(e) => setSearchValue(e.target.value)}
-            onFocus={() =>
-              filteredSuggestions.length > 0 && setShowSuggestions(true)
-            }
+            onFocus={() => filteredSuggestions.length > 0 && setShowSuggestions(true)}
             placeholder={`Search assets (e.g., ${getNativeTokenTickerForNetwork(network)})...`}
             className={`w-full px-1.5 sm:px-2 py-1 sm:py-1.5 text-[11px] sm:text-xs rounded-lg border-2 ${t.border} ${t.bg} ${t.text} focus:outline-none focus:ring-2 focus:ring-blue-500/50 backdrop-blur-sm`}
           />
@@ -188,9 +172,7 @@ export default function OrderBookFilters({
               }}
             >
               {filteredSuggestions.map((suggestion, index) => {
-                const assetId = tickerToAssetId.get(
-                  suggestion.value.toLowerCase(),
-                );
+                const assetId = tickerToAssetId.get(suggestion.value.toLowerCase());
                 const isXch = isXchTicker(suggestion.value);
                 return (
                   <button
@@ -203,18 +185,12 @@ export default function OrderBookFilters({
                       {isXch ? (
                         <XchIcon size={20} isTestnet={isTestnet} />
                       ) : assetId ? (
-                        <TickerIcon
-                          assetId={assetId}
-                          ticker={suggestion.label}
-                          size={20}
-                        />
+                        <TickerIcon assetId={assetId} ticker={suggestion.label} size={20} />
                       ) : null}
                       <div>
                         <div className="font-medium">{suggestion.label}</div>
                         <div className={`text-xs ${t.textSecondary}`}>
-                          {suggestion.column === "buyAsset"
-                            ? "Buy Asset"
-                            : "Sell Asset"}
+                          {suggestion.column === "buyAsset" ? "Buy Asset" : "Sell Asset"}
                         </div>
                       </div>
                     </div>
@@ -231,10 +207,7 @@ export default function OrderBookFilters({
             <span className="hidden md:inline text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
               Orders:
             </span>
-            <OrderBookPaginationControls
-              value={pagination}
-              onChange={setPagination}
-            />
+            <OrderBookPaginationControls value={pagination} onChange={setPagination} />
           </div>
         )}
       </div>

@@ -17,18 +17,21 @@ tests/e2e/
 ## Test Categories
 
 ### Smoke Tests
+
 - Quick checks that critical paths work
 - Run on every commit/PR
 - Should complete in < 5 minutes
 - Located in `smoke/`
 
 ### Regression Tests
+
 - Tests for previously fixed bugs
 - Reference bug tickets in test names
 - Run on every PR
 - Located in `regression/`
 
 ### Acceptance Tests
+
 - Full user story validation
 - Test complete workflows
 - May require more setup
@@ -64,6 +67,7 @@ We use the Page Object Model pattern to encapsulate page-specific logic:
 ## Test Data
 
 Test data fixtures are located in `fixtures/test-data.ts`:
+
 - User data
 - Asset data
 - Network configurations
@@ -79,6 +83,7 @@ Test data fixtures are located in `fixtures/test-data.ts`:
 ## CI/CD Integration
 
 E2E tests run:
+
 - On PR: Smoke and regression tests
 - On merge to main: All tests including acceptance
 - Nightly: Full test suite
@@ -86,11 +91,13 @@ E2E tests run:
 ## Troubleshooting
 
 ### Tests failing locally
+
 - Ensure dev server is running: `bun run dev`
 - Check Playwright is installed: `bun install`
 - Clear Playwright cache: `bunx playwright install --force`
 
 ### Tests timing out
+
 - Increase timeout in `playwright.config.ts`
 - Check if dev server is responding
 - Verify network connectivity

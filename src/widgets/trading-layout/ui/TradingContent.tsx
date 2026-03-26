@@ -10,12 +10,7 @@ import { useTradeHistory } from "@/features/trading/hooks/useTradeHistory";
 import { useTradeHistoryFilters } from "@/features/trading/hooks/useTradeHistoryFilters";
 
 interface TradingContentProps {
-  activeView:
-    | "orderbook"
-    | "chart"
-    | "depth"
-    | "trades"
-    | "terminal";
+  activeView: "orderbook" | "chart" | "depth" | "trades" | "terminal";
   filters?: {
     buyAsset?: string[];
     sellAsset?: string[];
@@ -23,11 +18,7 @@ interface TradingContentProps {
   onOrderClick: (order: OrderBookOrder) => void;
 }
 
-export default function TradingContent({
-  activeView,
-  filters,
-  onOrderClick,
-}: TradingContentProps) {
+export default function TradingContent({ activeView, filters, onOrderClick }: TradingContentProps) {
   const { filters: thFilters } = useTradeHistoryFilters();
   const tradeHistoryResult = useTradeHistory({
     orderBookFilters: filters,
@@ -49,10 +40,7 @@ export default function TradingContent({
 
   if (activeView === "trades") {
     return (
-      <TradeHistoryContainer
-        tradeHistoryResult={tradeHistoryResult}
-        onOfferClick={onOrderClick}
-      />
+      <TradeHistoryContainer tradeHistoryResult={tradeHistoryResult} onOfferClick={onOrderClick} />
     );
   }
 

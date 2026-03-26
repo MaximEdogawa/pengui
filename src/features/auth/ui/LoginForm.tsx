@@ -1,8 +1,8 @@
-'use client'
+"use client";
 
-import { ExternalLink } from 'lucide-react'
-import { PenguinLogo, NetworkPicker } from '@/shared/ui'
-import { LoginConnectWallet } from './LoginConnectWallet'
+import { ExternalLink } from "lucide-react";
+import { PenguinLogo, NetworkPicker } from "@/shared/ui";
+import { LoginConnectWallet } from "./LoginConnectWallet";
 
 export default function LoginForm() {
   return (
@@ -68,5 +68,5 @@ export default function LoginForm() {
         </div>
       </div>
     </div>
-  )
+  );
 }

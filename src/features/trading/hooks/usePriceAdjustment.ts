@@ -37,17 +37,11 @@ export function usePriceAdjustment({
       useAsTemplate(order);
       const requested = order.requesting.map((asset) => ({
         amount: asset.amount,
-        symbol:
-          asset.code ||
-          getCatTokenInfo(asset.id)?.ticker ||
-          asset.id.slice(0, 8),
+        symbol: asset.code || getCatTokenInfo(asset.id)?.ticker || asset.id.slice(0, 8),
       }));
       const offered = order.offering.map((asset) => ({
         amount: asset.amount,
-        symbol:
-          asset.code ||
-          getCatTokenInfo(asset.id)?.ticker ||
-          asset.id.slice(0, 8),
+        symbol: asset.code || getCatTokenInfo(asset.id)?.ticker || asset.id.slice(0, 8),
       }));
       setOriginalRequestedAmounts(requested);
       setOriginalOfferedAmounts(offered);
@@ -68,22 +62,14 @@ export function usePriceAdjustment({
           : asset;
       });
       setTakerAssets(adjusted);
-    } else if (
-      requestedAdjustment === 0 &&
-      originalRequestedAmounts.length > 0
-    ) {
+    } else if (requestedAdjustment === 0 && originalRequestedAmounts.length > 0) {
       const reset = takerAssets.map((asset, idx) => {
         const original = originalRequestedAmounts[idx];
         return original ? { ...asset, amount: original.amount } : asset;
       });
       setTakerAssets(reset);
     }
-  }, [
-    requestedAdjustment,
-    originalRequestedAmounts,
-    takerAssets,
-    setTakerAssets,
-  ]);
+  }, [requestedAdjustment, originalRequestedAmounts, takerAssets, setTakerAssets]);
 
   useEffect(() => {
     if (originalOfferedAmounts.length > 0 && offeredAdjustment !== 0) {

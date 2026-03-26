@@ -1,1 +1,1 @@
-export { default as VersionDisplay, type VersionDisplayProps } from './VersionDisplay'
+export { default as VersionDisplay, type VersionDisplayProps } from "./VersionDisplay";

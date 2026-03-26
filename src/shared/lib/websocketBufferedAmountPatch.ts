@@ -15,9 +15,7 @@
 
 /** From wasm-bindgen glue when WebSocket ref is stale (e.g. tab hidden). Message may vary by browser. */
 function isBufferedAmountStaleError(message: string): boolean {
-  return (
-    message.includes("getObject") && message.includes("bufferedAmount")
-  );
+  return message.includes("getObject") && message.includes("bufferedAmount");
 }
 
 let applied = false;
@@ -26,10 +24,7 @@ export function applyWebSocketBufferedAmountPatch(): void {
   if (typeof window === "undefined" || applied) return;
 
   try {
-    const desc = Object.getOwnPropertyDescriptor(
-      WebSocket.prototype,
-      "bufferedAmount",
-    );
+    const desc = Object.getOwnPropertyDescriptor(WebSocket.prototype, "bufferedAmount");
     if (desc?.get) {
       const originalGet = desc.get;
       Object.defineProperty(WebSocket.prototype, "bufferedAmount", {
@@ -47,13 +42,7 @@ export function applyWebSocketBufferedAmountPatch(): void {
     }
 
     const prevOnError = window.onerror;
-    window.onerror = function (
-      message,
-      source,
-      lineno,
-      colno,
-      error,
-    ): boolean {
+    window.onerror = function (message, source, lineno, colno, error): boolean {
       const msg = typeof message === "string" ? message : "";
       if (isBufferedAmountStaleError(msg)) {
         return true;

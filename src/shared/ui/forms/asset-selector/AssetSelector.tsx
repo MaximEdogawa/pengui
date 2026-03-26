@@ -1,44 +1,44 @@
-'use client'
+"use client";
 
-import type { AssetType, BaseAsset } from '@/entities/offer'
-import { useThemeClasses } from '@/shared/hooks'
-import { assetInputAmounts, formatAssetAmountForInput } from '@/shared/lib/utils/chia-units'
-import { useCallback, useRef, useState } from 'react'
-import AmountInput from './AmountInput'
-import AssetIdInput from './AssetIdInput'
-import AssetTypeSelector from './AssetTypeSelector'
-import RemoveAssetButton from './RemoveAssetButton'
-import TokenSearchInput from './TokenSearchInput'
+import type { AssetType, BaseAsset } from "@/entities/offer";
+import { useThemeClasses } from "@/shared/hooks";
+import { assetInputAmounts, formatAssetAmountForInput } from "@/shared/lib/utils/chia-units";
+import { useCallback, useRef, useState } from "react";
+import AmountInput from "./AmountInput";
+import AssetIdInput from "./AssetIdInput";
+import AssetTypeSelector from "./AssetTypeSelector";
+import RemoveAssetButton from "./RemoveAssetButton";
+import TokenSearchInput from "./TokenSearchInput";
 
 export interface ExtendedAsset extends BaseAsset {
-  searchQuery?: string
-  showDropdown?: boolean
-  _amountInput?: string // Temporary string for input while typing
+  searchQuery?: string;
+  showDropdown?: boolean;
+  _amountInput?: string; // Temporary string for input while typing
 }
 
 export interface TokenInfo {
-  assetId: string
-  ticker: string
-  symbol?: string
-  name?: string
+  assetId: string;
+  ticker: string;
+  symbol?: string;
+  name?: string;
   /** Optional icon URL for the token */
-  iconUrl?: string | null
+  iconUrl?: string | null;
   /** Whether the icon is currently loading */
-  iconLoading?: boolean
+  iconLoading?: boolean;
 }
 
 export interface AssetSelectorProps {
-  asset: ExtendedAsset
-  onUpdate: (asset: ExtendedAsset) => void
-  onRemove?: () => void
-  placeholder?: string
-  showRemoveButton?: boolean
-  enabledAssetTypes?: AssetType[] // Optional filter for which asset types to show
-  className?: string
+  asset: ExtendedAsset;
+  onUpdate: (asset: ExtendedAsset) => void;
+  onRemove?: () => void;
+  placeholder?: string;
+  showRemoveButton?: boolean;
+  enabledAssetTypes?: AssetType[]; // Optional filter for which asset types to show
+  className?: string;
   // Token data props (to avoid FSD violation - shared cannot import from entities)
-  availableTokens?: TokenInfo[]
-  isLoadingTickers?: boolean
-  useAssetListForDropdown?: boolean
+  availableTokens?: TokenInfo[];
+  isLoadingTickers?: boolean;
+  useAssetListForDropdown?: boolean;
 }
 
 /**
@@ -50,44 +50,44 @@ export default function AssetSelector({
   asset,
   onUpdate,
   onRemove,
-  placeholder = 'Select asset',
+  placeholder = "Select asset",
   showRemoveButton = true,
-  enabledAssetTypes = ['xch', 'cat', 'nft', 'option'],
-  className = '',
+  enabledAssetTypes = ["xch", "cat", "nft", "option"],
+  className = "",
   availableTokens: providedTokens = [],
   isLoadingTickers = false,
   useAssetListForDropdown = false,
 }: AssetSelectorProps) {
-  const { t } = useThemeClasses()
-  const [showDropdown, setShowDropdown] = useState(false)
-  const blurTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const { t } = useThemeClasses();
+  const [showDropdown, setShowDropdown] = useState(false);
+  const blurTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Use provided tokens or empty array
-  const availableTokens = providedTokens
+  const availableTokens = providedTokens;
 
   // Filter available asset types based on enabledAssetTypes prop
   const availableAssetTypes = enabledAssetTypes.filter(
-    (type) => type === 'xch' || type === 'cat' || type === 'nft' || type === 'option'
-  )
+    (type) => type === "xch" || type === "cat" || type === "nft" || type === "option"
+  );
 
   const filteredTokens = useCallback(
     (searchQuery: string) => {
-      if (!searchQuery) return availableTokens
-      const query = searchQuery.toLowerCase()
+      if (!searchQuery) return availableTokens;
+      const query = searchQuery.toLowerCase();
       return availableTokens.filter(
         (token) =>
           token.ticker.toLowerCase().includes(query) ||
           (token.name && token.name.toLowerCase().includes(query)) ||
           (token.assetId && token.assetId.toLowerCase().includes(query)) // Also search by asset ID
-      )
+      );
     },
     [availableTokens]
-  )
+  );
 
   const selectToken = useCallback(
     (token: { assetId: string; ticker: string; symbol?: string; name?: string }) => {
       // Determine asset type: XCH if assetId is empty, otherwise CAT
-      const assetType: AssetType = token.assetId === '' ? 'xch' : 'cat'
+      const assetType: AssetType = token.assetId === "" ? "xch" : "cat";
       onUpdate({
         ...asset,
         assetId: token.assetId,
@@ -96,11 +96,11 @@ export default function AssetSelector({
         name: token.name,
         searchQuery: token.ticker,
         showDropdown: false,
-      })
-      setShowDropdown(false)
+      });
+      setShowDropdown(false);
     },
     [asset, onUpdate]
-  )
+  );
 
   const handleTypeChange = useCallback(
     (newType: AssetType) => {
@@ -109,54 +109,54 @@ export default function AssetSelector({
       // Then set type and amount based on the new type
       const updatedAsset = {
         ...asset,
-        assetId: '',
-        symbol: '',
-        searchQuery: '',
+        assetId: "",
+        symbol: "",
+        searchQuery: "",
         showDropdown: false,
-        type: newType === 'xch' ? 'cat' : newType, // Map 'xch' to 'cat' for unified token search
-        amount: newType === 'nft' || newType === 'option' ? 1 : asset.amount,
-      }
-      onUpdate(updatedAsset)
+        type: newType === "xch" ? "cat" : newType, // Map 'xch' to 'cat' for unified token search
+        amount: newType === "nft" || newType === "option" ? 1 : asset.amount,
+      };
+      onUpdate(updatedAsset);
     },
     [asset, onUpdate]
-  )
+  );
 
   const handleSearchFocus = useCallback(() => {
     if (blurTimeoutRef.current) {
-      clearTimeout(blurTimeoutRef.current)
-      blurTimeoutRef.current = null
+      clearTimeout(blurTimeoutRef.current);
+      blurTimeoutRef.current = null;
     }
-    setShowDropdown(true)
-  }, [])
+    setShowDropdown(true);
+  }, []);
 
   const handleSearchBlur = useCallback(() => {
     // Delay closing to allow click events on dropdown items
     blurTimeoutRef.current = setTimeout(() => {
-      setShowDropdown(false)
-    }, 200)
-  }, [])
+      setShowDropdown(false);
+    }, 200);
+  }, []);
 
   const handleDropdownClose = useCallback(() => {
     if (blurTimeoutRef.current) {
-      clearTimeout(blurTimeoutRef.current)
-      blurTimeoutRef.current = null
+      clearTimeout(blurTimeoutRef.current);
+      blurTimeoutRef.current = null;
     }
-    setShowDropdown(false)
-  }, [])
+    setShowDropdown(false);
+  }, []);
 
   const getAssetTypePlaceholder = (type: AssetType): string =>
-    type === 'cat'
+    type === "cat"
       ? isLoadingTickers
-        ? 'Loading tokens...'
-        : 'Search tokens (XCH, CAT tokens)...'
-      : type === 'nft'
-        ? 'NFT Asset ID'
-        : type === 'option'
-          ? 'Option Contract ID'
-          : placeholder
+        ? "Loading tokens..."
+        : "Search tokens (XCH, CAT tokens)..."
+      : type === "nft"
+        ? "NFT Asset ID"
+        : type === "option"
+          ? "Option Contract ID"
+          : placeholder;
 
   // Check if amount input should be hidden (NFT and Option always have amount = 1)
-  const hideAmountInput = asset.type === 'nft' || asset.type === 'option'
+  const hideAmountInput = asset.type === "nft" || asset.type === "option";
 
   return (
     <div
@@ -170,10 +170,12 @@ export default function AssetSelector({
       />
 
       {/* Asset Selection */}
-      <div className={`relative h-8 sm:h-10 md:h-8 flex items-center min-w-0 ${hideAmountInput ? 'flex-[1]' : 'flex-[0.7]'}`}>
-        {asset.type === 'cat' || asset.type === 'xch' ? (
+      <div
+        className={`relative h-8 sm:h-10 md:h-8 flex items-center min-w-0 ${hideAmountInput ? "flex-[1]" : "flex-[0.7]"}`}
+      >
+        {asset.type === "cat" || asset.type === "xch" ? (
           <TokenSearchInput
-            value={asset.searchQuery || ''}
+            value={asset.searchQuery || ""}
             onChange={(value) =>
               onUpdate({
                 ...asset,
@@ -182,13 +184,9 @@ export default function AssetSelector({
             }
             onFocus={handleSearchFocus}
             onBlur={handleSearchBlur}
-            placeholder={
-              isLoadingTickers
-                ? 'Loading...'
-                : 'Search tokens...'
-            }
+            placeholder={isLoadingTickers ? "Loading..." : "Search tokens..."}
             disabled={isLoadingTickers}
-            filteredTokens={filteredTokens(asset.searchQuery || '')}
+            filteredTokens={filteredTokens(asset.searchQuery || "")}
             onSelectToken={selectToken}
             isDropdownOpen={showDropdown}
             onCloseDropdown={handleDropdownClose}
@@ -203,9 +201,9 @@ export default function AssetSelector({
                 ...asset,
                 assetId: value,
                 // Ensure amount is 1 for NFT and Option
-                amount: asset.type === 'nft' || asset.type === 'option' ? 1 : asset.amount,
-              }
-              onUpdate(updatedAsset)
+                amount: asset.type === "nft" || asset.type === "option" ? 1 : asset.amount,
+              };
+              onUpdate(updatedAsset);
             }}
             placeholder={getAssetTypePlaceholder(asset.type)}
           />
@@ -224,23 +222,23 @@ export default function AssetSelector({
                 ...asset,
                 _amountInput: tempInput,
                 amount,
-              })
+              });
             }}
             onBlur={() => {
-              const inputValue = asset._amountInput || ''
+              const inputValue = asset._amountInput || "";
               // Safely convert to number
-              const finalAmount = assetInputAmounts.parse(inputValue, asset.type)
+              const finalAmount = assetInputAmounts.parse(inputValue, asset.type);
               // Preserve the input format if user typed something like "1.0" or "1.00"
               // Only clear tempInput if the formatted value matches the input (no loss of precision)
-              const formatted = formatAssetAmountForInput(finalAmount, asset.type)
-              const shouldPreserveInput = inputValue.includes('.') && inputValue !== formatted
+              const formatted = formatAssetAmountForInput(finalAmount, asset.type);
+              const shouldPreserveInput = inputValue.includes(".") && inputValue !== formatted;
 
               onUpdate({
                 ...asset,
                 amount: finalAmount,
                 // Keep tempInput if user typed a decimal format that would be lost
                 _amountInput: shouldPreserveInput ? inputValue : undefined,
-              })
+              });
             }}
           />
         </div>
@@ -249,5 +247,5 @@ export default function AssetSelector({
       {/* Remove Button */}
       {showRemoveButton && onRemove && <RemoveAssetButton onRemove={onRemove} />}
     </div>
-  )
+  );
 }

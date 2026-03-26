@@ -40,9 +40,7 @@ export function SwapPreviewTabContent({
     <div className="space-y-1.5 text-[10px]">
       <div className="grid grid-cols-2 gap-1.5">
         <div className={`rounded-md border ${t.border} ${t.card} p-1.5`}>
-          <div
-            className={`text-[9px] font-medium uppercase tracking-wide ${t.textSecondary}`}
-          >
+          <div className={`text-[9px] font-medium uppercase tracking-wide ${t.textSecondary}`}>
             Receive
           </div>
           <div
@@ -67,14 +65,10 @@ export function SwapPreviewTabContent({
           </div>
         </div>
         <div className={`rounded-md border ${t.border} ${t.card} p-1.5`}>
-          <div
-            className={`text-[9px] font-medium uppercase tracking-wide ${t.textSecondary}`}
-          >
+          <div className={`text-[9px] font-medium uppercase tracking-wide ${t.textSecondary}`}>
             Pay
           </div>
-          <div
-            className={`mt-0.5 ${t.text} inline-flex flex-wrap items-center gap-0.5`}
-          >
+          <div className={`mt-0.5 ${t.text} inline-flex flex-wrap items-center gap-0.5`}>
             {offeredTicker && (
               <>
                 {isOfferedNative ? (
@@ -94,18 +88,12 @@ export function SwapPreviewTabContent({
           </div>
         </div>
       </div>
-      <div
-        className={`grid grid-cols-2 gap-x-2 gap-y-1 border-t ${t.border} pt-1.5`}
-      >
+      <div className={`grid grid-cols-2 gap-x-2 gap-y-1 border-t ${t.border} pt-1.5`}>
         <span className={t.textSecondary}>Price</span>
-        <span className={`font-mono text-right ${t.text}`}>
-          {priceLine ?? "—"}
-        </span>
+        <span className={`font-mono text-right ${t.text}`}>{priceLine ?? "—"}</span>
         <span className={t.textSecondary}>Price impact</span>
         <span className={`font-mono text-right ${t.text}`}>
-          {priceImpactPercent != null
-            ? `${priceImpactPercent.toFixed(2)}%`
-            : "—"}
+          {priceImpactPercent != null ? `${priceImpactPercent.toFixed(2)}%` : "—"}
         </span>
         <span className={t.textSecondary}>Liquidity fee</span>
         <span className="text-right">{liquidityFeePercent}%</span>
@@ -142,9 +130,7 @@ export function RemovePreviewTabContent({
         <>
           <div className="flex justify-between items-start">
             <span className={t.textSecondary}>{nativeTicker}</span>
-            <span
-              className={`${t.text} inline-flex items-center gap-1 justify-end`}
-            >
+            <span className={`${t.text} inline-flex items-center gap-1 justify-end`}>
               <XchIcon size={12} isTestnet={isTestnet} />
               <span>
                 ~{removeReceive.xch.toFixed(6)} {nativeTicker}
@@ -153,27 +139,19 @@ export function RemovePreviewTabContent({
           </div>
           <div className="flex justify-between items-start">
             <span className={t.textSecondary}>{tokenName}</span>
-            <span
-              className={`${t.text} inline-flex items-center gap-1 justify-end`}
-            >
+            <span className={`${t.text} inline-flex items-center gap-1 justify-end`}>
               {selectedPair && (
-                <TickerIcon
-                  assetId={selectedPair.asset_id}
-                  ticker={tokenName}
-                  size={12}
-                />
+                <TickerIcon assetId={selectedPair.asset_id} ticker={tokenName} size={12} />
               )}
               <span>
-                ~{formatTibetCatAmountForInput(removeReceive.token)}{" "}
-                {tokenName}
+                ~{formatTibetCatAmountForInput(removeReceive.token)} {tokenName}
               </span>
             </span>
           </div>
         </>
       ) : (
         <p className={t.textSecondary}>
-          Enter LP amount above, or both Sell and Buy amounts (in pool ratio) to
-          see estimate.
+          Enter LP amount above, or both Sell and Buy amounts (in pool ratio) to see estimate.
         </p>
       )}
       <div className={`border-t ${t.border} pt-1.5 mt-1.5`}>
@@ -216,9 +194,7 @@ export function AddPreviewTabContent({
       <div className={t.textSecondary}>You will pay:</div>
       <div className="flex justify-between items-start">
         <span className={t.textSecondary}>{offeredTicker ?? "—"}</span>
-        <span
-          className={`${t.text} inline-flex items-center gap-1 justify-end`}
-        >
+        <span className={`${t.text} inline-flex items-center gap-1 justify-end`}>
           {offeredTicker && (
             <>
               {isOfferedNative ? (
@@ -239,9 +215,7 @@ export function AddPreviewTabContent({
       </div>
       <div className="flex justify-between items-start">
         <span className={t.textSecondary}>{requestedTicker ?? "—"}</span>
-        <span
-          className={`${t.text} inline-flex items-center gap-1 justify-end`}
-        >
+        <span className={`${t.text} inline-flex items-center gap-1 justify-end`}>
           {requestedTicker && (
             <>
               {isRequestedNative ? (

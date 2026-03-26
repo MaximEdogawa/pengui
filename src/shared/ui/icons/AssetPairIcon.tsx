@@ -28,12 +28,8 @@ export function AssetPairIcon({ back, front, overlap = "default" }: AssetPairIco
   const gap = overlap === "tight" ? "-space-x-3" : "-space-x-1.5";
   return (
     <span className={`flex shrink-0 items-center ${gap}`}>
-      <span className="rounded-full ring-2 ring-white dark:ring-gray-900 z-[1]">
-        {back}
-      </span>
-      <span className="rounded-full ring-2 ring-white dark:ring-gray-900 z-[2]">
-        {front}
-      </span>
+      <span className="rounded-full ring-2 ring-white dark:ring-gray-900 z-[1]">{back}</span>
+      <span className="rounded-full ring-2 ring-white dark:ring-gray-900 z-[2]">{front}</span>
     </span>
   );
 }

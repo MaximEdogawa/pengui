@@ -148,7 +148,7 @@
   }
 
   /* Allow scrollbar-gutter to be set via inline style for specific cases */
-  .scrollbar-modern[style*='scrollbarGutter'] {
+  .scrollbar-modern[style*="scrollbarGutter"] {
     /* Inline style takes precedence */
   }
 
@@ -274,7 +274,7 @@
 
   /* iOS PWA optimizations for wallet connect button */
   button,
-  [role='button'],
+  [role="button"],
   .wallet-connect-button,
   .wallet-connect-button * {
     -webkit-tap-highlight-color: transparent;
@@ -285,7 +285,7 @@
   /* Ensure ConnectButton is immediately clickable on iOS */
   @supports (-webkit-touch-callout: none) {
     button:active,
-    [role='button']:active {
+    [role="button"]:active {
       opacity: 0.9;
     }
   }
@@ -395,7 +395,7 @@
 }
 
 @property --angle {
-  syntax: '<angle>';
+  syntax: "<angle>";
   initial-value: 0deg;
   inherits: false;
 }
@@ -594,7 +594,7 @@
   border: 1px solid rgba(0, 0, 0, 0.1);
   border-radius: 12px;
   font-family:
-    'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+    "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas, "Courier New", monospace;
   font-size: 12px;
   line-height: 1.4;
   color: #1d1d1f;

@@ -29,9 +29,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   // Detect when wallet (e.g. Sage) is closed or session invalid; clears state and redirects to login so no blank screen
   useWalletConnectionHealthCheck();
 
-  const isDark =
-    currentTheme === "dark" ||
-    (currentTheme === "system" && systemTheme === "dark");
+  const isDark = currentTheme === "dark" || (currentTheme === "system" && systemTheme === "dark");
   const t = getThemeClasses(isDark);
   const isScrolling = useScrollDetection(mounted);
 
@@ -46,7 +44,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const menuItems = useMenuItems();
 
   const getActiveItem = () => {
-    return menuItems.find((item) => pathname === item.path || pathname.startsWith(`${item.path}/`))?.id || "dashboard";
+    return (
+      menuItems.find((item) => pathname === item.path || pathname.startsWith(`${item.path}/`))
+        ?.id || "dashboard"
+    );
   };
 
   const activeItem = getActiveItem();
@@ -101,11 +102,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden relative z-10 w-full max-w-full mr-0 pr-0 border-r-0">
         {/* Top Bar */}
-        <Header
-          t={t}
-          isDark={isDark}
-          onMenuClick={() => setSidebarOpen(!sidebarOpen)}
-        />
+        <Header t={t} isDark={isDark} onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
 
         {/* Content Area */}
         <main
@@ -115,9 +112,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
         >
           {/* Info Banner - inside content area */}
           <InfoBanner currentVersion={APP_VERSION} />
-          <div className="w-full max-w-full h-full flex flex-col">
-            {children}
-          </div>
+          <div className="w-full max-w-full h-full flex flex-col">{children}</div>
         </main>
       </div>
 

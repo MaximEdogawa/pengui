@@ -1,11 +1,7 @@
 "use client";
 
 import type { OfferDetails } from "@/entities/offer";
-import {
-  OfferDetailsModal,
-  OfferHistory,
-  useMyOffers,
-} from "@/features/offers";
+import { OfferDetailsModal, OfferHistory, useMyOffers } from "@/features/offers";
 import { SplashTerminal } from "@/features/splash-terminal";
 import { CreateOfferModal, TakeOfferModal } from "@/features/trading";
 import { OrderBookFiltersProvider } from "@/features/trading/hooks/OrderBookFiltersProvider";
@@ -127,26 +123,26 @@ export default function OffersPage() {
           className={`backdrop-blur-[40px] ${t.card} flex-1 p-4 border ${t.border} transition-all duration-300 shadow-lg shadow-black/5 overflow-auto min-h-0`}
         >
           <OfferHistory
-          onCreateOffer={() => setShowCreateOffer(true)}
-          onViewOffer={handleViewOffer}
-          onCancelOffer={cancelOffer}
-          offers={filteredOffers}
-          isLoading={isLoading}
-          filters={filters}
-          setFilters={setFilters}
-          getStatusClass={getStatusClass}
-          formatDate={formatDate}
-          copyOfferString={copyOfferString}
-          getTickerSymbol={getTickerSymbol}
-          isCopied={isCopied}
-          refreshOffers={refreshOffers}
-          currentPage={currentPage}
-          pageSize={pageSize}
-          totalOffers={totalOffers}
-          totalPages={totalPages}
-          goToPage={goToPage}
-          changePageSize={changePageSize}
-        />
+            onCreateOffer={() => setShowCreateOffer(true)}
+            onViewOffer={handleViewOffer}
+            onCancelOffer={cancelOffer}
+            offers={filteredOffers}
+            isLoading={isLoading}
+            filters={filters}
+            setFilters={setFilters}
+            getStatusClass={getStatusClass}
+            formatDate={formatDate}
+            copyOfferString={copyOfferString}
+            getTickerSymbol={getTickerSymbol}
+            isCopied={isCopied}
+            refreshOffers={refreshOffers}
+            currentPage={currentPage}
+            pageSize={pageSize}
+            totalOffers={totalOffers}
+            totalPages={totalPages}
+            goToPage={goToPage}
+            changePageSize={changePageSize}
+          />
         </div>
 
         {/* Resizable Splash Terminal pane */}
@@ -166,10 +162,7 @@ export default function OffersPage() {
                 className="h-1 cursor-n-resize bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500"
                 onMouseDown={() => setIsDraggingTerminal(true)}
               />
-              <div
-                className="flex min-h-0 flex-col"
-                style={{ height: terminalHeight }}
-              >
+              <div className="flex min-h-0 flex-col" style={{ height: terminalHeight }}>
                 <SplashTerminal />
               </div>
             </>

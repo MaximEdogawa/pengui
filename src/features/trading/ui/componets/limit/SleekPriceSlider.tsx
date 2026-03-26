@@ -26,8 +26,7 @@ export default function SleekPriceSlider({
   const effectiveFineTune = isFineTune || isShiftPressed;
 
   // Ensure value is always a valid number
-  const safeValue =
-    typeof value === "number" && !isNaN(value) && isFinite(value) ? value : 0;
+  const safeValue = typeof value === "number" && !isNaN(value) && isFinite(value) ? value : 0;
   const clampedValue = Math.max(-100, Math.min(100, safeValue));
 
   // Handle slider change with snapping
@@ -66,9 +65,7 @@ export default function SleekPriceSlider({
     <div className="flex flex-col gap-1 py-0">
       {/* Label and Toggle on same row */}
       <div className="flex items-center justify-between">
-        <label className={`text-[9px] ${t.textSecondary} font-normal`}>
-          {label}
-        </label>
+        <label className={`text-[9px] ${t.textSecondary} font-normal`}>{label}</label>
         <button
           type="button"
           onClick={() => setIsFineTune(!isFineTune)}
@@ -109,10 +106,7 @@ export default function SleekPriceSlider({
         </div>
 
         {/* Percentage Display - fixed width area */}
-        <div
-          className="flex items-center justify-end flex-shrink-0"
-          style={{ minWidth: "2.5rem" }}
-        >
+        <div className="flex items-center justify-end flex-shrink-0" style={{ minWidth: "2.5rem" }}>
           <span
             className={`text-[10px] font-semibold font-mono tabular-nums text-right ${
               clampedValue === 0

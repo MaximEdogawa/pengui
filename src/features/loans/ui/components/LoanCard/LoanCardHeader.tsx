@@ -1,15 +1,19 @@
-'use client'
+"use client";
 
-import { getLoanAssetDisplay } from '../../../lib/loanUtils'
-import { getLoanStatusText, getLoanStatusColors, getAssetTypeColors } from '../../../lib/loanStatus'
-import type { LoanOffer, LoanAgreement } from '@/entities/loan'
-import type { ThemeClasses } from '@/shared/lib/theme'
+import { getLoanAssetDisplay } from "../../../lib/loanUtils";
+import {
+  getLoanStatusText,
+  getLoanStatusColors,
+  getAssetTypeColors,
+} from "../../../lib/loanStatus";
+import type { LoanOffer, LoanAgreement } from "@/entities/loan";
+import type { ThemeClasses } from "@/shared/lib/theme";
 
 interface LoanCardHeaderProps {
-  loan: LoanOffer | LoanAgreement
-  type: 'available' | 'taken' | 'created'
-  isDark: boolean
-  t: ThemeClasses
+  loan: LoanOffer | LoanAgreement;
+  type: "available" | "taken" | "created";
+  isDark: boolean;
+  t: ThemeClasses;
 }
 
 export function LoanCardHeader({ loan, type, isDark, t }: LoanCardHeaderProps) {
@@ -25,9 +29,9 @@ export function LoanCardHeader({ loan, type, isDark, t }: LoanCardHeaderProps) {
         </div>
         <h3 className={`text-sm font-bold ${t.text} mb-0.5`}>{getLoanAssetDisplay(loan)}</h3>
         <p className={`${t.textSecondary} text-[10px]`}>
-          {type === 'created'
-            ? `Lent to ${loan.borrower || 'N/A'}`
-            : type === 'taken'
+          {type === "created"
+            ? `Lent to ${loan.borrower || "N/A"}`
+            : type === "taken"
               ? `From ${(loan as LoanAgreement).lender || loan.maker}`
               : `By ${loan.maker}`}
         </p>
@@ -38,5 +42,5 @@ export function LoanCardHeader({ loan, type, isDark, t }: LoanCardHeaderProps) {
         {getLoanStatusText(loan.status)}
       </span>
     </div>
-  )
+  );
 }

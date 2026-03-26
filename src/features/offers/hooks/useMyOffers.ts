@@ -1,9 +1,9 @@
-'use client'
+"use client";
 
-import { useCallback } from 'react'
-import { useMyOffersData } from './useMyOffersData'
-import { useMyOffersActions } from './useMyOffersActions'
-import { useMyOffersUtils } from './useMyOffersUtils'
+import { useCallback } from "react";
+import { useMyOffersData } from "./useMyOffersData";
+import { useMyOffersActions } from "./useMyOffersActions";
+import { useMyOffersUtils } from "./useMyOffersUtils";
 
 /**
  * Hook for managing user's offers
@@ -11,25 +11,25 @@ import { useMyOffersUtils } from './useMyOffersUtils'
  * Composed from smaller hooks for better maintainability
  */
 export function useMyOffers() {
-  const { state, filteredOffers, refreshOffers } = useMyOffersData()
+  const { state, filteredOffers, refreshOffers } = useMyOffersData();
 
-  const actions = useMyOffersActions({ state, refreshOffers })
-  const utils = useMyOffersUtils({ state })
+  const actions = useMyOffersActions({ state, refreshOffers });
+  const utils = useMyOffersUtils({ state });
 
   const goToPage = useCallback(
     (page: number) => {
-      state.setCurrentPage(Math.max(1, Math.min(page, state.totalPages || 1)))
+      state.setCurrentPage(Math.max(1, Math.min(page, state.totalPages || 1)));
     },
     [state]
-  )
+  );
 
   const changePageSize = useCallback(
     (newPageSize: number) => {
-      state.setPageSize(newPageSize)
-      state.setCurrentPage(1)
+      state.setPageSize(newPageSize);
+      state.setCurrentPage(1);
     },
     [state]
-  )
+  );
 
   return {
     // State
@@ -62,5 +62,5 @@ export function useMyOffers() {
     refreshOffers,
     ...actions,
     ...utils,
-  }
+  };
 }

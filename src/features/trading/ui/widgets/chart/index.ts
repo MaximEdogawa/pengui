@@ -1,1 +1,1 @@
-export { default as PriceChart } from './PriceChart'
+export { default as PriceChart } from "./PriceChart";

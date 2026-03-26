@@ -39,9 +39,7 @@ export function ChartPriceLabels({
 
         // Check overlap with previous label
         if (prevLabel) {
-          const prevTextWidth = estimateTextWidth(
-            formatPriceForDisplay(prevLabel.price),
-          );
+          const prevTextWidth = estimateTextWidth(formatPriceForDisplay(prevLabel.price));
           const prevX = prevLabel.x;
           const minX = prevX + prevTextWidth / 2 + textWidth / 2 + 5; // Half width of each + padding
 
@@ -53,9 +51,7 @@ export function ChartPriceLabels({
 
         // Check overlap with next label
         if (nextLabel) {
-          const nextTextWidth = estimateTextWidth(
-            formatPriceForDisplay(nextLabel.price),
-          );
+          const nextTextWidth = estimateTextWidth(formatPriceForDisplay(nextLabel.price));
           const maxX = nextLabel.x - textWidth / 2 - nextTextWidth / 2 - 5; // Half width of each + padding
 
           if (x > maxX) {

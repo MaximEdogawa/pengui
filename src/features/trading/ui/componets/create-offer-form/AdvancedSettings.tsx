@@ -44,9 +44,7 @@ export function AdvancedSettings({
         onClick={() => setIsDetailedViewExpanded(!isDetailedViewExpanded)}
         className={`w-full p-3 flex items-center justify-between ${t.cardHover} transition-colors`}
       >
-        <span className={`text-sm font-medium ${t.text}`}>
-          Advanced Settings
-        </span>
+        <span className={`text-sm font-medium ${t.text}`}>Advanced Settings</span>
         {isDetailedViewExpanded ? (
           <ChevronDown className={`w-4 h-4 ${t.textSecondary}`} />
         ) : (

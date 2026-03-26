@@ -23,10 +23,5 @@
     "../src/**/*.ts",
     "../src/**/*.tsx"
   ],
-  "exclude": [
-    "node_modules",
-    "../node_modules",
-    "../.next",
-    "../storybook-static"
-  ]
+  "exclude": ["node_modules", "../node_modules", "../.next", "../storybook-static"]
 }

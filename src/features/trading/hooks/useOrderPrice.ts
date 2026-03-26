@@ -4,31 +4,19 @@ import { useCatTokens } from "@/entities/asset";
 import { useNetwork } from "@/shared/hooks/useNetwork";
 import { getNativeTokenTickerForNetwork } from "@/shared/lib/config/environment";
 import { useMemo, useCallback } from "react";
-import {
-  OrderBookFilters,
-  OrderBookOrder,
-} from "@/features/trading/lib/orderBookTypes";
+import { OrderBookFilters, OrderBookOrder } from "@/features/trading/lib/orderBookTypes";
 import { useOrderBookFilters } from "@/features/trading/hooks/OrderBookFiltersProvider";
 import { useOrderBook } from "@/features/trading/hooks/useOrderBook";
 import { useOrderBookFiltering } from "@/features/trading/composables/useOrderBookFiltering";
 import { calculateOrderPrice as calculateOrderPriceNumeric } from "@/features/trading/lib/services/priceCalculation";
-import {
-  calculateOrderType,
-  calculatePriceDeviation,
-} from "@/features/trading/utils/priceUtils";
+import { calculateOrderType, calculatePriceDeviation } from "@/features/trading/utils/priceUtils";
 
-export function useOrderPrice(
-  order: OrderBookOrder | undefined,
-  filters?: OrderBookFilters,
-) {
+export function useOrderPrice(order: OrderBookOrder | undefined, filters?: OrderBookFilters) {
   const { network } = useNetwork();
   const { getCatTokenInfo } = useCatTokens();
   const { filters: contextFilters } = useOrderBookFilters();
   const { orderBookData } = useOrderBook(contextFilters);
-  const { filteredBuyOrders, filteredSellOrders } = useOrderBookFiltering(
-    orderBookData,
-    filters,
-  );
+  const { filteredBuyOrders, filteredSellOrders } = useOrderBookFiltering(orderBookData, filters);
 
   const getTickerSymbolForPrice = useCallback(
     (assetId: string, code?: string): string => {
@@ -37,12 +25,12 @@ export function useOrderPrice(
       const tickerInfo = getCatTokenInfo(assetId);
       return tickerInfo?.ticker || assetId.slice(0, 8);
     },
-    [getCatTokenInfo, network],
+    [getCatTokenInfo, network]
   );
 
   const orderType = useMemo(
     () => calculateOrderType(order, filters, network, getCatTokenInfo),
-    [order, filters, network, getCatTokenInfo],
+    [order, filters, network, getCatTokenInfo]
   );
 
   const priceDeviationPercent = useMemo(
@@ -54,13 +42,7 @@ export function useOrderPrice(
         filters,
         getTickerSymbol: getTickerSymbolForPrice,
       }),
-    [
-      order,
-      filteredBuyOrders,
-      filteredSellOrders,
-      filters,
-      getTickerSymbolForPrice,
-    ],
+    [order, filteredBuyOrders, filteredSellOrders, filters, getTickerSymbolForPrice]
   );
 
   const orderPrice = useMemo(() => {
@@ -89,7 +71,7 @@ export function useOrderPrice(
       const tickerInfo = getCatTokenInfo(assetId);
       return tickerInfo?.ticker || assetId.slice(0, 8);
     },
-    [getCatTokenInfo],
+    [getCatTokenInfo]
   );
 
   return {

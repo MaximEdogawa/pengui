@@ -22,9 +22,7 @@ type EventHandlers = {
  * This function can be called directly to register listeners without waiting for React effects
  * Used to prevent race conditions where WalletConnect emits events before useEffect runs
  */
-export function registerWalletConnectListeners(
-  signClient: SignClient | undefined,
-): void {
+export function registerWalletConnectListeners(signClient: SignClient | undefined): void {
   if (!signClient) {
     return;
   }
@@ -51,12 +49,8 @@ export function registerWalletConnectListeners(
 
   // Notify only; do NOT auto-clear state — user must click Disconnect to go to login
   const onSessionEnd = () => {
-    toast.error(
-      "Wallet session ended. Use Disconnect in the wallet menu to reconnect.",
-    );
-    logger.info(
-      "Wallet session ended; user can disconnect from wallet menu to reconnect",
-    );
+    toast.error("Wallet session ended. Use Disconnect in the wallet menu to reconnect.");
+    logger.info("Wallet session ended; user can disconnect from wallet menu to reconnect");
   };
 
   // Create event handlers
@@ -102,8 +96,7 @@ export function registerWalletConnectListeners(
           });
         } catch (error) {
           // Suppress "No matching key" errors - these are non-critical
-          const errorMessage =
-            error instanceof Error ? error.message : String(error);
+          const errorMessage = error instanceof Error ? error.message : String(error);
           if (!errorMessage.includes("No matching key")) {
             if (process.env.NODE_ENV === "development") {
               logger.debug("Session ping error:", error);

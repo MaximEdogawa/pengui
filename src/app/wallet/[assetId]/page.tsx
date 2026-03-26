@@ -1,19 +1,19 @@
-'use client'
+"use client";
 
-import { useParams, useRouter } from 'next/navigation'
-import { useEffect } from 'react'
-import { AssetDetailView } from '@/features/wallet'
+import { useParams, useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { AssetDetailView } from "@/features/wallet";
 
 export default function WalletAssetPage() {
-  const params = useParams()
-  const router = useRouter()
-  const assetId = typeof params?.assetId === 'string' ? params.assetId : ''
+  const params = useParams();
+  const router = useRouter();
+  const assetId = typeof params?.assetId === "string" ? params.assetId : "";
 
   useEffect(() => {
-    if (!assetId) router.replace('/wallet')
-  }, [assetId, router])
+    if (!assetId) router.replace("/wallet");
+  }, [assetId, router]);
 
-  if (!assetId) return null
+  if (!assetId) return null;
 
-  return <AssetDetailView assetIdSlug={assetId} />
+  return <AssetDetailView assetIdSlug={assetId} />;
 }

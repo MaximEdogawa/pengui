@@ -1,7 +1,7 @@
 interface ChartGridLinesProps {
-  chartWidth: number
-  chartHeight: number
-  priceLabels: Array<{ price: number; x: number }>
+  chartWidth: number;
+  chartHeight: number;
+  priceLabels: Array<{ price: number; x: number }>;
 }
 
 export function ChartGridLines({ chartWidth, chartHeight, priceLabels }: ChartGridLinesProps) {
@@ -9,7 +9,7 @@ export function ChartGridLines({ chartWidth, chartHeight, priceLabels }: ChartGr
     <>
       {/* Grid lines - horizontal (volume) */}
       {[0, 0.25, 0.5, 0.75, 1].map((ratio, idx) => {
-        const y = chartHeight - (ratio * chartHeight)
+        const y = chartHeight - ratio * chartHeight;
         return (
           <g key={`vol-grid-${idx}`}>
             <line
@@ -19,11 +19,11 @@ export function ChartGridLines({ chartWidth, chartHeight, priceLabels }: ChartGr
               y2={y}
               stroke="#1a1d29"
               strokeWidth={0.5}
-              strokeDasharray={idx === 0 || idx === 4 ? '0' : '4,4'}
+              strokeDasharray={idx === 0 || idx === 4 ? "0" : "4,4"}
               opacity={0.5}
             />
           </g>
-        )
+        );
       })}
 
       {/* Grid lines - vertical (price) */}
@@ -36,11 +36,11 @@ export function ChartGridLines({ chartWidth, chartHeight, priceLabels }: ChartGr
             y2={chartHeight}
             stroke="#1a1d29"
             strokeWidth={0.5}
-            strokeDasharray={idx === 0 || idx === priceLabels.length - 1 ? '0' : '4,4'}
+            strokeDasharray={idx === 0 || idx === priceLabels.length - 1 ? "0" : "4,4"}
             opacity={0.5}
           />
         </g>
       ))}
     </>
-  )
+  );
 }

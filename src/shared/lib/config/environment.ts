@@ -1,31 +1,31 @@
 // Import chain IDs from networkUtils to avoid duplication
-import { CHIA_MAINNET_CHAIN_ID, CHIA_TESTNET_CHAIN_ID } from '../utils/networkUtils'
+import { CHIA_MAINNET_CHAIN_ID, CHIA_TESTNET_CHAIN_ID } from "../utils/networkUtils";
 
 // Re-export for backward compatibility
-export { CHIA_MAINNET_CHAIN_ID, CHIA_TESTNET_CHAIN_ID }
+export { CHIA_MAINNET_CHAIN_ID, CHIA_TESTNET_CHAIN_ID };
 
 const getCurrentUrl = (): string => {
-  if (typeof window !== 'undefined') {
-    return window.location.origin
+  if (typeof window !== "undefined") {
+    return window.location.origin;
   }
-  return 'https://pengui.pool'
-}
+  return "https://pengui.pool";
+};
 
 export const environment = {
-  appName: 'Penguin Pool',
-  appVersion: '1.0.0',
-  appDescription: 'Decentralized lending platform on Chia Network',
+  appName: "Penguin Pool",
+  appVersion: "1.0.0",
+  appDescription: "Decentralized lending platform on Chia Network",
 
-  isDevelopment: process.env.NODE_ENV === 'development',
-  isProduction: process.env.NODE_ENV === 'production',
-  isTest: process.env.NODE_ENV === 'test',
+  isDevelopment: process.env.NODE_ENV === "development",
+  isProduction: process.env.NODE_ENV === "production",
+  isTest: process.env.NODE_ENV === "test",
 
   wallet: {
     walletConnect: {
-      projectId: process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID || '',
+      projectId: process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID || "",
       metadata: {
-        name: 'Penguin Pool',
-        description: 'Decentralized lending platform on Chia Network',
+        name: "Penguin Pool",
+        description: "Decentralized lending platform on Chia Network",
         url: getCurrentUrl(),
         icons: [
           `${getCurrentUrl()}/icons/icon-192x192.png`,
@@ -41,31 +41,31 @@ export const environment = {
           current: CHIA_MAINNET_CHAIN_ID, // Default to mainnet
         },
       },
-      relayUrl: process.env.NEXT_PUBLIC_WALLET_CONNECT_RELAY_URL || 'wss://relay.walletconnect.com',
+      relayUrl: process.env.NEXT_PUBLIC_WALLET_CONNECT_RELAY_URL || "wss://relay.walletconnect.com",
     },
   },
 
   // Dexie API configuration
   dexie: {
-    apiBaseUrl: process.env.NEXT_PUBLIC_DEXIE_API_URL || 'https://api-testnet.dexie.space',
+    apiBaseUrl: process.env.NEXT_PUBLIC_DEXIE_API_URL || "https://api-testnet.dexie.space",
   },
 
   // Database configuration
   database: {
     indexedDB: {
-      name: 'pengui-db',
+      name: "pengui-db",
       version: 2, // Updated to version 2 to support network field
     },
   },
-} as const
+} as const;
 
 /**
  * Get native token ticker for a specific network
  * @param network - The network type ('mainnet' | 'testnet')
  * @returns 'TXCH' for testnet, 'XCH' for mainnet
  */
-export function getNativeTokenTickerForNetwork(network: 'mainnet' | 'testnet'): 'TXCH' | 'XCH' {
-  return network === 'testnet' ? 'TXCH' : 'XCH'
+export function getNativeTokenTickerForNetwork(network: "mainnet" | "testnet"): "TXCH" | "XCH" {
+  return network === "testnet" ? "TXCH" : "XCH";
 }
 
 /**
@@ -73,8 +73,8 @@ export function getNativeTokenTickerForNetwork(network: 'mainnet' | 'testnet'): 
  * @param network - The network type ('mainnet' | 'testnet')
  * @returns true if testnet, false if mainnet
  */
-export function isNetworkTestnet(network: 'mainnet' | 'testnet'): boolean {
-  return network === 'testnet'
+export function isNetworkTestnet(network: "mainnet" | "testnet"): boolean {
+  return network === "testnet";
 }
 
-export type Environment = typeof environment
+export type Environment = typeof environment;

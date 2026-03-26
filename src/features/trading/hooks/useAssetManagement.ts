@@ -1,25 +1,25 @@
-import { useCallback } from 'react'
-import type { ExtendedAsset as ExtendedOfferAsset } from '@/shared/ui'
+import { useCallback } from "react";
+import type { ExtendedAsset as ExtendedOfferAsset } from "@/shared/ui";
 
 interface AssetItem {
-  assetId: string
-  amount: number
-  type: 'xch' | 'cat' | 'nft'
-  symbol: string
-  searchQuery?: string
-  showDropdown?: boolean
+  assetId: string;
+  amount: number;
+  type: "xch" | "cat" | "nft";
+  symbol: string;
+  searchQuery?: string;
+  showDropdown?: boolean;
 }
 
 interface UseAssetManagementProps {
-  setMakerAssets: React.Dispatch<React.SetStateAction<AssetItem[]>>
-  setTakerAssets: React.Dispatch<React.SetStateAction<AssetItem[]>>
+  setMakerAssets: React.Dispatch<React.SetStateAction<AssetItem[]>>;
+  setTakerAssets: React.Dispatch<React.SetStateAction<AssetItem[]>>;
   setManuallyEdited: React.Dispatch<
     React.SetStateAction<{
-      requested: Set<number>
-      offered: Set<number>
+      requested: Set<number>;
+      offered: Set<number>;
     }>
-  >
-  setBaseAmounts: React.Dispatch<React.SetStateAction<{ requested: number[]; offered: number[] }>>
+  >;
+  setBaseAmounts: React.Dispatch<React.SetStateAction<{ requested: number[]; offered: number[] }>>;
 }
 
 /**
@@ -35,36 +35,36 @@ export function useAssetManagement({
     setMakerAssets((prev) => [
       ...prev,
       {
-        assetId: '',
+        assetId: "",
         amount: 0,
-        type: 'xch',
-        symbol: '',
-        searchQuery: '',
+        type: "xch",
+        symbol: "",
+        searchQuery: "",
         showDropdown: false,
         _amountInput: undefined,
       },
-    ])
-  }, [setMakerAssets])
+    ]);
+  }, [setMakerAssets]);
 
   const removeOfferedAsset = useCallback(
     (index: number) => {
-      setMakerAssets((prev) => prev.filter((_, i) => i !== index))
+      setMakerAssets((prev) => prev.filter((_, i) => i !== index));
       setManuallyEdited((prev) => {
-        const newSet = new Set(prev.offered)
-        newSet.delete(index)
-        const shifted = new Set<number>()
+        const newSet = new Set(prev.offered);
+        newSet.delete(index);
+        const shifted = new Set<number>();
         newSet.forEach((idx) => {
           if (idx > index) {
-            shifted.add(idx - 1)
+            shifted.add(idx - 1);
           } else {
-            shifted.add(idx)
+            shifted.add(idx);
           }
-        })
-        return { ...prev, offered: shifted }
-      })
+        });
+        return { ...prev, offered: shifted };
+      });
     },
     [setMakerAssets, setManuallyEdited]
-  )
+  );
 
   const updateOfferedAsset = useCallback(
     (index: number, asset: ExtendedOfferAsset) => {
@@ -73,63 +73,63 @@ export function useAssetManagement({
           i === index
             ? {
                 ...a,
-                assetId: asset.assetId || '',
+                assetId: asset.assetId || "",
                 amount: asset.amount || 0,
-                type: (asset.type === 'option' ? 'cat' : asset.type) as 'xch' | 'cat' | 'nft',
-                symbol: asset.symbol || '',
-                searchQuery: asset.searchQuery || '',
+                type: (asset.type === "option" ? "cat" : asset.type) as "xch" | "cat" | "nft",
+                symbol: asset.symbol || "",
+                searchQuery: asset.searchQuery || "",
                 showDropdown: asset.showDropdown || false,
                 _amountInput: asset._amountInput,
               }
             : a
         )
-      )
+      );
       setManuallyEdited((prev) => ({
         ...prev,
         offered: new Set(prev.offered).add(index),
-      }))
+      }));
       setBaseAmounts((prev) => ({
         ...prev,
         offered: prev.offered.map((base, idx) => (idx === index ? asset.amount || 0 : base)),
-      }))
+      }));
     },
     [setMakerAssets, setManuallyEdited, setBaseAmounts]
-  )
+  );
 
   const addRequestedAsset = useCallback(() => {
     setTakerAssets((prev) => [
       ...prev,
       {
-        assetId: '',
+        assetId: "",
         amount: 0,
-        type: 'xch',
-        symbol: '',
-        searchQuery: '',
+        type: "xch",
+        symbol: "",
+        searchQuery: "",
         showDropdown: false,
         _amountInput: undefined,
       },
-    ])
-  }, [setTakerAssets])
+    ]);
+  }, [setTakerAssets]);
 
   const removeRequestedAsset = useCallback(
     (index: number) => {
-      setTakerAssets((prev) => prev.filter((_, i) => i !== index))
+      setTakerAssets((prev) => prev.filter((_, i) => i !== index));
       setManuallyEdited((prev) => {
-        const newSet = new Set(prev.requested)
-        newSet.delete(index)
-        const shifted = new Set<number>()
+        const newSet = new Set(prev.requested);
+        newSet.delete(index);
+        const shifted = new Set<number>();
         newSet.forEach((idx) => {
           if (idx > index) {
-            shifted.add(idx - 1)
+            shifted.add(idx - 1);
           } else {
-            shifted.add(idx)
+            shifted.add(idx);
           }
-        })
-        return { ...prev, requested: shifted }
-      })
+        });
+        return { ...prev, requested: shifted };
+      });
     },
     [setTakerAssets, setManuallyEdited]
-  )
+  );
 
   const updateRequestedAsset = useCallback(
     (index: number, asset: ExtendedOfferAsset) => {
@@ -138,28 +138,28 @@ export function useAssetManagement({
           i === index
             ? {
                 ...a,
-                assetId: asset.assetId || '',
+                assetId: asset.assetId || "",
                 amount: asset.amount || 0,
-                type: (asset.type === 'option' ? 'cat' : asset.type) as 'xch' | 'cat' | 'nft',
-                symbol: asset.symbol || '',
-                searchQuery: asset.searchQuery || '',
+                type: (asset.type === "option" ? "cat" : asset.type) as "xch" | "cat" | "nft",
+                symbol: asset.symbol || "",
+                searchQuery: asset.searchQuery || "",
                 showDropdown: asset.showDropdown || false,
                 _amountInput: asset._amountInput,
               }
             : a
         )
-      )
+      );
       setManuallyEdited((prev) => ({
         ...prev,
         requested: new Set(prev.requested).add(index),
-      }))
+      }));
       setBaseAmounts((prev) => ({
         ...prev,
         requested: prev.requested.map((base, idx) => (idx === index ? asset.amount || 0 : base)),
-      }))
+      }));
     },
     [setTakerAssets, setManuallyEdited, setBaseAmounts]
-  )
+  );
 
   return {
     addOfferedAsset,
@@ -168,5 +168,5 @@ export function useAssetManagement({
     addRequestedAsset,
     removeRequestedAsset,
     updateRequestedAsset,
-  }
+  };
 }

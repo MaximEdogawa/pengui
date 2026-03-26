@@ -56,8 +56,8 @@ export function AddLiquiditySection({
       const lpReceiveSmallest = Math.floor(
         Math.min(
           xchMojosToOffer / selectedPair.xch_reserve,
-          tokenSmallestToOffer / selectedPair.token_reserve,
-        ) * selectedPair.liquidity,
+          tokenSmallestToOffer / selectedPair.token_reserve
+        ) * selectedPair.liquidity
       );
 
       if (lpReceiveSmallest <= 0) {
@@ -84,9 +84,7 @@ export function AddLiquiditySection({
   };
 
   return (
-    <div
-      className={`rounded-xl p-2.5 space-y-2 max-w-sm ${t.card} border ${t.border}`}
-    >
+    <div className={`rounded-xl p-2.5 space-y-2 max-w-sm ${t.card} border ${t.border}`}>
       {selectedPairFromFilter == null && (
         <PairSelector
           pairs={pairs}
@@ -116,11 +114,7 @@ export function AddLiquiditySection({
         onChange={(e) => setTokenAmount(e.target.value)}
       />
       {error && <p className="text-[10px] text-red-500">{error}</p>}
-      {success && (
-        <p className="text-[10px] text-emerald-600 dark:text-emerald-400">
-          Added.
-        </p>
-      )}
+      {success && <p className="text-[10px] text-emerald-600 dark:text-emerald-400">Added.</p>}
       <button
         type="button"
         onClick={handleAdd}

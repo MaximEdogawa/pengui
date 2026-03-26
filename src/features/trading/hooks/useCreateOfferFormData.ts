@@ -9,10 +9,7 @@ import { useOrderInitialization } from "./useOrderInitialization";
 import { useFeeInput } from "./useFeeInput";
 import { useCreateOfferFormState } from "./useCreateOfferFormState";
 import type { OfferDetails } from "@/entities/offer";
-import {
-  OrderBookFilters,
-  OrderBookOrder,
-} from "@/features/trading/lib/orderBookTypes";
+import { OrderBookFilters, OrderBookOrder } from "@/features/trading/lib/orderBookTypes";
 import type { AssetItem } from "./useOrderBookOfferSubmission";
 
 interface UseCreateOfferFormDataProps {
@@ -51,13 +48,7 @@ export function useCreateOfferFormData({
 
   const formState = useCreateOfferFormState({ initialPriceAdjustments });
 
-  const {
-    fee,
-    feeDisplayValue,
-    handleFeeChange,
-    handleFeeBlur,
-    feePlaceholder,
-  } = useFeeInput();
+  const { fee, feeDisplayValue, handleFeeChange, handleFeeBlur, feePlaceholder } = useFeeInput();
 
   useOrderInitialization({
     order,
@@ -81,14 +72,10 @@ export function useCreateOfferFormData({
 
   const { extendedMakerAssets, extendedTakerAssets } = useAssetConversion(
     adjustedMakerAssets,
-    adjustedTakerAssets,
+    adjustedTakerAssets
   );
 
-  const isFormValid = useFormValidation(
-    extendedMakerAssets,
-    extendedTakerAssets,
-    fee,
-  );
+  const isFormValid = useFormValidation(extendedMakerAssets, extendedTakerAssets, fee);
 
   const {
     addOfferedAsset,
@@ -104,26 +91,21 @@ export function useCreateOfferFormData({
     setBaseAmounts: formState.setBaseAmounts,
   });
 
-  const {
-    handleSubmit,
-    isSubmitting,
-    isUploadingToDexie,
-    errorMessage,
-    successMessage,
-  } = useFormSubmission({
-    extendedMakerAssets,
-    extendedTakerAssets,
-    fee,
-    isFormValid,
-    onOfferCreated,
-    resetForm,
-    mode,
-    onClose,
-  });
+  const { handleSubmit, isSubmitting, isUploadingToDexie, errorMessage, successMessage } =
+    useFormSubmission({
+      extendedMakerAssets,
+      extendedTakerAssets,
+      fee,
+      isFormValid,
+      onOfferCreated,
+      resetForm,
+      mode,
+      onClose,
+    });
 
   const { previewOffered, previewRequested } = usePreviewCalculations(
     extendedMakerAssets,
-    extendedTakerAssets,
+    extendedTakerAssets
   );
 
   return {

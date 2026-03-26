@@ -35,7 +35,7 @@ function createTakenOffer(
   offerString: string,
   fee: number,
   offerPreview: UseMarketOfferSubmissionProps["offerPreview"],
-  dexieOfferId?: string,
+  dexieOfferId?: string
 ): OfferDetails {
   return {
     id: Date.now().toString(),
@@ -53,10 +53,7 @@ function createTakenOffer(
 }
 
 // Helper function to save taken offer
-async function saveTakenOffer(
-  offer: OfferDetails,
-  walletAddress: string,
-): Promise<void> {
+async function saveTakenOffer(offer: OfferDetails, walletAddress: string): Promise<void> {
   await offerStorageService.saveOffer(offer, true, walletAddress);
   await offerStorageService.markOfferAsTaken(offer.id, walletAddress);
 }
@@ -108,7 +105,7 @@ export function useMarketOfferSubmission({
             formState.offerString,
             formState.fee,
             offerPreview,
-            order?.id,
+            order?.id
           );
 
           // Save offer to IndexedDB with takenBy field
@@ -135,7 +132,7 @@ export function useMarketOfferSubmission({
             formState.offerString,
             formState.fee,
             offerPreview,
-            order?.id,
+            order?.id
           );
 
           formState.setSuccessMessage("Offer accepted! Processing...");
@@ -151,8 +148,7 @@ export function useMarketOfferSubmission({
           throw new Error("Failed to take market offer - no tradeId returned");
         }
       } catch (error) {
-        const errorMsg =
-          error instanceof Error ? error.message : "Unknown error occurred";
+        const errorMsg = error instanceof Error ? error.message : "Unknown error occurred";
         formState.setErrorMessage(`Failed to take market offer: ${errorMsg}`);
       } finally {
         formState.setIsSubmitting(false);
@@ -168,7 +164,7 @@ export function useMarketOfferSubmission({
       mode,
       walletAddress,
       order?.id,
-    ],
+    ]
   );
 
   return { handleSubmit };

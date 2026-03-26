@@ -6,8 +6,7 @@ import { useOrderBookFilters } from "@/features/trading/hooks/useOrderBookFilter
 
 export default function FilterButton() {
   const { t } = useThemeClasses();
-  const { showFilterPane, toggleFilterPane, hasActiveFilters } =
-    useOrderBookFilters();
+  const { showFilterPane, toggleFilterPane, hasActiveFilters } = useOrderBookFilters();
 
   return (
     <button
@@ -51,8 +50,7 @@ export default function FilterButton() {
       <div
         className="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"
         style={{
-          background:
-            "linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent)",
+          background: "linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent)",
         }}
       />
 
@@ -65,9 +63,7 @@ export default function FilterButton() {
           ${showFilterPane ? "text-blue-600 dark:text-blue-400" : t.text}
         `}
         style={{
-          filter: showFilterPane
-            ? "drop-shadow(0 0 4px rgba(59, 130, 246, 0.5))"
-            : "none",
+          filter: showFilterPane ? "drop-shadow(0 0 4px rgba(59, 130, 246, 0.5))" : "none",
         }}
       />
 

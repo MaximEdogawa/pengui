@@ -18,12 +18,7 @@ import type { OrderBookPanelMode } from "./types";
 export type { OrderBookPanelMode } from "./types";
 
 interface TradingLayoutProps {
-  activeTradingView?:
-    | "orderbook"
-    | "chart"
-    | "depth"
-    | "trades"
-    | "terminal";
+  activeTradingView?: "orderbook" | "chart" | "depth" | "trades" | "terminal";
   activeMode?: OrderBookPanelMode;
 }
 
@@ -70,13 +65,7 @@ export default function TradingLayout({
         // Desktop: show inline (handled in render)
       }
     },
-    [
-      currentMode,
-      useAsTemplate,
-      isMobile,
-      selectOrderForTaking,
-      selectOrderForMaking,
-    ],
+    [currentMode, useAsTemplate, isMobile, selectOrderForTaking, selectOrderForMaking]
   );
 
   const handleFiltersChange = useCallback(() => {
@@ -109,14 +98,11 @@ export default function TradingLayout({
     // Order book will auto-refresh via useOrderBook hook
   }, [resetForm]);
 
-  const handleMobileModeToggle = useCallback(
-    (mode: OrderBookPanelMode) => {
-      setCurrentMode(mode);
-      setShowCreateOfferModal(false);
-      setShowTakeOfferModal(false);
-    },
-    [],
-  );
+  const handleMobileModeToggle = useCallback((mode: OrderBookPanelMode) => {
+    setCurrentMode(mode);
+    setShowCreateOfferModal(false);
+    setShowTakeOfferModal(false);
+  }, []);
 
   return (
     <div className="flex h-full">
@@ -138,7 +124,10 @@ export default function TradingLayout({
         )}
         <div className="flex-1 min-h-0">
           {isMobile && currentMode === "swap" ? (
-            <div className={`h-full overflow-y-auto ${t.card} rounded-lg border ${t.border} px-1.5 py-1`} style={{ scrollbarGutter: "stable" }}>
+            <div
+              className={`h-full overflow-y-auto ${t.card} rounded-lg border ${t.border} px-1.5 py-1`}
+              style={{ scrollbarGutter: "stable" }}
+            >
               <SwapTabContent mode="inline" />
             </div>
           ) : (

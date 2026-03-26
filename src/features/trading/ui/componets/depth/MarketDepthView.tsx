@@ -5,10 +5,7 @@ import { Loader2, AlertCircle, RefreshCw } from "lucide-react";
 import MarketDepthChart from "./MarketDepthChart";
 import { useThemeClasses } from "@/shared/hooks";
 import { useMarketDepth } from "@/features/trading/hooks/useMarketDepth";
-import {
-  OrderBookFilters,
-  OrderBookOrder,
-} from "@/features/trading/lib/orderBookTypes";
+import { OrderBookFilters, OrderBookOrder } from "@/features/trading/lib/orderBookTypes";
 
 interface MarketDepthViewProps {
   filters?: OrderBookFilters;
@@ -27,24 +24,15 @@ function LoadingState() {
   );
 }
 
-function ErrorState({
-  error,
-  onRetry,
-}: {
-  error: Error | null;
-  onRetry: () => void;
-}) {
+function ErrorState({ error, onRetry }: { error: Error | null; onRetry: () => void }) {
   return (
     <div className="h-full flex items-center justify-center bg-[#131722] rounded-lg">
       <div className="flex flex-col items-center gap-3 max-w-md text-center px-4">
         <AlertCircle className="w-8 h-8 text-[#ef5350]" />
         <div>
-          <p className="text-sm font-medium text-[#d1d4dc] mb-1">
-            Failed to load market depth
-          </p>
+          <p className="text-sm font-medium text-[#d1d4dc] mb-1">Failed to load market depth</p>
           <p className="text-xs text-[#868993] mb-4">
-            {error?.message ||
-              "An error occurred while fetching order book data"}
+            {error?.message || "An error occurred while fetching order book data"}
           </p>
         </div>
         <button
@@ -65,8 +53,7 @@ function EmptyState() {
       <div className="flex flex-col items-center gap-3 max-w-md text-center px-4">
         <p className="text-sm text-[#868993]">No order book data available</p>
         <p className="text-xs text-[#868993] opacity-75">
-          The order book is currently empty. Try adjusting your filters or check
-          back later.
+          The order book is currently empty. Try adjusting your filters or check back later.
         </p>
       </div>
     </div>
@@ -133,7 +120,7 @@ export default function MarketDepthView({
     (price: number) => {
       onPriceClick?.(price);
     },
-    [onPriceClick],
+    [onPriceClick]
   );
 
   // Loading state
@@ -152,11 +139,13 @@ export default function MarketDepthView({
   }
 
   return (
-    <div
-      className={`h-full flex flex-col ${t.card} rounded-lg overflow-hidden`}
-    >
+    <div className={`h-full flex flex-col ${t.card} rounded-lg overflow-hidden`}>
       {/* Chart Section */}
-      <div ref={chartContainerRef} className="flex-1 min-h-[300px] sm:min-h-[400px] relative touch-manipulation" style={{ touchAction: 'none' }}>
+      <div
+        ref={chartContainerRef}
+        className="flex-1 min-h-[300px] sm:min-h-[400px] relative touch-manipulation"
+        style={{ touchAction: "none" }}
+      >
         {chartSize.width > 0 && chartSize.height > 0 && (
           <MarketDepthChart
             depthData={depthData}

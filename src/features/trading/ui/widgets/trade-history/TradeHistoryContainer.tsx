@@ -6,10 +6,7 @@ import TradeHistoryTable from "./TradeHistoryTable";
 import { Loader2 } from "lucide-react";
 import { OrderBookOrder } from "@/features/trading/lib/orderBookTypes";
 import { useOrderBookFilters } from "@/features/trading/hooks/useOrderBookFilters";
-import {
-  useTradeHistory,
-  type TradeHistoryResult,
-} from "@/features/trading/hooks/useTradeHistory";
+import { useTradeHistory, type TradeHistoryResult } from "@/features/trading/hooks/useTradeHistory";
 import { useTradeHistoryFilters } from "@/features/trading/hooks/useTradeHistoryFilters";
 import { useTradeHistorySorting } from "@/features/trading/hooks/useTradeHistorySorting";
 
@@ -69,7 +66,7 @@ export default function TradeHistoryContainer({
       (entries) => {
         if (entries[0]?.isIntersecting) fetchNextPage();
       },
-      { root: null, rootMargin: "200px", threshold: 0 },
+      { root: null, rootMargin: "200px", threshold: 0 }
     );
     obs.observe(el);
     return () => obs.disconnect();
@@ -77,9 +74,7 @@ export default function TradeHistoryContainer({
 
   if (error) {
     return (
-      <div
-        className={`${t.card} p-4 h-full flex flex-col items-center justify-center`}
-      >
+      <div className={`${t.card} p-4 h-full flex flex-col items-center justify-center`}>
         <p className={`${t.textSecondary} text-sm`}>
           Error loading trade history. Please try again.
         </p>
@@ -89,9 +84,7 @@ export default function TradeHistoryContainer({
 
   if (!hasPairFilter) {
     return (
-      <div
-        className={`${t.card} p-4 h-full flex flex-col items-center justify-center`}
-      >
+      <div className={`${t.card} p-4 h-full flex flex-col items-center justify-center`}>
         <p className={`${t.textSecondary} text-sm`}>
           Please select an asset pair to view trade history
         </p>
@@ -177,9 +170,7 @@ export default function TradeHistoryContainer({
         {isLoading ? (
           <div className="flex items-center justify-center h-full">
             <Loader2 className="w-5 h-5 animate-spin text-gray-400 dark:text-gray-500" />
-            <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">
-              Loading offers...
-            </span>
+            <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">Loading offers...</span>
           </div>
         ) : (
           <>
@@ -191,9 +182,7 @@ export default function TradeHistoryContainer({
             />
             <div ref={sentinelRef} className="h-4 flex-shrink-0" aria-hidden />
             {isFetchingNextPage && (
-              <div
-                className={`flex items-center justify-center py-3 ${t.textSecondary}`}
-              >
+              <div className={`flex items-center justify-center py-3 ${t.textSecondary}`}>
                 <Loader2 className="w-4 h-4 animate-spin" />
                 <span className="ml-2 text-xs">Loading more...</span>
               </div>

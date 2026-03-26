@@ -56,14 +56,10 @@ export function SwapTradeCard({
     "min-w-0 flex-1 [&_input]:!h-6 [&_input]:!min-h-[1.5rem] [&_input]:!px-1 [&_input]:!text-[10px] [&_input]:!font-medium [&_input]:!rounded-md";
 
   return (
-    <div
-      className={`overflow-hidden rounded-md border ${t.border} ${t.card} backdrop-blur-xl`}
-    >
+    <div className={`overflow-hidden rounded-md border ${t.border} ${t.card} backdrop-blur-xl`}>
       <div className="px-1.5 py-1">
         <div className="mb-0.5">
-          <span
-            className={`text-[10px] font-medium leading-tight ${t.textSecondary}`}
-          >
+          <span className={`text-[10px] font-medium leading-tight ${t.textSecondary}`}>
             LP token
           </span>
         </div>
@@ -74,32 +70,18 @@ export function SwapTradeCard({
           {selectedPair ? (
             <AssetPairIcon
               back={<XchIcon size={12} isTestnet={isTestnet} />}
-              front={
-                <TickerIcon
-                  assetId={selectedPair.asset_id}
-                  ticker={tokenName}
-                  size={12}
-                />
-              }
+              front={<TickerIcon assetId={selectedPair.asset_id} ticker={tokenName} size={12} />}
             />
           ) : (
-            <span
-              className={`h-3 w-3 shrink-0 rounded-full ${t.card} border ${t.border}`}
-            />
+            <span className={`h-3 w-3 shrink-0 rounded-full ${t.card} border ${t.border}`} />
           )}
-          <span
-            className={`min-w-[1.75rem] shrink-0 text-[10px] font-medium ${t.text}`}
-          >
-            LP
-          </span>
+          <span className={`min-w-[1.75rem] shrink-0 text-[10px] font-medium ${t.text}`}>LP</span>
           <div className={lpAmountField}>
             <AmountInput
               value={parseFloat(lpAmount) || 0}
               tempInput={lpAmount}
               type="cat"
-              onChange={(amt, temp) =>
-                onLpAmountChange(temp !== undefined ? temp : String(amt))
-              }
+              onChange={(amt, temp) => onLpAmountChange(temp !== undefined ? temp : String(amt))}
               onBlur={() => {}}
             />
           </div>
@@ -113,9 +95,7 @@ export function SwapTradeCard({
           </span>
           <span className={`text-[9px] ${t.textSecondary}`}>You receive</span>
         </label>
-        <div
-          className={`${assetRow} ring-1 ring-cyan-500/15 dark:ring-cyan-400/12`}
-        >
+        <div className={`${assetRow} ring-1 ring-cyan-500/15 dark:ring-cyan-400/12`}>
           {isRequestedNative ? (
             <XchIcon size={14} isTestnet={isTestnet} />
           ) : selectedPair ? (
@@ -125,24 +105,16 @@ export function SwapTradeCard({
               size={14}
             />
           ) : (
-            <span
-              className={`h-3.5 w-3.5 rounded-full ${t.card} border ${t.border}`}
-            />
+            <span className={`h-3.5 w-3.5 rounded-full ${t.card} border ${t.border}`} />
           )}
-          <span
-            className={`min-w-[2.25rem] shrink-0 text-[11px] font-medium ${t.text}`}
-          >
+          <span className={`min-w-[2.25rem] shrink-0 text-[11px] font-medium ${t.text}`}>
             {requestedTicker}
           </span>
           <div className={amountField}>
             <AmountInput
               value={parseFloat(requestedAmount) || 0}
               tempInput={requestedAmount}
-              type={
-                (requestedTicker && isXchTicker(requestedTicker)
-                  ? "xch"
-                  : "cat") as AssetType
-              }
+              type={(requestedTicker && isXchTicker(requestedTicker) ? "xch" : "cat") as AssetType}
               onChange={(amount, temp) => {
                 onAmountDriverRequested();
                 onRequestedChange(temp !== undefined ? temp : String(amount));
@@ -155,9 +127,7 @@ export function SwapTradeCard({
 
       <div className={`border-t px-1.5 py-1.5 ${t.border}`}>
         <label className="mb-1 flex items-baseline justify-between gap-2">
-          <span
-            className={`text-[11px] font-medium leading-tight ${t.textSecondary}`}
-          >
+          <span className={`text-[11px] font-medium leading-tight ${t.textSecondary}`}>
             Sell {offeredTicker ?? "—"}
           </span>
           <span className={`text-[9px] ${t.textSecondary}`}>You pay</span>
@@ -172,24 +142,16 @@ export function SwapTradeCard({
               size={14}
             />
           ) : (
-            <span
-              className={`h-3.5 w-3.5 rounded-full ${t.card} border ${t.border}`}
-            />
+            <span className={`h-3.5 w-3.5 rounded-full ${t.card} border ${t.border}`} />
           )}
-          <span
-            className={`min-w-[2.25rem] shrink-0 text-[11px] font-medium ${t.text}`}
-          >
+          <span className={`min-w-[2.25rem] shrink-0 text-[11px] font-medium ${t.text}`}>
             {offeredTicker}
           </span>
           <div className={amountField}>
             <AmountInput
               value={parseFloat(offeredAmount) || 0}
               tempInput={offeredAmount}
-              type={
-                (offeredTicker && isXchTicker(offeredTicker)
-                  ? "xch"
-                  : "cat") as AssetType
-              }
+              type={(offeredTicker && isXchTicker(offeredTicker) ? "xch" : "cat") as AssetType}
               onChange={(amount, temp) => {
                 onAmountDriverOffered();
                 onOfferedChange(temp !== undefined ? temp : String(amount));

@@ -32,6 +32,7 @@ Each feature section contains stories for all UI components within that feature,
 Storybook is typically set up with **complete separation** from the application build:
 
 ### 1. **Directory Structure**
+
 ```
 project-root/
 ├── .storybook/          # Storybook configuration
@@ -60,13 +61,14 @@ project-root/
 ### Method 1: TypeScript Exclusion (Primary Method) ✅
 
 **`tsconfig.json`**:
+
 ```json
 {
   "exclude": [
     "node_modules",
     ".next",
     "storybook-static",
-    "storybook"  // Excludes entire storybook directory
+    "storybook" // Excludes entire storybook directory
   ]
 }
 ```
@@ -76,6 +78,7 @@ This prevents TypeScript from type-checking Storybook files during the build.
 ### Method 2: Directory Location (Automatic)
 
 Since `storybook/` is at the project root (not in `src/` or `app/`):
+
 - Next.js **automatically ignores** it for page routing
 - No special `pageExtensions` config needed
 - No webpack/Turbopack exclusions needed
@@ -83,11 +86,10 @@ Since `storybook/` is at the project root (not in `src/` or `app/`):
 ### Method 3: Storybook Config (For Storybook Builds)
 
 **`.storybook/main.ts`**:
+
 ```typescript
 {
-  stories: [
-    "../storybook/**/*.stories.@(js|jsx|mjs|ts|tsx)"
-  ]
+  stories: ["../storybook/**/*.stories.@(js|jsx|mjs|ts|tsx)"];
 }
 ```
 
@@ -98,13 +100,13 @@ This tells Storybook where to find stories (only used when running `bun run stor
 ✅ **Storybook directory**: `storybook/` at project root  
 ✅ **TypeScript exclusion**: `tsconfig.json` excludes `storybook`  
 ✅ **Next.js**: Automatically ignores `storybook/` (not in `src/` or `app/`)  
-✅ **Storybook config**: Points to `../storybook/**/*.stories.*`  
+✅ **Storybook config**: Points to `../storybook/**/*.stories.*`
 
 ## What's NOT Needed
 
 ❌ **Webpack config**: Not needed (Next.js 16 uses Turbopack, and `storybook/` is outside `src/`)  
 ❌ **pageExtensions**: Not needed (no `.stories.tsx` files in `src/app/` or `src/pages/`)  
-❌ **Special Next.js config**: Not needed (directory location handles it)  
+❌ **Special Next.js config**: Not needed (directory location handles it)
 
 ## Verification
 
@@ -124,7 +126,7 @@ Storybook has its own `tsconfig.json` at `storybook/tsconfig.json` that extends 
 {
   "extends": "../tsconfig.json",
   "compilerOptions": {
-    "moduleResolution": "bundler",  // Required for proper type resolution
+    "moduleResolution": "bundler" // Required for proper type resolution
     // ... other options
   }
 }
@@ -139,7 +141,7 @@ Storybook has its own `tsconfig.json` at `storybook/tsconfig.json` that extends 
 Always import `Meta` and `StoryObj` from the framework package:
 
 ```typescript
-import type { Meta, StoryObj } from '@storybook/nextjs-vite'
+import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 ```
 
 ❌ **Don't** import from `@storybook/react` directly - the linter will flag this.
@@ -169,26 +171,26 @@ export const MyStory: Story = {
 ### Basic Story Pattern
 
 ```typescript
-import type { Meta, StoryObj } from '@storybook/nextjs-vite'
-import { MyComponent } from '@/shared/ui'
+import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { MyComponent } from "@/shared/ui";
 
 const meta = {
-  title: 'Shared UI/MyComponent',
+  title: "Shared UI/MyComponent",
   component: MyComponent,
   parameters: {
-    layout: 'centered',
+    layout: "centered",
   },
-  tags: ['autodocs'],
-} satisfies Meta<typeof MyComponent>
+  tags: ["autodocs"],
+} satisfies Meta<typeof MyComponent>;
 
-export default meta
-type Story = StoryObj<typeof meta>
+export default meta;
+type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   args: {
     // Component props here
   },
-}
+};
 ```
 
 ## Best Practices
@@ -205,18 +207,22 @@ export const Default: Story = {
 ## Troubleshooting
 
 ### Next.js tries to compile Storybook files
+
 1. Verify `storybook/` is in root `tsconfig.json` exclude
 2. Ensure `storybook/` is at project root (not in `src/`)
 3. Clear `.next` cache: `rm -rf .next`
 4. Check that no app code imports from `storybook/`
 
 ### TypeScript errors: "Module has no exported member 'StoryObj'"
+
 1. Verify `storybook/tsconfig.json` has `"moduleResolution": "bundler"`
 2. Ensure you're importing from `@storybook/nextjs-vite`, not `@storybook/react`
 3. Clear TypeScript cache: `rm -rf node_modules/.cache`
 
 ### TypeScript errors: "Property 'args' is missing"
+
 When using custom `render` functions, you must provide dummy `args`:
+
 ```typescript
 export const MyStory: Story = {
   args: {
@@ -227,15 +233,17 @@ export const MyStory: Story = {
   render: () => {
     // Your custom render logic
   },
-}
+};
 ```
 
 ### Linter error: "Do not import renderer package directly"
+
 Always import from the framework package:
+
 ```typescript
 // ✅ Correct
-import type { Meta, StoryObj } from '@storybook/nextjs-vite'
+import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 
 // ❌ Wrong
-import type { Meta, StoryObj } from '@storybook/react'
+import type { Meta, StoryObj } from "@storybook/react";
 ```

@@ -1,25 +1,25 @@
-'use client'
+"use client";
 
-import { CHIA_ASSET_IDS, XCH_BASE_CURRENCIES } from '@/shared/lib/constants/chia-assets'
-import { getDexieApiUrl } from '@/shared/lib/utils/networkUtils'
-import { useNetwork } from '@/shared/hooks/useNetwork'
-import { getAdaptiveConfig } from '@/shared/lib/utils/networkQuality'
-import { tickerToAsset, type Asset, type Ticker, type DexieTicker } from '../types'
-import { useQuery } from '@tanstack/react-query'
-import { useMemo } from 'react'
+import { CHIA_ASSET_IDS, XCH_BASE_CURRENCIES } from "@/shared/lib/constants/chia-assets";
+import { getDexieApiUrl } from "@/shared/lib/utils/networkUtils";
+import { useNetwork } from "@/shared/hooks/useNetwork";
+import { getAdaptiveConfig } from "@/shared/lib/utils/networkQuality";
+import { tickerToAsset, type Asset, type Ticker, type DexieTicker } from "../types";
+import { useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
 
-const DEXIE_KEY = 'dexie'
-const TICKERS_KEY = 'tickers'
+const DEXIE_KEY = "dexie";
+const TICKERS_KEY = "tickers";
 
 /**
  * Legacy CAT token info interface (for backward compatibility)
  * @deprecated Use Asset type from @/entities/asset instead
  */
 export interface CatTokenInfo {
-  assetId: string
-  ticker: string
-  name: string
-  symbol: string
+  assetId: string;
+  ticker: string;
+  name: string;
+  symbol: string;
 }
 
 /**
@@ -43,7 +43,7 @@ export function dexieTickerToTicker(dexieTicker: DexieTicker): Ticker {
     ask: dexieTicker.ask,
     high: dexieTicker.high,
     low: dexieTicker.low,
-  }
+  };
 }
 
 /**
@@ -52,17 +52,17 @@ export function dexieTickerToTicker(dexieTicker: DexieTicker): Ticker {
  * Includes ALL tickers dynamically (not just those paired with XCH)
  */
 export function createCatTokenMap(tickers: DexieTicker[]): Map<string, CatTokenInfo> {
-  const catMap = new Map<string, CatTokenInfo>()
+  const catMap = new Map<string, CatTokenInfo>();
 
   // Only exclude pure XCH (not tokens that use XCH asset ID like TDBX)
   // We exclude base_currency that is exactly 'xch' or 'TXCH' (string match)
   // But we include tokens like TDBX that use the TXCH asset ID as their base_currency
-  const xchBaseCurrencies = XCH_BASE_CURRENCIES
+  const xchBaseCurrencies = XCH_BASE_CURRENCIES;
 
   tickers.forEach((dexieTicker) => {
     // Include ALL tickers where base_currency is not exactly 'xch' or 'TXCH'
     // This includes tokens like TDBX that use the TXCH asset ID
-    const isNotXchBase = !xchBaseCurrencies.has(dexieTicker.base_currency)
+    const isNotXchBase = !xchBaseCurrencies.has(dexieTicker.base_currency);
 
     if (isNotXchBase && dexieTicker.base_currency) {
       // Map asset ID (base_currency) to asset information
@@ -72,11 +72,11 @@ export function createCatTokenMap(tickers: DexieTicker[]): Map<string, CatTokenI
         ticker: dexieTicker.base_code,
         name: dexieTicker.base_name,
         symbol: dexieTicker.base_code,
-      })
+      });
     }
-  })
+  });
 
-  return catMap
+  return catMap;
 }
 
 /**
@@ -85,28 +85,28 @@ export function createCatTokenMap(tickers: DexieTicker[]): Map<string, CatTokenI
  * Includes ALL tickers dynamically (not just those paired with XCH)
  */
 export function createAssetMap(tickers: DexieTicker[]): Map<string, Asset> {
-  const assetMap = new Map<string, Asset>()
+  const assetMap = new Map<string, Asset>();
 
   // Only exclude pure XCH (not tokens that use XCH asset ID like TDBX)
   // We exclude base_currency that is exactly 'xch' or 'TXCH' (string match)
   // But we include tokens like TDBX that use the TXCH asset ID as their base_currency
-  const xchBaseCurrencies = XCH_BASE_CURRENCIES
+  const xchBaseCurrencies = XCH_BASE_CURRENCIES;
 
   tickers.forEach((dexieTicker) => {
     // Include ALL tickers where base_currency is not exactly 'xch' or 'TXCH'
     // This includes tokens like TDBX that use the TXCH asset ID
-    const isNotXchBase = !xchBaseCurrencies.has(dexieTicker.base_currency)
+    const isNotXchBase = !xchBaseCurrencies.has(dexieTicker.base_currency);
 
     if (isNotXchBase && dexieTicker.base_currency) {
-      const ticker = dexieTickerToTicker(dexieTicker)
-      const asset = tickerToAsset(ticker)
+      const ticker = dexieTickerToTicker(dexieTicker);
+      const asset = tickerToAsset(ticker);
       // Map asset ID (base_currency) to Asset
       // Use the most recent ticker data if duplicate asset IDs exist
-      assetMap.set(dexieTicker.base_currency, asset)
+      assetMap.set(dexieTicker.base_currency, asset);
     }
-  })
+  });
 
-  return assetMap
+  return assetMap;
 }
 
 /**
@@ -120,34 +120,34 @@ export function getCatTokenInfo(assetId: string, catMap: Map<string, CatTokenInf
       name: assetId,
       symbol: assetId,
     }
-  )
+  );
 }
 
 /**
  * Hook to fetch all tickers from Dexie API using TanStack Query
  */
 export function useTickers() {
-  const { network } = useNetwork()
-  const dexieApiBaseUrl = getDexieApiUrl(network)
-  
+  const { network } = useNetwork();
+  const dexieApiBaseUrl = getDexieApiUrl(network);
+
   return useQuery({
     queryKey: [DEXIE_KEY, TICKERS_KEY, network],
     queryFn: async () => {
-      const cfg = getAdaptiveConfig()
-      const controller = new AbortController()
-      const timer = setTimeout(() => controller.abort(), cfg.fetchTimeoutMs)
+      const cfg = getAdaptiveConfig();
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), cfg.fetchTimeoutMs);
 
       try {
         const response = await fetch(`${dexieApiBaseUrl}/v3/prices/tickers`, {
-          headers: { Accept: 'application/json', 'Accept-Encoding': 'gzip, deflate, br' },
+          headers: { Accept: "application/json", "Accept-Encoding": "gzip, deflate, br" },
           signal: controller.signal,
-        })
+        });
 
         if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`)
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        const data = await response.json()
+        const data = await response.json();
         const tickersArray = Array.isArray(data.json)
           ? data.json
           : Array.isArray(data.tickers)
@@ -156,14 +156,14 @@ export function useTickers() {
               ? data.data
               : Array.isArray(data)
                 ? data
-                : []
+                : [];
 
         return {
           success: true,
           data: tickersArray,
-        }
+        };
       } finally {
-        clearTimeout(timer)
+        clearTimeout(timer);
       }
     },
     staleTime: 24 * 60 * 60 * 1000,
@@ -171,7 +171,7 @@ export function useTickers() {
     retry: 3,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
-  })
+  });
 }
 
 /**
@@ -179,76 +179,76 @@ export function useTickers() {
  * Returns both legacy CatTokenInfo format and new Asset format
  */
 export function useCatTokens() {
-  const tickersQuery = useTickers()
+  const tickersQuery = useTickers();
 
   // Legacy map for backward compatibility
   const catTokenMap = useMemo(() => {
-    const map = new Map<string, CatTokenInfo>()
+    const map = new Map<string, CatTokenInfo>();
 
     // Process tickers if available
     if (tickersQuery.data?.success && tickersQuery.data.data) {
-      const processedMap = createCatTokenMap(tickersQuery.data.data)
+      const processedMap = createCatTokenMap(tickersQuery.data.data);
       processedMap.forEach((value, key) => {
-        map.set(key, value)
-      })
+        map.set(key, value);
+      });
     }
 
-    return map
-  }, [tickersQuery.data])
+    return map;
+  }, [tickersQuery.data]);
 
   // New asset map using proper types
   const assetMap = useMemo(() => {
-    const map = new Map<string, Asset>()
+    const map = new Map<string, Asset>();
 
     // Process tickers if available
     if (tickersQuery.data?.success && tickersQuery.data.data) {
-      const processedMap = createAssetMap(tickersQuery.data.data)
+      const processedMap = createAssetMap(tickersQuery.data.data);
       processedMap.forEach((value, key) => {
-        map.set(key, value)
-      })
+        map.set(key, value);
+      });
     }
 
-    return map
-  }, [tickersQuery.data])
+    return map;
+  }, [tickersQuery.data]);
 
   // Create available tokens list (legacy format for backward compatibility)
   // Include XCH in the list
   const availableCatTokens = useMemo(() => {
-    const tokens = Array.from(catTokenMap.values())
+    const tokens = Array.from(catTokenMap.values());
     // Add XCH to the list
     tokens.unshift({
       assetId: CHIA_ASSET_IDS.XCH, // Empty string for XCH (as per wallet requirements)
-      ticker: 'XCH',
-      name: 'Chia',
-      symbol: 'XCH',
-    })
+      ticker: "XCH",
+      name: "Chia",
+      symbol: "XCH",
+    });
     return tokens.sort((a, b) => {
       // XCH always first
-      if (a.ticker === 'XCH') return -1
-      if (b.ticker === 'XCH') return 1
-      return a.ticker.localeCompare(b.ticker)
-    })
-  }, [catTokenMap])
+      if (a.ticker === "XCH") return -1;
+      if (b.ticker === "XCH") return 1;
+      return a.ticker.localeCompare(b.ticker);
+    });
+  }, [catTokenMap]);
 
   // Create available assets list (new format)
   // Include XCH in the list
   const availableAssets = useMemo(() => {
-    const assets = Array.from(assetMap.values())
+    const assets = Array.from(assetMap.values());
     // Add XCH to the list
     assets.unshift({
       assetId: CHIA_ASSET_IDS.XCH, // Empty string for XCH (as per wallet requirements)
-      ticker: 'XCH',
-      name: 'Chia',
-      symbol: 'XCH',
-      type: 'xch',
-    })
+      ticker: "XCH",
+      name: "Chia",
+      symbol: "XCH",
+      type: "xch",
+    });
     return assets.sort((a, b) => {
       // XCH always first
-      if (a.ticker === 'XCH') return -1
-      if (b.ticker === 'XCH') return 1
-      return a.ticker.localeCompare(b.ticker)
-    })
-  }, [assetMap])
+      if (a.ticker === "XCH") return -1;
+      if (b.ticker === "XCH") return 1;
+      return a.ticker.localeCompare(b.ticker);
+    });
+  }, [assetMap]);
 
   return {
     // Legacy format (backward compatibility)
@@ -273,7 +273,7 @@ export function useCatTokens() {
 
     // Helper to get asset info synchronously (new)
     getAsset: (assetId: string): Asset | undefined => assetMap.get(assetId),
-  }
+  };
 }
 
 /**
@@ -283,5 +283,5 @@ export function getCatTokenInfoSync(
   assetId: string,
   catTokenMap: Map<string, CatTokenInfo>
 ): CatTokenInfo {
-  return getCatTokenInfo(assetId, catTokenMap)
+  return getCatTokenInfo(assetId, catTokenMap);
 }

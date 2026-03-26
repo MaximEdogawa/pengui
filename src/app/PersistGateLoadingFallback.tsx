@@ -39,8 +39,8 @@ export function PersistGateLoadingFallback() {
       {showEscape && (
         <div className="flex flex-col items-center gap-3 text-center">
           <p className="text-sm text-white/70">
-            Taking longer than usual? You can disconnect the wallet, reload, and
-            try opening the wallet again.
+            Taking longer than usual? You can disconnect the wallet, reload, and try opening the
+            wallet again.
           </p>
           <button
             type="button"

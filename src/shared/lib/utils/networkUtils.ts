@@ -38,15 +38,11 @@ export function networkToChainId(network: "mainnet" | "testnet"): string {
 export function getDexieApiUrl(network: "mainnet" | "testnet"): string {
   return network === "mainnet"
     ? process.env.NEXT_PUBLIC_DEXIE_MAINNET_API_URL || "https://api.dexie.space"
-    : process.env.NEXT_PUBLIC_DEXIE_TESTNET_API_URL ||
-        "https://api-testnet.dexie.space";
+    : process.env.NEXT_PUBLIC_DEXIE_TESTNET_API_URL || "https://api-testnet.dexie.space";
 }
 
 function isAbsoluteWsUrl(url: string): boolean {
-  return (
-    typeof url === "string" &&
-    (url.startsWith("ws://") || url.startsWith("wss://"))
-  );
+  return typeof url === "string" && (url.startsWith("ws://") || url.startsWith("wss://"));
 }
 
 /** Local relays (run `bun run relay` / `relay:testnet`). */
@@ -81,17 +77,13 @@ export function getDexieSplashRelayUrl(network: "mainnet" | "testnet"): string {
   // No env set: use remote relays (dev and production) so stream works without local relay
   if (process.env.NODE_ENV === "development") {
     return network === "mainnet"
-      ? process.env.NEXT_PUBLIC_DEXIE_SPLASH_RELAY_MAINNET_WS_URL ||
-          DEFAULT_RELAY_MAINNET_WS
-      : process.env.NEXT_PUBLIC_DEXIE_SPLASH_RELAY_TESTNET_WS_URL ||
-          DEFAULT_RELAY_TESTNET_WS;
+      ? process.env.NEXT_PUBLIC_DEXIE_SPLASH_RELAY_MAINNET_WS_URL || DEFAULT_RELAY_MAINNET_WS
+      : process.env.NEXT_PUBLIC_DEXIE_SPLASH_RELAY_TESTNET_WS_URL || DEFAULT_RELAY_TESTNET_WS;
   }
   if (isLocalhostForRelay()) {
     return network === "mainnet"
-      ? process.env.NEXT_PUBLIC_DEXIE_SPLASH_RELAY_MAINNET_WS_URL ||
-          DEFAULT_RELAY_MAINNET_WS
-      : process.env.NEXT_PUBLIC_DEXIE_SPLASH_RELAY_TESTNET_WS_URL ||
-          DEFAULT_RELAY_TESTNET_WS;
+      ? process.env.NEXT_PUBLIC_DEXIE_SPLASH_RELAY_MAINNET_WS_URL || DEFAULT_RELAY_MAINNET_WS
+      : process.env.NEXT_PUBLIC_DEXIE_SPLASH_RELAY_TESTNET_WS_URL || DEFAULT_RELAY_TESTNET_WS;
   }
   return "";
 }
@@ -100,9 +92,7 @@ export function getDexieSplashRelayUrl(network: "mainnet" | "testnet"): string {
  * Whether the current relay URL is the dev/localhost default (no env configured).
  * Use in UI to show "Using local relay" when auto-connected for testing.
  */
-export function isDefaultLocalRelayUrl(
-  network: "mainnet" | "testnet",
-): boolean {
+export function isDefaultLocalRelayUrl(network: "mainnet" | "testnet"): boolean {
   const u =
     network === "mainnet"
       ? process.env.NEXT_PUBLIC_DEXIE_SPLASH_RELAY_MAINNET_WS_URL ||
@@ -120,12 +110,7 @@ export function isDefaultLocalRelayUrl(
  */
 export function getSpaceScanApiUrl(network?: "mainnet" | "testnet"): string {
   if (network === "testnet") {
-    return (
-      process.env.NEXT_PUBLIC_SPACESCAN_TESTNET_API_URL ||
-      "https://api-testnet.spacescan.io"
-    );
+    return process.env.NEXT_PUBLIC_SPACESCAN_TESTNET_API_URL || "https://api-testnet.spacescan.io";
   }
-  return (
-    process.env.NEXT_PUBLIC_SPACESCAN_API_URL || "https://api.spacescan.io"
-  );
+  return process.env.NEXT_PUBLIC_SPACESCAN_API_URL || "https://api.spacescan.io";
 }

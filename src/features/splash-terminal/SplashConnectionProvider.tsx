@@ -15,11 +15,7 @@ const SplashConnectionContext = createContext<UseSplashWasmResult | null>(null);
  * - Children (StreamContainer, order book, form hooks, …) share one
  *   connection instead of each creating their own.
  */
-export function SplashConnectionProvider({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export function SplashConnectionProvider({ children }: { children: React.ReactNode }) {
   const wasm = useSplashWasm();
   const { network } = useNetwork();
   const relayUrl = getDexieSplashRelayUrl(network);
@@ -53,14 +49,11 @@ export function SplashConnectionProvider({
       }
     };
     document.addEventListener("visibilitychange", handleVisibility);
-    return () =>
-      document.removeEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
   }, []);
 
   return (
-    <SplashConnectionContext.Provider value={wasm}>
-      {children}
-    </SplashConnectionContext.Provider>
+    <SplashConnectionContext.Provider value={wasm}>{children}</SplashConnectionContext.Provider>
   );
 }
 
@@ -71,9 +64,7 @@ export function SplashConnectionProvider({
 export function useSplashConnection(): UseSplashWasmResult {
   const ctx = useContext(SplashConnectionContext);
   if (!ctx) {
-    throw new Error(
-      "useSplashConnection must be used inside <SplashConnectionProvider>",
-    );
+    throw new Error("useSplashConnection must be used inside <SplashConnectionProvider>");
   }
   return ctx;
 }

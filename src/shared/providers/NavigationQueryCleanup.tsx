@@ -1,8 +1,8 @@
-'use client'
+"use client";
 
-import { useQueryClient } from '@tanstack/react-query'
-import { useEffect, useRef } from 'react'
-import { useNavigationProgress } from './NavigationProgressProvider'
+import { useQueryClient } from "@tanstack/react-query";
+import { useEffect, useRef } from "react";
+import { useNavigationProgress } from "./NavigationProgressProvider";
 
 /**
  * Cancels in-flight wallet/API queries shortly after a navigation starts.
@@ -18,22 +18,22 @@ import { useNavigationProgress } from './NavigationProgressProvider'
  * Must be rendered inside both NavigationProgressProvider and ReactQueryProvider.
  */
 export function NavigationQueryCleanup() {
-  const { isNavigating } = useNavigationProgress()
-  const queryClient = useQueryClient()
-  const prevNavigatingRef = useRef(false)
+  const { isNavigating } = useNavigationProgress();
+  const queryClient = useQueryClient();
+  const prevNavigatingRef = useRef(false);
 
   useEffect(() => {
     if (isNavigating && !prevNavigatingRef.current) {
       const timer = setTimeout(() => {
-        queryClient.cancelQueries({ queryKey: ['walletConnect', 'balance'] })
-        queryClient.cancelQueries({ queryKey: ['spacescan'] })
-        queryClient.cancelQueries({ queryKey: ['spacescan', 'all-tokens'] })
-      }, 150)
-      prevNavigatingRef.current = isNavigating
-      return () => clearTimeout(timer)
+        queryClient.cancelQueries({ queryKey: ["walletConnect", "balance"] });
+        queryClient.cancelQueries({ queryKey: ["spacescan"] });
+        queryClient.cancelQueries({ queryKey: ["spacescan", "all-tokens"] });
+      }, 150);
+      prevNavigatingRef.current = isNavigating;
+      return () => clearTimeout(timer);
     }
-    prevNavigatingRef.current = isNavigating
-  }, [isNavigating, queryClient])
+    prevNavigatingRef.current = isNavigating;
+  }, [isNavigating, queryClient]);
 
-  return null
+  return null;
 }

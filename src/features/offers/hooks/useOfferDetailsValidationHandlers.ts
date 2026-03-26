@@ -64,9 +64,7 @@ export function useOfferDetailsValidationHandlers({
             updateError instanceof Error &&
             updateError.message.includes("No offer found with ID")
           ) {
-            state.setValidationError(
-              "This offer has been deleted. Closing modal...",
-            );
+            state.setValidationError("This offer has been deleted. Closing modal...");
             await onOfferDeleted(offer);
             onClose();
           } else {
@@ -77,27 +75,16 @@ export function useOfferDetailsValidationHandlers({
         state.setValidationError("Failed to validate offer state");
       }
     } catch (error) {
-      const errorMsg =
-        error instanceof Error ? error.message : "Unknown error occurred";
+      const errorMsg = error instanceof Error ? error.message : "Unknown error occurred";
       state.setValidationError(`Failed to validate offer: ${errorMsg}`);
     } finally {
       state.setIsValidating(false);
     }
-  }, [
-    offer,
-    inspectOffer,
-    offerStorage,
-    onOfferUpdated,
-    onOfferDeleted,
-    onClose,
-    state,
-  ]);
+  }, [offer, inspectOffer, offerStorage, onOfferUpdated, onOfferDeleted, onClose, state]);
 
   const handleStartStateValidation = useCallback(() => {
     if (!offer.dexieOfferId) {
-      state.setStateValidationError(
-        "No Dexie offer ID available for validation",
-      );
+      state.setStateValidationError("No Dexie offer ID available for validation");
       return;
     }
 

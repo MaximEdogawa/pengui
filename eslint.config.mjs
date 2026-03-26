@@ -40,10 +40,7 @@ export default [
     },
     rules: {
       // App Style Guide Rules - matches style-guide-rules configuration
-      "max-lines": [
-        "error",
-        { max: 1000, skipBlankLines: true, skipComments: true },
-      ],
+      "max-lines": ["error", { max: 1000, skipBlankLines: true, skipComments: true }],
       "no-console": "error", // Disallow all console usage - use logger instead
       "no-debugger": "error",
       "no-var": "error",
@@ -62,13 +59,11 @@ export default [
         },
         {
           selector: "WhileStatement",
-          message:
-            "Use functional programming methods or recursion instead of while loops",
+          message: "Use functional programming methods or recursion instead of while loops",
         },
         {
           selector: "DoWhileStatement",
-          message:
-            "Use functional programming methods or recursion instead of do-while loops",
+          message: "Use functional programming methods or recursion instead of do-while loops",
         },
       ],
       "@typescript-eslint/no-explicit-any": "error",
@@ -186,10 +181,7 @@ export default [
   // Storybook-specific rules (minimal linting for .stories files)
   // Disable TypeScript type checking - Storybook handles this via its own build system
   {
-    files: [
-      "storybook/**/*.stories.{ts,tsx,js,jsx}",
-      ".storybook/**/*.{ts,tsx,js,jsx}",
-    ],
+    files: ["storybook/**/*.stories.{ts,tsx,js,jsx}", ".storybook/**/*.{ts,tsx,js,jsx}"],
     languageOptions: {
       parser: tseslint.parser,
       parserOptions: {

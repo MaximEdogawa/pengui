@@ -1,13 +1,13 @@
-import { useCallback } from 'react'
-import type { ExtendedAsset as ExtendedOfferAsset } from '@/shared/ui'
+import { useCallback } from "react";
+import type { ExtendedAsset as ExtendedOfferAsset } from "@/shared/ui";
 
 interface AssetItem {
-  assetId: string
-  amount: number
-  type: 'xch' | 'cat' | 'nft'
-  symbol: string
-  searchQuery?: string
-  showDropdown?: boolean
+  assetId: string;
+  amount: number;
+  type: "xch" | "cat" | "nft";
+  symbol: string;
+  searchQuery?: string;
+  showDropdown?: boolean;
 }
 
 export function useAssetManagement(
@@ -19,16 +19,16 @@ export function useAssetManagement(
   const addOfferedAsset = useCallback(() => {
     setMakerAssets([
       ...makerAssets,
-      { assetId: '', amount: 0, type: 'xch', symbol: '', searchQuery: '', showDropdown: false },
-    ])
-  }, [makerAssets, setMakerAssets])
+      { assetId: "", amount: 0, type: "xch", symbol: "", searchQuery: "", showDropdown: false },
+    ]);
+  }, [makerAssets, setMakerAssets]);
 
   const removeOfferedAsset = useCallback(
     (index: number) => {
-      setMakerAssets(makerAssets.filter((_, i) => i !== index))
+      setMakerAssets(makerAssets.filter((_, i) => i !== index));
     },
     [makerAssets, setMakerAssets]
-  )
+  );
 
   const updateOfferedAsset = useCallback(
     (index: number, asset: ExtendedOfferAsset) => {
@@ -36,33 +36,33 @@ export function useAssetManagement(
         i === index
           ? {
               ...a,
-              assetId: asset.assetId || '',
+              assetId: asset.assetId || "",
               amount: asset.amount || 0,
-              type: (asset.type === 'option' ? 'cat' : asset.type) as 'xch' | 'cat' | 'nft',
-              symbol: asset.symbol || '',
-              searchQuery: asset.searchQuery || '',
+              type: (asset.type === "option" ? "cat" : asset.type) as "xch" | "cat" | "nft",
+              symbol: asset.symbol || "",
+              searchQuery: asset.searchQuery || "",
               showDropdown: asset.showDropdown || false,
             }
           : a
-      )
-      setMakerAssets(updated)
+      );
+      setMakerAssets(updated);
     },
     [makerAssets, setMakerAssets]
-  )
+  );
 
   const addRequestedAsset = useCallback(() => {
     setTakerAssets([
       ...takerAssets,
-      { assetId: '', amount: 0, type: 'xch', symbol: '', searchQuery: '', showDropdown: false },
-    ])
-  }, [takerAssets, setTakerAssets])
+      { assetId: "", amount: 0, type: "xch", symbol: "", searchQuery: "", showDropdown: false },
+    ]);
+  }, [takerAssets, setTakerAssets]);
 
   const removeRequestedAsset = useCallback(
     (index: number) => {
-      setTakerAssets(takerAssets.filter((_, i) => i !== index))
+      setTakerAssets(takerAssets.filter((_, i) => i !== index));
     },
     [takerAssets, setTakerAssets]
-  )
+  );
 
   const updateRequestedAsset = useCallback(
     (index: number, asset: ExtendedOfferAsset) => {
@@ -70,19 +70,19 @@ export function useAssetManagement(
         i === index
           ? {
               ...a,
-              assetId: asset.assetId || '',
+              assetId: asset.assetId || "",
               amount: asset.amount || 0,
-              type: (asset.type === 'option' ? 'cat' : asset.type) as 'xch' | 'cat' | 'nft',
-              symbol: asset.symbol || '',
-              searchQuery: asset.searchQuery || '',
+              type: (asset.type === "option" ? "cat" : asset.type) as "xch" | "cat" | "nft",
+              symbol: asset.symbol || "",
+              searchQuery: asset.searchQuery || "",
               showDropdown: asset.showDropdown || false,
             }
           : a
-      )
-      setTakerAssets(updated)
+      );
+      setTakerAssets(updated);
     },
     [takerAssets, setTakerAssets]
-  )
+  );
 
   return {
     addOfferedAsset,
@@ -91,5 +91,5 @@ export function useAssetManagement(
     addRequestedAsset,
     removeRequestedAsset,
     updateRequestedAsset,
-  }
+  };
 }

@@ -6,7 +6,7 @@ import { useNetwork } from "@/shared/hooks/useNetwork";
 import { useCallback } from "react";
 import { OrderBookOrder } from "@/features/trading/lib/orderBookTypes";
 import { CopyableField } from "../order-details-section/CopyableField";
-import { AssetList } from '@/shared/ui'
+import { AssetList } from "@/shared/ui";
 
 interface OrderDetailsSectionProps {
   order: OrderBookOrder;
@@ -31,16 +31,14 @@ export default function OrderDetailsSection({
       const tickerInfo = getCatTokenInfo(assetId);
       return tickerInfo?.ticker || assetId.slice(0, 8);
     },
-    [getCatTokenInfo, network],
+    [getCatTokenInfo, network]
   );
 
   const containerClass = mode === "modal" ? "space-y-4" : "space-y-3";
 
   return (
     <div className={containerClass}>
-      <div className="text-sm font-semibold text-gray-900 dark:text-white">
-        Offer Details
-      </div>
+      <div className="text-sm font-semibold text-gray-900 dark:text-white">Offer Details</div>
 
       {/* Offer ID */}
       <CopyableField label="Offer ID" value={order.id} />
@@ -55,16 +53,10 @@ export default function OrderDetailsSection({
       )}
 
       {/* Maker Address */}
-      {order.maker && (
-        <CopyableField label="Trade ID Hash" value={order.maker} />
-      )}
+      {order.maker && <CopyableField label="Trade ID Hash" value={order.maker} />}
 
       {/* Offering Assets */}
-      <AssetList
-        label="Buy (Offering)"
-        assets={order.offering}
-        getTickerSymbol={getTickerSymbol}
-      />
+      <AssetList label="Buy (Offering)" assets={order.offering} getTickerSymbol={getTickerSymbol} />
 
       {/* Requesting Assets */}
       <AssetList
@@ -74,25 +66,22 @@ export default function OrderDetailsSection({
       />
 
       {/* Price Range Percentage */}
-      {priceDeviationPercent !== null &&
-        priceDeviationPercent !== undefined && (
-          <div>
-            <span className="text-xs text-gray-500 dark:text-gray-400">
-              Price Range:
-            </span>
-            <span className="text-xs font-mono text-gray-900 dark:text-white ml-1">
-              {priceDeviationPercent < 0.01
-                ? (() => {
-                    // Show full precision up to 10 decimal places, remove trailing zeros
-                    const formatted = priceDeviationPercent.toFixed(10);
-                    // Remove trailing zeros after decimal point, but keep at least .0
-                    const trimmed = formatted.replace(/0+$/, "");
-                    return `${trimmed.endsWith(".") ? `${trimmed}0` : trimmed}%`;
-                  })()
-                : `${priceDeviationPercent.toFixed(2)}%`}
-            </span>
-          </div>
-        )}
+      {priceDeviationPercent !== null && priceDeviationPercent !== undefined && (
+        <div>
+          <span className="text-xs text-gray-500 dark:text-gray-400">Price Range:</span>
+          <span className="text-xs font-mono text-gray-900 dark:text-white ml-1">
+            {priceDeviationPercent < 0.01
+              ? (() => {
+                  // Show full precision up to 10 decimal places, remove trailing zeros
+                  const formatted = priceDeviationPercent.toFixed(10);
+                  // Remove trailing zeros after decimal point, but keep at least .0
+                  const trimmed = formatted.replace(/0+$/, "");
+                  return `${trimmed.endsWith(".") ? `${trimmed}0` : trimmed}%`;
+                })()
+              : `${priceDeviationPercent.toFixed(2)}%`}
+          </span>
+        </div>
+      )}
 
       {/* Timestamp */}
       <div className="text-xs text-gray-500 dark:text-gray-400">
@@ -102,12 +91,8 @@ export default function OrderDetailsSection({
       {/* Status */}
       {order.status !== undefined && (
         <div>
-          <span className="text-xs text-gray-500 dark:text-gray-400">
-            Status:
-          </span>
-          <span className="text-xs text-gray-900 dark:text-white ml-1">
-            {order.status}
-          </span>
+          <span className="text-xs text-gray-500 dark:text-gray-400">Status:</span>
+          <span className="text-xs text-gray-900 dark:text-white ml-1">{order.status}</span>
         </div>
       )}
     </div>

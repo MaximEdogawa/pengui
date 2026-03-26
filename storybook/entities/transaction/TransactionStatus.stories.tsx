@@ -1,44 +1,45 @@
-import type { Meta, StoryObj } from '@storybook/nextjs-vite'
-import TransactionStatus from '@/entities/transaction/ui/TransactionStatus'
+import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import TransactionStatus from "@/entities/transaction/ui/TransactionStatus";
 
 const meta = {
-  title: 'Entities/Transaction/TransactionStatus',
+  title: "Entities/Transaction/TransactionStatus",
   component: TransactionStatus,
   parameters: {
-    layout: 'centered',
+    layout: "centered",
   },
-  tags: ['autodocs'],
+  tags: ["autodocs"],
   argTypes: {
     type: {
-      control: 'select',
-      options: ['success', 'error', null],
+      control: "select",
+      options: ["success", "error", null],
     },
     message: {
-      control: 'text',
+      control: "text",
     },
   },
-} satisfies Meta<typeof TransactionStatus>
+} satisfies Meta<typeof TransactionStatus>;
 
-export default meta
-type Story = StoryObj<typeof meta>
+export default meta;
+type Story = StoryObj<typeof meta>;
 
 export const Success: Story = {
   args: {
-    type: 'success',
-    message: 'Transaction confirmed successfully',
+    type: "success",
+    message: "Transaction confirmed successfully",
   },
-}
+};
 
 export const Error: Story = {
   args: {
-    type: 'error',
-    message: 'Transaction failed. Please try again.',
+    type: "error",
+    message: "Transaction failed. Please try again.",
   },
-}
+};
 
 export const LongMessage: Story = {
   args: {
-    type: 'success',
-    message: 'Your transaction has been successfully processed and confirmed on the blockchain. The funds have been transferred.',
+    type: "success",
+    message:
+      "Your transaction has been successfully processed and confirmed on the blockchain. The funds have been transferred.",
   },
-}
+};

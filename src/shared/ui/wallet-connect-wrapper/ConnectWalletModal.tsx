@@ -1,17 +1,17 @@
-'use client'
+"use client";
 
-import { createPortal } from 'react-dom'
-import { QRCodeSVG } from 'qrcode.react'
-import { Copy, Check, RefreshCw, Loader2, X } from 'lucide-react'
+import { createPortal } from "react-dom";
+import { QRCodeSVG } from "qrcode.react";
+import { Copy, Check, RefreshCw, Loader2, X } from "lucide-react";
 
 interface ConnectWalletModalProps {
-  uri: string | null
-  isInitializing: boolean
-  error: string | null
-  copied: boolean
-  onClose: () => void
-  onCopy: () => void
-  onRetry: () => void
+  uri: string | null;
+  isInitializing: boolean;
+  error: string | null;
+  copied: boolean;
+  onClose: () => void;
+  onCopy: () => void;
+  onRetry: () => void;
 }
 
 export function ConnectWalletModal({
@@ -24,7 +24,11 @@ export function ConnectWalletModal({
   onRetry,
 }: ConnectWalletModalProps) {
   const modal = (
-    <div className="fixed inset-0 z-[10002] flex items-center justify-center p-4" aria-modal="true" role="dialog">
+    <div
+      className="fixed inset-0 z-[10002] flex items-center justify-center p-4"
+      aria-modal="true"
+      role="dialog"
+    >
       {/* backdrop */}
       <div
         className="absolute inset-0 bg-black/60 backdrop-blur-xl animate-[fadeIn_200ms_ease-out]"
@@ -71,7 +75,7 @@ export function ConnectWalletModal({
                   <div className="bg-white p-4 rounded-2xl">
                     <QRCodeSVG
                       value={uri}
-                      size={typeof window !== 'undefined' && window.innerWidth < 640 ? 188 : 208}
+                      size={typeof window !== "undefined" && window.innerWidth < 640 ? 188 : 208}
                       bgColor="#FFFFFF"
                       fgColor="#0f172a"
                       level="M"
@@ -85,7 +89,9 @@ export function ConnectWalletModal({
             {/* Divider */}
             <div className="flex items-center gap-3 w-full">
               <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
-              <span className="text-[10px] text-white/20 uppercase tracking-widest font-medium">or</span>
+              <span className="text-[10px] text-white/20 uppercase tracking-widest font-medium">
+                or
+              </span>
               <div className="flex-1 h-px bg-gradient-to-r from-transparent via-white/[0.06] to-transparent" />
             </div>
 
@@ -138,17 +144,17 @@ export function ConnectWalletModal({
               disabled={isInitializing}
               className="flex items-center justify-center gap-1.5 py-2.5 px-4 rounded-xl text-xs sm:text-sm font-medium text-cyan-200/70 hover:text-cyan-100 bg-cyan-500/10 hover:bg-cyan-500/15 border border-cyan-400/15 hover:border-cyan-400/25 transition-all duration-200 disabled:opacity-40"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${isInitializing ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-3.5 h-3.5 ${isInitializing ? "animate-spin" : ""}`} />
               New QR
             </button>
           </div>
         </div>
       </div>
     </div>
-  )
+  );
 
-  if (typeof document !== 'undefined') {
-    return createPortal(modal, document.body)
+  if (typeof document !== "undefined") {
+    return createPortal(modal, document.body);
   }
-  return modal
+  return modal;
 }

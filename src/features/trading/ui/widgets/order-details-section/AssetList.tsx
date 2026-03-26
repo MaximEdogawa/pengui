@@ -1,1 +1,1 @@
-export { AssetList } from '@/shared/ui/components/asset-list/AssetList'
+export { AssetList } from "@/shared/ui/components/asset-list/AssetList";

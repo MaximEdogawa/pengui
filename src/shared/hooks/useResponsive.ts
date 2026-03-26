@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState } from "react";
 
 /**
  * Hook to detect screen size and determine if mobile or desktop
@@ -7,33 +7,33 @@ import { useEffect, useState } from 'react'
  * - lg and above (>= 1024px): Desktop view (order book + take offer tab)
  */
 export function useResponsive() {
-  const [isMobile, setIsMobile] = useState(false)
-  const [isTablet, setIsTablet] = useState(false)
+  const [isMobile, setIsMobile] = useState(false);
+  const [isTablet, setIsTablet] = useState(false);
 
   useEffect(() => {
     // Set initial value
     const checkScreenSize = () => {
-      const width = window.innerWidth
+      const width = window.innerWidth;
       // Mobile: < 1024px (sm and md breakpoints)
-      setIsMobile(width < 1024) // lg breakpoint
+      setIsMobile(width < 1024); // lg breakpoint
       // Tablet: 768px - 1023px (md breakpoint range)
-      setIsTablet(width >= 768 && width < 1024)
-    }
+      setIsTablet(width >= 768 && width < 1024);
+    };
 
     // Check on mount
-    checkScreenSize()
+    checkScreenSize();
 
     // Listen for resize events
-    window.addEventListener('resize', checkScreenSize)
+    window.addEventListener("resize", checkScreenSize);
 
     return () => {
-      window.removeEventListener('resize', checkScreenSize)
-    }
-  }, [])
+      window.removeEventListener("resize", checkScreenSize);
+    };
+  }, []);
 
   return {
     isMobile, // < 1024px (sm and md)
     isTablet, // 768px - 1023px (md)
     isDesktop: !isMobile, // >= 1024px (lg and above)
-  }
+  };
 }

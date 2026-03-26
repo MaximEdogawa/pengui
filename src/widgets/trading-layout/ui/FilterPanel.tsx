@@ -10,13 +10,8 @@ interface FilterPanelProps {
 
 export default function FilterPanel({ onFiltersChange }: FilterPanelProps) {
   const { t } = useThemeClasses();
-  const {
-    filters,
-    hasActiveFilters,
-    clearAllFilters,
-    showFilterPane,
-    setShowFilterPane,
-  } = useOrderBookFilters();
+  const { filters, hasActiveFilters, clearAllFilters, showFilterPane, setShowFilterPane } =
+    useOrderBookFilters();
 
   const handleClearAll = () => {
     clearAllFilters();
@@ -34,8 +29,7 @@ export default function FilterPanel({ onFiltersChange }: FilterPanelProps) {
     <div
       className={`fixed bottom-4 left-1/2 transform -translate-x-1/2 z-[100] backdrop-blur-[40px] ${t.card} border-2 ${t.border} rounded-lg shadow-2xl p-4 max-w-2xl w-full mx-4`}
       style={{
-        boxShadow:
-          "0 20px 40px -12px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1)",
+        boxShadow: "0 20px 40px -12px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1)",
       }}
     >
       <div className="flex items-center justify-between mb-2">

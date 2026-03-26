@@ -1,17 +1,17 @@
-'use client'
+"use client";
 
-import { WalletPageHeader, AssetListPane } from '@/features/wallet'
-import { useEffect, useState } from 'react'
+import { WalletPageHeader, AssetListPane } from "@/features/wallet";
+import { useEffect, useState } from "react";
 
 export default function WalletPage() {
-  const [mounted, setMounted] = useState(false)
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true)
-  }, [])
+    setMounted(true);
+  }, []);
 
   if (!mounted) {
-    return null
+    return null;
   }
 
   return (
@@ -21,5 +21,5 @@ export default function WalletPage() {
         <AssetListPane />
       </div>
     </div>
-  )
+  );
 }

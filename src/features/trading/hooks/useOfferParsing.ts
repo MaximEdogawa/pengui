@@ -89,11 +89,11 @@ export function useOfferParsing({ order, offerString }: UseOfferParsingProps) {
 
         const enrichedAssetsOffered = await enrichAssets(
           appOffer.assetsOffered,
-          getCatTokenInfoRef.current,
+          getCatTokenInfoRef.current
         );
         const enrichedAssetsRequested = await enrichAssets(
           appOffer.assetsRequested,
-          getCatTokenInfoRef.current,
+          getCatTokenInfoRef.current
         );
 
         setOfferPreview({
@@ -133,9 +133,7 @@ export function useOfferParsing({ order, offerString }: UseOfferParsingProps) {
           offer: response.offer,
         };
       }
-      throw new Error(
-        response?.error_message || "Failed to fetch offer details",
-      );
+      throw new Error(response?.error_message || "Failed to fetch offer details");
     },
     // Perform HTTP request for detailed offer inspection like before,
     // but only when we actually have an order id.
@@ -165,11 +163,7 @@ export function useOfferParsing({ order, offerString }: UseOfferParsingProps) {
       const offerData = offerDetailsQuery.data?.offer;
       const trimmedOffer = offerString.trim();
 
-      if (
-        !trimmedOffer ||
-        isParsingRef.current ||
-        lastParsedOfferRef.current === trimmedOffer
-      ) {
+      if (!trimmedOffer || isParsingRef.current || lastParsedOfferRef.current === trimmedOffer) {
         return;
       }
 
@@ -181,7 +175,7 @@ export function useOfferParsing({ order, offerString }: UseOfferParsingProps) {
         offerData,
         trimmedOffer,
         getCatTokenInfoRef.current,
-        offerData ? undefined : postOfferRef.current,
+        offerData ? undefined : postOfferRef.current
       );
 
       setOfferPreview(result.preview);
@@ -192,10 +186,7 @@ export function useOfferParsing({ order, offerString }: UseOfferParsingProps) {
       isParsingRef.current = false;
     };
 
-    if (
-      cachedOrderData?.offer &&
-      lastParsedOfferRef.current === cachedOrderData.offerString
-    ) {
+    if (cachedOrderData?.offer && lastParsedOfferRef.current === cachedOrderData.offerString) {
       return;
     }
 
@@ -209,13 +200,7 @@ export function useOfferParsing({ order, offerString }: UseOfferParsingProps) {
       }
       isParsingRef.current = false;
     };
-  }, [
-    offerString,
-    order?.id,
-    fetchedOfferString,
-    offerDetailsQuery.data?.offer,
-    cachedOrderData,
-  ]);
+  }, [offerString, order?.id, fetchedOfferString, offerDetailsQuery.data?.offer, cachedOrderData]);
 
   return {
     offerPreview,

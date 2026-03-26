@@ -18,9 +18,7 @@ interface UseAssetAdjustmentsProps {
   offeredAdjustment: number;
   manuallyEdited: { requested: Set<number>; offered: Set<number> };
   baseAmounts: { requested: number[]; offered: number[] };
-  setBaseAmounts: React.Dispatch<
-    React.SetStateAction<{ requested: number[]; offered: number[] }>
-  >;
+  setBaseAmounts: React.Dispatch<React.SetStateAction<{ requested: number[]; offered: number[] }>>;
   setManuallyEdited: React.Dispatch<
     React.SetStateAction<{
       requested: Set<number>;
@@ -85,18 +83,12 @@ export function useAssetAdjustments({
 
   // Update base amounts when manually adding assets (no order)
   useEffect(() => {
-    if (
-      !order &&
-      takerAssets.length > 0 &&
-      takerAssets.length !== prevTakerLengthRef.current
-    ) {
+    if (!order && takerAssets.length > 0 && takerAssets.length !== prevTakerLengthRef.current) {
       setBaseAmounts((prev) => ({
         ...prev,
         requested: takerAssets.map((asset) => {
           const amount = asset.amount || 0;
-          return typeof amount === "number" && isFinite(amount) && amount >= 0
-            ? amount
-            : 0;
+          return typeof amount === "number" && isFinite(amount) && amount >= 0 ? amount : 0;
         }),
       }));
       prevTakerLengthRef.current = takerAssets.length;
@@ -104,18 +96,12 @@ export function useAssetAdjustments({
   }, [takerAssets, order, setBaseAmounts]);
 
   useEffect(() => {
-    if (
-      !order &&
-      makerAssets.length > 0 &&
-      makerAssets.length !== prevMakerLengthRef.current
-    ) {
+    if (!order && makerAssets.length > 0 && makerAssets.length !== prevMakerLengthRef.current) {
       setBaseAmounts((prev) => ({
         ...prev,
         offered: makerAssets.map((asset) => {
           const amount = asset.amount || 0;
-          return typeof amount === "number" && isFinite(amount) && amount >= 0
-            ? amount
-            : 0;
+          return typeof amount === "number" && isFinite(amount) && amount >= 0 ? amount : 0;
         }),
       }));
       prevMakerLengthRef.current = makerAssets.length;
@@ -152,13 +138,7 @@ export function useAssetAdjustments({
         amount: newAmount,
       };
     });
-  }, [
-    order,
-    baseAmounts.requested,
-    takerAssets,
-    manuallyEdited.requested,
-    requestedAdjustment,
-  ]);
+  }, [order, baseAmounts.requested, takerAssets, manuallyEdited.requested, requestedAdjustment]);
 
   const adjustedMakerAssets = useMemo(() => {
     if (!order || baseAmounts.offered.length === 0) return makerAssets;
@@ -189,13 +169,7 @@ export function useAssetAdjustments({
         amount: newAmount,
       };
     });
-  }, [
-    order,
-    baseAmounts.offered,
-    makerAssets,
-    manuallyEdited.offered,
-    offeredAdjustment,
-  ]);
+  }, [order, baseAmounts.offered, makerAssets, manuallyEdited.offered, offeredAdjustment]);
 
   return {
     adjustedTakerAssets,

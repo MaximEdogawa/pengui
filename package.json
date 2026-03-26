@@ -29,7 +29,9 @@
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:debug": "playwright test --debug",
     "test:all": "bun test:unit && bun test:integration && bun test:e2e",
-    "test:api-proxy": "bun run scripts/test-api-proxy.ts"
+    "test:api-proxy": "bun run scripts/test-api-proxy.ts",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "dependencies": {
     "@maximedogawa/chia-wallet-connect-react": "^0.0.5",
@@ -77,6 +79,7 @@
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
     "postcss": "^8.5.6",
+    "prettier": "^3.8.1",
     "storybook": "^10.1.11",
     "tailwindcss": "^3.4.19",
     "typescript": "^5.9.3"

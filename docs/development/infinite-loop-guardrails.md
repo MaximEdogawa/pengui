@@ -11,30 +11,32 @@ This document describes common infinite loop patterns that can cause Turbopack/N
 **Problem**: A `useEffect` hook that includes a state variable in its dependency array and also updates that same state variable can cause infinite re-renders.
 
 **Example (BAD)**:
+
 ```typescript
-const [network, setNetworkState] = useState('mainnet')
+const [network, setNetworkState] = useState("mainnet");
 
 useEffect(() => {
   // This updates 'network', which is in the dependency array
   if (someCondition) {
-    setNetworkState('testnet') // This triggers the effect again!
+    setNetworkState("testnet"); // This triggers the effect again!
   }
-}, [network]) // ❌ 'network' is in dependencies but also updated inside
+}, [network]); // ❌ 'network' is in dependencies but also updated inside
 ```
 
 **Solution**: Remove the state variable from dependencies if you're updating it, or use a ref to track previous values.
 
 **Example (GOOD)**:
+
 ```typescript
-const [network, setNetworkState] = useState('mainnet')
-const prevNetworkRef = useRef(network)
+const [network, setNetworkState] = useState("mainnet");
+const prevNetworkRef = useRef(network);
 
 useEffect(() => {
   if (someCondition && prevNetworkRef.current !== network) {
-    setNetworkState('testnet')
-    prevNetworkRef.current = 'testnet'
+    setNetworkState("testnet");
+    prevNetworkRef.current = "testnet";
   }
-}, [isConnected, walletConnectSession]) // ✅ Only depend on external values
+}, [isConnected, walletConnectSession]); // ✅ Only depend on external values
 ```
 
 **Location**: `src/shared/providers/NetworkProvider.tsx` (lines 35-68)
@@ -44,34 +46,36 @@ useEffect(() => {
 **Problem**: Including a state object (or the entire state) in a `useEffect` dependency array causes the effect to run on every state change, even if you only care about specific properties.
 
 **Example (BAD)**:
+
 ```typescript
-const [state, setState] = useState({ count: 0, name: '' })
+const [state, setState] = useState({ count: 0, name: "" });
 
 useEffect(() => {
   // This runs every time ANY property in state changes
-  console.log('State changed')
-}, [state]) // ❌ Entire state object in dependencies
+  console.log("State changed");
+}, [state]); // ❌ Entire state object in dependencies
 ```
 
 **Solution**: Only include the specific properties you need, or use an empty dependency array if the effect should only run once.
 
 **Example (GOOD)**:
+
 ```typescript
-const [state, setState] = useState({ count: 0, name: '' })
+const [state, setState] = useState({ count: 0, name: "" });
 
 useEffect(() => {
   // Only runs when count changes
-  console.log('Count changed')
-}, [state.count]) // ✅ Only specific property
+  console.log("Count changed");
+}, [state.count]); // ✅ Only specific property
 
 // OR if you only want to register once:
 useEffect(() => {
   // Only runs once on mount
-  listeners.push(setState)
+  listeners.push(setState);
   return () => {
-    listeners.splice(listeners.indexOf(setState), 1)
-  }
-}, []) // ✅ Empty array for one-time setup
+    listeners.splice(listeners.indexOf(setState), 1);
+  };
+}, []); // ✅ Empty array for one-time setup
 ```
 
 **Location**: `src/hooks/use-toast.ts` (line 177-185)
@@ -98,6 +102,7 @@ useEffect(() => {
 ### 3. Development-Time Checks
 
 When developing, watch for:
+
 - Continuous console logs from useEffect
 - Browser tab becoming unresponsive
 - Turbopack showing "compiling..." indefinitely
@@ -125,29 +130,31 @@ Run `npm run lint` or `bun run lint` to check for issues.
 **Problem**: When a query has `refetchInterval` configured but the query keeps failing (e.g., due to invalid filter parameters from localStorage), it creates an infinite request loop.
 
 **Example (BAD)**:
+
 ```typescript
 const query = useQuery({
-  queryKey: ['orderBook', filters],
+  queryKey: ["orderBook", filters],
   queryFn: fetchOrderBook,
   refetchInterval: 30000, // Refetches every 30s even on errors!
-})
+});
 ```
 
 **Solution**: Use a function for `refetchInterval` that checks query status, and add explicit retry limits.
 
 **Example (GOOD)**:
+
 ```typescript
 const query = useQuery({
-  queryKey: ['orderBook', filters],
+  queryKey: ["orderBook", filters],
   queryFn: fetchOrderBook,
   refetchInterval: (query) => {
-    if (query.state.status === 'error') {
-      return false // Stop refetching on error
+    if (query.state.status === "error") {
+      return false; // Stop refetching on error
     }
-    return 30000
+    return 30000;
   },
   retry: 3, // Max 3 retries
-})
+});
 ```
 
 **Location**: `src/features/trading/model/useOrderBook.ts`
@@ -156,7 +163,8 @@ const query = useQuery({
 
 **Problem**: Stored filters from a previous session (e.g., different network) can cause API requests to fail continuously when loaded.
 
-**Solution**: 
+**Solution**:
+
 1. Use Zustand with persist middleware to manage filter state
 2. Store the network context (`savedNetwork`) with filters
 3. Validate stored filters match current network on load
@@ -171,18 +179,18 @@ export const useOrderBookFilterStore = create<OrderBookFilterStore>()(
     (set, get) => ({
       // ... state and actions
       clearForNetworkChange: (newNetwork) => {
-        const state = get()
+        const state = get();
         if (state.savedNetwork !== newNetwork) {
-          set({ ...createDefaultState(newNetwork) })
+          set({ ...createDefaultState(newNetwork) });
         }
       },
     }),
     {
-      name: 'orderBookFilterState',
+      name: "orderBookFilterState",
       storage: createJSONStorage(() => localStorage),
     }
   )
-)
+);
 ```
 
 **Location**: `src/features/trading/model/orderBookFilterStore.ts`
@@ -192,15 +200,17 @@ export const useOrderBookFilterStore = create<OrderBookFilterStore>()(
 **Problem**: Calling both `invalidateQueries` and `refetchQueries` causes duplicate requests. `invalidateQueries` already marks queries as stale, and active queries will automatically refetch.
 
 **Example (BAD)**:
+
 ```typescript
-queryClient.invalidateQueries({ queryKey: ['orderBook'] })
-queryClient.refetchQueries({ queryKey: ['orderBook'] }) // Redundant!
+queryClient.invalidateQueries({ queryKey: ["orderBook"] });
+queryClient.refetchQueries({ queryKey: ["orderBook"] }); // Redundant!
 ```
 
 **Example (GOOD)**:
+
 ```typescript
 // Only invalidate - TanStack Query handles refetching automatically
-queryClient.invalidateQueries({ queryKey: ['orderBook'] })
+queryClient.invalidateQueries({ queryKey: ["orderBook"] });
 ```
 
 **Location**: `src/features/trading/model/useOrderBookFilters.ts`

@@ -1,15 +1,15 @@
-import type { ThemeClasses } from '@/shared/lib/theme'
+import type { ThemeClasses } from "@/shared/lib/theme";
 
 interface ExpirationSettingsProps {
-  expirationEnabled: boolean
-  setExpirationEnabled: (enabled: boolean) => void
-  expirationDays: number
-  setExpirationDays: (days: number) => void
-  expirationHours: number
-  setExpirationHours: (hours: number) => void
-  expirationMinutes: number
-  setExpirationMinutes: (minutes: number) => void
-  t: ThemeClasses
+  expirationEnabled: boolean;
+  setExpirationEnabled: (enabled: boolean) => void;
+  expirationDays: number;
+  setExpirationDays: (days: number) => void;
+  expirationHours: number;
+  setExpirationHours: (hours: number) => void;
+  expirationMinutes: number;
+  setExpirationMinutes: (minutes: number) => void;
+  t: ThemeClasses;
 }
 
 /**
@@ -35,15 +35,15 @@ export function ExpirationSettings({
           onClick={() => setExpirationEnabled(!expirationEnabled)}
           className={`relative inline-flex h-5 w-9 items-center rounded-full backdrop-blur-3xl transition-all duration-300 focus:outline-none focus:ring-2 ${t.focusRing} overflow-hidden ${
             expirationEnabled
-              ? 'bg-blue-500/20 border border-blue-400/30'
-              : 'bg-white/5 border border-white/10'
+              ? "bg-blue-500/20 border border-blue-400/30"
+              : "bg-white/5 border border-white/10"
           }`}
         >
           <span
             className={`relative inline-block h-3 w-3 transform rounded-full backdrop-blur-3xl transition-all duration-300 ${
               expirationEnabled
-                ? 'translate-x-[20px] bg-blue-500/40'
-                : 'translate-x-0.5 bg-white/30'
+                ? "translate-x-[20px] bg-blue-500/40"
+                : "translate-x-0.5 bg-white/30"
             }`}
           />
         </button>
@@ -90,5 +90,5 @@ export function ExpirationSettings({
         </div>
       )}
     </div>
-  )
+  );
 }

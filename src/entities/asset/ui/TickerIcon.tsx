@@ -26,7 +26,7 @@ export default function TickerIcon({
   const { imageUrl, isLoading } = useTickerIcon(assetId, enabled);
 
   if (!assetId) {
-    return <XchIcon size={size} className={className}/>;
+    return <XchIcon size={size} className={className} />;
   }
 
   return (

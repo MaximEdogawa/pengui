@@ -1,9 +1,9 @@
-'use client'
+"use client";
 
-import { X } from 'lucide-react'
+import { X } from "lucide-react";
 
 interface RemoveAssetButtonProps {
-  onRemove: () => void
+  onRemove: () => void;
 }
 
 export default function RemoveAssetButton({ onRemove }: RemoveAssetButtonProps) {
@@ -15,5 +15,5 @@ export default function RemoveAssetButton({ onRemove }: RemoveAssetButtonProps) 
     >
       <X size={14} className="sm:w-4 sm:h-4" />
     </button>
-  )
+  );
 }

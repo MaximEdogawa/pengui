@@ -17,7 +17,11 @@ export { useSignClient } from "./hooks/useSignClient";
 export { useTransactionForm } from "./hooks/useTransactionForm";
 export { useTransactionHistory } from "./hooks/useTransactionHistory";
 export { useBalanceLoading } from "./hooks/useBalanceLoading";
-export { useWalletAssets, type WalletAssetItem, type WalletAssetType } from "./hooks/useWalletAssets";
+export {
+  useWalletAssets,
+  type WalletAssetItem,
+  type WalletAssetType,
+} from "./hooks/useWalletAssets";
 export { useAssetFilter, type AssetFilterCategory } from "./hooks/useAssetFilter";
 export { useAssetPriceChart } from "./hooks/useAssetPriceChart";
 

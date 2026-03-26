@@ -22,21 +22,13 @@ interface SwapModalProps {
   onSuccess: () => void;
 }
 
-export function SwapModal({
-  pair,
-  amountInRaw,
-  xchIsInput,
-  onClose,
-  onSuccess,
-}: SwapModalProps) {
+export function SwapModal({ pair, amountInRaw, xchIsInput, onClose, onSuccess }: SwapModalProps) {
   const { t } = useThemeClasses();
   const { network } = useNetwork();
   const tibetOffer = useTibetOffer();
 
   const amountInNum = parseFloat(amountInRaw) || 0;
-  const amountInMojos = xchIsInput
-    ? Math.round(convertToSmallestUnit(amountInNum, "xch"))
-    : 0;
+  const amountInMojos = xchIsInput ? Math.round(convertToSmallestUnit(amountInNum, "xch")) : 0;
   const amountInTokenSmallest = xchIsInput
     ? 0
     : Math.round(convertToSmallestUnit(amountInNum, "cat"));
@@ -72,8 +64,7 @@ export function SwapModal({
     setError("");
 
     try {
-      const xchAssetId =
-        network === "testnet" ? CHIA_ASSET_IDS.TXCH : CHIA_ASSET_IDS.XCH;
+      const xchAssetId = network === "testnet" ? CHIA_ASSET_IDS.TXCH : CHIA_ASSET_IDS.XCH;
 
       // Tibet's server-computed amount_out is used as receiveAmount so offer
       // amounts match exactly what Tibet expects when taking the offer.
@@ -115,7 +106,7 @@ export function SwapModal({
           <div className="flex justify-between text-sm">
             <span className={t.textSecondary}>You pay</span>
             <span className={t.text}>
-              {amountInRaw || "0"} {xchIsInput ? "XCH" : pair.asset_short_name ?? pair.asset_name}
+              {amountInRaw || "0"} {xchIsInput ? "XCH" : (pair.asset_short_name ?? pair.asset_name)}
             </span>
           </div>
           <div className="flex justify-between text-sm mt-2">
@@ -130,8 +121,9 @@ export function SwapModal({
                   : "—"}
             </span>
           </div>
-          {quote && priceImpact != null && (
-            priceImpact > 10 ? (
+          {quote &&
+            priceImpact != null &&
+            (priceImpact > 10 ? (
               <div className="mt-3 rounded-lg p-3 bg-amber-500/10 dark:bg-amber-500/5 border border-amber-500/30 space-y-2.5">
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-xs font-medium text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
@@ -163,16 +155,15 @@ export function SwapModal({
                 <span>Price impact</span>
                 <span className={t.text}>{priceImpact.toFixed(2)}%</span>
               </div>
-            )
-          )}
+            ))}
         </div>
 
-        {error && (
-          <p className="mt-2 text-sm text-red-500 dark:text-red-400">{error}</p>
-        )}
+        {error && <p className="mt-2 text-sm text-red-500 dark:text-red-400">{error}</p>}
 
         {success && (
-          <p className="mt-2 text-sm text-emerald-600 dark:text-emerald-400">Swap submitted successfully.</p>
+          <p className="mt-2 text-sm text-emerald-600 dark:text-emerald-400">
+            Swap submitted successfully.
+          </p>
         )}
 
         <div className="flex gap-2 mt-4">
@@ -187,11 +178,11 @@ export function SwapModal({
             type="button"
             onClick={handleConfirm}
             disabled={
-            !quote ||
-            (priceImpact != null && priceImpact > 10 && !confirmHighImpact) ||
-            isPending ||
-            success
-          }
+              !quote ||
+              (priceImpact != null && priceImpact > 10 && !confirmHighImpact) ||
+              isPending ||
+              success
+            }
             className={`flex-1 py-2 rounded-xl border ${t.border} bg-gradient-to-r ${t.accent} text-white ${t.accentHover} disabled:opacity-50 disabled:pointer-events-none transition-colors`}
           >
             {isPending ? "Submitting…" : success ? "Done" : "Confirm"}

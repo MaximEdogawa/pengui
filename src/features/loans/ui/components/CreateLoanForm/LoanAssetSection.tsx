@@ -4,9 +4,7 @@ import React from "react";
 import { DollarSign } from "lucide-react";
 import type { CreateLoanForm } from "@/entities/loan";
 import type { ThemeClasses } from "@/shared/lib/theme";
-import AssetSelector, {
-  type ExtendedAsset,
-} from "@/shared/ui/forms/asset-selector/AssetSelector";
+import AssetSelector, { type ExtendedAsset } from "@/shared/ui/forms/asset-selector/AssetSelector";
 import { useCatTokens } from "@/entities/asset";
 
 interface LoanAssetSectionProps {
@@ -43,16 +41,8 @@ const getSelectClasses = (isDark: boolean) =>
       : "bg-white/40 border border-white/60 text-slate-800 focus:ring-cyan-600/30"
   }`;
 
-const Label = ({
-  children,
-  className,
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) => (
-  <label className={`${className} text-[10px] font-medium mb-1 block`}>
-    {children}
-  </label>
+const Label = ({ children, className }: { children: React.ReactNode; className?: string }) => (
+  <label className={`${className} text-[10px] font-medium mb-1 block`}>{children}</label>
 );
 
 const InputField = ({
@@ -115,17 +105,8 @@ const SelectField = ({
   </div>
 );
 
-export function LoanAssetSection({
-  formData,
-  onUpdate,
-  isDark,
-  t,
-}: LoanAssetSectionProps) {
-  const {
-    availableCatTokens,
-    availableAssets,
-    isLoading: isLoadingTickers,
-  } = useCatTokens();
+export function LoanAssetSection({ formData, onUpdate, isDark, t }: LoanAssetSectionProps) {
+  const { availableCatTokens, availableAssets, isLoading: isLoadingTickers } = useCatTokens();
 
   const availableTokens =
     availableAssets.length > 0
@@ -159,9 +140,7 @@ export function LoanAssetSection({
 
       {/* Asset Type Selector */}
       <div className="mb-3">
-        <label
-          className={`${t.textSecondary} text-[10px] font-medium mb-1.5 block`}
-        >
+        <label className={`${t.textSecondary} text-[10px] font-medium mb-1.5 block`}>
           Asset Type
         </label>
         <div className="grid grid-cols-3 gap-1.5">
@@ -209,9 +188,7 @@ export function LoanAssetSection({
                   symbol: "",
                 } as ExtendedAsset
               }
-              onUpdate={(asset) =>
-                onUpdate({ currency: asset.assetId || asset.searchQuery || "" })
-              }
+              onUpdate={(asset) => onUpdate({ currency: asset.assetId || asset.searchQuery || "" })}
               placeholder="Search tokens (XCH, CAT tokens, asset IDs)..."
               availableTokens={availableTokens}
               isLoadingTickers={isLoadingTickers}

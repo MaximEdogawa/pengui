@@ -13,7 +13,7 @@ function XIcon() {
         fill="white"
       />
     </svg>
-  )
+  );
 }
 
-export default XIcon
+export default XIcon;

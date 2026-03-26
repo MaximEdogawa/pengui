@@ -1,2 +1,2 @@
-export { SafeConnectButton } from './SafeConnectButton'
-export { ConnectWalletModal } from './ConnectWalletModal'
+export { SafeConnectButton } from "./SafeConnectButton";
+export { ConnectWalletModal } from "./ConnectWalletModal";

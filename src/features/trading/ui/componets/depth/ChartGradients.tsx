@@ -10,5 +10,5 @@ export function ChartGradients() {
         <stop offset="100%" stopColor="#ef5350" stopOpacity="0.3" />
       </linearGradient>
     </defs>
-  )
+  );
 }

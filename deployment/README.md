@@ -29,29 +29,29 @@ This directory contains everything needed to deploy Pengui to production with **
 
 Go to **Settings → Secrets and variables → Actions** and add:
 
-| Secret | Description | Example |
-|--------|-------------|---------|
-| `DEPLOY_HOST` | Server hostname/IP | `deploy.example.com` |
-| `DEPLOY_USER` | SSH username | `deploy` |
-| `DEPLOY_SSH_KEY` | Private SSH key | *(see below)* |
-| `DEPLOY_PORT` | SSH port (optional) | `22` |
-| `DOMAIN` | Your domain name | `pengui.example.com` |
-| `CERTBOT_EMAIL` | Email for SSL certs | `admin@example.com` |
-| `CERTBOT_STAGING` | Use staging SSL (testing) | `0` |
-| `PRODUCTION_ENV` | Multiline env vars | *(see below)* |
+| Secret            | Description               | Example              |
+| ----------------- | ------------------------- | -------------------- |
+| `DEPLOY_HOST`     | Server hostname/IP        | `deploy.example.com` |
+| `DEPLOY_USER`     | SSH username              | `deploy`             |
+| `DEPLOY_SSH_KEY`  | Private SSH key           | _(see below)_        |
+| `DEPLOY_PORT`     | SSH port (optional)       | `22`                 |
+| `DOMAIN`          | Your domain name          | `pengui.example.com` |
+| `CERTBOT_EMAIL`   | Email for SSL certs       | `admin@example.com`  |
+| `CERTBOT_STAGING` | Use staging SSL (testing) | `0`                  |
+| `PRODUCTION_ENV`  | Multiline env vars        | _(see below)_        |
 
 ### 2. Configure GitHub Variables
 
 Go to **Settings → Secrets and variables → Actions → Variables** and add:
 
-| Variable | Description |
-|----------|-------------|
+| Variable                                | Description              |
+| --------------------------------------- | ------------------------ |
 | `NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID` | WalletConnect project ID |
-| `NEXT_PUBLIC_WALLET_CONNECT_RELAY_URL` | WalletConnect relay URL |
-| `NEXT_PUBLIC_DEXIE_MAINNET_API_URL` | Dexie mainnet API |
-| `NEXT_PUBLIC_DEXIE_TESTNET_API_URL` | Dexie testnet API |
-| `NEXT_PUBLIC_API_BASE_URL` | Your API base URL |
-| `NEXT_PUBLIC_APP_URL` | Your app URL |
+| `NEXT_PUBLIC_WALLET_CONNECT_RELAY_URL`  | WalletConnect relay URL  |
+| `NEXT_PUBLIC_DEXIE_MAINNET_API_URL`     | Dexie mainnet API        |
+| `NEXT_PUBLIC_DEXIE_TESTNET_API_URL`     | Dexie testnet API        |
+| `NEXT_PUBLIC_API_BASE_URL`              | Your API base URL        |
+| `NEXT_PUBLIC_APP_URL`                   | Your app URL             |
 
 ### 3. Create SSH Key Pair
 
@@ -77,12 +77,14 @@ NODE_ENV=production
 ### 5. Deploy
 
 **Option A: Create a GitHub Release**
+
 - Go to Releases → Create new release
 - Tag with version (e.g., `v1.0.0`)
 - Publish release
 - Deployment starts automatically
 
 **Option B: Manual Dispatch**
+
 - Go to Actions → Deploy Release (Docker)
 - Click "Run workflow"
 - Select environment and optionally specify a tag
@@ -160,16 +162,16 @@ If the server already has an SSL cert that does not include the relay subdomain,
 
 ## Files
 
-| File | Description |
-|------|-------------|
-| `Dockerfile` | Multi-stage build for Next.js standalone server |
-| `docker-compose.yml` | Service orchestration (Next.js + nginx + certbot + splash-relay) |
-| `splash-relay/Dockerfile` | Build for splash-relay (Rust) |
-| `nginx/Dockerfile` | Nginx image with relay watchdog |
-| `nginx/nginx.conf` | Base nginx configuration |
+| File                              | Description                                                        |
+| --------------------------------- | ------------------------------------------------------------------ |
+| `Dockerfile`                      | Multi-stage build for Next.js standalone server                    |
+| `docker-compose.yml`              | Service orchestration (Next.js + nginx + certbot + splash-relay)   |
+| `splash-relay/Dockerfile`         | Build for splash-relay (Rust)                                      |
+| `nginx/Dockerfile`                | Nginx image with relay watchdog                                    |
+| `nginx/nginx.conf`                | Base nginx configuration                                           |
 | `nginx/templates/*.conf.template` | Domain-specific nginx configs (including optional relay subdomain) |
-| `scripts/deploy.sh` | Automated deployment script |
-| `.env.example` | Environment variable template |
+| `scripts/deploy.sh`               | Automated deployment script                                        |
+| `.env.example`                    | Environment variable template                                      |
 
 ## How It Works
 
@@ -329,14 +331,14 @@ docker compose logs splash-relay 2>&1 | grep -iE 'warn|error'
 
 #### Common issues
 
-| Issue | What to do |
-|-------|------------|
+| Issue                                             | What to do                                                                                                                                                                                                                                                                                                                                                                                                         |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Relay in restart loop** (e.g. `Restarting (0)`) | The relay exits and Docker keeps restarting it. Run it in the foreground to see the real error: `docker compose run --rm splash-relay` (or `docker run --rm -it <SPLASH_RELAY_IMAGE> splash-relay --tcp-port 11511 --ws-port 9090`). You should see `splash-relay starting...` then either the ready line or an error (e.g. bind failure, DNS, or panic). Fix the cause (ports, image platform, DNS) and redeploy. |
-| Container exits immediately | Run `docker compose logs splash-relay --tail 100` and check for bind/port errors (e.g. 9090 or 11511 in use). Or run the container in the foreground (see "Relay in restart loop" above). Ensure ports are free or change `command`/port mapping. |
-| "No peers connected" | Check DNS from the host (`nslookup _dnsaddr.splash.dexie.space` or similar). If using `--known-peer`, ensure addresses are correct. Restart relay after fixing network. |
-| Stream tab in app not updating | Confirm app is using the correct relay URL (e.g. `wss://relay.yourdomain.com`). Check nginx is proxying to `splash-relay:9090` and that `docker compose logs splash-relay` shows no repeated errors. |
-| Too many WS connections | Increase `--max-ws-connections` in the relay `command` in docker-compose (e.g. `--max-ws-connections 1000`) and redeploy. |
-| Need to see what the relay is doing | Set `RUST_LOG=info` or `RUST_LOG=debug` (see above), reproduce, then turn verbose logging off. |
+| Container exits immediately                       | Run `docker compose logs splash-relay --tail 100` and check for bind/port errors (e.g. 9090 or 11511 in use). Or run the container in the foreground (see "Relay in restart loop" above). Ensure ports are free or change `command`/port mapping.                                                                                                                                                                  |
+| "No peers connected"                              | Check DNS from the host (`nslookup _dnsaddr.splash.dexie.space` or similar). If using `--known-peer`, ensure addresses are correct. Restart relay after fixing network.                                                                                                                                                                                                                                            |
+| Stream tab in app not updating                    | Confirm app is using the correct relay URL (e.g. `wss://relay.yourdomain.com`). Check nginx is proxying to `splash-relay:9090` and that `docker compose logs splash-relay` shows no repeated errors.                                                                                                                                                                                                               |
+| Too many WS connections                           | Increase `--max-ws-connections` in the relay `command` in docker-compose (e.g. `--max-ws-connections 1000`) and redeploy.                                                                                                                                                                                                                                                                                          |
+| Need to see what the relay is doing               | Set `RUST_LOG=info` or `RUST_LOG=debug` (see above), reproduce, then turn verbose logging off.                                                                                                                                                                                                                                                                                                                     |
 
 #### Log retention (minimal; no long-term storage)
 

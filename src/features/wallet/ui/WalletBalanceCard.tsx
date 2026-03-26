@@ -13,13 +13,8 @@ import { useBalanceLoading } from "../hooks/useBalanceLoading";
 
 export default function WalletBalanceCard() {
   const { isDark, t } = useThemeClasses();
-  const { isConnected, connectedWallet, walletName } =
-    useWalletConnectionState();
-  const {
-    data: balance,
-    isLoading: isLoadingBalance,
-    error: balanceError,
-  } = useWalletBalance();
+  const { isConnected, connectedWallet, walletName } = useWalletConnectionState();
+  const { data: balance, isLoading: isLoadingBalance, error: balanceError } = useWalletBalance();
   const { refreshBalance } = useRefreshBalance();
 
   const { showSpinner, setIsRefreshing } = useBalanceLoading({
@@ -28,14 +23,8 @@ export default function WalletBalanceCard() {
     hasBalance: !!balance,
   });
 
-  const formattedBalance = useMemo(
-    () => formatConfirmedBalance(balance),
-    [balance],
-  );
-  const formattedSpendable = useMemo(
-    () => formatSpendableBalance(balance),
-    [balance],
-  );
+  const formattedBalance = useMemo(() => formatConfirmedBalance(balance), [balance]);
+  const formattedSpendable = useMemo(() => formatSpendableBalance(balance), [balance]);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -52,25 +41,17 @@ export default function WalletBalanceCard() {
   return (
     <div className="flex items-center justify-between mb-3">
       <div>
-        <p
-          className={`${t.textSecondary} text-[10px] font-medium mb-2 uppercase tracking-wide`}
-        >
+        <p className={`${t.textSecondary} text-[10px] font-medium mb-2 uppercase tracking-wide`}>
           Wallet Balance
         </p>
-        <h2
-          className={`text-2xl lg:text-3xl font-semibold ${t.text} tracking-tight`}
-        >
+        <h2 className={`text-2xl lg:text-3xl font-semibold ${t.text} tracking-tight`}>
           {isConnected ? (
             balanceError ? (
-              <span
-                className={`${isDark ? "text-red-400" : "text-red-600"} text-lg`}
-              >
+              <span className={`${isDark ? "text-red-400" : "text-red-600"} text-lg`}>
                 Error loading balance
               </span>
             ) : (
-              <span
-                className={`tabular-nums ${showSpinner ? "opacity-40" : ""}`}
-              >
+              <span className={`tabular-nums ${showSpinner ? "opacity-40" : ""}`}>
                 {formattedBalance} XCH
               </span>
             )
@@ -98,9 +79,7 @@ export default function WalletBalanceCard() {
             </>
           ) : (
             <p className={`${t.textSecondary} text-xs`}>
-              <span
-                className={`${isDark ? "text-orange-400" : "text-orange-600"}`}
-              >
+              <span className={`${isDark ? "text-orange-400" : "text-orange-600"}`}>
                 Not connected
               </span>
             </p>
@@ -115,11 +94,7 @@ export default function WalletBalanceCard() {
             className={`p-2 rounded-lg ${t.cardHover} transition-colors ${t.textSecondary} ${t.textHover} disabled:opacity-50 disabled:cursor-not-allowed`}
             title="Refresh balance"
           >
-            <RefreshCw
-              size={18}
-              strokeWidth={2}
-              className={showSpinner ? "animate-spin" : ""}
-            />
+            <RefreshCw size={18} strokeWidth={2} className={showSpinner ? "animate-spin" : ""} />
           </button>
         )}
         <div

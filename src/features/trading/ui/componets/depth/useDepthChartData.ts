@@ -1,8 +1,5 @@
 import { useMemo, useState, useEffect, useCallback } from "react";
-import type {
-  MarketDepthData,
-  MarketDepthLevel,
-} from "@/features/trading/lib/chartTypes";
+import type { MarketDepthData, MarketDepthLevel } from "@/features/trading/lib/chartTypes";
 
 interface UseDepthChartDataOptions {
   depthData: MarketDepthData;
@@ -34,10 +31,7 @@ export function useDepthChartData({
     const currentSpreadPercent = depthData.spreadPercent;
 
     // Ensure maxSpreadPercent is always greater than current spread
-    const safeMaxSpreadPercent = Math.max(
-      maxSpreadPercent,
-      currentSpreadPercent + 0.1,
-    );
+    const safeMaxSpreadPercent = Math.max(maxSpreadPercent, currentSpreadPercent + 0.1);
 
     // Calculate max spread amount based on percentage of mid-price
     const maxSpreadAmount = midPrice * (safeMaxSpreadPercent / 100);
@@ -64,40 +58,25 @@ export function useDepthChartData({
       min: Math.max(0, depthData.bestBid - extension - buffer),
       max: depthData.bestAsk + extension + buffer,
     };
-  }, [
-    depthData.bestBid,
-    depthData.bestAsk,
-    depthData.spreadPercent,
-    maxSpreadPercent,
-  ]);
+  }, [depthData.bestBid, depthData.bestAsk, depthData.spreadPercent, maxSpreadPercent]);
 
   // Filter bids and asks to only include those within the spread range
   // Use a small tolerance to ensure best bid/ask are always included
   const filteredBids = useMemo(() => {
     if (!depthData.bestBid) return [];
     // Filter bids within range, with a small buffer to ensure best bid is included
-    const tolerance = Math.max(
-      0.00000001,
-      (priceRange.max - priceRange.min) * 0.001,
-    );
+    const tolerance = Math.max(0.00000001, (priceRange.max - priceRange.min) * 0.001);
     return depthData.bids.filter(
-      (bid) =>
-        bid.price >= priceRange.min - tolerance &&
-        bid.price <= priceRange.max + tolerance,
+      (bid) => bid.price >= priceRange.min - tolerance && bid.price <= priceRange.max + tolerance
     );
   }, [depthData.bids, depthData.bestBid, priceRange]);
 
   const filteredAsks = useMemo(() => {
     if (!depthData.bestAsk) return [];
     // Filter asks within range, with a small buffer to ensure best ask is included
-    const tolerance = Math.max(
-      0.00000001,
-      (priceRange.max - priceRange.min) * 0.001,
-    );
+    const tolerance = Math.max(0.00000001, (priceRange.max - priceRange.min) * 0.001);
     return depthData.asks.filter(
-      (ask) =>
-        ask.price >= priceRange.min - tolerance &&
-        ask.price <= priceRange.max + tolerance,
+      (ask) => ask.price >= priceRange.min - tolerance && ask.price <= priceRange.max + tolerance
     );
   }, [depthData.asks, depthData.bestAsk, priceRange]);
 
@@ -139,13 +118,9 @@ export function useDepthChartData({
   // Calculate max cumulative volume for Y-axis normalization
   const maxVolume = useMemo(() => {
     const bidMax =
-      visibleBids.length > 0
-        ? visibleBids[visibleBids.length - 1]?.cumulativeVolume || 0
-        : 0;
+      visibleBids.length > 0 ? visibleBids[visibleBids.length - 1]?.cumulativeVolume || 0 : 0;
     const askMax =
-      visibleAsks.length > 0
-        ? visibleAsks[visibleAsks.length - 1]?.cumulativeVolume || 0
-        : 0;
+      visibleAsks.length > 0 ? visibleAsks[visibleAsks.length - 1]?.cumulativeVolume || 0 : 0;
     const max = Math.max(bidMax, askMax, 1);
     return isFinite(max) && max > 0 ? max : 1;
   }, [visibleBids, visibleAsks]);
@@ -174,23 +149,16 @@ const maxSpreadCache = new Map<string, number>();
 /**
  * Generate a unique key for filter combination
  */
-function getFilterKey(filters?: {
-  buyAsset?: string[];
-  sellAsset?: string[];
-}): string {
+function getFilterKey(filters?: { buyAsset?: string[]; sellAsset?: string[] }): string {
   // Copy arrays before sorting to avoid mutating the input
-  const buyKey = filters?.buyAsset
-    ? [...filters.buyAsset].sort().join(",")
-    : "";
-  const sellKey = filters?.sellAsset
-    ? [...filters.sellAsset].sort().join(",")
-    : "";
+  const buyKey = filters?.buyAsset ? [...filters.buyAsset].sort().join(",") : "";
+  const sellKey = filters?.sellAsset ? [...filters.sellAsset].sort().join(",") : "";
   return `${buyKey}|${sellKey}`;
 }
 
 export function useMaxSpreadPercent(
   depthData: MarketDepthData,
-  filters?: { buyAsset?: string[]; sellAsset?: string[] },
+  filters?: { buyAsset?: string[]; sellAsset?: string[] }
 ) {
   const defaultMaxSpread = useMemo(() => {
     if (depthData.bestBid && depthData.bestAsk) {
@@ -252,7 +220,7 @@ export function useMaxSpreadPercent(
       const newValue = Math.max(value, minAllowed);
       setMaxSpreadPercentState(newValue);
     },
-    [depthData.spreadPercent],
+    [depthData.spreadPercent]
   );
 
   // Reset function to restore default
@@ -262,9 +230,5 @@ export function useMaxSpreadPercent(
     setMaxSpreadPercentState(defaultMaxSpread);
   }, [filterKey, defaultMaxSpread]);
 
-  return [
-    maxSpreadPercent,
-    setMaxSpreadPercentSafe,
-    resetMaxSpreadPercent,
-  ] as const;
+  return [maxSpreadPercent, setMaxSpreadPercentSafe, resetMaxSpreadPercent] as const;
 }

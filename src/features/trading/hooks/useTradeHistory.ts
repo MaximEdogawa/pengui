@@ -3,10 +3,7 @@
 import { useCallback, useMemo } from "react";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { useMyTrades } from "./useMyTrades";
-import {
-  useTradeHistoryFilters,
-  type TradeHistoryFilters,
-} from "./useTradeHistoryFilters";
+import { useTradeHistoryFilters, type TradeHistoryFilters } from "./useTradeHistoryFilters";
 import { useOrderBook } from "./useOrderBook";
 import { normalizeTickerForApi } from "../lib/orderBookParams";
 import { useNetwork } from "@/shared/hooks/useNetwork";
@@ -27,7 +24,7 @@ async function fetchOffersForStatus(
     status: number;
     sort: string;
     pageParam: number;
-  },
+  }
 ): Promise<{ items: DexieOffer[]; rawCount: number }> {
   const { targetRequested, targetOffered, status, sort, pageParam } = opts;
   if (!targetRequested && !targetOffered) return { items: [], rawCount: 0 };
@@ -56,21 +53,11 @@ async function fetchOffersForStatus(
   const rawCount = list.length;
 
   const match = (a: { code?: string; id?: string } | undefined, t: string) =>
-    !!a &&
-    [a.code, a.id].some(
-      (v) => v && String(v).toLowerCase() === t.toLowerCase(),
-    );
+    !!a && [a.code, a.id].some((v) => v && String(v).toLowerCase() === t.toLowerCase());
   const items = list.filter((o) => {
-    if (
-      !o?.id ||
-      (o.offered?.length ?? 0) === 0 ||
-      (o.requested?.length ?? 0) === 0
-    )
-      return false;
-    if (targetRequested && !o.requested?.some((a) => match(a, targetRequested)))
-      return false;
-    if (targetOffered && !o.offered?.some((a) => match(a, targetOffered)))
-      return false;
+    if (!o?.id || (o.offered?.length ?? 0) === 0 || (o.requested?.length ?? 0) === 0) return false;
+    if (targetRequested && !o.requested?.some((a) => match(a, targetRequested))) return false;
+    if (targetOffered && !o.offered?.some((a) => match(a, targetOffered))) return false;
     return true;
   });
 
@@ -83,15 +70,13 @@ function mergeStatusOffers(
     pages: Array<{ items: DexieOffer[]; rawCount: number }> | undefined;
     offerState: OfferState;
   }[],
-  getIsMyOffer: (o: DexieOffer) => boolean,
+  getIsMyOffer: (o: DexieOffer) => boolean
 ): TradeHistoryOfferItem[] {
   const out: TradeHistoryOfferItem[] = [];
   for (const { show, pages, offerState } of sources) {
     if (!show || !pages) continue;
     const raw = pages.flatMap((p) => p.items);
-    out.push(
-      ...raw.map((o) => ({ offer: o, offerState, isMyOffer: getIsMyOffer(o) })),
-    );
+    out.push(...raw.map((o) => ({ offer: o, offerState, isMyOffer: getIsMyOffer(o) })));
   }
   return out;
 }
@@ -100,7 +85,7 @@ function buildNextPageState(
   filters: TradeHistoryFilters,
   completedHasNext: boolean,
   cancelledHasNext: boolean,
-  pendingHasNext: boolean,
+  pendingHasNext: boolean
 ) {
   return (
     (filters.showCompleted && completedHasNext) ||
@@ -112,7 +97,7 @@ function buildNextPageState(
 function buildIsFetching(
   completedFetching: boolean,
   cancelledFetching: boolean,
-  pendingFetching: boolean,
+  pendingFetching: boolean
 ) {
   return completedFetching || cancelledFetching || pendingFetching;
 }
@@ -122,7 +107,7 @@ function buildLoadingState(
   completedLoading: boolean,
   cancelledLoading: boolean,
   pendingLoading: boolean,
-  orderBookLoading: boolean,
+  orderBookLoading: boolean
 ) {
   return (
     (filters.showOpen && orderBookLoading) ||
@@ -175,8 +160,7 @@ export function useTradeHistory(options: TradeHistoryOptions = {}) {
 
   const ourIdsQuery = useQuery({
     queryKey: ["our-dexie-offer-ids", walletAddress ?? "", network],
-    queryFn: () =>
-      offerStorageService.getOurDexieOfferIds(walletAddress!, network),
+    queryFn: () => offerStorageService.getOurDexieOfferIds(walletAddress!, network),
     enabled: enabled && !!walletAddress,
     staleTime: 60 * 1000,
   });
@@ -195,8 +179,7 @@ export function useTradeHistory(options: TradeHistoryOptions = {}) {
     return new Set([...fromDexieOurIds, ...fromMyOfferIds, ...fromMy]);
   }, [ourIdsQuery.data, myOfferIdsQuery.data, myTrades]);
 
-  const baseEnabled =
-    enabled && hasPairFilter && (!thFilters.myTradesOnly || !!walletAddress);
+  const baseEnabled = enabled && hasPairFilter && (!thFilters.myTradesOnly || !!walletAddress);
   const dexieUrl = getDexieApiUrl(network);
   const fetchOpts = {
     targetRequested,
@@ -296,9 +279,7 @@ export function useTradeHistory(options: TradeHistoryOptions = {}) {
   });
 
   const { orderBookData, orderBookLoading, orderBookError } = useOrderBook(
-    enabled && thFilters.showOpen && hasPairFilter
-      ? orderBookFilters
-      : undefined,
+    enabled && thFilters.showOpen && hasPairFilter ? orderBookFilters : undefined
   );
 
   const openOffers = useMemo(() => {
@@ -314,7 +295,7 @@ export function useTradeHistory(options: TradeHistoryOptions = {}) {
         price: order.pricePerUnit ?? 0,
         fees: 0,
         known_taker: null,
-      }),
+      })
     );
   }, [orderBookData]);
 
@@ -329,7 +310,7 @@ export function useTradeHistory(options: TradeHistoryOptions = {}) {
         )
       );
     },
-    [ourOfferIds, walletAddress],
+    [ourOfferIds, walletAddress]
   );
 
   const historyOffers = useMemo(
@@ -352,7 +333,7 @@ export function useTradeHistory(options: TradeHistoryOptions = {}) {
             offerState: "Pending",
           },
         ],
-        isOfferMine,
+        isOfferMine
       ),
     [
       thFilters.showCompleted,
@@ -362,7 +343,7 @@ export function useTradeHistory(options: TradeHistoryOptions = {}) {
       cancelledQuery.data?.pages,
       pendingQuery.data?.pages,
       isOfferMine,
-    ],
+    ]
   );
 
   const openItems = useMemo(() => {
@@ -377,9 +358,7 @@ export function useTradeHistory(options: TradeHistoryOptions = {}) {
 
   const offers = useMemo(() => {
     const allOffers = [...openItems, ...historyOffers];
-    return thFilters.myTradesOnly
-      ? allOffers.filter((item) => item.isMyOffer)
-      : allOffers;
+    return thFilters.myTradesOnly ? allOffers.filter((item) => item.isMyOffer) : allOffers;
   }, [openItems, historyOffers, thFilters.myTradesOnly]);
 
   const fetchNextPage = useCallback(() => {
@@ -399,25 +378,22 @@ export function useTradeHistory(options: TradeHistoryOptions = {}) {
     thFilters,
     !!completedQuery.hasNextPage,
     !!cancelledQuery.hasNextPage,
-    !!pendingQuery.hasNextPage,
+    !!pendingQuery.hasNextPage
   );
   const isFetchingNextPage = buildIsFetching(
     completedQuery.isFetchingNextPage,
     cancelledQuery.isFetchingNextPage,
-    pendingQuery.isFetchingNextPage,
+    pendingQuery.isFetchingNextPage
   );
   const isLoading = buildLoadingState(
     thFilters,
     completedQuery.isLoading,
     cancelledQuery.isLoading,
     pendingQuery.isLoading,
-    orderBookLoading,
+    orderBookLoading
   );
   const error =
-    completedQuery.error ??
-    cancelledQuery.error ??
-    pendingQuery.error ??
-    orderBookError;
+    completedQuery.error ?? cancelledQuery.error ?? pendingQuery.error ?? orderBookError;
 
   return {
     offers,

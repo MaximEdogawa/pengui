@@ -2,10 +2,7 @@
 
 import type { OfferDetails } from "@/entities/offer";
 import { useThemeClasses } from "@/shared/hooks";
-import type {
-  OrderBookFilters,
-  OrderBookOrder,
-} from "../../../lib/orderBookTypes";
+import type { OrderBookFilters, OrderBookOrder } from "../../../lib/orderBookTypes";
 import { useOrderBookOfferSubmission } from "../../../hooks/useOrderBookOfferSubmission";
 import { useCreateOfferFormData } from "@/features/trading/hooks/useCreateOfferFormData";
 import { OfferPreview } from "../../componets/create-offer-form/OfferPreview";
@@ -37,14 +34,8 @@ export default function CreateOfferForm({
 }: CreateOfferFormProps) {
   const { t } = useThemeClasses();
 
-  const {
-    makerAssets,
-    setMakerAssets,
-    takerAssets,
-    setTakerAssets,
-    useAsTemplate,
-    resetForm,
-  } = useOrderBookOfferSubmission();
+  const { makerAssets, setMakerAssets, takerAssets, setTakerAssets, useAsTemplate, resetForm } =
+    useOrderBookOfferSubmission();
 
   const formData = useCreateOfferFormData({
     order,
@@ -67,11 +58,9 @@ export default function CreateOfferForm({
     <div className={containerClass}>
       <form onSubmit={formData.handleSubmit} className={containerClass}>
         <OfferPreview
-          offeredAssets={formData.extendedMakerAssets.filter(
-            (a) => a.assetId || a.type === "xch",
-          )}
+          offeredAssets={formData.extendedMakerAssets.filter((a) => a.assetId || a.type === "xch")}
           requestedAssets={formData.extendedTakerAssets.filter(
-            (a) => a.assetId || a.type === "xch",
+            (a) => a.assetId || a.type === "xch"
           )}
           fee={formData.fee}
           t={t}

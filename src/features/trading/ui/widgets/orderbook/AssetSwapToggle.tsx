@@ -87,8 +87,7 @@ export default function AssetSwapToggle() {
       <div
         className="absolute inset-0 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300"
         style={{
-          background:
-            "linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent)",
+          background: "linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent)",
         }}
       />
 
@@ -102,9 +101,7 @@ export default function AssetSwapToggle() {
           ${assetsSwapped ? "rotate-180" : ""}
         `}
         style={{
-          filter: assetsSwapped
-            ? "drop-shadow(0 0 4px rgba(59, 130, 246, 0.5))"
-            : "none",
+          filter: assetsSwapped ? "drop-shadow(0 0 4px rgba(59, 130, 246, 0.5))" : "none",
         }}
       />
     </button>

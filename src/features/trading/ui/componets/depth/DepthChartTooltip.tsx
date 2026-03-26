@@ -1,7 +1,4 @@
-import {
-  formatAmountForDisplay,
-  formatPriceForDisplay,
-} from "@/features/trading/lib/formatAmount";
+import { formatAmountForDisplay, formatPriceForDisplay } from "@/features/trading/lib/formatAmount";
 
 interface TooltipData {
   x: number;

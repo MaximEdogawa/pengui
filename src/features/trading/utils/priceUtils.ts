@@ -1,8 +1,5 @@
 import { getNativeTokenTickerForNetwork } from "@/shared/lib/config/environment";
-import {
-  OrderBookFilters,
-  OrderBookOrder,
-} from "@/features/trading/lib/orderBookTypes";
+import { OrderBookFilters, OrderBookOrder } from "@/features/trading/lib/orderBookTypes";
 import { calculateOrderPrice as calculateOrderPriceNumeric } from "@/features/trading/lib/services/priceCalculation";
 
 /**
@@ -12,7 +9,7 @@ export function calculateOrderType(
   order: OrderBookOrder | undefined,
   filters: OrderBookFilters | undefined,
   network: "mainnet" | "testnet",
-  getCatTokenInfo: (assetId: string) => { ticker?: string } | undefined,
+  getCatTokenInfo: (assetId: string) => { ticker?: string } | undefined
 ): "buy" | "sell" | null {
   if (!order || !filters?.buyAsset || !filters?.sellAsset) return null;
   const buyAssets = filters.buyAsset || [];
@@ -29,21 +26,19 @@ export function calculateOrderType(
   const requestingIsBuyAsset = order.requesting.some((asset) =>
     buyAssets.some(
       (filterAsset) =>
-        getTickerSymbol(asset.id, asset.code).toLowerCase() ===
-          filterAsset.toLowerCase() ||
+        getTickerSymbol(asset.id, asset.code).toLowerCase() === filterAsset.toLowerCase() ||
         asset.id.toLowerCase() === filterAsset.toLowerCase() ||
-        (asset.code && asset.code.toLowerCase() === filterAsset.toLowerCase()),
-    ),
+        (asset.code && asset.code.toLowerCase() === filterAsset.toLowerCase())
+    )
   );
 
   const offeringIsBuyAsset = order.offering.some((asset) =>
     buyAssets.some(
       (filterAsset) =>
-        getTickerSymbol(asset.id, asset.code).toLowerCase() ===
-          filterAsset.toLowerCase() ||
+        getTickerSymbol(asset.id, asset.code).toLowerCase() === filterAsset.toLowerCase() ||
         asset.id.toLowerCase() === filterAsset.toLowerCase() ||
-        (asset.code && asset.code.toLowerCase() === filterAsset.toLowerCase()),
-    ),
+        (asset.code && asset.code.toLowerCase() === filterAsset.toLowerCase())
+    )
   );
 
   if (requestingIsBuyAsset && !offeringIsBuyAsset) return "sell";
@@ -61,13 +56,7 @@ export function calculatePriceDeviation(params: {
   filters: OrderBookFilters | undefined;
   getTickerSymbol: (assetId: string, code?: string) => string;
 }): number | null {
-  const {
-    order,
-    filteredBuyOrders,
-    filteredSellOrders,
-    filters,
-    getTickerSymbol,
-  } = params;
+  const { order, filteredBuyOrders, filteredSellOrders, filters, getTickerSymbol } = params;
   if (!order) return null;
   const isBuyOrder = filteredBuyOrders.some((o) => o.id === order.id);
   const orderList = isBuyOrder ? filteredBuyOrders : filteredSellOrders;
@@ -76,18 +65,14 @@ export function calculatePriceDeviation(params: {
 
   const getNumericPrice = (o: OrderBookOrder) =>
     calculateOrderPriceNumeric(o, filters, { getTickerSymbol });
-  const prices = orderList
-    .map(getNumericPrice)
-    .filter((p) => p > 0 && isFinite(p));
+  const prices = orderList.map(getNumericPrice).filter((p) => p > 0 && isFinite(p));
   if (prices.length === 0) return null;
 
-  const bestPrice =
-    orderTypeForPrice === "sell" ? Math.min(...prices) : Math.max(...prices);
+  const bestPrice = orderTypeForPrice === "sell" ? Math.min(...prices) : Math.max(...prices);
   if (!bestPrice || bestPrice <= 0 || !isFinite(bestPrice)) return null;
 
   const currentPrice = getNumericPrice(order);
-  if (!currentPrice || currentPrice <= 0 || !isFinite(currentPrice))
-    return null;
+  if (!currentPrice || currentPrice <= 0 || !isFinite(currentPrice)) return null;
   if (currentPrice === bestPrice) return 0;
 
   const deviation =
