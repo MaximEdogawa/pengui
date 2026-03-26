@@ -13,6 +13,9 @@ import { CHIA_ASSET_IDS, XCH_BASE_CURRENCIES } from '@/shared/lib/constants/chia
 import TickerIcon, { XchIcon } from '@/entities/asset/ui/TickerIcon'
 import { useCatTokens, type DexieTicker } from '@/entities/asset'
 import { useNetwork } from '@/shared/hooks/useNetwork'
+import { TibetLpPairIcon } from '@/features/tibet-swap/ui/TibetLpPairIcon'
+import { useTibetLpPairMap } from '@/features/tibet-swap/hooks/useTibetLpPairMap'
+import { getLpTicker } from '@/features/tibet-swap/lib/tibetUiUtils'
 import { useThemeClasses } from '@/shared/hooks'
 import { useResponsive } from '@/shared/hooks/useResponsive'
 import { useNavigationProgress } from '@/shared/providers/NavigationProgressProvider'
@@ -89,6 +92,9 @@ export default function AssetDetailView({ assetIdSlug }: AssetDetailViewProps) {
 
   const assetId = assetIdSlug === 'xch' ? CHIA_ASSET_IDS.XCH : decodeURIComponent(assetIdSlug)
   const isXch = assetId === CHIA_ASSET_IDS.XCH || assetId === ''
+  const lpMap = useTibetLpPairMap()
+  const lpPair = !isXch ? lpMap.get(assetId) : undefined
+  const isLpToken = lpPair != null
 
   // Single WalletConnect RPC for this specific asset's balance.
   const { data: balanceData, isLoading: isLoadingBalance } = useWalletBalance(
@@ -97,10 +103,16 @@ export default function AssetDetailView({ assetIdSlug }: AssetDetailViewProps) {
   )
 
   const catalogAsset = !isXch ? getAsset(assetId) : undefined
-  const displayName = isXch ? 'Chia' : (catalogAsset?.name ?? assetIdSlug.slice(0, 8))
+  const displayName = isXch
+    ? 'Chia'
+    : isLpToken
+      ? getLpTicker(lpPair)
+      : (catalogAsset?.name ?? assetIdSlug.slice(0, 8))
   const ticker = isXch
     ? (network === 'testnet' ? 'TXCH' : 'XCH')
-    : (catalogAsset?.ticker ?? assetIdSlug.slice(0, 8))
+    : isLpToken
+      ? getLpTicker(lpPair)
+      : (catalogAsset?.ticker ?? assetIdSlug.slice(0, 8))
 
   const spendable = balanceData?.spendable != null ? Number(balanceData.spendable) : 0
   const balance = convertFromSmallestUnit(spendable, isXch ? 'xch' : 'cat')
@@ -150,17 +162,27 @@ export default function AssetDetailView({ assetIdSlug }: AssetDetailViewProps) {
         <div className="flex items-start justify-between gap-2 mb-3 min-w-0">
           {/* Icon + name + price */}
           <div className="flex items-center gap-2.5 min-w-0 flex-1 overflow-hidden">
-            {isXch ? (
-              <XchIcon size={36} isTestnet={network === 'testnet'} className="flex-shrink-0" />
-            ) : (
-              <TickerIcon assetId={assetId} ticker={ticker} size={36} className="flex-shrink-0" />
-            )}
+            <div className="flex-shrink-0">
+              {isXch ? (
+                <XchIcon size={36} isTestnet={network === 'testnet'} />
+              ) : isLpToken ? (
+                <TibetLpPairIcon liquidityAssetId={assetId} size={36} />
+              ) : (
+                <TickerIcon assetId={assetId} ticker={ticker} size={36} />
+              )}
+            </div>
             <div className="min-w-0 overflow-hidden">
               <h1 className={`text-lg sm:text-base font-semibold ${t.text} leading-tight truncate`}>{displayName}</h1>
-              <p className={`text-[13px] sm:text-[11px] ${t.textSecondary} tabular-nums leading-tight truncate`}>
-                {ticker}
-                {priceUsd != null && priceUsd > 0 && (
-                  <span className="ml-1">· {formatPrice(priceUsd, maxDecimals)}</span>
+              <p className={`text-[13px] sm:text-[11px] leading-tight truncate`}>
+                {isLpToken ? (
+                  <span className="text-emerald-500/80 dark:text-emerald-400/70 font-medium">TibetSwap</span>
+                ) : (
+                  <span className={t.textSecondary}>
+                    {ticker}
+                    {priceUsd != null && priceUsd > 0 && (
+                      <span className="ml-1">· {formatPrice(priceUsd, maxDecimals)}</span>
+                    )}
+                  </span>
                 )}
               </p>
             </div>

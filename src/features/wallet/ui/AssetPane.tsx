@@ -8,6 +8,7 @@ import TickerIcon, { XchIcon } from '@/entities/asset/ui/TickerIcon'
 import { CHIA_ASSET_IDS } from '@/shared/lib/constants/chia-assets'
 import { TibetLpPairIcon } from '@/features/tibet-swap/ui/TibetLpPairIcon'
 import { useTibetLpPairMap } from '@/features/tibet-swap/hooks/useTibetLpPairMap'
+import { getLpTicker } from '@/features/tibet-swap/lib/tibetUiUtils'
 import type { WalletAssetItem } from '../hooks/useWalletAssets'
 
 interface AssetPaneProps {
@@ -51,9 +52,7 @@ export default function AssetPane({ asset, href }: AssetPaneProps) {
   const isXch = asset.assetId === CHIA_ASSET_IDS.XCH || asset.assetId === ''
   const lpPair = !isXch ? lpMap.get(asset.assetId) : undefined
   const isLpToken = lpPair != null
-  const lpTicker = lpPair
-    ? `${lpPair.asset_short_name || lpPair.asset_name}-XCH`
-    : asset.ticker
+  const lpTicker = lpPair ? getLpTicker(lpPair) : asset.ticker
   const linkClass = `w-full flex items-center gap-3 sm:gap-3 p-3.5 sm:p-3 rounded-xl border transition-all text-left block cursor-pointer touch-manipulation min-w-0 ${
     isDark
       ? 'bg-white/[0.03] border-white/5 hover:bg-white/5 active:bg-white/8'
