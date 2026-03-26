@@ -32,7 +32,6 @@ interface UseSwapQuoteSyncArgs {
   requestedAmount: string;
   setOfferedAmount: (v: string) => void;
   setRequestedAmount: (v: string) => void;
-  /** When true, do not overwrite offered/requested from quote (e.g. when LP amount drives the form) */
   skipQuoteSync?: boolean;
 }
 

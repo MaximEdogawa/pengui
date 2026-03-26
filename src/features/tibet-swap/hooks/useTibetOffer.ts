@@ -72,7 +72,7 @@ export function useTibetOffer() {
     fee,
   }: {
     pair: TibetApiPair;
-    /** Mojos to deposit. */
+    /** Pool XCH to deposit (mojos). The offer will include lpAmount on top — see below. */
     xchAmount: number;
     /** Token smallest units to deposit. */
     tokenAmount: number;
@@ -81,10 +81,13 @@ export function useTibetOffer() {
     fee?: number;
   }): Promise<string> {
     const effectiveFee = clampFee(fee);
+    // Tibet AMM protocol: LP tokens are minted from a XCH coin, so their mojo value is
+    // embedded in the XCH side of the offer. The wallet must offer xchAmount + lpAmount XCH.
+    // Reference: tibet-ui Liquidity.tsx — `xchAmount += liquidity`
     const result = await walletOffer.mutateAsync({
       walletId: 1,
       offerAssets: [
-        { assetId: xchAssetId, amount: xchAmount },
+        { assetId: xchAssetId, amount: xchAmount + lpAmount },
         { assetId: pair.asset_id, amount: tokenAmount },
       ],
       requestAssets: [{ assetId: pair.liquidity_asset_id, amount: lpAmount }],
@@ -106,18 +109,21 @@ export function useTibetOffer() {
     pair: TibetApiPair;
     /** LP tokens to burn. */
     lpAmount: number;
-    /** Mojos to receive — use floor(reserve * share) to never over-request. */
+    /** Pool XCH to receive (mojos). The offer will request lpAmount on top — see below. */
     xchAmount: number;
-    /** Token smallest units to receive — same floor rule. */
+    /** Token smallest units to receive — floor(token_reserve * lp / liquidity). */
     tokenAmount: number;
     fee?: number;
   }): Promise<string> {
     const effectiveFee = clampFee(fee);
+    // Tibet AMM protocol: LP coins carry XCH that is returned when they are burned.
+    // The XCH received = proportional pool XCH + lp_amount (the LP coin's own XCH value).
+    // Reference: tibet-ui Liquidity.tsx — `xchAmount += liquidity`
     const result = await walletOffer.mutateAsync({
       walletId: 1,
       offerAssets: [{ assetId: pair.liquidity_asset_id, amount: lpAmount }],
       requestAssets: [
-        { assetId: xchAssetId, amount: xchAmount },
+        { assetId: xchAssetId, amount: xchAmount + lpAmount },
         { assetId: pair.asset_id, amount: tokenAmount },
       ],
       ...(effectiveFee !== undefined && { fee: effectiveFee }),
