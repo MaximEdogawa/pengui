@@ -16,8 +16,6 @@ export { default as OrderBookContainer } from "./ui/widgets/orderbook/OrderBookC
 export { default as OrderBookTable } from "./ui/widgets/orderbook/OrderBookTable";
 export { default as OrderBookFilters } from "./ui/widgets/orderbook/OrderBookFilters";
 export { default as OrderTooltip } from "./ui/widgets/orderbook/OrderTooltip";
-export { default as FilterPanel } from "./ui/layout/FilterPanel";
-export { default as LimitOfferTab } from "./ui/layout/OfferTab";
 export { default as CreateOfferModal } from "./ui/componets/offer/CreateOfferDialog";
 export { default as CreateOfferForm } from "./ui/componets/limit/CreateOfferForm";
 export { default as TakeOfferModal } from "./ui/componets/offer/TakeOfferDialog";

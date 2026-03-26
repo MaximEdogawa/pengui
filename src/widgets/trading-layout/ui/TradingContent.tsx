@@ -10,7 +10,12 @@ import { useTradeHistory } from "@/features/trading/hooks/useTradeHistory";
 import { useTradeHistoryFilters } from "@/features/trading/hooks/useTradeHistoryFilters";
 
 interface TradingContentProps {
-  activeView: "orderbook" | "chart" | "depth" | "trades" | "terminal";
+  activeView:
+    | "orderbook"
+    | "chart"
+    | "depth"
+    | "trades"
+    | "terminal";
   filters?: {
     buyAsset?: string[];
     sellAsset?: string[];

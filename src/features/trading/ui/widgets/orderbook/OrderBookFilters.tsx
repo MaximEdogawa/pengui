@@ -14,10 +14,13 @@ import OrderBookPaginationControls from "./OrderBookPaginationControls";
 
 interface OrderBookFiltersProps {
   onFiltersChange?: () => void;
+  /** When true, hide the "Orders" pagination control (amount of orders shown in the book) */
+  hidePagination?: boolean;
 }
 
 export default function OrderBookFilters({
   onFiltersChange,
+  hidePagination = false,
 }: OrderBookFiltersProps) {
   const { t } = useThemeClasses();
   const {
@@ -170,7 +173,7 @@ export default function OrderBookFilters({
             onFocus={() =>
               filteredSuggestions.length > 0 && setShowSuggestions(true)
             }
-            placeholder={`Search assets (e.g., ${getNativeTokenTickerForNetwork(network)}, TBYC)...`}
+            placeholder={`Search assets (e.g., ${getNativeTokenTickerForNetwork(network)})...`}
             className={`w-full px-1.5 sm:px-2 py-1 sm:py-1.5 text-[11px] sm:text-xs rounded-lg border-2 ${t.border} ${t.bg} ${t.text} focus:outline-none focus:ring-2 focus:ring-blue-500/50 backdrop-blur-sm`}
           />
 
@@ -222,8 +225,8 @@ export default function OrderBookFilters({
           )}
         </div>
 
-        {/* Pagination Controls - on the right side of the search bar */}
-        {pagination !== undefined && (
+        {/* Pagination Controls - how many orders to show in the order book */}
+        {!hidePagination && pagination !== undefined && (
           <div className="flex items-center gap-1.5 flex-shrink-0">
             <span className="hidden md:inline text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap">
               Orders:

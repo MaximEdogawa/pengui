@@ -1,5 +1,6 @@
 'use client'
 
+import { ArrowLeftRight } from 'lucide-react'
 import { useThemeClasses } from '@/shared/hooks'
 import { useCatTokens } from '@/entities/asset'
 import { getNativeTokenTickerForNetwork } from '@/shared/lib/config/environment'
@@ -8,8 +9,8 @@ import { useMemo } from 'react'
 import type { OrderBookOrder } from '@/features/trading/lib/orderBookTypes'
 
 interface LimitOfferTabProps {
-  activeMode: 'maker' | 'taker'
-  onModeChange: (mode: 'maker' | 'taker') => void
+  activeMode: 'maker' | 'taker' | 'swap'
+  onModeChange: (mode: 'maker' | 'taker' | 'swap') => void
   selectedOrder?: OrderBookOrder | null
   filters?: { buyAsset?: string[]; sellAsset?: string[] }
 }
@@ -90,6 +91,31 @@ export default function LimitOfferTab({
     return null
   }, [selectedOrder, filters, getCatTokenInfo, network, activeMode])
 
+  const tabButtonClass = (isActive: boolean) =>
+    `flex-1 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md transition-all duration-200 font-medium text-[11px] sm:text-xs relative overflow-hidden flex items-center justify-center gap-1 ${
+      isActive
+        ? isDark
+          ? 'bg-white/10 text-white backdrop-blur-xl'
+          : 'bg-white/50 text-slate-800 backdrop-blur-xl'
+        : `${t.textSecondary} ${t.cardHover}`
+    }`
+
+  const activeOverlay = (isActive: boolean) =>
+    isActive && (
+      <>
+        <div
+          className={`absolute inset-0 backdrop-blur-xl ${
+            isDark ? 'bg-white/10' : 'bg-white/30'
+          } rounded-md`}
+        />
+        <div
+          className={`absolute inset-0 bg-gradient-to-b ${
+            isDark ? 'from-white/5' : 'from-white/20'
+          } to-transparent rounded-md`}
+        />
+      </>
+    )
+
   return (
     <div
       className={`mb-1 backdrop-blur-[40px] ${t.card} rounded-lg p-0.5 border ${t.border} transition-all duration-300 shadow-lg shadow-black/5 ${
@@ -100,31 +126,12 @@ export default function LimitOfferTab({
         <button
           type="button"
           onClick={() => onModeChange('maker')}
-          className={`flex-1 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md transition-all duration-200 font-medium text-[11px] sm:text-xs relative overflow-hidden ${
-            activeMode === 'maker'
-              ? isDark
-                ? 'bg-white/10 text-white backdrop-blur-xl'
-                : 'bg-white/50 text-slate-800 backdrop-blur-xl'
-              : `${t.textSecondary} ${t.cardHover}`
-          }`}
+          className={tabButtonClass(activeMode === 'maker')}
         >
-          {activeMode === 'maker' && (
-            <>
-              <div
-                className={`absolute inset-0 backdrop-blur-xl ${
-                  isDark ? 'bg-white/10' : 'bg-white/30'
-                } rounded-md`}
-              />
-              <div
-                className={`absolute inset-0 bg-gradient-to-b ${
-                  isDark ? 'from-white/5' : 'from-white/20'
-                } to-transparent rounded-md`}
-              />
-            </>
-          )}
+          {activeOverlay(activeMode === 'maker')}
           <span className="relative">
             Limit
-            {orderType && (
+            {orderType && activeMode !== 'swap' && (
               <span
                 className={`ml-1 text-[9px] font-normal ${
                   orderType === 'buy'
@@ -141,31 +148,12 @@ export default function LimitOfferTab({
         <button
           type="button"
           onClick={() => onModeChange('taker')}
-          className={`flex-1 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-md transition-all duration-200 font-medium text-[11px] sm:text-xs relative overflow-hidden ${
-            activeMode === 'taker'
-              ? isDark
-                ? 'bg-white/10 text-white backdrop-blur-xl'
-                : 'bg-white/50 text-slate-800 backdrop-blur-xl'
-              : `${t.textSecondary} ${t.cardHover}`
-          }`}
+          className={tabButtonClass(activeMode === 'taker')}
         >
-          {activeMode === 'taker' && (
-            <>
-              <div
-                className={`absolute inset-0 backdrop-blur-xl ${
-                  isDark ? 'bg-white/10' : 'bg-white/30'
-                } rounded-md`}
-              />
-              <div
-                className={`absolute inset-0 bg-gradient-to-b ${
-                  isDark ? 'from-white/5' : 'from-white/20'
-                } to-transparent rounded-md`}
-              />
-            </>
-          )}
+          {activeOverlay(activeMode === 'taker')}
           <span className="relative">
             Market
-            {orderType && (
+            {orderType && activeMode !== 'swap' && (
               <span
                 className={`ml-1 text-[9px] font-normal ${
                   orderType === 'buy'
@@ -176,6 +164,18 @@ export default function LimitOfferTab({
                 ({orderType === 'buy' ? 'Buy' : 'Sell'})
               </span>
             )}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onModeChange('swap')}
+          className={tabButtonClass(activeMode === 'swap')}
+        >
+          {activeOverlay(activeMode === 'swap')}
+          <span className="relative inline-flex items-center gap-1">
+            <ArrowLeftRight size={10} />
+            Swap
           </span>
         </button>
       </div>

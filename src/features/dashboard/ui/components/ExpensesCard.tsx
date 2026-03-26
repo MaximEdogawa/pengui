@@ -11,6 +11,8 @@ import { convertFromSmallestUnit } from '@/shared/lib/utils/chia-units'
 import type { StoredTransaction } from '@/shared/lib/walletConnect/utils/transactionStorage'
 import { useMemo } from 'react'
 import { CardSkeleton } from './CardSkeleton'
+import { TibetLpPairIcon } from '@/features/tibet-swap/ui/TibetLpPairIcon'
+import { useTibetLpPairMap } from '@/features/tibet-swap/hooks/useTibetLpPairMap'
 
 interface ExpensesCardProps {
   isDark: boolean
@@ -85,6 +87,7 @@ function computePnl(transactions: StoredTransaction[]): number {
 export function ExpensesCard({ isDark, t }: ExpensesCardProps) {
   const transactions = useTransactionHistory()
   const { isLoading } = useWalletAssets()
+  const lpMap = useTibetLpPairMap()
 
   const recentTrades = useMemo(
     () => transactions.slice(0, MAX_VISIBLE_TRADES),
@@ -175,6 +178,8 @@ export function ExpensesCard({ isDark, t }: ExpensesCardProps) {
                 >
                   {!tx.assetId || isChiaNativeToken(tx.assetId) ? (
                     <XchIcon size={14} />
+                  ) : lpMap.has(tx.assetId) ? (
+                    <TibetLpPairIcon liquidityAssetId={tx.assetId} size={14} />
                   ) : (
                     <TickerIcon assetId={tx.assetId} ticker={tx.amountAsset ?? ''} size={14} />
                   )}

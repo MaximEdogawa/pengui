@@ -9,6 +9,9 @@ import { isChiaNativeToken } from '@/shared/lib/constants/chia-assets'
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts'
 import { useMemo, useState, useCallback } from 'react'
 import { CardSkeleton } from './CardSkeleton'
+import { TibetLpPairIcon } from '@/features/tibet-swap/ui/TibetLpPairIcon'
+import { useTibetLpPairMap } from '@/features/tibet-swap/hooks/useTibetLpPairMap'
+import { getLpTicker } from '@/features/tibet-swap/lib/tibetUiUtils'
 
 interface PortfolioCardProps {
   isDark: boolean
@@ -69,6 +72,7 @@ function CustomTooltip({
 
 export function PortfolioCard({ isDark, t }: PortfolioCardProps) {
   const { assets, isLoading } = useWalletAssets()
+  const lpMap = useTibetLpPairMap()
   const [activeIndex, setActiveIndex] = useState<number | null>(null)
 
   const slices = useMemo<PortfolioSlice[]>(() => {
@@ -193,11 +197,23 @@ export function PortfolioCard({ isDark, t }: PortfolioCardProps) {
                   />
                   {isChiaNativeToken(slice.assetId) ? (
                     <XchIcon size={16} />
+                  ) : lpMap.has(slice.assetId) ? (
+                    <TibetLpPairIcon liquidityAssetId={slice.assetId} size={16} />
                   ) : (
                     <TickerIcon assetId={slice.assetId} ticker={slice.ticker} size={16} />
                   )}
-                  <span className={`text-[11px] font-medium ${t.text} truncate`}>
-                    {slice.ticker}
+                  <span className="flex flex-col min-w-0">
+                    <span className={`text-[11px] font-medium ${t.text} truncate leading-tight`}>
+                      {(() => {
+                        const pair = lpMap.get(slice.assetId)
+                        return pair ? getLpTicker(pair) : slice.ticker
+                      })()}
+                    </span>
+                    {lpMap.has(slice.assetId) && (
+                      <span className="text-[9px] font-medium text-emerald-500/70 dark:text-emerald-400/60 leading-tight">
+                        TibetSwap
+                      </span>
+                    )}
                   </span>
                 </div>
                 <span className={`text-[11px] font-medium ${t.textSecondary} tabular-nums`}>
