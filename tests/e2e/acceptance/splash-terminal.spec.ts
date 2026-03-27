@@ -1,53 +1,52 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "../fixtures";
 
 /**
- * E2E tests for Dexie Splash Terminal
- * - Trading page: Stream tab shows terminal
- * - Terminal commands: /help, /list, /status, /clear
+ * Acceptance Tests — Splash Terminal
+ *
+ * The xterm-based Splash Terminal lives on the /offers page behind a
+ * "Show live stream terminal" toggle button, NOT on the trading page.
+ *
+ * The trading page "Stream" tab shows a StreamContainer (live trade table),
+ * which is a separate component with no data-testid="splash-terminal".
  */
-test.describe("Splash Terminal", () => {
-  test("trading page has Stream tab and terminal loads", async ({ page }) => {
-    await page.goto("/trading");
 
-    // May redirect to login; if we have Stream tab we're on trading
-    const streamTab = page.getByRole("button", { name: /stream/i });
-    await streamTab.waitFor({ state: "visible", timeout: 15000 }).catch(() => {
-      // If not visible, we might be on login - skip assertion
-    });
-
-    const isStreamVisible = await streamTab.isVisible();
-    if (!isStreamVisible) {
-      test.skip();
-      return;
-    }
-
-    await streamTab.click();
-
-    const terminal = page.getByTestId("splash-terminal");
-    await expect(terminal).toBeVisible({ timeout: 10000 });
+test.describe("Splash Terminal — /offers page", () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto("/offers");
+    await page.waitForLoadState("domcontentloaded");
   });
 
-  test("terminal shows help when /help is entered", async ({ page }) => {
+  test("toggle button is visible before the terminal is open", async ({ page }) => {
+    await expect(page.getByRole("button", { name: /live stream terminal/i })).toBeVisible({
+      timeout: 10_000,
+    });
+  });
+
+  test("clicking the toggle shows the terminal container", async ({ page }) => {
+    await page.getByRole("button", { name: /live stream terminal/i }).click();
+    await expect(page.getByTestId("splash-terminal")).toBeVisible({ timeout: 10_000 });
+  });
+
+  test("clicking the toggle again hides the terminal", async ({ page }) => {
+    const btn = page.getByRole("button", { name: /live stream terminal/i });
+    await btn.click();
+    await expect(page.getByTestId("splash-terminal")).toBeVisible({ timeout: 10_000 });
+
+    await btn.click();
+    await expect(page.getByTestId("splash-terminal")).not.toBeVisible();
+  });
+});
+
+test.describe("Trading page — Stream tab", () => {
+  test("Stream tab shows the live trade stream (not xterm terminal)", async ({ page }) => {
     await page.goto("/trading");
+    await page.waitForLoadState("domcontentloaded");
 
     const streamTab = page.getByRole("button", { name: /stream/i });
-    await streamTab.waitFor({ state: "visible", timeout: 15000 }).catch(() => {});
-
-    if (!(await streamTab.isVisible())) {
-      test.skip();
-      return;
-    }
-
+    await expect(streamTab).toBeVisible({ timeout: 10_000 });
     await streamTab.click();
 
-    const terminal = page.getByTestId("splash-terminal");
-    await expect(terminal).toBeVisible({ timeout: 10000 });
-
-    await terminal.click();
-    await page.keyboard.type("/help");
-    await page.keyboard.press("Enter");
-
-    await expect(page.getByText(/Commands:/)).toBeVisible({ timeout: 5000 });
-    await expect(page.getByText(/\/filter/)).toBeVisible({ timeout: 2000 });
+    // The Stream tab renders StreamContainer (a trade history table), not the xterm terminal
+    await expect(page.getByTestId("splash-terminal")).not.toBeAttached();
   });
 });

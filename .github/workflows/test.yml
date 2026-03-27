@@ -3,11 +3,44 @@ name: Tests
 on:
   pull_request:
     branches: [main]
+  push:
+    branches: [main]
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
+  unit-tests:
+    name: Unit & Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Run unit tests on all PRs and main branch pushes
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.23
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Run unit tests with coverage
+        run: bun test --coverage --reporter=verbose
+        env:
+          CI: true
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 14
+
   e2e:
     name: E2E Tests
     runs-on: ubuntu-latest
@@ -83,3 +116,11 @@ jobs:
         run: bunx playwright test tests/e2e/smoke --project=chromium
         env:
           CI: true
+
+      - name: Upload smoke test report
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: smoke-test-report
+          path: playwright-report/
+          retention-days: 7
