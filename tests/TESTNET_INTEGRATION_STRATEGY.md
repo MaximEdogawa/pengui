@@ -8,13 +8,13 @@ This document describes how to set up and automate integration tests that run ag
 
 ## Test Levels
 
-| Level | Scope | Trigger | Wallet required |
-|-------|-------|---------|-----------------|
-| Unit | Pure functions, hooks | Every PR | No |
-| Smoke | Page loads, UI render | Every PR | No |
-| Regression | Known-bug scenarios | Every PR | No |
-| Integration | Full user flows (E2E) | Main branch merge | Yes (testnet) |
-| Testnet | Real blockchain transactions | Manual / nightly | Yes (funded testnet) |
+| Level       | Scope                        | Trigger           | Wallet required      |
+| ----------- | ---------------------------- | ----------------- | -------------------- |
+| Unit        | Pure functions, hooks        | Every PR          | No                   |
+| Smoke       | Page loads, UI render        | Every PR          | No                   |
+| Regression  | Known-bug scenarios          | Every PR          | No                   |
+| Integration | Full user flows (E2E)        | Main branch merge | Yes (testnet)        |
+| Testnet     | Real blockchain transactions | Manual / nightly  | Yes (funded testnet) |
 
 ---
 
@@ -29,6 +29,7 @@ This document describes how to set up and automate integration tests that run ag
 ### 2. Fund the Test Wallet
 
 Get testnet XCH from the Chia testnet faucet:
+
 - https://testnet.chia.net/faucet (request 1 TXCH)
 - Or ask in the Chia Discord `#testnet` channel.
 
@@ -75,6 +76,7 @@ GitHub Actions (ubuntu-latest)
 ### Option B: Mock WalletConnect Responses (Simpler, less realistic)
 
 For flows where you only need to verify the dApp side:
+
 1. Intercept WalletConnect RPC calls with a test relay server.
 2. Return pre-signed responses from a fixture file.
 3. Useful for verifying UI state machines without a real wallet.
@@ -95,22 +97,22 @@ Good for one-off regression checks on complex flows.
 
 ### Priority 1 — Core Flows
 
-| # | Scenario | Steps | Expected |
-|---|----------|-------|----------|
-| T-001 | Connect wallet | Open pengui → click Connect → approve in Sage | Dashboard shows balance |
-| T-002 | View XCH balance | After connect | Balance matches chain |
-| T-003 | Send TXCH | Enter recipient + 0.001 TXCH + fee → submit → approve in Sage | Transaction appears in history |
-| T-004 | Create offer | Offer 0.01 TXCH for SBX → submit | Offer visible in "My Offers" |
-| T-005 | Cancel offer | Select open offer → cancel | Offer status → Cancelled |
-| T-006 | Upload offer to Dexie | Create offer → upload | Offer appears in Dexie testnet |
+| #     | Scenario              | Steps                                                         | Expected                       |
+| ----- | --------------------- | ------------------------------------------------------------- | ------------------------------ |
+| T-001 | Connect wallet        | Open pengui → click Connect → approve in Sage                 | Dashboard shows balance        |
+| T-002 | View XCH balance      | After connect                                                 | Balance matches chain          |
+| T-003 | Send TXCH             | Enter recipient + 0.001 TXCH + fee → submit → approve in Sage | Transaction appears in history |
+| T-004 | Create offer          | Offer 0.01 TXCH for SBX → submit                              | Offer visible in "My Offers"   |
+| T-005 | Cancel offer          | Select open offer → cancel                                    | Offer status → Cancelled       |
+| T-006 | Upload offer to Dexie | Create offer → upload                                         | Offer appears in Dexie testnet |
 
 ### Priority 2 — Edge Cases
 
-| # | Scenario |
-|---|----------|
-| T-007 | Insufficient balance → correct error message |
-| T-008 | Invalid recipient address → validation error shown |
-| T-009 | Session disconnect mid-flow → reconnect prompt |
+| #     | Scenario                                                       |
+| ----- | -------------------------------------------------------------- |
+| T-007 | Insufficient balance → correct error message                   |
+| T-008 | Invalid recipient address → validation error shown             |
+| T-009 | Session disconnect mid-flow → reconnect prompt                 |
 | T-010 | Network switch (mainnet↔testnet) → UI reflects correct network |
 
 ---
@@ -124,15 +126,15 @@ name: Testnet Integration Tests
 
 on:
   schedule:
-    - cron: '0 2 * * *'   # Nightly at 02:00 UTC
-  workflow_dispatch:        # Manual trigger
+    - cron: "0 2 * * *" # Nightly at 02:00 UTC
+  workflow_dispatch: # Manual trigger
 
 jobs:
   testnet:
     name: Testnet Integration
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    environment: testnet     # Requires environment approval in GitHub
+    environment: testnet # Requires environment approval in GitHub
 
     steps:
       - uses: actions/checkout@v5

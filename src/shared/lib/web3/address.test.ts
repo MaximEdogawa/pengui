@@ -12,7 +12,7 @@ describe("formatAddress", () => {
   });
 
   it("should truncate long addresses with ellipsis", () => {
-    const addr = `xch1${  "a".repeat(58)}`;
+    const addr = `xch1${"a".repeat(58)}`;
     const result = formatAddress(addr);
     expect(result).toContain("...");
     expect(result.startsWith("xch1aa")).toBe(true); // first 6 chars

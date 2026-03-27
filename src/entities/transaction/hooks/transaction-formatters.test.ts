@@ -1,8 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import {
-  formatTransactionAddress,
-  formatTransactionAmount,
-} from "./transaction-formatters";
+import { formatTransactionAddress, formatTransactionAmount } from "./transaction-formatters";
 import type { Transaction } from "./types";
 
 function makeTransaction(overrides: Partial<Transaction> = {}): Transaction {
@@ -13,7 +10,7 @@ function makeTransaction(overrides: Partial<Transaction> = {}): Transaction {
     type: "send",
     amount: "1000000000000", // 1 XCH in mojos
     fee: "1000000",
-    recipientAddress: `xch1${  "a".repeat(58)}`,
+    recipientAddress: `xch1${"a".repeat(58)}`,
     status: "confirmed",
     ...overrides,
   };
@@ -21,7 +18,7 @@ function makeTransaction(overrides: Partial<Transaction> = {}): Transaction {
 
 describe("formatTransactionAddress", () => {
   it("should format long recipient address with ellipsis", () => {
-    const tx = makeTransaction({ recipientAddress: `xch1${  "a".repeat(58)}` });
+    const tx = makeTransaction({ recipientAddress: `xch1${"a".repeat(58)}` });
     const result = formatTransactionAddress(tx);
     expect(result).toContain("...");
     expect(result.length).toBeLessThan(20);
@@ -30,7 +27,7 @@ describe("formatTransactionAddress", () => {
   it("should fall back to senderAddress when recipientAddress is missing", () => {
     const tx = makeTransaction({
       recipientAddress: undefined,
-      senderAddress: `xch1${  "b".repeat(58)}`,
+      senderAddress: `xch1${"b".repeat(58)}`,
     });
     const result = formatTransactionAddress(tx);
     expect(result).toContain("...");

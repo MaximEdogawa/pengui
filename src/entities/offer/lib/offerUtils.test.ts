@@ -23,7 +23,7 @@ describe("validateOfferString", () => {
   });
 
   it("should accept strings starting with 'offer' that are long enough", () => {
-    const longOffer = `offer${  "a".repeat(60)}`;
+    const longOffer = `offer${"a".repeat(60)}`;
     expect(validateOfferString(longOffer)).toBe(true);
   });
 
@@ -43,7 +43,13 @@ describe("isOfferActiveState", () => {
   });
 
   it("should return false for finalized states", () => {
-    const finalizedStates: OfferState[] = ["Completed", "Cancelled", "Expired", "Unknown", "Cancelling"];
+    const finalizedStates: OfferState[] = [
+      "Completed",
+      "Cancelled",
+      "Expired",
+      "Unknown",
+      "Cancelling",
+    ];
     for (const state of finalizedStates) {
       expect(isOfferActiveState(state)).toBe(false);
     }
@@ -117,7 +123,7 @@ describe("canUploadToDexie", () => {
   });
 
   it("should return true for valid offer string", () => {
-    const validOffer = `offer${  "x".repeat(60)}`;
+    const validOffer = `offer${"x".repeat(60)}`;
     expect(canUploadToDexie(validOffer)).toBe(true);
   });
 });

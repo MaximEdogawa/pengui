@@ -1,10 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import {
-  isOfferCompleted,
-  isOfferCancelled,
-  isOfferActive,
-  isOfferFinalized,
-} from "./dexieUtils";
+import { isOfferCompleted, isOfferCancelled, isOfferActive, isOfferFinalized } from "./dexieUtils";
 import type { OfferState } from "@/entities/offer";
 
 const ALL_STATES: OfferState[] = [

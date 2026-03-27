@@ -37,7 +37,6 @@ test.describe("Regression — Login Page", () => {
     await expect(loginPage.connectWithSageLink).toBeVisible();
     await expect(loginPage.connectWithSageLink).toHaveAttribute("href", /sagewallet/i);
   });
-
 });
 
 test.describe("Regression — Trading Page", () => {
