@@ -6,6 +6,7 @@ Acceptance tests validate complete user stories and feature functionality. These
 - Validate acceptance criteria from user stories
 - May require more complex setup (mocks, test data, etc.)
 - Run on PR and before releases
+- Should stay unauthenticated by default
 
 ## Test Organization
 
@@ -14,6 +15,8 @@ Acceptance tests are organized by feature area:
 - `auth-features.spec.ts` - Authentication and login flows
 - `wallet-features.spec.ts` - Wallet connection and management
 - Add more as features are developed
+
+If an acceptance story genuinely requires wallet connection, prefer the regression authenticated layer unless the test is explicitly story-level and cannot fit there.
 
 ## Adding Acceptance Tests
 

@@ -1,0 +1,69 @@
+name: Testnet Integration Tests
+
+on:
+  schedule:
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  testnet:
+    name: Testnet E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment: testnet
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.23
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Install Playwright browsers
+        run: bunx playwright install --with-deps chromium
+
+      - name: Build application
+        run: bun run build
+
+      # Phase 1 workflow:
+      # Runs the current testnet suite, which uses a mock WalletConnect peer
+      # with a real testnet address/fingerprint/balance.
+      #
+      # Phase 2 TODO:
+      # Replace this with a real Sage/signing runtime once the project has a
+      # supported headless Sage image or equivalent signing harness.
+      - name: Run testnet Playwright suite
+        run: bunx playwright test tests/e2e/testnet --project=chromium
+        env:
+          CI: true
+          PLAYWRIGHT_TEST_BASE_URL: http://localhost:3000
+          NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID }}
+          TESTNET_WALLET_ADDRESS: ${{ secrets.TESTNET_WALLET_ADDRESS }}
+          TESTNET_WALLET_FINGERPRINT: ${{ secrets.TESTNET_WALLET_FINGERPRINT }}
+          TESTNET_MIN_BALANCE_MOJOS: ${{ vars.TESTNET_MIN_BALANCE_MOJOS }}
+          TESTNET_WAIT_FOR_FUNDING: ${{ vars.TESTNET_WAIT_FOR_FUNDING }}
+          TESTNET_FUNDING_TIMEOUT_MS: ${{ vars.TESTNET_FUNDING_TIMEOUT_MS }}
+
+      - name: Upload testnet report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: testnet-playwright-report
+          path: playwright-report/
+          retention-days: 30
+
+      - name: Upload testnet traces
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: testnet-results
+          path: test-results/
+          retention-days: 14

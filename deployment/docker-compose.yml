@@ -117,6 +117,39 @@ services:
         max-size: "5m"
         max-file: "1"
 
+  # Splash relay (testnet) – separate relay instance for testnet11 Splash offers
+  splash-relay-testnet:
+    image: ${SPLASH_RELAY_IMAGE:-ghcr.io/maximedogawa/pengui:splash-relay}
+    container_name: pengui-splash-relay-testnet
+    hostname: splash-relay-testnet
+    restart: unless-stopped
+    ports:
+      - "9091:9091" # WebSocket for app/browser connections (testnet)
+      - "11512:11512" # TCP for Splash network testnet (optional)
+    command: ["--tcp-port", "11512", "--ws-port", "9091"]
+    environment:
+      - RUST_LOG=${RUST_LOG:-info}
+      - RUST_BACKTRACE=1
+    networks:
+      pengui-network:
+        aliases:
+          - splash-relay-testnet
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "for i in 1 2 3 4 5; do nc -z -w 3 127.0.0.1 9091 && nc -z -w 3 127.0.0.1 11512 && exit 0; sleep 2; done; exit 1",
+        ]
+      interval: 20s
+      timeout: 35s
+      retries: 4
+      start_period: 120s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "1"
+
 networks:
   pengui-network:
     driver: bridge

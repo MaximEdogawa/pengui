@@ -23,9 +23,10 @@ cleanup_and_start() {
         docker compose up -d pengui 2>/dev/null || true
     fi
     
-    # Start relay if not running
+    # Start relays if not running
     if [ -n "${SPLASH_RELAY_IMAGE:-}" ]; then
         docker compose up -d splash-relay 2>/dev/null || true
+        docker compose up -d splash-relay-testnet 2>/dev/null || true
     fi
     # Nginx (relay-coupled watchdog)
     # Respect RELAY_WATCHDOG if set by deploy logic (rollback uses 0).
@@ -103,9 +104,10 @@ else
     NEED_CERT=true
 fi
 
-# Optional: extra -d for relay subdomains (so cert covers wss://relay subdomain)
+# Optional: extra -d for relay subdomains (so cert covers wss://relay subdomains)
 CERTBOT_RELAY_DOMAINS=""
 [ -n "${RELAY_MAINNET_SUBDOMAIN:-}" ] && CERTBOT_RELAY_DOMAINS="$CERTBOT_RELAY_DOMAINS -d $RELAY_MAINNET_SUBDOMAIN"
+[ -n "${RELAY_TESTNET_SUBDOMAIN:-}" ] && CERTBOT_RELAY_DOMAINS="$CERTBOT_RELAY_DOMAINS -d $RELAY_TESTNET_SUBDOMAIN"
 
 # Request SSL certificate if needed
 if [ "$NEED_CERT" = true ]; then
@@ -170,11 +172,15 @@ log "Configuring nginx with HTTPS..."
 envsubst '${DOMAIN}' < nginx/templates/https.conf.template > nginx/conf.d/default.conf.tmp
 mv nginx/conf.d/default.conf.tmp nginx/conf.d/default.conf
 
-# Optional: relay subdomain WebSocket proxy (when RELAY_MAINNET_SUBDOMAIN is set)
+# Optional: relay subdomain WebSocket proxies (when RELAY_*_SUBDOMAIN vars are set)
 rm -f nginx/conf.d/relay.conf
 if [ -n "${RELAY_MAINNET_SUBDOMAIN:-}" ]; then
-    log "Configuring nginx relay subdomain..."
+    log "Configuring nginx mainnet relay subdomain..."
     envsubst '${DOMAIN} ${RELAY_MAINNET_SUBDOMAIN}' < nginx/templates/relay-mainnet.conf.template >> nginx/conf.d/relay.conf
+fi
+if [ -n "${RELAY_TESTNET_SUBDOMAIN:-}" ]; then
+    log "Configuring nginx testnet relay subdomain..."
+    envsubst '${DOMAIN} ${RELAY_TESTNET_SUBDOMAIN}' < nginx/templates/relay-testnet.conf.template >> nginx/conf.d/relay.conf
 fi
 
 # Pull latest Docker image
@@ -198,6 +204,8 @@ docker compose up -d --no-deps --wait pengui || warn "Pengui update had issues"
 
 log "Starting splash-relay service..."
 docker compose up -d --no-deps --wait splash-relay || err "splash-relay failed to become healthy"
+log "Starting splash-relay-testnet service..."
+docker compose up -d --no-deps --wait splash-relay-testnet || warn "splash-relay-testnet failed to become healthy (non-fatal)"
 
 log "Starting nginx..."
 export RELAY_WATCHDOG=1

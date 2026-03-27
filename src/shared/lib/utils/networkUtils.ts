@@ -105,12 +105,16 @@ export function isDefaultLocalRelayUrl(network: "mainnet" | "testnet"): boolean 
 
 /**
  * Get Space Scan API URL
- * @param network - Optional network type. Testnet uses api-testnet.spacescan.io.
+ * @param network - Optional network type. Testnet uses api-testnet11.spacescan.io.
  * @returns The Space Scan API base URL
  */
 export function getSpaceScanApiUrl(network?: "mainnet" | "testnet"): string {
   if (network === "testnet") {
-    return process.env.NEXT_PUBLIC_SPACESCAN_TESTNET_API_URL || "https://api-testnet.spacescan.io";
+    // api-testnet11 is the current active testnet (testnet11).
+    // Override via NEXT_PUBLIC_SPACESCAN_TESTNET_API_URL if SpaceScan changes subdomain.
+    return (
+      process.env.NEXT_PUBLIC_SPACESCAN_TESTNET_API_URL || "https://api-testnet11.spacescan.io"
+    );
   }
   return process.env.NEXT_PUBLIC_SPACESCAN_API_URL || "https://api.spacescan.io";
 }

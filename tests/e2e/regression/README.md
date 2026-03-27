@@ -1,26 +1,37 @@
 # Regression Tests
 
-Regression tests verify that previously fixed bugs don't reoccur. These tests:
+Regression tests are the authenticated WalletConnect browser suite. These tests:
 
-- Reference specific bug tickets
-- Test scenarios that previously caused issues
+- Reuse one initialized mock wallet client per Playwright worker
+- Perform an explicit authenticated setup for each test page
+- Exercise the main wallet-connected user flows with deterministic mocks
 - Run on every PR and before releases
 - Should be stable and reliable
+- Should use mocked or deterministic data
+- Should not depend on funded wallets or live chain state
+
+WalletConnect is real in transport terms, but the wallet peer and app-side data are deterministic.
+
+This gives the suite a better balance between speed and isolation:
+
+- the wallet client initialization happens once per worker
+- each regression test still starts from a clean authenticated page
+- sessions are torn down between tests so state does not leak across cases
 
 ## Adding Regression Tests
 
-When a bug is fixed:
+When adding a regression test:
 
-1. Create a test that reproduces the bug scenario
-2. Reference the bug ticket in the test name: `BUG-123: Description`
-3. Verify the fix works correctly
-4. Add the test to this file
+1. Start from the regression fixture
+2. Keep the wallet and external data deterministic
+3. Add any API mocks needed by the feature under test
+4. Prefer user-flow coverage over implementation-detail assertions
 
 ## Test Naming Convention
 
 ```typescript
-test("BUG-123: App crashes when wallet disconnects", async ({ page }) => {
-  // Test that verifies the bug is fixed
+test("wallet page renders when authenticated", async ({ page }) => {
+  // Authenticated deterministic regression coverage
 });
 ```
 
@@ -31,5 +42,5 @@ test("BUG-123: App crashes when wallet disconnects", async ({ page }) => {
 bun run test:e2e tests/e2e/regression
 
 # Run specific regression test
-bun run test:e2e tests/e2e/regression/bug-fixes.spec.ts
+bun run test:e2e tests/e2e/regression/wallet-connected.spec.ts
 ```

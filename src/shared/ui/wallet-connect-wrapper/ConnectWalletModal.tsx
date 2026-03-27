@@ -61,6 +61,16 @@ export function ConnectWalletModal({
 
           {/* ── Body ── */}
           <div className="px-6 pb-6 flex flex-col items-center gap-5">
+            {/* Hidden URI accessor for automated testing */}
+            {uri && (
+              <span
+                data-testid="wc-pairing-uri"
+                data-uri={uri}
+                aria-hidden="true"
+                className="sr-only"
+              />
+            )}
+
             {/* QR Code */}
             <div className="relative w-full flex justify-center">
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-cyan-500/8 rounded-full blur-3xl pointer-events-none" />
