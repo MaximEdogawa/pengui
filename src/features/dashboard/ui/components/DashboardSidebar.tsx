@@ -99,12 +99,12 @@ export function DashboardSidebar({ activeItem, t, isDark, onToggleTheme }: Dashb
       <SidebarStoreSync />
 
       {/* ── Header: logo / collapse toggle ── */}
-      <SidebarHeader className={cn("px-2 py-2 border-b", t.border)}>
+      <SidebarHeader className={cn("px-0 py-2 border-b", t.border)}>
         <SidebarMenuButton
           size="default"
           tooltip={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           className={cn(
-            "h-8 rounded-none px-2 gap-2 transition-all duration-200",
+            "h-8 rounded-none px-3 gap-0 transition-all duration-200",
             "data-[state=open]:bg-sidebar-accent",
             isDark
               ? "hover:bg-white/[0.06] active:bg-white/10"
@@ -114,7 +114,7 @@ export function DashboardSidebar({ activeItem, t, isDark, onToggleTheme }: Dashb
           aria-label="Toggle sidebar"
         >
           {/* Logo mark — always visible */}
-          <div className="size-8 flex-shrink-0 rounded-full overflow-hidden flex items-center justify-center">
+          <div className="size-7 flex-shrink-0 rounded-full overflow-hidden flex items-center justify-center">
             <PenguinLogo size={32} className={cn(t.text, "rounded-full")} />
           </div>
 
@@ -148,7 +148,7 @@ export function DashboardSidebar({ activeItem, t, isDark, onToggleTheme }: Dashb
                     // Base: rounded pill, smooth transitions
                     "relative rounded-full px-3 py-2 touch-manipulation",
                     "transition-all duration-150 ease-out",
-                    "group-data-[collapsible=icon]:rounded-full group-data-[collapsible=icon]:px-2",
+                    "group-data-[collapsible=icon]:rounded-full group-data-[collapsible=icon]:px-3",
                     isActive
                       ? [
                           // Active: glass highlight + accent text
