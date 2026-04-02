@@ -2,11 +2,7 @@
 
 import { useThemeClasses } from "@/shared/hooks";
 import { type ReactNode } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-} from "@/shared/ui/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/shared/ui/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
 export interface ModalImplProps {

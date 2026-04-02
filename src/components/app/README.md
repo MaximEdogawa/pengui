@@ -49,12 +49,7 @@ import { getThemeClasses } from "@/shared/lib/theme";
 const t = getThemeClasses(false);
 
 <SidebarProvider defaultOpen>
-  <DashboardSidebar
-    activeItem="dashboard"
-    t={t}
-    isDark={false}
-    onToggleTheme={() => {}}
-  />
+  <DashboardSidebar activeItem="dashboard" t={t} isDark={false} onToggleTheme={() => {}} />
 </SidebarProvider>;
 ```
 
