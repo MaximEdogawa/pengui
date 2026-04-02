@@ -1,6 +1,6 @@
 "use client";
 
-import { useThemeClasses } from "@/shared/hooks";
+import dynamic from "next/dynamic";
 import { type ReactNode } from "react";
 
 export interface ModalProps {
@@ -11,34 +11,23 @@ export interface ModalProps {
   closeOnOverlayClick?: boolean;
 }
 
-export default function Modal({
-  children,
-  onClose,
-  maxWidth = "max-w-5xl",
-  className = "",
-  closeOnOverlayClick = true,
-}: ModalProps) {
-  const { isDark } = useThemeClasses();
+// Lazy-load the Dialog implementation — only fetched when a modal is first shown
+const ModalImpl = dynamic(() => import("./ModalImpl"), { ssr: false });
 
-  return (
-    <div
-      className={`fixed inset-0 flex items-center justify-center p-2 sm:p-4 z-[60] ${
-        isDark ? "bg-black/50" : "bg-black/30"
-      } backdrop-blur-sm`}
-      onClick={(e) => {
-        // Close modal when clicking on the overlay (not the modal content)
-        if (closeOnOverlayClick && e.target === e.currentTarget) {
-          onClose();
-        }
-      }}
-    >
-      <div
-        className={`backdrop-blur-[40px] rounded-lg shadow-xl ${maxWidth} w-full max-h-[90vh] sm:max-h-[85vh] my-auto overflow-y-auto border transition-all duration-300 ${
-          isDark ? "bg-white/10 border-white/20" : "bg-white/60 border-white/70"
-        } ${className}`}
-      >
-        {children}
-      </div>
-    </div>
-  );
+/**
+ * Modal — accessible overlay dialog backed by shadcn's Dialog (Radix UI).
+ *
+ * Public interface is identical to the old custom Modal so call sites need no
+ * changes. Renders when mounted (parent controls visibility via conditional
+ * rendering), closes via `onClose` callback on overlay click or Escape key.
+ *
+ * @example
+ * {showModal && (
+ *   <Modal onClose={() => setShowModal(false)} maxWidth="max-w-xl">
+ *     <div>...</div>
+ *   </Modal>
+ * )}
+ */
+export default function Modal(props: ModalProps) {
+  return <ModalImpl {...props} />;
 }

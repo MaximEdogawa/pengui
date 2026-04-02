@@ -13,6 +13,15 @@ if (typeof window === "undefined") {
   global.navigator = windowInstance.navigator;
   global.localStorage = windowInstance.localStorage;
   global.sessionStorage = windowInstance.sessionStorage;
+  global.getComputedStyle = windowInstance.getComputedStyle.bind(windowInstance);
+  global.MutationObserver = windowInstance.MutationObserver as typeof MutationObserver;
+  global.NodeFilter = windowInstance.NodeFilter;
+  global.HTMLElement = windowInstance.HTMLElement;
+  global.Element = windowInstance.Element;
+  global.Node = windowInstance.Node;
+  global.HTMLInputElement = windowInstance.HTMLInputElement;
+  global.HTMLButtonElement = windowInstance.HTMLButtonElement;
+  global.HTMLAnchorElement = windowInstance.HTMLAnchorElement;
 
   // Set up URL environment for Next.js Image component
   // Use Object.defineProperty to properly set location

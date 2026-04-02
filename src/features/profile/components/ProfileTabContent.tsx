@@ -7,7 +7,6 @@ import {
   Settings,
   Info,
   Mail,
-  Github,
   ExternalLink,
   ShieldCheck,
   Database,
@@ -208,7 +207,7 @@ export function ProfileTabContent({ activeTab, isDark, t, onThemeChange }: Profi
                 rel="noopener noreferrer"
                 className={`flex items-center gap-2 p-2 rounded-lg ${isDark ? "hover:bg-white/5" : "hover:bg-white/40"} transition-colors group`}
               >
-                <Github
+                <ExternalLink
                   className={`w-4 h-4 ${isDark ? "text-slate-400 group-hover:text-white" : "text-slate-600 group-hover:text-slate-900"}`}
                 />
                 <span className={`text-sm ${t.textSecondary} group-hover:${t.text}`}>

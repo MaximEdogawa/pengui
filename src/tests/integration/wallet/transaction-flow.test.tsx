@@ -4,8 +4,8 @@
  */
 
 import { describe, it, expect } from "bun:test";
-import { createTransaction } from "@/test-utils/factories/transaction-factory";
-import { createAsset } from "@/test-utils/factories/asset-factory";
+import { createTransaction } from "../../../../src/test-utils/factories/transaction-factory";
+import { createAsset } from "../../../../src/test-utils/factories/asset-factory";
 
 describe("Transaction Flow Integration", () => {
   it("should create transaction with valid data", () => {

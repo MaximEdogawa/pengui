@@ -1,46 +1,64 @@
-import { NetworkPicker, SafeConnectButton, PenguinLogo } from "@/shared/ui";
+"use client";
+
+import { NetworkPicker, SafeConnectButton } from "@/shared/ui";
+import { SidebarTrigger } from "@/shared/ui/components/ui/sidebar";
+import { Separator } from "@/shared/ui/components/ui/separator";
+import { cn } from "@/lib/utils";
 import type { ThemeClasses } from "@/shared/lib/theme";
 
 interface HeaderProps {
   t: ThemeClasses;
   isDark: boolean;
-  onMenuClick: () => void;
 }
 
-export function Header({ t, isDark, onMenuClick }: HeaderProps) {
+/**
+ * Header — fixed top bar for the dashboard layout.
+ *
+ * Desktop: spacer on the left (sidebar fills that space) + network/wallet on right.
+ * Mobile:  SidebarTrigger hamburger on the left + network/wallet on right.
+ *
+ * The SidebarTrigger is backed by shadcn's useSidebar() context and opens the
+ * mobile Sheet drawer automatically.
+ */
+export function Header({ t, isDark }: HeaderProps) {
   return (
     <header
-      className={`h-12 lg:h-10 backdrop-blur-3xl ${t.card} border-b ${t.border} flex items-center justify-between pl-2 sm:pl-3 lg:pl-4 pr-2 sm:pr-3 lg:pr-4 gap-1.5 sm:gap-2 transition-all duration-300 w-full max-w-full flex-shrink-0 border-r-0 mr-0 pr-0 overflow-visible relative z-[9999]`}
+      className={cn(
+        // Layout: fixed height, full-bleed, flex row
+        "h-12 flex items-center justify-between gap-2",
+        "pl-1 pr-3 sm:pr-4",
+        // Glass background + border
+        "backdrop-blur-3xl border-b transition-colors duration-300",
+        t.card,
+        t.border,
+        // z-index above sidebar overlay (sidebar is z-[100])
+        "relative z-[200]"
+      )}
     >
-      {/* Left Section - Logo button for mobile only */}
-      <div className="flex items-center lg:hidden">
-        <button
-          onClick={onMenuClick}
-          className={`
-            p-1.5 rounded-xl transition-colors duration-200 touch-manipulation
-            ${isDark ? "hover:bg-white/5 active:bg-white/10" : "hover:bg-black/5 active:bg-black/10"}
-          `}
-        >
-          <div className="w-9 h-9 lg:w-7 lg:h-7 rounded-full overflow-hidden flex items-center justify-center">
-            <PenguinLogo size={36} className={`${t.text} rounded-full lg:hidden`} />
-            <PenguinLogo size={28} className={`${t.text} rounded-full hidden lg:block`} />
-          </div>
-        </button>
+      {/* ── Left: mobile sidebar trigger ── */}
+      <div className="flex items-center gap-1">
+        {/* SidebarTrigger uses shadcn's PanelLeft icon + toggleSidebar() internally */}
+        <SidebarTrigger
+          className={cn(
+            "size-9 rounded-lg transition-colors duration-150",
+            isDark
+              ? "text-slate-400 hover:text-white hover:bg-white/[0.06]"
+              : "text-slate-600 hover:text-slate-900 hover:bg-black/[0.04]"
+          )}
+        />
+        <Separator
+          orientation="vertical"
+          className={cn("h-5 mx-1 hidden md:block", isDark ? "bg-white/10" : "bg-black/10")}
+        />
       </div>
 
-      {/* Spacer for desktop to push content to the right */}
-      <div className="hidden lg:block flex-1" />
+      {/* ── Spacer (desktop): sidebar occupies the left column ── */}
+      <div className="hidden lg:flex flex-1" aria-hidden />
 
-      {/* Right Section */}
+      {/* ── Right: network + wallet ── */}
       <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
-        {/* Network Picker */}
-        <div className="relative flex items-center flex-shrink-0">
-          <NetworkPicker />
-        </div>
-        {/* Wallet Connection Status */}
-        <div className="relative flex items-center flex-shrink-0">
-          <SafeConnectButton />
-        </div>
+        <NetworkPicker />
+        <SafeConnectButton />
       </div>
     </header>
   );

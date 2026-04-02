@@ -1,5 +1,7 @@
 "use client";
 
+import { Button as ShadcnButton } from "@/shared/ui/components/ui/button";
+import { cn } from "@/lib/utils";
 import { useThemeClasses } from "@/shared/hooks";
 import { type LucideIcon } from "lucide-react";
 import { type ReactNode } from "react";
@@ -16,6 +18,14 @@ export interface ButtonProps {
   fullWidth?: boolean;
 }
 
+/**
+ * App button — wraps shadcn's Button with the project's glass-morphism variant
+ * system. Preserves the existing public prop interface so call sites don't need
+ * to change.
+ *
+ * Variants: primary | secondary | danger | success | warning | info
+ * Sizes:    sm | md | lg
+ */
 export default function Button({
   children,
   onClick,
@@ -30,14 +40,10 @@ export default function Button({
   const { isDark } = useThemeClasses();
 
   const sizeClasses = {
-    sm: "px-2 py-1 text-xs gap-1",
-    md: "px-3 py-1.5 text-xs gap-1.5",
-    lg: "px-4 py-2 text-sm gap-2",
+    sm: "h-auto px-2 py-1 text-xs gap-1",
+    md: "h-auto px-3 py-1.5 text-xs gap-1.5",
+    lg: "h-auto px-4 py-2 text-sm gap-2",
   };
-
-  const baseClasses = `flex items-center justify-center ${sizeClasses[size]} rounded-lg backdrop-blur-xl transition-all duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed ${
-    fullWidth ? "w-full" : ""
-  }`;
 
   const variantClasses =
     variant === "primary"
@@ -67,14 +73,23 @@ export default function Button({
   const iconSize = size === "sm" ? 12 : size === "lg" ? 16 : 14;
 
   return (
-    <button
+    <ShadcnButton
       type={type}
       onClick={onClick}
       disabled={disabled}
-      className={`${baseClasses} ${variantClasses} ${className}`}
+      variant="ghost"
+      // Override all shadcn size defaults — we apply our own sizing
+      size="sm"
+      className={cn(
+        "rounded-lg backdrop-blur-xl font-medium",
+        sizeClasses[size],
+        variantClasses,
+        fullWidth && "w-full",
+        className
+      )}
     >
       {Icon ? <Icon size={iconSize} strokeWidth={2.5} /> : null}
       {children}
-    </button>
+    </ShadcnButton>
   );
 }

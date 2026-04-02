@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect } from "bun:test";
-import { createAsset } from "@/test-utils/factories/asset-factory";
+import { createAsset } from "../../../../src/test-utils/factories/asset-factory";
 
 describe("Create Offer Flow Integration", () => {
   it("should validate offer asset selection", () => {
