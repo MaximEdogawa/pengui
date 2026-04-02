@@ -6,6 +6,7 @@ Smoke tests are quick checks that verify critical paths work. These tests should
 - Test only the most essential user flows
 - Be stable and reliable
 - Run on every commit/PR
+- Avoid WalletConnect and any requirement for real wallet funds
 
 ## Current Smoke Tests
 

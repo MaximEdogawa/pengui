@@ -2,7 +2,7 @@
 
 import type { OfferDetails } from "@/entities/offer";
 import { OfferDetailsModal, OfferHistory, useMyOffers } from "@/features/offers";
-import { SplashTerminal } from "@/features/splash-terminal";
+import { SplashTerminal, SplashConnectionProvider } from "@/features/splash-terminal";
 import { CreateOfferModal, TakeOfferModal } from "@/features/trading";
 import { OrderBookFiltersProvider } from "@/features/trading/hooks/OrderBookFiltersProvider";
 import { useThemeClasses } from "@/shared/hooks";
@@ -172,22 +172,28 @@ export default function OffersPage() {
 
       {/* Create Offer Modal */}
       {showCreateOffer && (
-        <CreateOfferModal
-          onClose={() => setShowCreateOffer(false)}
-          onOfferCreated={handleOfferCreatedWrapper}
-        />
+        <OrderBookFiltersProvider>
+          <SplashConnectionProvider>
+            <CreateOfferModal
+              onClose={() => setShowCreateOffer(false)}
+              onOfferCreated={handleOfferCreatedWrapper}
+            />
+          </SplashConnectionProvider>
+        </OrderBookFiltersProvider>
       )}
 
       {/* Take Offer Modal */}
       {showTakeOffer && (
         <OrderBookFiltersProvider>
-          <TakeOfferModal
-            onClose={() => setShowTakeOffer(false)}
-            onOfferTaken={() => {
-              // Offer was taken successfully, modal will close automatically
-              setShowTakeOffer(false);
-            }}
-          />
+          <SplashConnectionProvider>
+            <TakeOfferModal
+              onClose={() => setShowTakeOffer(false)}
+              onOfferTaken={() => {
+                // Offer was taken successfully, modal will close automatically
+                setShowTakeOffer(false);
+              }}
+            />
+          </SplashConnectionProvider>
         </OrderBookFiltersProvider>
       )}
 

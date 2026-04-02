@@ -1,26 +1,71 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "../fixtures";
 
 /**
- * Minimal smoke tests - Quick checks that critical paths work
- * These tests verify basic functionality without requiring wallet connection
+ * Smoke Tests — fast critical-path checks that run on every PR.
+ *
+ * Rules:
+ *  - No wallet connection required
+ *  - Must complete in < 5 minutes total
+ *  - Each test must make at least one meaningful assertion (not just "body not empty")
  */
 
-test.describe("Critical Paths - Smoke Tests", () => {
-  test("should load the login page", async ({ page }) => {
-    await page.goto("/login");
-
-    // Check that the page loads
-    await expect(page).toHaveTitle(/pengui/i);
-
-    // Check for key elements
-    await expect(page.getByText(/pengui/i)).toBeVisible();
-    await expect(page.getByText(/Connect with Sage Wallet/i)).toBeVisible();
+test.describe("Smoke — Login Page", () => {
+  test("renders heading, connect button, and sage link", async ({ loginPage }) => {
+    await loginPage.goto();
+    await loginPage.expectVisible();
   });
 
-  test("should load the home page", async ({ page }) => {
-    await page.goto("/");
+  test("connect button is present in the DOM", async ({ loginPage }) => {
+    await loginPage.goto();
+    await expect(loginPage.connectButton).toBeVisible();
+  });
 
-    // Verify page loads without errors
-    await expect(page).not.toHaveURL(/error/);
+  test("title contains 'pengui'", async ({ loginPage }) => {
+    await loginPage.goto();
+    await expect(loginPage.page).toHaveTitle(/pengui/i);
+  });
+
+  test("no JS exceptions on load", async ({ page }) => {
+    const errors: string[] = [];
+    page.on("pageerror", (err) => errors.push(err.message));
+
+    await page.goto("/login");
+    await page.waitForLoadState("domcontentloaded");
+
+    expect(errors).toHaveLength(0);
+  });
+});
+
+test.describe("Smoke — Home Route", () => {
+  test("/ renders the login page (same component as /login)", async ({ loginPage }) => {
+    // app/page.tsx re-exports the login page — URL stays at /
+    await loginPage.page.goto("/");
+    await loginPage.page.waitForLoadState("domcontentloaded");
+
+    // Same UI as /login must be visible
+    await expect(loginPage.heading).toBeVisible();
+    await expect(loginPage.connectButton).toBeVisible();
+  });
+});
+
+test.describe("Smoke — App Routes", () => {
+  for (const route of ["/trading", "/offers", "/wallet"]) {
+    test(`${route} loads without a 500 error`, async ({ page }) => {
+      const pageErrors: string[] = [];
+      page.on("pageerror", (err) => pageErrors.push(err.message));
+
+      await page.goto(route);
+      await page.waitForLoadState("domcontentloaded");
+
+      await expect(page).not.toHaveURL(/500/);
+      expect(pageErrors).toHaveLength(0);
+    });
+  }
+
+  test("unknown route does not produce a 500", async ({ page }) => {
+    await page.goto("/this-route-does-not-exist");
+    await page.waitForLoadState("domcontentloaded");
+
+    await expect(page).not.toHaveURL(/500/);
   });
 });

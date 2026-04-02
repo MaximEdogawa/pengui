@@ -35,7 +35,9 @@ export default function TradingLayout({
     selectOrderForMaking,
     clearSelectedOrders,
     resetForm,
-    useAsTemplate,
+    // Rename at the call site: this is a plain callback, not a React hook.
+    // The `use` prefix in the provider name was confusing eslint.
+    useAsTemplate: applyAsTemplate,
   } = useSelectedOrder();
   const { isMobile } = useResponsive();
 
@@ -57,15 +59,13 @@ export default function TradingLayout({
         }
       } else {
         if (isMobile) {
-          // useAsTemplate is a callback function returned from useOrderBookOfferSubmission hook, not a hook itself
-          // eslint-disable-next-line react-hooks/rules-of-hooks
-          useAsTemplate(order);
+          applyAsTemplate(order);
           setShowCreateOfferModal(true);
         }
         // Desktop: show inline (handled in render)
       }
     },
-    [currentMode, useAsTemplate, isMobile, selectOrderForTaking, selectOrderForMaking]
+    [currentMode, applyAsTemplate, isMobile, selectOrderForTaking, selectOrderForMaking]
   );
 
   const handleFiltersChange = useCallback(() => {
