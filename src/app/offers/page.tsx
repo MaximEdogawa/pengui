@@ -2,13 +2,21 @@
 
 import type { OfferDetails } from "@/entities/offer";
 import { OfferDetailsModal, OfferHistory, useMyOffers } from "@/features/offers";
-import { SplashTerminal, SplashConnectionProvider } from "@/features/splash-terminal";
+import { SplashConnectionProvider } from "@/features/splash-terminal";
+import StreamContainer from "@/features/trading/ui/widgets/stream/StreamContainer";
+import OrderBookFilters from "@/features/trading/ui/widgets/orderbook/OrderBookFilters";
+import type { OrderBookOrder } from "@/features/trading/lib/orderBookTypes";
 import { CreateOfferModal, TakeOfferModal } from "@/features/trading";
-import { OrderBookFiltersProvider } from "@/features/trading/hooks/OrderBookFiltersProvider";
 import { useThemeClasses } from "@/shared/hooks";
 import { useEffect, useState } from "react";
 import { OffersPageHeader } from "@/features/offers/ui/components/OfferHistory/OffersPageHeader";
 import { CancelOfferConfirmationModal } from "@/features/offers/ui/components/OfferHistory/CancelOfferConfirmationModal";
+import Handshake from "lucide-react/dist/esm/icons/handshake";
+import Radio from "lucide-react/dist/esm/icons/radio";
+import FilterPanel from "@/widgets/trading-layout/ui/FilterPanel";
+import { OrderBookFiltersProvider } from "@/features/trading/hooks/OrderBookFiltersProvider";
+
+type OffersView = "my-offers" | "live-stream";
 
 export default function OffersPage() {
   const { isDark, t } = useThemeClasses();
@@ -46,21 +54,19 @@ export default function OffersPage() {
 
   const [showCreateOffer, setShowCreateOffer] = useState(false);
   const [showTakeOffer, setShowTakeOffer] = useState(false);
+  const [selectedStreamOrder, setSelectedStreamOrder] = useState<OrderBookOrder | null>(null);
   const [mounted, setMounted] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [terminalHeight, setTerminalHeight] = useState(0);
-  const [isDraggingTerminal, setIsDraggingTerminal] = useState(false);
+  const [activeView, setActiveView] = useState<OffersView>("my-offers");
 
   useEffect(() => {
     setMounted(true);
-    // Don't call refreshOffers here - OfferHistory handles it on mount
   }, []);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
       await refreshOffers();
-      // Add a small delay to show the refresh animation
       await new Promise((resolve) => setTimeout(resolve, 500));
     } catch {
       // Error handled by refreshOffers
@@ -78,148 +84,182 @@ export default function OffersPage() {
     viewOffer(offer);
   };
 
-  const toggleTerminal = () => {
-    setTerminalHeight((h) => (h > 0 ? 0 : 250));
-  };
-
-  useEffect(() => {
-    if (!isDraggingTerminal) return;
-    const onMove = (ev: MouseEvent) => {
-      const y = window.innerHeight - ev.clientY;
-      if (y >= 150 && y <= 600) setTerminalHeight(y);
-    };
-    const onUp = () => setIsDraggingTerminal(false);
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("mouseup", onUp);
-    return () => {
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("mouseup", onUp);
-    };
-  }, [isDraggingTerminal]);
-
   if (!mounted) {
     return null;
   }
 
+  const views = [
+    { id: "my-offers" as const, icon: Handshake, label: "My Offers" },
+    { id: "live-stream" as const, icon: Radio, label: "Live Stream" },
+  ];
+
   return (
-    <div className="w-full relative z-10 min-h-full">
-      <OffersPageHeader
-        isDark={isDark}
-        t={t}
-        onCreateOffer={() => setShowCreateOffer(true)}
-        onTakeOffer={() => setShowTakeOffer(true)}
-        onRefresh={handleRefresh}
-        isLoading={isLoading}
-        isRefreshing={isRefreshing}
-      />
-
-      {/* Offers Content */}
-      <div
-        className={`flex flex-1 flex-col min-h-0 rounded-2xl ${
-          isDark ? "bg-white/[0.03]" : "bg-white/30"
-        }`}
-      >
-        <div
-          className={`backdrop-blur-[40px] ${t.card} flex-1 p-4 border ${t.border} transition-all duration-300 shadow-lg shadow-black/5 overflow-auto min-h-0`}
-        >
-          <OfferHistory
+    <OrderBookFiltersProvider>
+      <SplashConnectionProvider>
+        <div className="w-full relative z-10 min-h-full flex flex-col">
+          <OffersPageHeader
+            isDark={isDark}
+            t={t}
             onCreateOffer={() => setShowCreateOffer(true)}
-            onViewOffer={handleViewOffer}
-            onCancelOffer={cancelOffer}
-            offers={filteredOffers}
+            onTakeOffer={() => setShowTakeOffer(true)}
+            onRefresh={handleRefresh}
             isLoading={isLoading}
-            filters={filters}
-            setFilters={setFilters}
-            getStatusClass={getStatusClass}
-            formatDate={formatDate}
-            copyOfferString={copyOfferString}
-            getTickerSymbol={getTickerSymbol}
-            isCopied={isCopied}
-            refreshOffers={refreshOffers}
-            currentPage={currentPage}
-            pageSize={pageSize}
-            totalOffers={totalOffers}
-            totalPages={totalPages}
-            goToPage={goToPage}
-            changePageSize={changePageSize}
+            isRefreshing={isRefreshing}
           />
-        </div>
 
-        {/* Resizable Splash Terminal pane */}
-        <div className="mt-2 flex flex-col rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-          <button
-            type="button"
-            onClick={toggleTerminal}
-            className={`flex items-center justify-center gap-1 py-1 text-xs font-medium ${t.card} border-b ${t.border} hover:opacity-90`}
+          {/* View Tabs */}
+          <div
+            className={`mb-1.5 sm:mb-2 backdrop-blur-[40px] ${t.card} rounded-xl p-0.5 sm:p-1 border ${t.border} transition-all duration-300 shadow-lg shadow-black/5 ${
+              isDark ? "bg-white/[0.03]" : "bg-white/30"
+            }`}
           >
-            {terminalHeight > 0 ? "Hide" : "Show"} live stream terminal
-          </button>
-          {terminalHeight > 0 && (
-            <>
-              <div
-                role="separator"
-                aria-label="Resize terminal"
-                className="h-1 cursor-n-resize bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500"
-                onMouseDown={() => setIsDraggingTerminal(true)}
-              />
-              <div className="flex min-h-0 flex-col" style={{ height: terminalHeight }}>
-                <SplashTerminal />
-              </div>
-            </>
-          )}
-        </div>
-      </div>
+            <div className="flex gap-0.5 sm:gap-1">
+              {views.map((view) => {
+                const Icon = view.icon;
+                const isActive = activeView === view.id;
+                return (
+                  <button
+                    key={view.id}
+                    onClick={() => setActiveView(view.id)}
+                    className={`flex items-center gap-0.5 sm:gap-1 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg transition-all duration-200 font-medium text-[10px] sm:text-[11px] relative overflow-hidden ${
+                      isActive
+                        ? isDark
+                          ? "bg-white/10 text-white backdrop-blur-xl"
+                          : "bg-white/50 text-slate-800 backdrop-blur-xl"
+                        : `${t.textSecondary} ${t.cardHover}`
+                    }`}
+                  >
+                    {isActive && (
+                      <>
+                        <div
+                          className={`absolute inset-0 backdrop-blur-xl ${
+                            isDark ? "bg-white/10" : "bg-white/30"
+                          } rounded-lg`}
+                        />
+                        <div
+                          className={`absolute inset-0 bg-gradient-to-b ${
+                            isDark ? "from-white/5" : "from-white/20"
+                          } to-transparent rounded-lg`}
+                        />
+                      </>
+                    )}
+                    <Icon
+                      size={11}
+                      strokeWidth={2.5}
+                      className={`relative sm:w-3 sm:h-3 ${isActive ? "opacity-100" : "opacity-70"}`}
+                    />
+                    <span className="relative">{view.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
-      {/* Create Offer Modal */}
-      {showCreateOffer && (
-        <OrderBookFiltersProvider>
-          <SplashConnectionProvider>
+          {/* Content */}
+          <div
+            className={`flex flex-1 flex-col min-h-0 rounded-2xl ${
+              isDark ? "bg-white/[0.03]" : "bg-white/30"
+            }`}
+          >
+            {activeView === "my-offers" ? (
+              <div
+                className={`backdrop-blur-[40px] ${t.card} flex-1 p-4 border ${t.border} transition-all duration-300 shadow-lg shadow-black/5 overflow-auto min-h-0`}
+              >
+                <OfferHistory
+                  onCreateOffer={() => setShowCreateOffer(true)}
+                  onViewOffer={handleViewOffer}
+                  onCancelOffer={cancelOffer}
+                  offers={filteredOffers}
+                  isLoading={isLoading}
+                  filters={filters}
+                  setFilters={setFilters}
+                  getStatusClass={getStatusClass}
+                  formatDate={formatDate}
+                  copyOfferString={copyOfferString}
+                  getTickerSymbol={getTickerSymbol}
+                  isCopied={isCopied}
+                  refreshOffers={refreshOffers}
+                  currentPage={currentPage}
+                  pageSize={pageSize}
+                  totalOffers={totalOffers}
+                  totalPages={totalPages}
+                  goToPage={goToPage}
+                  changePageSize={changePageSize}
+                />
+              </div>
+            ) : (
+              <div className="flex flex-col flex-1 min-h-0 gap-1.5">
+                {/* Asset Search & Filters */}
+                <div>
+                  <OrderBookFilters hidePagination />
+                </div>
+                {/* Stream Table */}
+                <div
+                  className={`backdrop-blur-[40px] ${t.card} flex-1 border ${t.border} transition-all duration-300 shadow-lg shadow-black/5 overflow-hidden min-h-0 rounded-2xl`}
+                >
+                  <StreamContainer onOfferClick={(order) => setSelectedStreamOrder(order)} />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Create Offer Modal */}
+          {showCreateOffer && (
             <CreateOfferModal
               onClose={() => setShowCreateOffer(false)}
               onOfferCreated={handleOfferCreatedWrapper}
             />
-          </SplashConnectionProvider>
-        </OrderBookFiltersProvider>
-      )}
+          )}
 
-      {/* Take Offer Modal */}
-      {showTakeOffer && (
-        <OrderBookFiltersProvider>
-          <SplashConnectionProvider>
+          {/* Take Offer Modal (from header button) */}
+          {showTakeOffer && (
             <TakeOfferModal
               onClose={() => setShowTakeOffer(false)}
               onOfferTaken={() => {
-                // Offer was taken successfully, modal will close automatically
                 setShowTakeOffer(false);
               }}
             />
-          </SplashConnectionProvider>
-        </OrderBookFiltersProvider>
-      )}
+          )}
 
-      {/* Offer Details Modal */}
-      {selectedOffer && (
-        <OfferDetailsModal
-          offer={selectedOffer}
-          onClose={() => viewOffer(null)}
-          onOfferCancelled={handleOfferCancelled}
-          onOfferDeleted={handleOfferDeleted}
-          onOfferUpdated={handleOfferUpdated}
-        />
-      )}
+          {/* Take Offer Modal (from stream click) */}
+          {selectedStreamOrder && (
+            <TakeOfferModal
+              order={selectedStreamOrder}
+              onClose={() => setSelectedStreamOrder(null)}
+              onOfferTaken={() => {
+                setSelectedStreamOrder(null);
+              }}
+            />
+          )}
 
-      {/* Cancel Offer Confirmation Modal */}
-      {showCancelConfirmation && offerToCancel && (
-        <CancelOfferConfirmationModal
-          offer={offerToCancel}
-          isDark={isDark}
-          t={t}
-          onConfirm={confirmCancelOffer}
-          onClose={handleCancelDialogClose}
-          isCancelling={isCancelling}
-          cancelError={cancelError}
-        />
-      )}
-    </div>
+          {/* Offer Details Modal */}
+          {selectedOffer && (
+            <OfferDetailsModal
+              offer={selectedOffer}
+              onClose={() => viewOffer(null)}
+              onOfferCancelled={handleOfferCancelled}
+              onOfferDeleted={handleOfferDeleted}
+              onOfferUpdated={handleOfferUpdated}
+            />
+          )}
+
+          {/* Cancel Offer Confirmation Modal */}
+          {showCancelConfirmation && offerToCancel && (
+            <CancelOfferConfirmationModal
+              offer={offerToCancel}
+              isDark={isDark}
+              t={t}
+              onConfirm={confirmCancelOffer}
+              onClose={handleCancelDialogClose}
+              isCancelling={isCancelling}
+              cancelError={cancelError}
+            />
+          )}
+        </div>
+
+        {/* Filter Panel */}
+        <FilterPanel onFiltersChange={refreshOffers} />
+      </SplashConnectionProvider>
+    </OrderBookFiltersProvider>
   );
 }

@@ -1,4 +1,3 @@
-export { default as SplashTerminal } from "./SplashTerminal";
 export { parseTerminalCommand, HELP_TEXT } from "./commandParser";
 export { formatOfferLine } from "./formatOfferLine";
 export {

@@ -20,6 +20,7 @@ export default [
       "**/tailwind.config.*",
       "**/public/wasm/**",
       "**/crates/**",
+      "**/.cache/**",
     ],
   },
   eslint.configs.recommended,
