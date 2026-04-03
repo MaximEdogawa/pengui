@@ -2,8 +2,10 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useTheme } from "next-themes";
-import { Wallet, ChevronDown, LogOut, RefreshCw } from "lucide-react";
+import Wallet from "lucide-react/dist/esm/icons/wallet";
+import ChevronDown from "lucide-react/dist/esm/icons/chevron-down";
+import LogOut from "lucide-react/dist/esm/icons/log-out";
+import RefreshCw from "lucide-react/dist/esm/icons/refresh-cw";
 import {
   WalletConnect,
   store,
@@ -14,6 +16,7 @@ import {
   useWalletConnectionState,
 } from "@maximedogawa/chia-wallet-connect-react";
 import { useNetwork } from "@/shared/hooks/useNetwork";
+import { useThemeClasses } from "@/shared/hooks";
 import {
   getStoredNetwork,
   hasNetworkPreference,
@@ -22,6 +25,15 @@ import {
 import { networkToChainId } from "@/shared/lib/utils/networkUtils";
 import { getRequiredNamespaces } from "@/shared/lib/walletConnect/constants/wallet-connect";
 import { disconnectWallet } from "@/shared/lib/walletConnect/disconnectWallet";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/shared/ui/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 import { ConnectWalletModal } from "./ConnectWalletModal";
 import toast from "react-hot-toast";
 import type { SessionTypes } from "@walletconnect/types";
@@ -31,25 +43,21 @@ import type { SessionTypes } from "@walletconnect/types";
  *
  * NetworkPicker-styled wallet button for the dashboard header.
  * - Not connected: compact "Connect" pill → opens custom QR modal
- * - Connected: shows shortened address → dropdown with disconnect
- * Never uses the native WalletConnect modal.
+ * - Connected: shows shortened address → DropdownMenu with disconnect/reconnect
  */
 export function SafeConnectButton() {
   const queryClient = useQueryClient();
   const { network } = useNetwork();
-  const { theme: currentTheme, systemTheme } = useTheme();
-  const isDark = currentTheme === "dark" || (currentTheme === "system" && systemTheme === "dark");
+  const { isDark } = useThemeClasses();
 
   const { isConnected, address, walletName } = useWalletConnectionState();
 
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [uri, setUri] = useState<string | null>(null);
   const [isInitializing, setIsInitializing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const containerRef = useRef<HTMLDivElement>(null);
   const mountedRef = useRef(true);
 
   useEffect(() => {
@@ -59,7 +67,7 @@ export function SafeConnectButton() {
     };
   }, []);
 
-  // ── validation (mirrors the old SafeConnectButton) ─────
+  // ── validation ─────────────────────────────────────────
 
   const [isReady, setIsReady] = useState(false);
 
@@ -80,19 +88,6 @@ export function SafeConnectButton() {
       /* silently ignore */
     }
   }, [network]);
-
-  // ── click-outside to close dropdown ────────────────────
-
-  useEffect(() => {
-    if (!isDropdownOpen) return;
-    function handleClick(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setIsDropdownOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClick);
-    return () => document.removeEventListener("mousedown", handleClick);
-  }, [isDropdownOpen]);
 
   // ── config helper ──────────────────────────────────────
 
@@ -148,12 +143,11 @@ export function SafeConnectButton() {
 
       toast.success("Wallet connected!");
       setIsModalOpen(false);
-      // SignClient invalidation is handled once by NetworkProvider when isConnected/session updates (avoids duplicate invalidate + relay loop)
     },
     []
   );
 
-  // ── initiate connection (generates URI + waits for approval) ──
+  // ── initiate connection ────────────────────────────────
 
   const initConnection = useCallback(async () => {
     if (!mountedRef.current) return;
@@ -207,7 +201,6 @@ export function SafeConnectButton() {
   // ── disconnect ─────────────────────────────────────────
 
   const handleDisconnect = useCallback(async () => {
-    setIsDropdownOpen(false);
     try {
       await disconnectWallet();
       queryClient.invalidateQueries({ queryKey: ["walletConnect"] });
@@ -217,10 +210,9 @@ export function SafeConnectButton() {
     }
   }, [queryClient]);
 
-  // ── reconnect (disconnect then redirect to login so user can connect again) ──
+  // ── reconnect ──────────────────────────────────────────
 
   const handleReconnect = useCallback(async () => {
-    setIsDropdownOpen(false);
     try {
       const { penguiIcon, metadata } = getConfig();
       const wc = new WalletConnect(penguiIcon, metadata);
@@ -264,7 +256,6 @@ export function SafeConnectButton() {
   // ── open modal for new connection ──────────────────────
 
   const openConnectModal = () => {
-    setIsDropdownOpen(false);
     setIsModalOpen(true);
     if (!uri && !isInitializing) initConnection();
   };
@@ -279,117 +270,97 @@ export function SafeConnectButton() {
 
   const shortAddress = address ? `${address.slice(0, 6)}…${address.slice(-4)}` : null;
 
+  const buttonClasses = cn(
+    "relative flex items-center gap-1.5 px-2 py-1 rounded-lg",
+    "backdrop-blur-[40px] transition-all duration-200",
+    "hover:scale-[1.02] active:scale-[0.98]",
+    "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-cyan-400/30",
+    isDark
+      ? "bg-white/10 border border-white/20 text-white shadow-lg shadow-black/20"
+      : "bg-white/60 border border-white/70 text-slate-800 shadow-lg shadow-black/10"
+  );
+
   // ── render ─────────────────────────────────────────────
 
   return (
     <>
-      <div className="relative" style={{ zIndex: 10000 }} ref={containerRef}>
-        <button
-          type="button"
-          onClick={() => {
-            if (isConnected) {
-              setIsDropdownOpen((v) => !v);
-            } else {
-              openConnectModal();
-            }
-          }}
-          className={`
-            relative flex items-center gap-1.5 px-2 py-1 rounded-lg
-            backdrop-blur-[40px] transition-all duration-200
-            hover:scale-[1.02] active:scale-[0.98]
-            ${isDropdownOpen ? "ring-1 ring-cyan-400/30" : ""}
-            ${
-              isDark
-                ? "bg-white/10 border border-white/20 text-white shadow-lg shadow-black/20"
-                : "bg-white/60 border border-white/70 text-slate-800 shadow-lg shadow-black/10"
-            }
-          `}
-          aria-label="Manage wallet"
-          aria-expanded={isDropdownOpen}
-          aria-haspopup="true"
-        >
-          {isConnected ? (
-            <>
+      {isConnected ? (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button type="button" className={buttonClasses} aria-label="Manage wallet">
               <Wallet className="w-3 h-3" />
               <span className="text-[10px] font-medium tracking-tight max-w-[80px] truncate">
                 {shortAddress ?? walletName ?? "Connected"}
               </span>
-              <ChevronDown
-                className={`w-2.5 h-2.5 transition-transform duration-200 ${isDropdownOpen ? "rotate-180" : ""}`}
-              />
-            </>
-          ) : (
-            <>
-              <Wallet className="w-3 h-3" />
-              <span className="text-[10px] font-medium tracking-tight">Connect</span>
-            </>
-          )}
-        </button>
+              <ChevronDown className="w-2.5 h-2.5 transition-transform duration-200" />
+            </button>
+          </DropdownMenuTrigger>
 
-        {/* ── Dropdown (connected state) ── */}
-        {isDropdownOpen && isConnected && (
-          <div
-            className={`
-              absolute top-full mt-1.5 right-0 rounded-xl
-              backdrop-blur-xl overflow-hidden shadow-2xl
-              border min-w-[160px] z-[10001] transition-all duration-200
-              ${
-                isDark
-                  ? "bg-slate-900/95 border-white/25 shadow-black/50"
-                  : "bg-white/95 border-slate-200/90 shadow-black/25"
-              }
-            `}
-            style={{
-              boxShadow: isDark
-                ? "0 20px 40px -12px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.05), inset 0 1px 0 rgba(255,255,255,0.05)"
-                : "0 20px 40px -12px rgba(0,0,0,0.15), 0 0 0 1px rgba(255,255,255,0.1), inset 0 1px 0 rgba(255,255,255,0.1)",
-            }}
+          <DropdownMenuContent
+            align="end"
+            sideOffset={6}
+            className={cn(
+              "min-w-[160px] rounded-xl backdrop-blur-xl p-0.5",
+              isDark ? "bg-slate-900/95 border-white/25" : "bg-white/95 border-slate-200/90"
+            )}
+            style={{ zIndex: 10001 }}
           >
-            <div className="py-0.5">
-              {/* Wallet info */}
-              <div
-                className={`px-2.5 py-1.5 border-b ${isDark ? "border-white/10" : "border-black/5"}`}
-              >
-                <div className="flex items-center gap-1.5">
-                  <Wallet
-                    className={`w-3.5 h-3.5 ${isDark ? "text-white/70" : "text-slate-600"}`}
-                  />
-                  <span
-                    className={`text-[10px] font-medium ${isDark ? "text-white/70" : "text-slate-600"}`}
-                  >
-                    {shortAddress ?? "Connected"}
-                  </span>
-                </div>
+            <DropdownMenuLabel className="px-2.5 py-1.5">
+              <div className="flex items-center gap-1.5">
+                <Wallet
+                  className={cn("w-3.5 h-3.5", isDark ? "text-white/70" : "text-slate-600")}
+                />
+                <span
+                  className={cn(
+                    "text-[10px] font-medium",
+                    isDark ? "text-white/70" : "text-slate-600"
+                  )}
+                >
+                  {shortAddress ?? "Connected"}
+                </span>
               </div>
+            </DropdownMenuLabel>
 
-              {/* Reconnect — disconnect and go to login to connect again */}
-              <button
-                type="button"
-                onClick={handleReconnect}
-                className={`
-                  w-full px-2.5 py-1.5 text-left flex items-center gap-1.5 transition-all duration-150
-                  ${isDark ? "text-cyan-400/90 hover:bg-cyan-500/10 hover:text-cyan-400" : "text-cyan-600 hover:bg-cyan-500/10 hover:text-cyan-700"}
-                `}
-              >
-                <RefreshCw className="w-3 h-3" />
-                <span className="text-[10px] font-medium tracking-tight">Reconnect</span>
-              </button>
-              {/* Disconnect */}
-              <button
-                type="button"
-                onClick={handleDisconnect}
-                className={`
-                  w-full px-2.5 py-1.5 text-left flex items-center gap-1.5 transition-all duration-150
-                  ${isDark ? "text-red-400/80 hover:bg-red-500/10 hover:text-red-400" : "text-red-500/80 hover:bg-red-500/10 hover:text-red-600"}
-                `}
-              >
-                <LogOut className="w-3 h-3" />
-                <span className="text-[10px] font-medium tracking-tight">Disconnect</span>
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
+            <DropdownMenuSeparator className={isDark ? "bg-white/10" : "bg-black/5"} />
+
+            <DropdownMenuItem
+              onSelect={handleReconnect}
+              className={cn(
+                "flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 cursor-pointer",
+                isDark
+                  ? "text-cyan-400/90 focus:bg-cyan-500/10 focus:text-cyan-400"
+                  : "text-cyan-600 focus:bg-cyan-500/10 focus:text-cyan-700"
+              )}
+            >
+              <RefreshCw className="w-3 h-3" />
+              <span className="text-[10px] font-medium tracking-tight">Reconnect</span>
+            </DropdownMenuItem>
+
+            <DropdownMenuItem
+              onSelect={handleDisconnect}
+              className={cn(
+                "flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 cursor-pointer",
+                isDark
+                  ? "text-red-400/80 focus:bg-red-500/10 focus:text-red-400"
+                  : "text-red-500/80 focus:bg-red-500/10 focus:text-red-600"
+              )}
+            >
+              <LogOut className="w-3 h-3" />
+              <span className="text-[10px] font-medium tracking-tight">Disconnect</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ) : (
+        <button
+          type="button"
+          onClick={openConnectModal}
+          className={buttonClasses}
+          aria-label="Connect wallet"
+        >
+          <Wallet className="w-3 h-3" />
+          <span className="text-[10px] font-medium tracking-tight">Connect</span>
+        </button>
+      )}
 
       {/* ── Custom QR Modal ── */}
       {isModalOpen && (

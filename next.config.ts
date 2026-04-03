@@ -15,13 +15,17 @@ const nextConfig: NextConfig = {
   experimental: {
     optimizePackageImports: [
       "lucide-react",
-      "@radix-ui/react-toast",
+      "@radix-ui/react-dialog",
+      "@radix-ui/react-navigation-menu",
+      "@radix-ui/react-dropdown-menu",
+      "@radix-ui/react-tooltip",
+      "@radix-ui/react-slot",
+      "@radix-ui/react-separator",
       "@tanstack/react-query",
       "dexie",
       "clsx",
       "tailwind-merge",
       "recharts",
-      "react-redux",
       "zustand",
     ],
     serverActions: {

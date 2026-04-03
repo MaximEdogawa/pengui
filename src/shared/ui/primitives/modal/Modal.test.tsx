@@ -1,17 +1,19 @@
 import { describe, it, expect } from "bun:test";
-import { render, screen } from "@/test-utils";
+import { render, screen, waitFor } from "@/test-utils";
 import userEvent from "@testing-library/user-event";
-import Modal from "./Modal";
+import ModalImpl from "./ModalImpl";
 
 describe("Modal", () => {
-  it("should render modal with children", () => {
+  it("should render modal with children", async () => {
     const onClose = () => {};
     render(
-      <Modal onClose={onClose}>
+      <ModalImpl onClose={onClose}>
         <div>Modal Content</div>
-      </Modal>
+      </ModalImpl>
     );
-    expect(screen.getByText("Modal Content")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("Modal Content")).toBeInTheDocument();
+    });
   });
 
   it("should call onClose when clicking overlay", async () => {
@@ -21,23 +23,18 @@ describe("Modal", () => {
     };
 
     render(
-      <Modal onClose={onClose}>
+      <ModalImpl onClose={onClose}>
         <div>Modal Content</div>
-      </Modal>
+      </ModalImpl>
     );
 
-    // Find the overlay (the outer div with fixed class)
-    const overlay = screen.getByText("Modal Content").closest(".fixed");
-    expect(overlay).toBeInTheDocument();
-
-    // Get bounding rect to click on the backdrop (not the centered content)
-    const rect = overlay!.getBoundingClientRect();
-    // Click near the top-left corner of the overlay (backdrop area)
-    await userEvent.click(overlay!, {
-      // Use coordinates to target the backdrop, not the centered content
-      clientX: rect.left + 10,
-      clientY: rect.top + 10,
+    const overlay = await waitFor(() => {
+      const el = document.querySelector("[data-slot='dialog-overlay']") as HTMLElement | null;
+      expect(el).toBeTruthy();
+      return el!;
     });
+
+    await userEvent.click(overlay);
     expect(closed).toBe(true);
   });
 
@@ -48,13 +45,12 @@ describe("Modal", () => {
     };
 
     render(
-      <Modal onClose={onClose}>
+      <ModalImpl onClose={onClose}>
         <div>Modal Content</div>
-      </Modal>
+      </ModalImpl>
     );
 
-    // Click on the content, not the overlay
-    const content = screen.getByText("Modal Content");
+    const content = await screen.findByText("Modal Content");
     await userEvent.click(content);
     expect(closed).toBe(false);
   });
@@ -66,44 +62,44 @@ describe("Modal", () => {
     };
 
     render(
-      <Modal onClose={onClose} closeOnOverlayClick={false}>
+      <ModalImpl onClose={onClose} closeOnOverlayClick={false}>
         <div>Modal Content</div>
-      </Modal>
+      </ModalImpl>
     );
 
-    const overlay = screen.getByText("Modal Content").closest(".fixed");
-    expect(overlay).toBeInTheDocument();
-
-    // Get bounding rect to click on the backdrop
-    const rect = overlay!.getBoundingClientRect();
-    await userEvent.click(overlay!, {
-      clientX: rect.left + 10,
-      clientY: rect.top + 10,
+    const overlay = await waitFor(() => {
+      const el = document.querySelector("[data-slot='dialog-overlay']") as HTMLElement | null;
+      expect(el).toBeTruthy();
+      return el!;
     });
+
+    await userEvent.click(overlay);
     expect(closed).toBe(false);
   });
 
-  it("should apply custom maxWidth", () => {
+  it("should apply custom maxWidth", async () => {
     const onClose = () => {};
     render(
-      <Modal onClose={onClose} maxWidth="max-w-2xl">
+      <ModalImpl onClose={onClose} maxWidth="max-w-2xl">
         <div>Modal Content</div>
-      </Modal>
+      </ModalImpl>
     );
 
-    const modalContent = screen.getByText("Modal Content").closest(".max-w-2xl");
+    const content = await screen.findByRole("dialog");
+    const modalContent = content.closest(".max-w-2xl");
     expect(modalContent).toBeInTheDocument();
   });
 
-  it("should apply custom className", () => {
+  it("should apply custom className", async () => {
     const onClose = () => {};
     render(
-      <Modal onClose={onClose} className="custom-modal">
+      <ModalImpl onClose={onClose} className="custom-modal">
         <div>Modal Content</div>
-      </Modal>
+      </ModalImpl>
     );
 
-    const modalContent = screen.getByText("Modal Content").closest(".custom-modal");
+    const content = await screen.findByRole("dialog");
+    const modalContent = content.closest(".custom-modal");
     expect(modalContent).toBeInTheDocument();
   });
 });

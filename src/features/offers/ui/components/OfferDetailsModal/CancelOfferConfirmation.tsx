@@ -1,6 +1,7 @@
 "use client";
 
-import { Loader2, X } from "lucide-react";
+import Loader2 from "lucide-react/dist/esm/icons/loader-2";
+import X from "lucide-react/dist/esm/icons/x";
 import type { OfferDetails } from "@/entities/offer";
 import { Button, Modal } from "@/shared/ui";
 import type { ThemeClasses } from "@/shared/lib/theme";

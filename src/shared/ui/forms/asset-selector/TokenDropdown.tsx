@@ -3,7 +3,8 @@
 import { useThemeClasses } from "@/shared/hooks";
 import { AssetList } from "@/shared/ui";
 import { useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { Dialog, DialogContent, DialogTitle } from "@/shared/ui/components/ui/dialog";
+import { cn } from "@/lib/utils";
 
 export interface Token {
   assetId: string;
@@ -30,15 +31,8 @@ export default function TokenDropdown({
   useAssetList = false,
 }: TokenDropdownProps) {
   const { isDark } = useThemeClasses();
-  const [mounted, setMounted] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const listRef = useRef<HTMLDivElement>(null);
   const itemRefs = useRef<(HTMLDivElement | null)[]>([]);
-
-  useEffect(() => {
-    setMounted(true);
-    return () => setMounted(false);
-  }, []);
 
   // Reset selected index when tokens change
   useEffect(() => {
@@ -55,15 +49,11 @@ export default function TokenDropdown({
     }
   }, [selectedIndex]);
 
+  // Keyboard navigation
   useEffect(() => {
     if (!isOpen) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        onClose();
-        return;
-      }
-
       if (e.key === "ArrowDown") {
         e.preventDefault();
         setSelectedIndex((prev) => (prev + 1) % tokens.length);
@@ -86,67 +76,57 @@ export default function TokenDropdown({
     };
 
     document.addEventListener("keydown", handleKeyDown);
-    // Prevent body scroll when dropdown is open
-    document.body.style.overflow = "hidden";
-
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-      document.body.style.overflow = "";
-    };
+    return () => document.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose, tokens, selectedIndex, onSelect]);
 
-  if (!mounted || !isOpen || tokens.length === 0) {
+  if (!isOpen || tokens.length === 0) {
     return null;
   }
 
-  const dropdownContent = (
-    <>
-      {/* Backdrop - Highest layer, covers everything */}
-      <div
-        className={`absolute inset-0 z-[9998] flex items-center justify-center p-4 ${
-          isDark ? "bg-black/50" : "bg-black/30"
-        } backdrop-blur-sm`}
-        onClick={onClose}
-      />
-      {/* Dropdown - Above everything including modals, centered and smaller with glass effect */}
-      <div
-        className={`absolute z-[9999] rounded-lg shadow-xl overflow-y-auto max-w-3xl w-full max-h-[60vh] backdrop-blur-[40px] border transition-all duration-300 ${
+  return (
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) onClose();
+      }}
+    >
+      <DialogContent
+        className={cn(
+          "[&>button:last-child]:hidden",
+          "max-w-3xl w-full max-h-[60vh] p-0 rounded-lg shadow-xl overflow-hidden",
+          "backdrop-blur-[40px] border transition-all duration-300",
           isDark ? "bg-white/10 border-white/20" : "bg-white/60 border-white/70"
-        }`}
-        style={{
-          left: "50%",
-          top: "50%",
-          transform: "translate(-50%, -50%)",
-        }}
-        onClick={(e) => e.stopPropagation()}
+        )}
+        style={{ zIndex: 9999 }}
+        aria-describedby={undefined}
       >
-        {/* Label showing search input value - only show if not empty */}
+        <DialogTitle className="sr-only">Select token</DialogTitle>
+
+        {/* Label showing search input value */}
         {searchValue && (
           <div
-            className={`px-3 py-2 border-b ${
+            className={cn(
+              "px-3 py-2 border-b",
               isDark ? "border-gray-700 bg-gray-800/50" : "border-gray-200 bg-gray-50"
-            }`}
+            )}
           >
-            <label className={`text-xs font-medium ${isDark ? "text-gray-300" : "text-gray-700"}`}>
+            <label
+              className={cn("text-xs font-medium", isDark ? "text-gray-300" : "text-gray-700")}
+            >
               Search: <span className={isDark ? "text-white" : "text-gray-900"}>{searchValue}</span>
             </label>
           </div>
         )}
+
         {/* Token List */}
         <div
-          ref={listRef}
           className="overflow-y-auto"
           style={{
             maxHeight: searchValue ? "calc(60vh - 60px)" : "calc(60vh - 20px)",
           }}
         >
           {useAssetList ? (
-            // Use shared AssetList for modal-style display while keeping selection behavior
             <div className="p-2">
-              {/* Map tokens into AssetList-friendly shape */}
-              {/* AssetList will call onSelect with asset id; use selectedIndex for highlight */}
-              {/* eslint-disable-next-line @typescript-eslint/ban-ts-comment */}
-              {/* @ts-ignore */}
               <AssetList
                 label={searchValue ? `Results` : `Tokens`}
                 assets={tokens.map((t) => ({ id: t.assetId || "", code: t.ticker }))}
@@ -176,7 +156,8 @@ export default function TokenDropdown({
                     onSelect(token);
                     onClose();
                   }}
-                  className={`px-3 py-2 cursor-pointer text-xs transition-colors border-b ${
+                  className={cn(
+                    "px-3 py-2 cursor-pointer text-xs transition-colors border-b last:border-b-0",
                     isSelected
                       ? isDark
                         ? "bg-gray-700/80 text-white border-gray-600"
@@ -184,22 +165,25 @@ export default function TokenDropdown({
                       : isDark
                         ? "text-white border-gray-700 hover:bg-gray-700/50 active:bg-gray-600"
                         : "text-gray-900 border-gray-200 hover:bg-gray-100 active:bg-gray-200"
-                  } last:border-b-0`}
+                  )}
                 >
                   <div className="flex items-center gap-3">
-                    {/* Token Details */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between gap-2">
                         <div
-                          className={`font-semibold truncate ${isDark ? "text-white" : "text-gray-900"}`}
+                          className={cn(
+                            "font-semibold truncate",
+                            isDark ? "text-white" : "text-gray-900"
+                          )}
                         >
                           {token.ticker}
                         </div>
                         {token.assetId && (
                           <div
-                            className={`text-xs font-mono flex-shrink-0 ${
+                            className={cn(
+                              "text-xs font-mono flex-shrink-0",
                               isDark ? "text-gray-400" : "text-gray-500"
-                            }`}
+                            )}
                           >
                             {token.assetId.slice(0, 8)}...
                           </div>
@@ -207,7 +191,10 @@ export default function TokenDropdown({
                       </div>
                       {token.name && token.name !== token.ticker && (
                         <div
-                          className={`text-xs mt-0.5 truncate ${isDark ? "text-gray-400" : "text-gray-600"}`}
+                          className={cn(
+                            "text-xs mt-0.5 truncate",
+                            isDark ? "text-gray-400" : "text-gray-600"
+                          )}
                         >
                           {token.name}
                         </div>
@@ -219,9 +206,7 @@ export default function TokenDropdown({
             })
           )}
         </div>
-      </div>
-    </>
+      </DialogContent>
+    </Dialog>
   );
-
-  return createPortal(dropdownContent, document.body);
 }

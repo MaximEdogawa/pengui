@@ -14,7 +14,6 @@ const config = {
   theme: {
     extend: {
       colors: {
-        // Package colors for chia-wallet-connect-react components
         brandDark: "#526e78",
         brandLight: "#EFF4F7",
         border: "hsl(var(--border))",
@@ -57,6 +56,16 @@ const config = {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        sidebar: {
+          DEFAULT: "hsl(var(--sidebar-background))",
+          foreground: "hsl(var(--sidebar-foreground))",
+          primary: "hsl(var(--sidebar-primary))",
+          "primary-foreground": "hsl(var(--sidebar-primary-foreground))",
+          accent: "hsl(var(--sidebar-accent))",
+          "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
+          border: "hsl(var(--sidebar-border))",
+          ring: "hsl(var(--sidebar-ring))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -65,27 +74,41 @@ const config = {
       },
       keyframes: {
         gradient: {
-          "0%, 100%": { backgroundPosition: "0% 50%" },
-          "50%": { backgroundPosition: "100% 50%" },
+          "0%, 100%": {
+            backgroundPosition: "0% 50%",
+          },
+          "50%": {
+            backgroundPosition: "100% 50%",
+          },
         },
         shimmer: {
-          "0%": { backgroundPosition: "-200% 0" },
-          "100%": { backgroundPosition: "200% 0" },
+          "0%": {
+            backgroundPosition: "-200% 0",
+          },
+          "100%": {
+            backgroundPosition: "200% 0",
+          },
         },
-        // Package keyframes for chia-wallet-connect-react components
         fadeIn: {
-          "0%": { opacity: "0" },
-          "100%": { opacity: "1" },
+          "0%": {
+            opacity: "0",
+          },
+          "100%": {
+            opacity: "1",
+          },
         },
         "navigation-progress": {
-          "0%": { transform: "translateX(-100%)" },
-          "100%": { transform: "translateX(400%)" },
+          "0%": {
+            transform: "translateX(-100%)",
+          },
+          "100%": {
+            transform: "translateX(400%)",
+          },
         },
       },
       animation: {
         gradient: "gradient 3s ease infinite",
         shimmer: "shimmer 2s linear infinite",
-        // Package animation for chia-wallet-connect-react components
         fadeIn: "fadeIn .3s ease-in-out",
         "navigation-progress": "navigation-progress 1.5s ease-in-out infinite",
       },

@@ -1,4 +1,10 @@
-import { FileCheck, FileText, Handshake, Home, PiggyBank, TrendingUp, Wallet } from "lucide-react";
+import FileCheck from "lucide-react/dist/esm/icons/file-check";
+import FileText from "lucide-react/dist/esm/icons/file-text";
+import Handshake from "lucide-react/dist/esm/icons/handshake";
+import Home from "lucide-react/dist/esm/icons/house";
+import PiggyBank from "lucide-react/dist/esm/icons/piggy-bank";
+import TrendingUp from "lucide-react/dist/esm/icons/trending-up";
+import Wallet from "lucide-react/dist/esm/icons/wallet";
 
 /**
  * Extract menu items configuration to reduce DashboardLayout size

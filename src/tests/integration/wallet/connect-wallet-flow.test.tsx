@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect } from "bun:test";
-import { createMockWalletConnection } from "@/test-utils/mocks/wallet";
+import { createMockWalletConnection } from "../../../../src/test-utils/mocks/wallet";
 
 describe("Wallet Connection Flow Integration", () => {
   it("should handle wallet connection state changes", () => {

@@ -59,14 +59,18 @@ test.describe("Authenticated — Header wallet button", () => {
     // Open the dropdown.
     await page.getByRole("button", { name: /manage wallet/i }).click();
 
-    // Click Disconnect.
-    await page.getByRole("button", { name: /disconnect/i }).click();
+    // Wait for the dropdown menu to be visible
+    await page.locator("[data-radix-popper-content-wrapper]").waitFor({ state: "visible" });
 
-    // Disconnect clears wallet state but keeps the user on /dashboard.
-    // The wallet button keeps aria-label="Manage wallet" but its visible text
-    // reverts from the shortened address to "Connect" when isConnected=false.
-    const walletButton = page.getByRole("button", { name: /manage wallet/i });
-    await expect(walletButton).toContainText("Connect", { timeout: 10_000 });
+    // Click Disconnect using a more specific selector
+    await page.getByText("Disconnect").click();
+
+    // Wait for the disconnect to take effect
+    await page.waitForTimeout(2000);
+
+    // After disconnect, the button changes from "Manage wallet" to "Connect wallet"
+    const connectButton = page.getByRole("button", { name: /connect wallet/i });
+    await expect(connectButton).toContainText("Connect", { timeout: 10_000 });
   });
 });
 

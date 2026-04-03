@@ -20,7 +20,7 @@ export function useOrderBookViewport(
   const [visibleOrderIds, setVisibleOrderIds] = useState<Set<string>>(new Set());
   const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
-  const orderElementRefs = useRef<Map<string, HTMLElement>>(new Map());
+  const orderComponentRefs = useRef<Map<string, HTMLElement>>(new Map());
   // Persistent Set to track all visible orders across intersection changes
   const visibleIdsRef = useRef<Set<string>>(new Set());
 
@@ -126,13 +126,13 @@ export function useOrderBookViewport(
   const registerOrderElement = (orderId: string, element: HTMLElement | null) => {
     if (element) {
       element.setAttribute("data-order-id", orderId);
-      orderElementRefs.current.set(orderId, element);
+      orderComponentRefs.current.set(orderId, element);
       observerRef.current?.observe(element);
     } else {
-      const existingElement = orderElementRefs.current.get(orderId);
+      const existingElement = orderComponentRefs.current.get(orderId);
       if (existingElement) {
         observerRef.current?.unobserve(existingElement);
-        orderElementRefs.current.delete(orderId);
+        orderComponentRefs.current.delete(orderId);
         // Remove from visible set when element is unregistered
         visibleIdsRef.current.delete(orderId);
       }
