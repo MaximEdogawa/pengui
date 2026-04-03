@@ -12,7 +12,9 @@ run_on_changed() {
   shift
   local files
   files=$(echo "$ALL_CHANGED" | grep -E "$pattern" || true)
-  [ -n "$files" ] && echo "$files" | xargs "$@"
+  if [ -n "$files" ]; then
+    echo "$files" | xargs "$@"
+  fi
 }
 
 echo "🏗️  Building project..."
