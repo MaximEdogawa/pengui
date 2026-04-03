@@ -10,28 +10,6 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  unit-tests:
-    name: Unit Tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v5
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: 1.2.23
-
-      - name: Install dependencies
-        run: bun install
-
-      - name: Run unit tests with coverage
-        run: bun run test:unit --coverage
-        env:
-          CI: true
-
   integration-smoke-tests:
     name: Integration & Smoke Tests
     runs-on: ubuntu-latest
@@ -56,6 +34,10 @@ jobs:
       - name: Build application
         run: bun run build
 
+      - name: Run unit tests with coverage
+        run: bun run test:unit --coverage
+        env:
+          CI: true
       - name: Run integration tests
         run: bun run test:integration
         env:
