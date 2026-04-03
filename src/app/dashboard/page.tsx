@@ -3,6 +3,7 @@
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 import { getThemeClasses } from "@/shared/lib/theme";
+import { FeatureGate } from "@/shared/ui";
 import { BalanceCard } from "@/features/dashboard/ui/components/BalanceCard";
 import { PortfolioCard } from "@/features/dashboard/ui/components/PortfolioCard";
 import { ExpensesCard } from "@/features/dashboard/ui/components/ExpensesCard";
@@ -24,18 +25,20 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="w-full relative z-10 space-y-2">
-      {/* Total Balance */}
-      <BalanceCard isDark={isDark} t={t} />
+    <FeatureGate flag="dashboard">
+      <div className="w-full relative z-10 space-y-2">
+        {/* Total Balance */}
+        <BalanceCard isDark={isDark} t={t} />
 
-      {/* Portfolio + Expenses side-by-side */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-        <PortfolioCard isDark={isDark} t={t} />
-        <ExpensesCard isDark={isDark} t={t} />
+        {/* Portfolio + Expenses side-by-side */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+          <PortfolioCard isDark={isDark} t={t} />
+          <ExpensesCard isDark={isDark} t={t} />
+        </div>
+
+        {/* Investments */}
+        <InvestmentsCard isDark={isDark} t={t} />
       </div>
-
-      {/* Investments */}
-      <InvestmentsCard isDark={isDark} t={t} />
-    </div>
+    </FeatureGate>
   );
 }

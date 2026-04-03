@@ -219,9 +219,14 @@ jobs:
             NEXT_PUBLIC_APP_ENV="production"
           fi
 
+          # Short commit SHA for version display
+          COMMIT_SHA="${{ github.sha }}"
+          SHORT_SHA="${COMMIT_SHA:0:7}"
+
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "full_image=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:$TAG" >> "$GITHUB_OUTPUT"
           echo "app_env=$NEXT_PUBLIC_APP_ENV" >> "$GITHUB_OUTPUT"
+          echo "commit_sha=$SHORT_SHA" >> "$GITHUB_OUTPUT"
 
       - name: Decide whether to build/push app image
         id: app_image_resolve
@@ -259,6 +264,7 @@ jobs:
           build-args: |
             NEXT_PUBLIC_APP_VERSION=${{ steps.meta.outputs.tag }}
             NEXT_PUBLIC_APP_ENV=${{ steps.meta.outputs.app_env }}
+            NEXT_PUBLIC_COMMIT_SHA=${{ steps.meta.outputs.commit_sha }}
             # Use versioned WASM for deterministic app builds per requested tag.
             SPLASH_WASM_IMAGE=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.meta.outputs.tag == 'latest' && 'splash-wasm' || format('splash-wasm-{0}', steps.meta.outputs.tag) }}
             NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID=${{ secrets.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID }}
@@ -267,6 +273,7 @@ jobs:
             NEXT_PUBLIC_API_BASE_URL=${{ vars.NEXT_PUBLIC_API_BASE_URL }}
             NEXT_PUBLIC_APP_URL=${{ vars.NEXT_PUBLIC_APP_URL }}
             NEXT_PUBLIC_DEXIE_SPLASH_RELAY_MAINNET_WS_URL=wss://${{ vars.NEXT_PUBLIC_SPLASH_RELAY_MAINNET_SUBDOMAIN }}
+            NEXT_PUBLIC_FEATURE_FLAGS=${{ vars.NEXT_PUBLIC_FEATURE_FLAGS }}
 
   deploy:
     name: Deploy to Production

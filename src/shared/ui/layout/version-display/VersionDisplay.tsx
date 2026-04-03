@@ -29,9 +29,12 @@ export default function VersionDisplay({
 
   // Get version from prop or environment variable
   const version = versionProp || process.env.NEXT_PUBLIC_APP_VERSION || "0.0.1";
+  const commitSha = process.env.NEXT_PUBLIC_COMMIT_SHA;
 
   // Don't render until mounted to avoid hydration mismatch
   if (!mounted) return null;
+
+  const label = commitSha ? `v${version}+${commitSha}` : `v${version}`;
 
   return (
     <div
@@ -42,9 +45,9 @@ export default function VersionDisplay({
         select-none pointer-events-none
         ${className}
       `}
-      aria-label={`App version ${version}`}
+      aria-label={`App version ${label}`}
     >
-      v{version}
+      {label}
     </div>
   );
 }

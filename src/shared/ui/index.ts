@@ -67,6 +67,7 @@ export {
   type BannerAnnouncement,
 } from "./layout/info-banner";
 export { VersionDisplay, type VersionDisplayProps } from "./layout/version-display";
+export { FeatureGate } from "./FeatureGate";
 
 // ============================================================================
 // ERROR BOUNDARY

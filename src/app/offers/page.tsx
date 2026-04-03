@@ -1,5 +1,6 @@
 "use client";
 
+import { FeatureGate } from "@/shared/ui";
 import type { OfferDetails } from "@/entities/offer";
 import { OfferDetailsModal, OfferHistory, useMyOffers } from "@/features/offers";
 import { SplashConnectionProvider } from "@/features/splash-terminal";
@@ -94,172 +95,174 @@ export default function OffersPage() {
   ];
 
   return (
-    <OrderBookFiltersProvider>
-      <SplashConnectionProvider>
-        <div className="w-full relative z-10 min-h-full flex flex-col">
-          <OffersPageHeader
-            isDark={isDark}
-            t={t}
-            onCreateOffer={() => setShowCreateOffer(true)}
-            onTakeOffer={() => setShowTakeOffer(true)}
-            onRefresh={handleRefresh}
-            isLoading={isLoading}
-            isRefreshing={isRefreshing}
-          />
+    <FeatureGate flag="offers">
+      <OrderBookFiltersProvider>
+        <SplashConnectionProvider>
+          <div className="w-full relative z-10 min-h-full flex flex-col">
+            <OffersPageHeader
+              isDark={isDark}
+              t={t}
+              onCreateOffer={() => setShowCreateOffer(true)}
+              onTakeOffer={() => setShowTakeOffer(true)}
+              onRefresh={handleRefresh}
+              isLoading={isLoading}
+              isRefreshing={isRefreshing}
+            />
 
-          {/* View Tabs */}
-          <div
-            className={`mb-1.5 sm:mb-2 backdrop-blur-[40px] ${t.card} rounded-xl p-0.5 sm:p-1 border ${t.border} transition-all duration-300 shadow-lg shadow-black/5 ${
-              isDark ? "bg-white/[0.03]" : "bg-white/30"
-            }`}
-          >
-            <div className="flex gap-0.5 sm:gap-1">
-              {views.map((view) => {
-                const Icon = view.icon;
-                const isActive = activeView === view.id;
-                return (
-                  <button
-                    key={view.id}
-                    onClick={() => setActiveView(view.id)}
-                    className={`flex items-center gap-0.5 sm:gap-1 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg transition-all duration-200 font-medium text-[10px] sm:text-[11px] relative overflow-hidden ${
-                      isActive
-                        ? isDark
-                          ? "bg-white/10 text-white backdrop-blur-xl"
-                          : "bg-white/50 text-slate-800 backdrop-blur-xl"
-                        : `${t.textSecondary} ${t.cardHover}`
-                    }`}
-                  >
-                    {isActive && (
-                      <>
-                        <div
-                          className={`absolute inset-0 backdrop-blur-xl ${
-                            isDark ? "bg-white/10" : "bg-white/30"
-                          } rounded-lg`}
-                        />
-                        <div
-                          className={`absolute inset-0 bg-gradient-to-b ${
-                            isDark ? "from-white/5" : "from-white/20"
-                          } to-transparent rounded-lg`}
-                        />
-                      </>
-                    )}
-                    <Icon
-                      size={11}
-                      strokeWidth={2.5}
-                      className={`relative sm:w-3 sm:h-3 ${isActive ? "opacity-100" : "opacity-70"}`}
-                    />
-                    <span className="relative">{view.label}</span>
-                  </button>
-                );
-              })}
+            {/* View Tabs */}
+            <div
+              className={`mb-1.5 sm:mb-2 backdrop-blur-[40px] ${t.card} rounded-xl p-0.5 sm:p-1 border ${t.border} transition-all duration-300 shadow-lg shadow-black/5 ${
+                isDark ? "bg-white/[0.03]" : "bg-white/30"
+              }`}
+            >
+              <div className="flex gap-0.5 sm:gap-1">
+                {views.map((view) => {
+                  const Icon = view.icon;
+                  const isActive = activeView === view.id;
+                  return (
+                    <button
+                      key={view.id}
+                      onClick={() => setActiveView(view.id)}
+                      className={`flex items-center gap-0.5 sm:gap-1 px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg transition-all duration-200 font-medium text-[10px] sm:text-[11px] relative overflow-hidden ${
+                        isActive
+                          ? isDark
+                            ? "bg-white/10 text-white backdrop-blur-xl"
+                            : "bg-white/50 text-slate-800 backdrop-blur-xl"
+                          : `${t.textSecondary} ${t.cardHover}`
+                      }`}
+                    >
+                      {isActive && (
+                        <>
+                          <div
+                            className={`absolute inset-0 backdrop-blur-xl ${
+                              isDark ? "bg-white/10" : "bg-white/30"
+                            } rounded-lg`}
+                          />
+                          <div
+                            className={`absolute inset-0 bg-gradient-to-b ${
+                              isDark ? "from-white/5" : "from-white/20"
+                            } to-transparent rounded-lg`}
+                          />
+                        </>
+                      )}
+                      <Icon
+                        size={11}
+                        strokeWidth={2.5}
+                        className={`relative sm:w-3 sm:h-3 ${isActive ? "opacity-100" : "opacity-70"}`}
+                      />
+                      <span className="relative">{view.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
 
-          {/* Content */}
-          <div
-            className={`flex flex-1 flex-col min-h-0 rounded-2xl ${
-              isDark ? "bg-white/[0.03]" : "bg-white/30"
-            }`}
-          >
-            {activeView === "my-offers" ? (
-              <div
-                className={`backdrop-blur-[40px] ${t.card} flex-1 p-4 border ${t.border} transition-all duration-300 shadow-lg shadow-black/5 overflow-auto min-h-0`}
-              >
-                <OfferHistory
-                  onCreateOffer={() => setShowCreateOffer(true)}
-                  onViewOffer={handleViewOffer}
-                  onCancelOffer={cancelOffer}
-                  offers={filteredOffers}
-                  isLoading={isLoading}
-                  filters={filters}
-                  setFilters={setFilters}
-                  getStatusClass={getStatusClass}
-                  formatDate={formatDate}
-                  copyOfferString={copyOfferString}
-                  getTickerSymbol={getTickerSymbol}
-                  isCopied={isCopied}
-                  refreshOffers={refreshOffers}
-                  currentPage={currentPage}
-                  pageSize={pageSize}
-                  totalOffers={totalOffers}
-                  totalPages={totalPages}
-                  goToPage={goToPage}
-                  changePageSize={changePageSize}
-                />
-              </div>
-            ) : (
-              <div className="flex flex-col flex-1 min-h-0 gap-1.5">
-                {/* Asset Search & Filters */}
-                <div>
-                  <OrderBookFilters hidePagination />
-                </div>
-                {/* Stream Table */}
+            {/* Content */}
+            <div
+              className={`flex flex-1 flex-col min-h-0 rounded-2xl ${
+                isDark ? "bg-white/[0.03]" : "bg-white/30"
+              }`}
+            >
+              {activeView === "my-offers" ? (
                 <div
-                  className={`backdrop-blur-[40px] ${t.card} flex-1 border ${t.border} transition-all duration-300 shadow-lg shadow-black/5 overflow-hidden min-h-0 rounded-2xl`}
+                  className={`backdrop-blur-[40px] ${t.card} flex-1 p-4 border ${t.border} transition-all duration-300 shadow-lg shadow-black/5 overflow-auto min-h-0`}
                 >
-                  <StreamContainer onOfferClick={(order) => setSelectedStreamOrder(order)} />
+                  <OfferHistory
+                    onCreateOffer={() => setShowCreateOffer(true)}
+                    onViewOffer={handleViewOffer}
+                    onCancelOffer={cancelOffer}
+                    offers={filteredOffers}
+                    isLoading={isLoading}
+                    filters={filters}
+                    setFilters={setFilters}
+                    getStatusClass={getStatusClass}
+                    formatDate={formatDate}
+                    copyOfferString={copyOfferString}
+                    getTickerSymbol={getTickerSymbol}
+                    isCopied={isCopied}
+                    refreshOffers={refreshOffers}
+                    currentPage={currentPage}
+                    pageSize={pageSize}
+                    totalOffers={totalOffers}
+                    totalPages={totalPages}
+                    goToPage={goToPage}
+                    changePageSize={changePageSize}
+                  />
                 </div>
-              </div>
+              ) : (
+                <div className="flex flex-col flex-1 min-h-0 gap-1.5">
+                  {/* Asset Search & Filters */}
+                  <div>
+                    <OrderBookFilters hidePagination />
+                  </div>
+                  {/* Stream Table */}
+                  <div
+                    className={`backdrop-blur-[40px] ${t.card} flex-1 border ${t.border} transition-all duration-300 shadow-lg shadow-black/5 overflow-hidden min-h-0 rounded-2xl`}
+                  >
+                    <StreamContainer onOfferClick={(order) => setSelectedStreamOrder(order)} />
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Create Offer Modal */}
+            {showCreateOffer && (
+              <CreateOfferModal
+                onClose={() => setShowCreateOffer(false)}
+                onOfferCreated={handleOfferCreatedWrapper}
+              />
+            )}
+
+            {/* Take Offer Modal (from header button) */}
+            {showTakeOffer && (
+              <TakeOfferModal
+                onClose={() => setShowTakeOffer(false)}
+                onOfferTaken={() => {
+                  setShowTakeOffer(false);
+                }}
+              />
+            )}
+
+            {/* Take Offer Modal (from stream click) */}
+            {selectedStreamOrder && (
+              <TakeOfferModal
+                order={selectedStreamOrder}
+                onClose={() => setSelectedStreamOrder(null)}
+                onOfferTaken={() => {
+                  setSelectedStreamOrder(null);
+                }}
+              />
+            )}
+
+            {/* Offer Details Modal */}
+            {selectedOffer && (
+              <OfferDetailsModal
+                offer={selectedOffer}
+                onClose={() => viewOffer(null)}
+                onOfferCancelled={handleOfferCancelled}
+                onOfferDeleted={handleOfferDeleted}
+                onOfferUpdated={handleOfferUpdated}
+              />
+            )}
+
+            {/* Cancel Offer Confirmation Modal */}
+            {showCancelConfirmation && offerToCancel && (
+              <CancelOfferConfirmationModal
+                offer={offerToCancel}
+                isDark={isDark}
+                t={t}
+                onConfirm={confirmCancelOffer}
+                onClose={handleCancelDialogClose}
+                isCancelling={isCancelling}
+                cancelError={cancelError}
+              />
             )}
           </div>
 
-          {/* Create Offer Modal */}
-          {showCreateOffer && (
-            <CreateOfferModal
-              onClose={() => setShowCreateOffer(false)}
-              onOfferCreated={handleOfferCreatedWrapper}
-            />
-          )}
-
-          {/* Take Offer Modal (from header button) */}
-          {showTakeOffer && (
-            <TakeOfferModal
-              onClose={() => setShowTakeOffer(false)}
-              onOfferTaken={() => {
-                setShowTakeOffer(false);
-              }}
-            />
-          )}
-
-          {/* Take Offer Modal (from stream click) */}
-          {selectedStreamOrder && (
-            <TakeOfferModal
-              order={selectedStreamOrder}
-              onClose={() => setSelectedStreamOrder(null)}
-              onOfferTaken={() => {
-                setSelectedStreamOrder(null);
-              }}
-            />
-          )}
-
-          {/* Offer Details Modal */}
-          {selectedOffer && (
-            <OfferDetailsModal
-              offer={selectedOffer}
-              onClose={() => viewOffer(null)}
-              onOfferCancelled={handleOfferCancelled}
-              onOfferDeleted={handleOfferDeleted}
-              onOfferUpdated={handleOfferUpdated}
-            />
-          )}
-
-          {/* Cancel Offer Confirmation Modal */}
-          {showCancelConfirmation && offerToCancel && (
-            <CancelOfferConfirmationModal
-              offer={offerToCancel}
-              isDark={isDark}
-              t={t}
-              onConfirm={confirmCancelOffer}
-              onClose={handleCancelDialogClose}
-              isCancelling={isCancelling}
-              cancelError={cancelError}
-            />
-          )}
-        </div>
-
-        {/* Filter Panel */}
-        <FilterPanel onFiltersChange={refreshOffers} />
-      </SplashConnectionProvider>
-    </OrderBookFiltersProvider>
+          {/* Filter Panel */}
+          <FilterPanel onFiltersChange={refreshOffers} />
+        </SplashConnectionProvider>
+      </OrderBookFiltersProvider>
+    </FeatureGate>
   );
 }

@@ -1,5 +1,14 @@
 import type { NextConfig } from "next";
+import { execSync } from "child_process";
 import packageJson from "./package.json";
+
+function getCommitSha(): string {
+  try {
+    return execSync("git rev-parse --short HEAD", { encoding: "utf-8" }).trim();
+  } catch {
+    return process.env.NEXT_PUBLIC_COMMIT_SHA || "unknown";
+  }
+}
 
 const nextConfig: NextConfig = {
   output: "standalone",
@@ -34,6 +43,7 @@ const nextConfig: NextConfig = {
   },
   env: {
     NEXT_PUBLIC_APP_VERSION: packageJson.version,
+    NEXT_PUBLIC_COMMIT_SHA: getCommitSha(),
   },
   async headers() {
     return [
