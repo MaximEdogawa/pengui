@@ -29,23 +29,20 @@ jobs:
         run: bun install
 
       - name: Run unit tests with coverage
-        run: bun test --coverage --reporter=verbose
+        run: bun run test:unit --coverage
         env:
           CI: true
 
-      - name: Upload coverage report
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: coverage-report
-          path: coverage/
-          retention-days: 14
+      - name: Run integration tests
+        run: bun run test:integration
+        env:
+          CI: true
 
-  e2e:
-    name: E2E Tests
+  all-tests:
+    name: All Tests (Unit + Integration + E2E + CT)
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    # Only run E2E on main branch
+    # Run full test suite on main branch pushes
     if: github.ref == 'refs/heads/main'
 
     steps:
@@ -66,12 +63,12 @@ jobs:
       - name: Build application
         run: bun run build
 
-      - name: Run E2E tests
-        run: bun run test:e2e
+      - name: Run all tests
+        run: bun run test:all
         env:
           CI: true
 
-      - name: Upload test results
+      - name: Upload Playwright report
         uses: actions/upload-artifact@v4
         if: always()
         with:
