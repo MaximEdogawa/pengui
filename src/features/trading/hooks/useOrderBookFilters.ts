@@ -21,7 +21,7 @@ export function useOrderBookFilters() {
   const queryClient = useQueryClient();
   const { network } = useNetwork();
   const { availableCatTokens } = useCatTokens();
-  const topVolumePairs = useTopVolumePairs(3);
+  const topVolumePairs = useTopVolumePairs(5);
   const prevNetworkRef = useRef<typeof network | null>(null);
 
   // Get state from Zustand store (reactive)
@@ -52,6 +52,7 @@ export function useOrderBookFilters() {
   const storeSetPagination = useOrderBookFilterStore((state) => state.setPagination);
 
   const storeAddRecentPair = useOrderBookFilterStore((state) => state.addRecentPair);
+  const storeClearRecentPairs = useOrderBookFilterStore((state) => state.clearRecentPairs);
 
   // Get actions directly from store for network change handling
   const storeClearFiltersForNetwork = useOrderBookFilterStore((state) => state.clearAllFilters);
@@ -367,6 +368,10 @@ export function useOrderBookFilters() {
     storeClearAllFilters();
   }, [storeClearAllFilters]);
 
+  const clearRecentPairs = useCallback(() => {
+    storeClearRecentPairs();
+  }, [storeClearRecentPairs]);
+
   const swapBuySellAssets = useCallback(() => {
     storeSwapBuySellAssets();
   }, [storeSwapBuySellAssets]);
@@ -484,6 +489,7 @@ export function useOrderBookFilters() {
     addFilter,
     removeFilter,
     clearAllFilters,
+    clearRecentPairs,
     swapBuySellAssets,
     toggleFilterPane,
     setShowFilterPane,

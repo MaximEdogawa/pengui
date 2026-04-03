@@ -16,6 +16,7 @@ interface OrderBookFiltersContextValue {
   addFilter: ReturnType<typeof useOrderBookFiltersImpl>["addFilter"];
   removeFilter: ReturnType<typeof useOrderBookFiltersImpl>["removeFilter"];
   clearAllFilters: ReturnType<typeof useOrderBookFiltersImpl>["clearAllFilters"];
+  clearRecentPairs: ReturnType<typeof useOrderBookFiltersImpl>["clearRecentPairs"];
   swapBuySellAssets: ReturnType<typeof useOrderBookFiltersImpl>["swapBuySellAssets"];
   toggleFilterPane: ReturnType<typeof useOrderBookFiltersImpl>["toggleFilterPane"];
   setShowFilterPane: ReturnType<typeof useOrderBookFiltersImpl>["setShowFilterPane"];
