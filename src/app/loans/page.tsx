@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { List, Briefcase, Plus, TrendingUp } from "lucide-react";
+import { FeatureGate } from "@/shared/ui";
 import type { LoanFilters, AmountFilter } from "@/entities/loan";
 import {
   useLoansData,
@@ -66,6 +67,7 @@ export default function LoansPage() {
   };
 
   return (
+    <FeatureGate flag="loans">
     <div className="w-full relative z-10 flex flex-col" style={{ height: "100%", minHeight: 0 }}>
       {/* Fixed Header */}
       <div className="flex-shrink-0">
@@ -126,5 +128,6 @@ export default function LoansPage() {
         </div>
       </div>
     </div>
+    </FeatureGate>
   );
 }

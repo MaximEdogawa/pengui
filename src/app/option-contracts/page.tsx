@@ -4,6 +4,7 @@ import { getThemeClasses } from "@/shared/lib/theme";
 import { FileCheck } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
+import { FeatureGate } from "@/shared/ui";
 
 export default function OptionContractsPage() {
   const [mounted, setMounted] = useState(false);
@@ -21,6 +22,7 @@ export default function OptionContractsPage() {
   }
 
   return (
+    <FeatureGate flag="optionContracts">
     <div className="w-full relative z-10">
       {/* Header */}
       <div
@@ -71,5 +73,6 @@ export default function OptionContractsPage() {
         </div>
       </div>
     </div>
+    </FeatureGate>
   );
 }

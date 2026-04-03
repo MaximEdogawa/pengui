@@ -4,6 +4,7 @@ import { getThemeClasses } from "@/shared/lib/theme";
 import { TrendingUp, BookOpen, BarChart3, Activity, Terminal, type LucideIcon } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
+import { FeatureGate } from "@/shared/ui";
 import { TradingLayout } from "@/widgets/trading-layout";
 import FilterPanel from "@/widgets/trading-layout/ui/FilterPanel";
 import {
@@ -40,6 +41,7 @@ export default function TradingPage() {
   ];
 
   return (
+    <FeatureGate flag="trading">
     <OrderBookFiltersProvider>
       <SelectedOrderProvider>
         <SplashConnectionProvider>
@@ -53,6 +55,7 @@ export default function TradingPage() {
         </SplashConnectionProvider>
       </SelectedOrderProvider>
     </OrderBookFiltersProvider>
+    </FeatureGate>
   );
 }
 

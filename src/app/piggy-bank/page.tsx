@@ -4,6 +4,7 @@ import { getThemeClasses } from "@/shared/lib/theme";
 import { PiggyBank } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
+import { FeatureGate } from "@/shared/ui";
 
 export default function PiggyBankPage() {
   const [mounted, setMounted] = useState(false);
@@ -21,6 +22,7 @@ export default function PiggyBankPage() {
   }
 
   return (
+    <FeatureGate flag="piggyBank">
     <div className="w-full relative z-10">
       {/* Header */}
       <div
@@ -69,5 +71,6 @@ export default function PiggyBankPage() {
         </div>
       </div>
     </div>
+    </FeatureGate>
   );
 }

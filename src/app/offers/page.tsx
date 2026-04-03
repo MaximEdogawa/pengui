@@ -1,5 +1,6 @@
 "use client";
 
+import { FeatureGate } from "@/shared/ui";
 import type { OfferDetails } from "@/entities/offer";
 import { OfferDetailsModal, OfferHistory, useMyOffers } from "@/features/offers";
 import { SplashConnectionProvider } from "@/features/splash-terminal";
@@ -94,6 +95,7 @@ export default function OffersPage() {
   ];
 
   return (
+    <FeatureGate flag="offers">
     <OrderBookFiltersProvider>
       <SplashConnectionProvider>
         <div className="w-full relative z-10 min-h-full flex flex-col">
@@ -261,5 +263,6 @@ export default function OffersPage() {
         <FilterPanel onFiltersChange={refreshOffers} />
       </SplashConnectionProvider>
     </OrderBookFiltersProvider>
+    </FeatureGate>
   );
 }
