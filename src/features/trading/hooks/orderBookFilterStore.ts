@@ -2,7 +2,7 @@
 
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import type { OrderBookFilters, OrderBookPagination, SuggestionItem } from "../lib/orderBookTypes";
+import type { AssetPair, OrderBookFilters, OrderBookPagination, SuggestionItem } from "../lib/orderBookTypes";
 
 const DEFAULT_PAGINATION: OrderBookPagination = 50;
 
@@ -14,6 +14,8 @@ interface OrderBookFilterState {
   assetsSwapped: boolean;
   showFilterPane: boolean;
   userClearedFilters: boolean;
+  // Recently used asset pairs (most recent first, max 10)
+  recentPairs: AssetPair[];
   // Network the filters were saved for (for validation)
   savedNetwork: "mainnet" | "testnet" | null;
   // Hydration flag - true after localStorage has been loaded
@@ -42,6 +44,8 @@ interface OrderBookFilterActions {
   toggleFilterPane: () => void;
   resetToDefaults: (network: "mainnet" | "testnet") => void;
   clearForNetworkChange: (newNetwork: "mainnet" | "testnet") => void;
+  addRecentPair: (pair: AssetPair) => void;
+  clearRecentPairs: () => void;
 
   // Internal
   _setHasHydrated: (hasHydrated: boolean) => void;
@@ -67,6 +71,7 @@ const createDefaultState = (
   assetsSwapped: false,
   showFilterPane: false,
   userClearedFilters: false,
+  recentPairs: [],
   savedNetwork: network,
 });
 
@@ -185,6 +190,19 @@ export const useOrderBookFilterStore = create<OrderBookFilterStore>()(
         }
       },
 
+      addRecentPair: (pair) =>
+        set((state) => {
+          const MAX_RECENT_PAIRS = 10;
+          // Remove duplicate if exists
+          const filtered = state.recentPairs.filter(
+            (p) => p.buyAsset !== pair.buyAsset || p.sellAsset !== pair.sellAsset
+          );
+          // Prepend new pair and cap at max
+          return { recentPairs: [pair, ...filtered].slice(0, MAX_RECENT_PAIRS) };
+        }),
+
+      clearRecentPairs: () => set({ recentPairs: [] }),
+
       // Internal: set hydration flag (called after rehydration)
       _setHasHydrated: (hasHydrated: boolean) => set({ _hasHydrated: hasHydrated }),
     }),
@@ -198,6 +216,7 @@ export const useOrderBookFilterStore = create<OrderBookFilterStore>()(
         assetsSwapped: state.assetsSwapped,
         showFilterPane: state.showFilterPane,
         userClearedFilters: state.userClearedFilters,
+        recentPairs: state.recentPairs,
         savedNetwork: state.savedNetwork,
       }),
       // Handle rehydration - set flag when complete
@@ -205,6 +224,10 @@ export const useOrderBookFilterStore = create<OrderBookFilterStore>()(
         if (!error && state) {
           // Ensure filteredSuggestions is always an array (not persisted)
           state.filteredSuggestions = [];
+          // Ensure recentPairs is always an array (may be missing for existing users)
+          if (!Array.isArray(state.recentPairs)) {
+            state.recentPairs = [];
+          }
 
           // If filters are effectively empty and the user has not explicitly cleared them,
           // apply network-specific defaults so Trading shows a sensible initial pair.

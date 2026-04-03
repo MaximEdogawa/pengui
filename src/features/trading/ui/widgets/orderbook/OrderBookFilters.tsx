@@ -7,7 +7,6 @@ import { useNetwork } from "@/shared/hooks/useNetwork";
 import { X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useOrderBookFilters } from "@/features/trading/hooks/useOrderBookFilters";
-import { SuggestionItem } from "@/features/trading/lib/orderBookTypes";
 import AssetSwapToggle from "./AssetSwapToggle";
 import FilterButton from "./FilterButton";
 import OrderBookPaginationControls from "./OrderBookPaginationControls";
@@ -28,8 +27,7 @@ export default function OrderBookFilters({
     searchValue,
     filteredSuggestions,
     setSearchValue,
-    setFilteredSuggestions,
-    addFilter,
+    applySuggestion,
     removeFilter,
     pagination,
     setPagination,
@@ -57,51 +55,30 @@ export default function OrderBookFilters({
     return lower === "xch" || lower === "txch";
   };
 
-  // Generate suggestions based on search value
+  const renderAssetIcon = useCallback(
+    (ticker: string, size: number) => {
+      const assetId = tickerToAssetId.get(ticker.toLowerCase());
+      if (isXchTicker(ticker)) {
+        return <XchIcon size={size} isTestnet={isTestnet} />;
+      }
+      if (assetId) {
+        return <TickerIcon assetId={assetId} ticker={ticker} size={size} />;
+      }
+      return null;
+    },
+    [isTestnet, tickerToAssetId]
+  );
+
   useEffect(() => {
-    if (!searchValue?.trim()) {
-      setFilteredSuggestions([]);
+    if (filteredSuggestions.length === 0) {
       setShowSuggestions(false);
       return;
     }
 
-    const lowerSearch = searchValue.toLowerCase();
-    const suggestions: SuggestionItem[] = [];
-    const nativeTicker = getNativeTokenTickerForNetwork(network).toLowerCase();
-    const normalizedSearch =
-      lowerSearch === "xch" || lowerSearch === "txch" ? nativeTicker : lowerSearch;
-    const addedTickers = new Set<string>();
-
-    availableCatTokens.forEach((token) => {
-      const tokenTicker = token.ticker.toLowerCase();
-      if (
-        addedTickers.has(tokenTicker) ||
-        (!tokenTicker.includes(normalizedSearch) &&
-          !token.name.toLowerCase().includes(normalizedSearch))
-      ) {
-        return;
-      }
-      addedTickers.add(tokenTicker);
-      const tickerLower = token.ticker.toLowerCase();
-      if (!filters.buyAsset?.some((f) => f.toLowerCase() === tickerLower)) {
-        suggestions.push({
-          value: token.ticker,
-          column: "buyAsset",
-          label: token.ticker,
-        });
-      }
-      if (!filters.sellAsset?.some((f) => f.toLowerCase() === tickerLower)) {
-        suggestions.push({
-          value: token.ticker,
-          column: "sellAsset",
-          label: token.ticker,
-        });
-      }
-    });
-
-    setFilteredSuggestions(suggestions);
-    setShowSuggestions(suggestions.length > 0);
-  }, [searchValue, availableCatTokens, filters, setFilteredSuggestions, network]);
+    if (searchValue.trim()) {
+      setShowSuggestions(true);
+    }
+  }, [filteredSuggestions, searchValue]);
 
   const triggerCallback = useCallback(
     () => setTimeout(() => onFiltersChange?.(), 0),
@@ -109,13 +86,12 @@ export default function OrderBookFilters({
   );
 
   const handleSuggestionClick = useCallback(
-    (suggestion: SuggestionItem) => {
-      addFilter(suggestion.column as "buyAsset" | "sellAsset" | "status", suggestion.value);
-      setSearchValue("");
+    (suggestion: (typeof filteredSuggestions)[number]) => {
+      applySuggestion(suggestion);
       setShowSuggestions(false);
       triggerCallback();
     },
-    [addFilter, setSearchValue, triggerCallback]
+    [applySuggestion, triggerCallback]
   );
 
   const handleRemoveFilter = useCallback(
@@ -156,7 +132,11 @@ export default function OrderBookFilters({
             type="text"
             value={searchValue}
             onChange={(e) => setSearchValue(e.target.value)}
-            onFocus={() => filteredSuggestions.length > 0 && setShowSuggestions(true)}
+            onFocus={() => {
+              if (filteredSuggestions.length > 0) {
+                setShowSuggestions(true);
+              }
+            }}
             placeholder={`Search assets (e.g., ${getNativeTokenTickerForNetwork(network)})...`}
             className={`w-full px-1.5 sm:px-2 py-1 sm:py-1.5 text-[11px] sm:text-xs rounded-lg border-2 ${t.border} ${t.bg} ${t.text} focus:outline-none focus:ring-2 focus:ring-blue-500/50 backdrop-blur-sm`}
           />
@@ -172,8 +152,6 @@ export default function OrderBookFilters({
               }}
             >
               {filteredSuggestions.map((suggestion, index) => {
-                const assetId = tickerToAssetId.get(suggestion.value.toLowerCase());
-                const isXch = isXchTicker(suggestion.value);
                 return (
                   <button
                     key={`${suggestion.column}-${suggestion.value}-${index}`}
@@ -182,15 +160,41 @@ export default function OrderBookFilters({
                     className={`w-full text-left px-3 py-2 text-sm ${t.cardHover} ${t.text} transition-colors border-b ${t.border} last:border-b-0`}
                   >
                     <div className="flex items-center gap-2">
-                      {isXch ? (
-                        <XchIcon size={20} isTestnet={isTestnet} />
-                      ) : assetId ? (
-                        <TickerIcon assetId={assetId} ticker={suggestion.label} size={20} />
+                      {suggestion.type === "pair" &&
+                      suggestion.pairBuyAsset &&
+                      suggestion.pairSellAsset ? (
+                        <div className="flex items-center">
+                          <div className="relative flex h-6 w-9 items-center">
+                            <div className="absolute left-0 top-0 z-10 rounded-full ring-2 ring-white dark:ring-gray-900">
+                              {renderAssetIcon(suggestion.pairBuyAsset, 20)}
+                            </div>
+                            <div className="absolute right-0 top-0 rounded-full ring-2 ring-white dark:ring-gray-900">
+                              {renderAssetIcon(suggestion.pairSellAsset, 20)}
+                            </div>
+                          </div>
+                        </div>
+                      ) : suggestion.value ? (
+                        renderAssetIcon(suggestion.value, 20)
                       ) : null}
-                      <div>
-                        <div className="font-medium">{suggestion.label}</div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <div className="font-medium">{suggestion.label}</div>
+                          {suggestion.type === "single" && (
+                            <span
+                              className={`rounded px-1.5 py-0.5 text-[10px] uppercase tracking-wide border ${t.border} ${t.textSecondary}`}
+                            >
+                              {suggestion.column === "buyAsset" ? "Buy" : "Sell"}
+                            </span>
+                          )}
+                        </div>
                         <div className={`text-xs ${t.textSecondary}`}>
-                          {suggestion.column === "buyAsset" ? "Buy Asset" : "Sell Asset"}
+                          {suggestion.type === "pair"
+                            ? suggestion.sublabel
+                            : suggestion.sublabel
+                              ? `${suggestion.column === "buyAsset" ? "Buy" : "Sell"} asset · ${suggestion.sublabel}`
+                              : suggestion.column === "buyAsset"
+                                ? "Buy Asset"
+                                : "Sell Asset"}
                         </div>
                       </div>
                     </div>
