@@ -17,12 +17,12 @@ export default function WalletPage() {
 
   return (
     <FeatureGate flag="wallet">
-    <div className="w-full relative z-10">
-      <WalletPageHeader />
-      <div className="mt-2">
-        <AssetListPane />
+      <div className="w-full relative z-10">
+        <WalletPageHeader />
+        <div className="mt-2">
+          <AssetListPane />
+        </div>
       </div>
-    </div>
     </FeatureGate>
   );
 }

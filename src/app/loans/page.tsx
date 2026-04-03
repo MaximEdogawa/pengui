@@ -68,66 +68,66 @@ export default function LoansPage() {
 
   return (
     <FeatureGate flag="loans">
-    <div className="w-full relative z-10 flex flex-col" style={{ height: "100%", minHeight: 0 }}>
-      {/* Fixed Header */}
-      <div className="flex-shrink-0">
-        <LoansPageHeader isLender={isLender} onToggleRole={() => setIsLender(!isLender)} />
-      </div>
+      <div className="w-full relative z-10 flex flex-col" style={{ height: "100%", minHeight: 0 }}>
+        {/* Fixed Header */}
+        <div className="flex-shrink-0">
+          <LoansPageHeader isLender={isLender} onToggleRole={() => setIsLender(!isLender)} />
+        </div>
 
-      {/* Fixed Tab Navigation */}
-      <div className="flex-shrink-0">
-        <LoansTabNavigation tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
-      </div>
+        {/* Fixed Tab Navigation */}
+        <div className="flex-shrink-0">
+          <LoansTabNavigation tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
+        </div>
 
-      {/* Scrollable Content Area - Stable scrollbar, always visible, fixed height */}
-      <div
-        className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-modern scrollbar-permanent"
-        style={{
-          scrollbarGutter: "stable",
-          minHeight: 0,
-          height: 0, // Force flex-1 to work properly
-        }}
-      >
-        {activeTab === "available" && userRole === "taker" && (
-          <LoanFiltersComponent
-            filters={filters}
-            amountFilter={amountFilter}
-            onFiltersChange={setFilters}
-            onAmountFilterChange={setAmountFilter}
-          />
-        )}
-
-        <div className="space-y-2">
+        {/* Scrollable Content Area - Stable scrollbar, always visible, fixed height */}
+        <div
+          className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-modern scrollbar-permanent"
+          style={{
+            scrollbarGutter: "stable",
+            minHeight: 0,
+            height: 0, // Force flex-1 to work properly
+          }}
+        >
           {activeTab === "available" && userRole === "taker" && (
-            <AvailableLoansList
-              loans={filteredAvailableLoans}
-              onTakeLoan={handleTakeLoan}
-              onViewDetails={handleViewDetails}
+            <LoanFiltersComponent
+              filters={filters}
+              amountFilter={amountFilter}
+              onFiltersChange={setFilters}
+              onAmountFilterChange={setAmountFilter}
             />
           )}
 
-          {activeTab === "myTaken" && userRole === "taker" && (
-            <MyTakenLoansList
-              loans={myLoansTaken}
-              onPayment={handlePayment}
-              onViewDetails={handleViewDetails}
-            />
-          )}
+          <div className="space-y-2">
+            {activeTab === "available" && userRole === "taker" && (
+              <AvailableLoansList
+                loans={filteredAvailableLoans}
+                onTakeLoan={handleTakeLoan}
+                onViewDetails={handleViewDetails}
+              />
+            )}
 
-          {activeTab === "create" && userRole === "maker" && (
-            <CreateLoanFormComponent onSubmit={handleLoanCreated} />
-          )}
+            {activeTab === "myTaken" && userRole === "taker" && (
+              <MyTakenLoansList
+                loans={myLoansTaken}
+                onPayment={handlePayment}
+                onViewDetails={handleViewDetails}
+              />
+            )}
 
-          {activeTab === "myCreated" && userRole === "maker" && (
-            <MyCreatedLoans loans={myCreatedLoans} onViewDetails={handleViewDetails} />
-          )}
+            {activeTab === "create" && userRole === "maker" && (
+              <CreateLoanFormComponent onSubmit={handleLoanCreated} />
+            )}
 
-          {activeTab === "income" && userRole === "maker" && (
-            <LoanIncomeAnalytics loans={myCreatedLoans} />
-          )}
+            {activeTab === "myCreated" && userRole === "maker" && (
+              <MyCreatedLoans loans={myCreatedLoans} onViewDetails={handleViewDetails} />
+            )}
+
+            {activeTab === "income" && userRole === "maker" && (
+              <LoanIncomeAnalytics loans={myCreatedLoans} />
+            )}
+          </div>
         </div>
       </div>
-    </div>
     </FeatureGate>
   );
 }

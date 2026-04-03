@@ -26,19 +26,19 @@ export default function DashboardPage() {
 
   return (
     <FeatureGate flag="dashboard">
-    <div className="w-full relative z-10 space-y-2">
-      {/* Total Balance */}
-      <BalanceCard isDark={isDark} t={t} />
+      <div className="w-full relative z-10 space-y-2">
+        {/* Total Balance */}
+        <BalanceCard isDark={isDark} t={t} />
 
-      {/* Portfolio + Expenses side-by-side */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-        <PortfolioCard isDark={isDark} t={t} />
-        <ExpensesCard isDark={isDark} t={t} />
+        {/* Portfolio + Expenses side-by-side */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+          <PortfolioCard isDark={isDark} t={t} />
+          <ExpensesCard isDark={isDark} t={t} />
+        </div>
+
+        {/* Investments */}
+        <InvestmentsCard isDark={isDark} t={t} />
       </div>
-
-      {/* Investments */}
-      <InvestmentsCard isDark={isDark} t={t} />
-    </div>
     </FeatureGate>
   );
 }

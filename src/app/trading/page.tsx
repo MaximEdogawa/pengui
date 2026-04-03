@@ -42,19 +42,19 @@ export default function TradingPage() {
 
   return (
     <FeatureGate flag="trading">
-    <OrderBookFiltersProvider>
-      <SelectedOrderProvider>
-        <SplashConnectionProvider>
-          <TradingPageContent
-            activeView={activeView}
-            setActiveView={setActiveView}
-            views={views}
-            isDark={isDark}
-            t={t}
-          />
-        </SplashConnectionProvider>
-      </SelectedOrderProvider>
-    </OrderBookFiltersProvider>
+      <OrderBookFiltersProvider>
+        <SelectedOrderProvider>
+          <SplashConnectionProvider>
+            <TradingPageContent
+              activeView={activeView}
+              setActiveView={setActiveView}
+              views={views}
+              isDark={isDark}
+              t={t}
+            />
+          </SplashConnectionProvider>
+        </SelectedOrderProvider>
+      </OrderBookFiltersProvider>
     </FeatureGate>
   );
 }
