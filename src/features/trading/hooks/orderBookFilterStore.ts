@@ -2,7 +2,12 @@
 
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import type { AssetPair, OrderBookFilters, OrderBookPagination, SuggestionItem } from "../lib/orderBookTypes";
+import type {
+  AssetPair,
+  OrderBookFilters,
+  OrderBookPagination,
+  SuggestionItem,
+} from "../lib/orderBookTypes";
 
 const DEFAULT_PAGINATION: OrderBookPagination = 50;
 

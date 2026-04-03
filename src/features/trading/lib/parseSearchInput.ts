@@ -48,7 +48,11 @@ export function parseSearchInput(raw: string): ParsedSearch {
   }
 
   // Check for space-separated pair: "XCH BYC" (exactly 2 tokens, neither is buy/sell)
-  if (parts.length === 2 && !SIDE_KEYWORDS.has(parts[0].toLowerCase()) && !SIDE_KEYWORDS.has(parts[1].toLowerCase())) {
+  if (
+    parts.length === 2 &&
+    !SIDE_KEYWORDS.has(parts[0].toLowerCase()) &&
+    !SIDE_KEYWORDS.has(parts[1].toLowerCase())
+  ) {
     return {
       mode: "pair",
       tokens: [
