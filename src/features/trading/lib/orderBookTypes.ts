@@ -43,10 +43,19 @@ export interface OrderBookFilters {
   pagination?: OrderBookPagination;
 }
 
+export interface AssetPair {
+  buyAsset: string;
+  sellAsset: string;
+}
+
 export interface SuggestionItem {
   value: string;
   column: string;
   label: string;
+  type?: "single" | "pair";
+  pairBuyAsset?: string;
+  pairSellAsset?: string;
+  sublabel?: string;
 }
 
 export interface OrderBookQueryResult {

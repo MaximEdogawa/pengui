@@ -10,8 +10,14 @@ interface FilterPanelProps {
 
 export default function FilterPanel({ onFiltersChange }: FilterPanelProps) {
   const { t } = useThemeClasses();
-  const { filters, hasActiveFilters, clearAllFilters, showFilterPane, setShowFilterPane } =
-    useOrderBookFilters();
+  const {
+    filters,
+    hasActiveFilters,
+    clearAllFilters,
+    clearRecentPairs,
+    showFilterPane,
+    setShowFilterPane,
+  } = useOrderBookFilters();
 
   const handleClearAll = () => {
     clearAllFilters();
@@ -73,6 +79,13 @@ export default function FilterPanel({ onFiltersChange }: FilterPanelProps) {
             className={`text-xs ${t.textSecondary} hover:${t.text} transition-colors underline`}
           >
             Clear all filters
+          </button>
+          <button
+            type="button"
+            onClick={clearRecentPairs}
+            className={`ml-3 text-xs ${t.textSecondary} hover:${t.text} transition-colors underline`}
+          >
+            Clear recent pairs
           </button>
         </>
       ) : (

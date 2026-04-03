@@ -1,21 +1,27 @@
 "use client";
 
+import { useCatTokens } from "@/entities/asset";
 import { useNetwork } from "@/shared/hooks/useNetwork";
+import { getNativeTokenTickerForNetwork } from "@/shared/lib/config/environment";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import type { OrderBookPagination, SuggestionItem } from "../lib/orderBookTypes";
+import type { AssetPair, OrderBookPagination, SuggestionItem } from "../lib/orderBookTypes";
+import { parseSearchInput } from "../lib/parseSearchInput";
 import {
   useOrderBookFilterStore,
   useHasActiveFilters,
   useHasHydrated,
 } from "./orderBookFilterStore";
 import { usePriceDataPrefetch } from "./usePriceDataPrefetch";
+import { useTopVolumePairs } from "./useTopVolumePairs";
 
 const DEFAULT_PAGINATION: OrderBookPagination = 50;
 
 export function useOrderBookFilters() {
   const queryClient = useQueryClient();
   const { network } = useNetwork();
+  const { availableCatTokens } = useCatTokens();
+  const topVolumePairs = useTopVolumePairs(5);
   const prevNetworkRef = useRef<typeof network | null>(null);
 
   // Get state from Zustand store (reactive)
@@ -28,6 +34,9 @@ export function useOrderBookFilters() {
   const hasActiveFilters = useHasActiveFilters();
   const hasHydrated = useHasHydrated();
   const userClearedFilters = useOrderBookFilterStore((state) => state.userClearedFilters);
+  const recentPairs = useOrderBookFilterStore((state) =>
+    Array.isArray(state.recentPairs) ? state.recentPairs : []
+  );
 
   // Get action functions directly from store (these are stable references)
   const storeSetSearchValue = useOrderBookFilterStore((state) => state.setSearchValue);
@@ -42,11 +51,28 @@ export function useOrderBookFilters() {
   const storeSetShowFilterPane = useOrderBookFilterStore((state) => state.setShowFilterPane);
   const storeSetPagination = useOrderBookFilterStore((state) => state.setPagination);
 
+  const storeAddRecentPair = useOrderBookFilterStore((state) => state.addRecentPair);
+  const storeClearRecentPairs = useOrderBookFilterStore((state) => state.clearRecentPairs);
+
   // Get actions directly from store for network change handling
   const storeClearFiltersForNetwork = useOrderBookFilterStore((state) => state.clearAllFilters);
   const setSavedNetwork = useOrderBookFilterStore((state) => state.setSavedNetwork);
   const storeSetBuyAsset = useOrderBookFilterStore((state) => state.setBuyAsset);
   const storeSetSellAsset = useOrderBookFilterStore((state) => state.setSellAsset);
+
+  const effectiveRecentPairs = useMemo(() => {
+    const sourcePairs = recentPairs.length > 0 ? recentPairs : topVolumePairs;
+
+    return sourcePairs.filter(
+      (pair, index, pairs) =>
+        pair.buyAsset.toLowerCase() !== pair.sellAsset.toLowerCase() &&
+        pairs.findIndex(
+          (candidate) =>
+            candidate.buyAsset.toLowerCase() === pair.buyAsset.toLowerCase() &&
+            candidate.sellAsset.toLowerCase() === pair.sellAsset.toLowerCase()
+        ) === index
+    );
+  }, [recentPairs, topVolumePairs]);
 
   // Handle network changes - clear ALL filters when network changes
   // Wait for hydration to complete before making network-based decisions
@@ -147,6 +173,168 @@ export function useOrderBookFilters() {
   // Prefetch price data when filters change
   usePriceDataPrefetch(memoizedFilters);
 
+  useEffect(() => {
+    const nativeTicker = getNativeTokenTickerForNetwork(network);
+    const normalizedNativeTicker = nativeTicker.toLowerCase();
+
+    const normalizeTicker = (ticker: string) => {
+      const lower = ticker.toLowerCase();
+      if (lower === "xch" || lower === "txch") {
+        return nativeTicker;
+      }
+      return ticker.toUpperCase();
+    };
+
+    const pairSuggestions: SuggestionItem[] = effectiveRecentPairs.map((pair, index) => ({
+      value: `${pair.buyAsset}/${pair.sellAsset}`,
+      column: "buyAsset",
+      label: `${pair.buyAsset}/${pair.sellAsset}`,
+      type: "pair",
+      pairBuyAsset: pair.buyAsset,
+      pairSellAsset: pair.sellAsset,
+      sublabel:
+        recentPairs.length > 0 && index < recentPairs.length ? "Recent pair" : "Top volume pair",
+    }));
+
+    const trimmedSearch = searchValue.trim();
+    if (!trimmedSearch) {
+      storeSetFilteredSuggestions(pairSuggestions);
+      return;
+    }
+
+    const parsed = parseSearchInput(trimmedSearch);
+    const addedKeys = new Set<string>();
+    const suggestions: SuggestionItem[] = [];
+
+    const hasBuyAsset = (ticker: string) =>
+      filters.buyAsset?.some((value) => value.toLowerCase() === ticker.toLowerCase()) ?? false;
+    const hasSellAsset = (ticker: string) =>
+      filters.sellAsset?.some((value) => value.toLowerCase() === ticker.toLowerCase()) ?? false;
+    const existsOnOppositeSide = (ticker: string, column: "buyAsset" | "sellAsset") =>
+      column === "buyAsset" ? hasSellAsset(ticker) : hasBuyAsset(ticker);
+
+    const addSingleSuggestion = (
+      ticker: string,
+      column: "buyAsset" | "sellAsset",
+      name?: string
+    ) => {
+      const normalizedTicker = normalizeTicker(ticker);
+      const key = `${column}:${normalizedTicker}`;
+      if (addedKeys.has(key)) {
+        return;
+      }
+      if (column === "buyAsset" ? hasBuyAsset(normalizedTicker) : hasSellAsset(normalizedTicker)) {
+        return;
+      }
+      if (existsOnOppositeSide(normalizedTicker, column)) {
+        return;
+      }
+
+      addedKeys.add(key);
+      suggestions.push({
+        value: normalizedTicker,
+        column,
+        label: normalizedTicker,
+        type: "single",
+        sublabel: name,
+      });
+    };
+
+    const addPairSuggestion = (buyAsset: string, sellAsset: string, sublabel = "Pair match") => {
+      const normalizedBuyAsset = normalizeTicker(buyAsset);
+      const normalizedSellAsset = normalizeTicker(sellAsset);
+      if (normalizedBuyAsset.toLowerCase() === normalizedSellAsset.toLowerCase()) {
+        return;
+      }
+      const key = `pair:${normalizedBuyAsset}/${normalizedSellAsset}`;
+      if (addedKeys.has(key)) {
+        return;
+      }
+      if (
+        filters.buyAsset?.[0]?.toLowerCase() === normalizedBuyAsset.toLowerCase() &&
+        filters.sellAsset?.[0]?.toLowerCase() === normalizedSellAsset.toLowerCase()
+      ) {
+        return;
+      }
+
+      addedKeys.add(key);
+      suggestions.push({
+        value: `${normalizedBuyAsset}/${normalizedSellAsset}`,
+        column: "buyAsset",
+        label: `${normalizedBuyAsset}/${normalizedSellAsset}`,
+        type: "pair",
+        pairBuyAsset: normalizedBuyAsset,
+        pairSellAsset: normalizedSellAsset,
+        sublabel,
+      });
+    };
+
+    if (parsed.mode === "pair" && parsed.tokens.length === 2) {
+      addPairSuggestion(parsed.tokens[0].ticker, parsed.tokens[1].ticker, "Search pair");
+    }
+
+    const tokenQueries = parsed.tokens.map((token) => normalizeTicker(token.ticker).toLowerCase());
+    const nativeQueries = new Set<string>([normalizedNativeTicker, "xch", "txch"]);
+
+    availableCatTokens.forEach((token) => {
+      const tokenTicker = token.ticker.toLowerCase();
+      const tokenName = token.name.toLowerCase();
+
+      const matchesToken = tokenQueries.some((query) => {
+        if (nativeQueries.has(query)) {
+          return tokenTicker === "xch";
+        }
+        return tokenTicker.includes(query) || tokenName.includes(query);
+      });
+
+      if (!matchesToken) {
+        return;
+      }
+
+      if (parsed.mode === "directed") {
+        const side = parsed.tokens[0]?.side;
+        if (side === "buy") {
+          addSingleSuggestion(token.ticker, "buyAsset", token.name);
+        } else if (side === "sell") {
+          addSingleSuggestion(token.ticker, "sellAsset", token.name);
+        }
+        return;
+      }
+
+      addSingleSuggestion(token.ticker, "buyAsset", token.name);
+      addSingleSuggestion(token.ticker, "sellAsset", token.name);
+    });
+
+    effectiveRecentPairs.forEach((pair, index) => {
+      const pairText = `${pair.buyAsset}/${pair.sellAsset}`.toLowerCase();
+      const matchesPair = tokenQueries.some(
+        (query) =>
+          pair.buyAsset.toLowerCase().includes(query) ||
+          pair.sellAsset.toLowerCase().includes(query) ||
+          pairText.includes(query)
+      );
+
+      if (matchesPair) {
+        addPairSuggestion(
+          pair.buyAsset,
+          pair.sellAsset,
+          recentPairs.length > 0 && index < recentPairs.length ? "Recent pair" : "Top volume pair"
+        );
+      }
+    });
+
+    storeSetFilteredSuggestions(suggestions);
+  }, [
+    availableCatTokens,
+    effectiveRecentPairs,
+    filters.buyAsset,
+    filters.sellAsset,
+    network,
+    recentPairs.length,
+    searchValue,
+    storeSetFilteredSuggestions,
+  ]);
+
   // Stable action wrappers
   const setSearchValue = useCallback(
     (value: string) => {
@@ -179,6 +367,10 @@ export function useOrderBookFilters() {
   const clearAllFilters = useCallback(() => {
     storeClearAllFilters();
   }, [storeClearAllFilters]);
+
+  const clearRecentPairs = useCallback(() => {
+    storeClearRecentPairs();
+  }, [storeClearRecentPairs]);
 
   const swapBuySellAssets = useCallback(() => {
     storeSwapBuySellAssets();
@@ -216,6 +408,63 @@ export function useOrderBookFilters() {
     [storeSetSellAsset]
   );
 
+  const applyAssetPair = useCallback(
+    (pair: AssetPair) => {
+      if (pair.buyAsset.toLowerCase() === pair.sellAsset.toLowerCase()) {
+        return;
+      }
+      storeSetBuyAsset([pair.buyAsset]);
+      storeSetSellAsset([pair.sellAsset]);
+      storeAddRecentPair(pair);
+      storeSetSearchValue("");
+    },
+    [storeAddRecentPair, storeSetBuyAsset, storeSetSearchValue, storeSetSellAsset]
+  );
+
+  const applySuggestion = useCallback(
+    (suggestion: SuggestionItem) => {
+      if (suggestion.type === "pair" && suggestion.pairBuyAsset && suggestion.pairSellAsset) {
+        applyAssetPair({
+          buyAsset: suggestion.pairBuyAsset,
+          sellAsset: suggestion.pairSellAsset,
+        });
+        return;
+      }
+
+      const column = suggestion.column as "buyAsset" | "sellAsset" | "status";
+      const oppositeValues = column === "buyAsset" ? filters.sellAsset : filters.buyAsset;
+      if (
+        column !== "status" &&
+        oppositeValues?.some((value) => value.toLowerCase() === suggestion.value.toLowerCase())
+      ) {
+        return;
+      }
+      storeAddFilter(column, suggestion.value);
+
+      const nextBuyAsset =
+        column === "buyAsset" ? suggestion.value : (filters.buyAsset?.[0] ?? undefined);
+      const nextSellAsset =
+        column === "sellAsset" ? suggestion.value : (filters.sellAsset?.[0] ?? undefined);
+
+      if (nextBuyAsset && nextSellAsset) {
+        storeAddRecentPair({
+          buyAsset: nextBuyAsset,
+          sellAsset: nextSellAsset,
+        });
+      }
+
+      storeSetSearchValue("");
+    },
+    [
+      applyAssetPair,
+      filters.buyAsset,
+      filters.sellAsset,
+      storeAddFilter,
+      storeAddRecentPair,
+      storeSetSearchValue,
+    ]
+  );
+
   // Refresh function (placeholder - actual refresh handled by useOrderBook hook)
   const refreshOrderBook = useCallback(() => {
     // This is a no-op - the useOrderBook hook will automatically refetch when filters change
@@ -228,6 +477,8 @@ export function useOrderBookFilters() {
     pagination: memoizedFilters.pagination,
     searchValue,
     filteredSuggestions,
+    recentPairs,
+    suggestedPairs: effectiveRecentPairs,
     assetsSwapped,
     showFilterPane,
     hasActiveFilters,
@@ -238,12 +489,15 @@ export function useOrderBookFilters() {
     addFilter,
     removeFilter,
     clearAllFilters,
+    clearRecentPairs,
     swapBuySellAssets,
     toggleFilterPane,
     setShowFilterPane,
     setPagination,
     setBuyAsset,
     setSellAsset,
+    applyAssetPair,
+    applySuggestion,
     refreshOrderBook,
   };
 }
