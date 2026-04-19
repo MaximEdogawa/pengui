@@ -36,9 +36,6 @@ services:
     image: pengui-nginx-relay-coupled:latest
     container_name: pengui-nginx
     restart: unless-stopped
-    # Pengine on host :1422 — hostname must be host.docker.internal (Linux has no magic name otherwise)
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     ports:
       - "80:80"
       - "443:443"
@@ -155,6 +152,8 @@ services:
 
 networks:
   pengui-network:
+    # Fixed name so Pengine (separate compose) can attach: `external: true` + `name: pengui-network`
+    name: pengui-network
     driver: bridge
     driver_opts:
       com.docker.network.bridge.enable_icc: "true"
