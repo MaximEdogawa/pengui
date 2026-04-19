@@ -1,0 +1,20 @@
+# Example Pengine stack for the same host as Pengui.
+#
+# Goal: HTTP on host port 1422 so:
+#   - On the server:  curl http://127.0.0.1:1422/
+#   - Pengui nginx (Docker) proxies to http://host.docker.internal:1422/
+#
+# Use "1422:<container-port>" with NO address prefix so Docker publishes on 0.0.0.0:1422.
+# If you use "127.0.0.1:1422:80" only, Pengui nginx often CANNOT reach Pengine via
+# host.docker.internal (traffic hits the host IP, not loopback).
+#
+# Replace image / internal port with your pengine repo’s values.
+
+services:
+  pengine:
+    image: ${PENGINE_IMAGE:-ghcr.io/your-org/pengine:latest}
+    container_name: pengine-app
+    restart: unless-stopped
+    ports:
+      # host:container — adjust the right side if your image serves on 8080 etc.
+      - "1422:80"

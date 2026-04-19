@@ -1,6 +1,6 @@
 # Optional: Pengine web on its own hostname (recommended — no Vite base path needed).
 # Deploy script appends this when PENGINE_SUBDOMAIN is set (same TLS cert as DOMAIN via SAN).
-# Upstream: pengine container on host (127.0.0.1:1422) from the pengine deployment repo.
+# Upstream: Pengine on host :1422 — use host.docker.internal (not 127.0.0.1: nginx runs in a container).
 server {
     listen 443 ssl http2;
     server_name ${PENGINE_SUBDOMAIN};
@@ -15,7 +15,7 @@ server {
     add_header X-Content-Type-Options "nosniff" always;
 
     location / {
-        proxy_pass http://127.0.0.1:1422;
+        proxy_pass http://host.docker.internal:1422;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;

@@ -104,6 +104,18 @@ else
     NEED_CERT=true
 fi
 
+# If DOMAIN cert exists but a configured hostname is missing from SAN (e.g. added PENGINE_SUBDOMAIN later), expand
+if [ "$NEED_CERT" = false ] && [ -f "$CERT" ]; then
+    for SAN in "${PENGINE_SUBDOMAIN:-}" "${RELAY_MAINNET_SUBDOMAIN:-}" "${RELAY_TESTNET_SUBDOMAIN:-}"; do
+        [ -z "$SAN" ] && continue
+        if ! openssl x509 -in "$CERT" -noout -text 2>/dev/null | grep -Fq "DNS:${SAN}"; then
+            warn "Certificate missing SAN for ${SAN} — will request expanded certificate"
+            NEED_CERT=true
+            break
+        fi
+    done
+fi
+
 # Optional: extra -d for relay subdomains (so cert covers wss://relay subdomains)
 CERTBOT_RELAY_DOMAINS=""
 [ -n "${RELAY_MAINNET_SUBDOMAIN:-}" ] && CERTBOT_RELAY_DOMAINS="$CERTBOT_RELAY_DOMAINS -d $RELAY_MAINNET_SUBDOMAIN"
