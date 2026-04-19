@@ -125,7 +125,7 @@ server {
         return 301 /pengine/;
     }
     location /pengine/ {
-        proxy_pass http://host.docker.internal:1422/;
+        proxy_pass http://127.0.0.1:1422/;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;

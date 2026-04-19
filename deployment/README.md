@@ -141,7 +141,7 @@ For production with your own domain, set the relay subdomain in GitHub vars (see
 
 ## Pengine behind Pengui nginx
 
-The **Pengine** web UI (separate repository) is the Vite/React app shipped as a **static** Docker image and bound on the host at **`127.0.0.1:1422`**. Pengui’s **nginx** container proxies to it using Docker’s **`host.docker.internal:host-gateway`** (see [`docker-compose.yml`](docker-compose.yml) `extra_hosts`).
+The **Pengine** web UI (separate repository) is the Vite/React app shipped as a **static** Docker image and bound on the host at **`127.0.0.1:1422`**. Pengui’s **nginx** container proxies to it using Docker’s **`127.0.0.1:1422:host-gateway`** (see [`docker-compose.yml`](docker-compose.yml) `extra_hosts`).
 
 Two ways to expose it:
 
