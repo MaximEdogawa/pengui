@@ -1,23 +1,2 @@
-# Example Pengine stack for the same host as Pengui.
-#
-# Pengui nginx proxies to http://pengine-app:1422 on shared Docker network `pengui-network`.
-# Publish 1422 on the host for local checks: curl http://127.0.0.1:1422/
-#
-# Deploy Pengui first (creates network `pengui-network`), then: docker compose up -d
-#
-# If your Pengui stack uses a different network name, set PENGUI_NETWORK_NAME in .env.
-
-networks:
-  pengui-network:
-    external: true
-    name: ${PENGUI_NETWORK_NAME:-pengui-network}
-
-services:
-  pengine:
-    image: ${PENGINE_IMAGE:-ghcr.io/your-org/pengine:latest}
-    container_name: pengine-app
-    restart: unless-stopped
-    networks:
-      - pengui-network
-    ports:
-      - "1422:1422"
+# This file is reference only. Prefer enabling Pengine inside Pengui’s docker-compose.yml
+# (service pengine-web, profile `pengine`) — same network as nginx, one deploy.

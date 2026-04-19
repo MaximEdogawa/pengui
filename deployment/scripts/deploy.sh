@@ -71,13 +71,6 @@ log "Starting deployment for ${DOMAIN:-'unknown domain'}..."
 log "Creating directories..."
 mkdir -p certbot/{conf,www} nginx/conf.d
 
-# Bridge used by Pengui compose (`name: pengui-network`). Pengine’s compose attaches here as external;
-# create it if missing so a Pengine-only `docker compose up` on the same host can run after Pengui deploy.
-if ! docker network inspect pengui-network >/dev/null 2>&1; then
-    log "Creating Docker network pengui-network (shared with Pengine)"
-    docker network create pengui-network || warn "Could not create pengui-network"
-fi
-
 # Login to GitHub Container Registry if credentials provided
 if [ -n "$GITHUB_TOKEN" ] && [ -n "$GITHUB_ACTOR" ]; then
     log "Logging into GitHub Container Registry..."
@@ -227,6 +220,9 @@ docker compose pull pengui || warn "Failed to pull pengui image"
 if [ -n "${SPLASH_RELAY_IMAGE:-}" ]; then
     docker compose pull splash-relay || warn "Failed to pull splash-relay image"
 fi
+if [ "${PENGINE_ENABLE:-0}" = "1" ]; then
+    docker compose pull pengine-web 2>/dev/null || warn "Failed to pull Pengine image"
+fi
 
 log "Updating pengui application..."
 docker compose up -d --no-deps --wait pengui || warn "Pengui update had issues"
@@ -242,6 +238,12 @@ docker compose up -d --no-deps --wait nginx || err "nginx failed to become healt
 
 # Reload nginx to apply updated configs from mounted templates.
 docker compose exec -T nginx nginx -s reload 2>/dev/null || true
+
+# Pengine on the same stack + network as nginx (no separate compose / external network)
+if [ "${PENGINE_ENABLE:-0}" = "1" ]; then
+    log "Starting Pengine web (compose profile pengine)..."
+    docker compose --profile pengine up -d pengine-web || warn "Pengine web failed to start (registry auth or PENGINE_WEB_IMAGE)"
+fi
 
 info "Container status:"
 docker compose ps --format "table {{.Name}}\t{{.Status}}" 2>/dev/null || true

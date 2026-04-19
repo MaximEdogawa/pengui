@@ -141,9 +141,9 @@ For production with your own domain, set the relay subdomain in GitHub vars (see
 
 ## Pengine behind Pengui nginx
 
-The **Pengine** web UI (separate repository) is the Vite/React app shipped as a **static** Docker image. Publish **host port 1422** and attach the Pengine container to the **same Docker network** as Pengui ([`docker-compose.yml`](docker-compose.yml) uses a fixed network name **`pengui-network`**). Nginx proxies to **`http://pengine-app:1422`** (container name). That avoids **`host.docker.internal` → `172.17.0.1`** on Linux, which often does not reach services published from another user-defined bridge. See [`pengine.example/docker-compose.yml`](pengine.example/docker-compose.yml).
+The **Pengine** web UI (separate repository) is shipped as a Docker image. **Run it in this stack** using the Compose **profile `pengine`** ([`docker-compose.yml`](docker-compose.yml) service `pengine-web`): set **`PENGINE_ENABLE=1`** and **`PENGINE_WEB_IMAGE`** (e.g. in GitHub Actions variables or `.env`). [`deploy.sh`](scripts/deploy.sh) runs **`docker compose --profile pengine up -d pengine-web`** so Pengine shares **`pengui-network`** with nginx — no second compose file and no `external` network. Nginx proxies to **`http://pengine-app:1422`**.
 
-**Order:** deploy Pengui once so **`pengui-network`** exists, then start Pengine with its compose (external network). If you upgrade an older Pengui install, run **`docker compose up -d`** in `~/pengui/deployment` so stacks use the named network; if your network name differs, set **`PENGUI_NETWORK_NAME`** in Pengine’s environment to match **`docker network ls`**.
+**Do not** run a separate `docker network create` for `pengui-network`; Compose creates it with the correct labels. **Do not** run a second Pengine compose on the same host (duplicate `pengine-app`).
 
 Two ways to expose it:
 

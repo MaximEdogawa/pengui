@@ -70,6 +70,34 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  # Pengine (Vite) — same Docker network as nginx; nginx proxies to http://pengine-app:1422
+  # Enable with: docker compose --profile pengine up -d   OR set PENGINE_ENABLE=1 in deploy.sh / .env
+  pengine-web:
+    profiles:
+      - pengine
+    image: ${PENGINE_WEB_IMAGE:-ghcr.io/pengine-ai/pengine-web:latest}
+    container_name: pengine-app
+    hostname: pengine
+    restart: unless-stopped
+    networks:
+      - pengui-network
+    command: ["npm", "run", "preview", "--", "--host", "0.0.0.0", "--port", "1422"]
+    ports:
+      - "1422:1422"
+    environment:
+      - NODE_ENV=production
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:1422/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 25s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
   # Certbot for SSL certificate management (on-demand only)
   certbot:
     image: certbot/certbot:latest
@@ -152,7 +180,7 @@ services:
 
 networks:
   pengui-network:
-    # Fixed name so Pengine (separate compose) can attach: `external: true` + `name: pengui-network`
+    # Fixed name; Compose creates it (do not `docker network create` by hand).
     name: pengui-network
     driver: bridge
     driver_opts:
