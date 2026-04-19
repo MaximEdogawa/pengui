@@ -108,6 +108,8 @@ fi
 CERTBOT_RELAY_DOMAINS=""
 [ -n "${RELAY_MAINNET_SUBDOMAIN:-}" ] && CERTBOT_RELAY_DOMAINS="$CERTBOT_RELAY_DOMAINS -d $RELAY_MAINNET_SUBDOMAIN"
 [ -n "${RELAY_TESTNET_SUBDOMAIN:-}" ] && CERTBOT_RELAY_DOMAINS="$CERTBOT_RELAY_DOMAINS -d $RELAY_TESTNET_SUBDOMAIN"
+# Optional: Pengine web on its own subdomain (see deployment/README.md — Pengine)
+[ -n "${PENGINE_SUBDOMAIN:-}" ] && CERTBOT_RELAY_DOMAINS="$CERTBOT_RELAY_DOMAINS -d $PENGINE_SUBDOMAIN"
 
 # Request SSL certificate if needed
 if [ "$NEED_CERT" = true ]; then
@@ -181,6 +183,14 @@ fi
 if [ -n "${RELAY_TESTNET_SUBDOMAIN:-}" ]; then
     log "Configuring nginx testnet relay subdomain..."
     envsubst '${DOMAIN} ${RELAY_TESTNET_SUBDOMAIN}' < nginx/templates/relay-testnet.conf.template >> nginx/conf.d/relay.conf
+fi
+
+# Optional: Pengine web (separate repo) — HTTPS vhost for PENGINE_SUBDOMAIN → host :1422
+rm -f nginx/conf.d/pengine.conf
+if [ -n "${PENGINE_SUBDOMAIN:-}" ]; then
+    log "Configuring nginx Pengine subdomain ($PENGINE_SUBDOMAIN)..."
+    envsubst '${DOMAIN} ${PENGINE_SUBDOMAIN}' < nginx/templates/pengine-subdomain.conf.template > nginx/conf.d/pengine.conf.tmp
+    mv nginx/conf.d/pengine.conf.tmp nginx/conf.d/pengine.conf
 fi
 
 # Pull latest Docker image

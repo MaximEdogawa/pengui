@@ -323,6 +323,7 @@ jobs:
           EMAIL: ${{ vars.EMAIL }}
           STAGING: ${{ vars.STAGING }}
           RELAY_MAINNET_SUBDOMAIN: ${{ vars.NEXT_PUBLIC_SPLASH_RELAY_MAINNET_SUBDOMAIN }}
+          PENGINE_SUBDOMAIN: ${{ vars.PENGINE_SUBDOMAIN }}
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
@@ -330,7 +331,7 @@ jobs:
           port: 22
           timeout: 10m
           command_timeout: 5m
-          envs: DOCKER_IMAGE,SPLASH_RELAY_IMAGE,GITHUB_TOKEN,GITHUB_ACTOR,DOMAIN,EMAIL,STAGING,RELAY_MAINNET_SUBDOMAIN
+          envs: DOCKER_IMAGE,SPLASH_RELAY_IMAGE,GITHUB_TOKEN,GITHUB_ACTOR,DOMAIN,EMAIL,STAGING,RELAY_MAINNET_SUBDOMAIN,PENGINE_SUBDOMAIN
           script: |
             chmod +x ~/pengui/deployment/scripts/deploy.sh
             STAGING="${STAGING:-0}" RELAY_MAINNET_SUBDOMAIN="${RELAY_MAINNET_SUBDOMAIN:-}" ~/pengui/deployment/scripts/deploy.sh

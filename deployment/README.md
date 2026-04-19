@@ -5,23 +5,25 @@ This directory contains everything needed to deploy Pengui to production with **
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                    Production Server                     │
-│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐  │
-│  │   Certbot   │    │    Nginx    │    │   Next.js   │  │
-│  │  (SSL Cert) │───▶│  (Reverse   │───▶│    App      │  │
-│  │             │    │   Proxy)    │    │  (Port 3000)│  │
-│  └─────────────┘    └─────────────┘    └─────────────┘  │
-│        │                  │                   │          │
-│        └──────────────────┼───────────────────┘          │
-│                           ▼                              │
-│  ┌─────────────┐    ┌─────────────┐   Docker Network    │
-│  │splash-relay │    │splash-relay │                      │
-│  │ (mainnet)   │    │ (testnet)   │   (optional)        │
-│  │ :9090/:11511│    │ :9091       │                      │
-│  └─────────────┘    └─────────────┘                      │
-└─────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────┐
+│                       Production Server                          │
+│  ┌──────────┐   ┌─────────────┐   ┌──────────────────────────┐   │
+│  │ Certbot  │──▶│   Nginx     │──▶│  Pengui (Next.js)        │   │
+│  │ (certs)  │   │ (TLS + path │   │  pengui:3000 (Docker)    │   │
+│  └──────────┘   │  routing)   │   └──────────────────────────┘   │
+│                 └──────┬──────┘                                    │
+│                        │ proxy (optional)                         │
+│                        ▼                                          │
+│              host:1422  ◀── Pengine (Vite SPA, separate compose) │
+│              (static-web-server; repo: pengine)                 │
+│  ┌─────────────┐    ┌─────────────┐   Docker Network             │
+│  │splash-relay │    │splash-relay │                                 │
+│  │ (mainnet)   │    │ (testnet)   │                                 │
+│  └─────────────┘    └─────────────┘                                 │
+└──────────────────────────────────────────────────────────────────┘
 ```
+
+Pengui’s app image is built from [`Dockerfile`](Dockerfile): **Next.js** `standalone` output (`node server.js`), not a static export — see [How Pengui is built](#how-pengine-differs-vite--nextjs) vs Pengine.
 
 ## Quick Start (Automated CI/CD)
 
@@ -39,6 +41,8 @@ Go to **Settings → Secrets and variables → Actions** and add:
 | `CERTBOT_EMAIL`   | Email for SSL certs       | `admin@example.com`  |
 | `CERTBOT_STAGING` | Use staging SSL (testing) | `0`                  |
 | `PRODUCTION_ENV`  | Multiline env vars        | _(see below)_        |
+
+Optional: set repository variable **`PENGINE_SUBDOMAIN`** to **`pengine.net`** so deploy requests a cert SAN and generates the Pengine vhost — see [Pengine behind Pengui nginx](#pengine-behind-pengui-nginx).
 
 ### 2. Configure GitHub Variables
 
@@ -135,6 +139,35 @@ To have the app **auto-connect** to these relays, set at **build time** (e.g. in
 
 For production with your own domain, set the relay subdomain in GitHub vars (see “DNS for relays” below) and use `wss://relay.yourdomain.com` in the app build vars. For local testing, use `ws://localhost:9090` and `ws://localhost:9091`.
 
+## Pengine behind Pengui nginx
+
+The **Pengine** web UI (separate repository) is the Vite/React app shipped as a **static** Docker image and bound on the host at **`127.0.0.1:1422`**. Pengui’s **nginx** container proxies to it using Docker’s **`host.docker.internal:host-gateway`** (see [`docker-compose.yml`](docker-compose.yml) `extra_hosts`).
+
+Two ways to expose it:
+
+### A. Path on the main site (default templates)
+
+- **URL:** `https://<DOMAIN>/pengine/`
+- **Nginx:** already in [`nginx/templates/https.conf.template`](nginx/templates/https.conf.template) and [`http-only.conf.template`](nginx/templates/http-only.conf.template).
+- **Pengine build:** you must set Vite [`base`](https://vitejs.dev/config/shared-options.html#base) to **`/pengine/`** so JS/CSS paths resolve under that prefix.
+
+### B. Dedicated subdomain (recommended for SPAs)
+
+- Set **`PENGINE_SUBDOMAIN`** to **`pengine.net`** in the server environment or as a GitHub **Actions variable** so CI passes it into [`scripts/deploy.sh`](scripts/deploy.sh).
+- **DNS:** A/AAAA record for **`pengine.net`** → same server as Pengui (or your Pengine host).
+- **TLS:** Deploy adds `-d $PENGINE_SUBDOMAIN` to certbot when the variable is set; nginx includes [`nginx/templates/pengine-subdomain.conf.template`](nginx/templates/pengine-subdomain.conf.template).
+- **Pengine build:** default `base: '/'` is fine.
+
+Ensure the Pengine stack is up on the host before relying on the proxy (`docker ps` / curl `http://127.0.0.1:1422`).
+
+## How Pengine differs (Vite vs Next.js)
+
+|            | **Pengui** ([`deployment/Dockerfile`](Dockerfile))      | **Pengine** (typical separate repo)                       |
+| ---------- | ------------------------------------------------------- | --------------------------------------------------------- |
+| Framework  | Next.js (App/Pages router)                              | Vite + React                                              |
+| Production | Node `standalone` server on **3000**                    | Static files + small HTTP server on **80→1422**           |
+| Image      | Multi-stage: Bun build → `node:alpine` runs `server.js` | Multi-stage: Bun build → e.g. static-web-server / similar |
+
 ## DNS for relays (penguinpool.space)
 
 DNS for your domain (e.g. penguinpool.space) is managed at your DNS provider, not in this repo. To expose the Splash relay so the app can connect via `wss://…`:
@@ -162,16 +195,17 @@ If the server already has an SSL cert that does not include the relay subdomain,
 
 ## Files
 
-| File                              | Description                                                        |
-| --------------------------------- | ------------------------------------------------------------------ |
-| `Dockerfile`                      | Multi-stage build for Next.js standalone server                    |
-| `docker-compose.yml`              | Service orchestration (Next.js + nginx + certbot + splash-relay)   |
-| `splash-relay/Dockerfile`         | Build for splash-relay (Rust)                                      |
-| `nginx/Dockerfile`                | Nginx image with relay watchdog                                    |
-| `nginx/nginx.conf`                | Base nginx configuration                                           |
-| `nginx/templates/*.conf.template` | Domain-specific nginx configs (including optional relay subdomain) |
-| `scripts/deploy.sh`               | Automated deployment script                                        |
-| `.env.example`                    | Environment variable template                                      |
+| File                                              | Description                                                                  |
+| ------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `Dockerfile`                                      | Multi-stage build for Next.js standalone server                              |
+| `docker-compose.yml`                              | Service orchestration (Next.js + nginx + certbot + splash-relay)             |
+| `splash-relay/Dockerfile`                         | Build for splash-relay (Rust)                                                |
+| `nginx/Dockerfile`                                | Nginx image with relay watchdog                                              |
+| `nginx/nginx.conf`                                | Base nginx configuration                                                     |
+| `nginx/templates/*.conf.template`                 | Domain-specific nginx configs (relay subdomains, optional Pengine subdomain) |
+| `nginx/templates/pengine-subdomain.conf.template` | Optional HTTPS vhost when `PENGINE_SUBDOMAIN` is set                         |
+| `scripts/deploy.sh`                               | Automated deployment script                                                  |
+| `.env.example`                                    | Environment variable template                                                |
 
 ## How It Works
 
