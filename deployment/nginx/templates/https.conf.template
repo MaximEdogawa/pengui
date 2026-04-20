@@ -119,6 +119,25 @@ server {
         proxy_busy_buffers_size 512k;
     }
     
+    # Pengine web (Vite/React SPA, deployed separately — host :1422 via host.docker.internal)
+    # Path mode: strip /pengine prefix. Requires pengine built with Vite base '/pengine/'.
+    location = /pengine {
+        return 301 /pengine/;
+    }
+    location /pengine/ {
+        # pengine-app must be on network `pengui-network` (see pengine deployment compose)
+        set $pengine_upstream "pengine-app:1422";
+        proxy_pass http://$pengine_upstream/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_connect_timeout 5s;
+        proxy_send_timeout 60s;
+        proxy_read_timeout 60s;
+    }
+
     # API routes (spacescan proxy, wasm, health, etc.) - explicit so no other rule blocks them
     location /api/ {
         set $backend "http://pengui:3000";

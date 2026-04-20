@@ -55,15 +55,43 @@ services:
     dns:
       - 127.0.0.11
     healthcheck:
-      test:
-        [
+      test: [
           "CMD-SHELL",
-          "wget -q -O /dev/null --tries=1 --timeout=3 http://127.0.0.1/health && nc -z -w 3 splash-relay 9090",
+          "wget -q -O /dev/null --tries=1 --timeout=3 http://127.0.0.1/health
+          && nc -z -w 3 splash-relay 9090",
         ]
       interval: 15s
       timeout: 10s
       retries: 3
       start_period: 30s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Pengine (Vite) — same Docker network as nginx; nginx proxies to http://pengine-app:1422
+  # Enable with: docker compose --profile pengine up -d   OR set PENGINE_ENABLE=1 in deploy.sh / .env
+  pengine-web:
+    profiles:
+      - pengine
+    image: ${PENGINE_WEB_IMAGE:-ghcr.io/pengine-ai/pengine-web:latest}
+    container_name: pengine-app
+    hostname: pengine
+    restart: unless-stopped
+    networks:
+      - pengui-network
+    command: ["npm", "run", "preview", "--", "--host", "0.0.0.0", "--port", "1422"]
+    ports:
+      - "1422:1422"
+    environment:
+      - NODE_ENV=production
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:1422/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 25s
     logging:
       driver: "json-file"
       options:
@@ -102,10 +130,10 @@ services:
           - splash-relay
     healthcheck:
       # Several attempts per check: WS 9090 + Splash TCP 11511 must both accept
-      test:
-        [
+      test: [
           "CMD-SHELL",
-          "for i in 1 2 3 4 5; do nc -z -w 3 127.0.0.1 9090 && nc -z -w 3 127.0.0.1 11511 && exit 0; sleep 2; done; exit 1",
+          "for i in 1 2 3 4 5; do nc -z -w 3 127.0.0.1 9090 && nc -z -w 3
+          127.0.0.1 11511 && exit 0; sleep 2; done; exit 1",
         ]
       interval: 20s
       timeout: 35s
@@ -135,10 +163,10 @@ services:
         aliases:
           - splash-relay-testnet
     healthcheck:
-      test:
-        [
+      test: [
           "CMD-SHELL",
-          "for i in 1 2 3 4 5; do nc -z -w 3 127.0.0.1 9091 && nc -z -w 3 127.0.0.1 11512 && exit 0; sleep 2; done; exit 1",
+          "for i in 1 2 3 4 5; do nc -z -w 3 127.0.0.1 9091 && nc -z -w 3
+          127.0.0.1 11512 && exit 0; sleep 2; done; exit 1",
         ]
       interval: 20s
       timeout: 35s
@@ -152,6 +180,8 @@ services:
 
 networks:
   pengui-network:
+    # Fixed name; Compose creates it (do not `docker network create` by hand).
+    name: pengui-network
     driver: bridge
     driver_opts:
       com.docker.network.bridge.enable_icc: "true"

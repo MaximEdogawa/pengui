@@ -104,10 +104,24 @@ else
     NEED_CERT=true
 fi
 
+# If DOMAIN cert exists but a configured hostname is missing from SAN (e.g. added PENGINE_SUBDOMAIN later), expand
+if [ "$NEED_CERT" = false ] && [ -f "$CERT" ]; then
+    for SAN in "${PENGINE_SUBDOMAIN:-}" "${RELAY_MAINNET_SUBDOMAIN:-}" "${RELAY_TESTNET_SUBDOMAIN:-}"; do
+        [ -z "$SAN" ] && continue
+        if ! openssl x509 -in "$CERT" -noout -text 2>/dev/null | grep -Fq "DNS:${SAN}"; then
+            warn "Certificate missing SAN for ${SAN} — will request expanded certificate"
+            NEED_CERT=true
+            break
+        fi
+    done
+fi
+
 # Optional: extra -d for relay subdomains (so cert covers wss://relay subdomains)
 CERTBOT_RELAY_DOMAINS=""
 [ -n "${RELAY_MAINNET_SUBDOMAIN:-}" ] && CERTBOT_RELAY_DOMAINS="$CERTBOT_RELAY_DOMAINS -d $RELAY_MAINNET_SUBDOMAIN"
 [ -n "${RELAY_TESTNET_SUBDOMAIN:-}" ] && CERTBOT_RELAY_DOMAINS="$CERTBOT_RELAY_DOMAINS -d $RELAY_TESTNET_SUBDOMAIN"
+# Optional: Pengine web on its own subdomain (see deployment/README.md — Pengine)
+[ -n "${PENGINE_SUBDOMAIN:-}" ] && CERTBOT_RELAY_DOMAINS="$CERTBOT_RELAY_DOMAINS -d $PENGINE_SUBDOMAIN"
 
 # Request SSL certificate if needed
 if [ "$NEED_CERT" = true ]; then
@@ -183,6 +197,14 @@ if [ -n "${RELAY_TESTNET_SUBDOMAIN:-}" ]; then
     envsubst '${DOMAIN} ${RELAY_TESTNET_SUBDOMAIN}' < nginx/templates/relay-testnet.conf.template >> nginx/conf.d/relay.conf
 fi
 
+# Optional: Pengine web (separate repo) — HTTPS vhost for PENGINE_SUBDOMAIN → host :1422
+rm -f nginx/conf.d/pengine.conf
+if [ -n "${PENGINE_SUBDOMAIN:-}" ]; then
+    log "Configuring nginx Pengine subdomain ($PENGINE_SUBDOMAIN)..."
+    envsubst '${DOMAIN} ${PENGINE_SUBDOMAIN}' < nginx/templates/pengine-subdomain.conf.template > nginx/conf.d/pengine.conf.tmp
+    mv nginx/conf.d/pengine.conf.tmp nginx/conf.d/pengine.conf
+fi
+
 # Pull latest Docker image
 if [ -n "$DOCKER_IMAGE" ]; then
     log "Pulling Docker image: $DOCKER_IMAGE"
@@ -197,6 +219,9 @@ log "Pulling latest images..."
 docker compose pull pengui || warn "Failed to pull pengui image"
 if [ -n "${SPLASH_RELAY_IMAGE:-}" ]; then
     docker compose pull splash-relay || warn "Failed to pull splash-relay image"
+fi
+if [ "${PENGINE_ENABLE:-0}" = "1" ]; then
+    docker compose pull pengine-web 2>/dev/null || warn "Failed to pull Pengine image"
 fi
 
 log "Updating pengui application..."
@@ -213,6 +238,12 @@ docker compose up -d --no-deps --wait nginx || err "nginx failed to become healt
 
 # Reload nginx to apply updated configs from mounted templates.
 docker compose exec -T nginx nginx -s reload 2>/dev/null || true
+
+# Pengine on the same stack + network as nginx (no separate compose / external network)
+if [ "${PENGINE_ENABLE:-0}" = "1" ]; then
+    log "Starting Pengine web (compose profile pengine)..."
+    docker compose --profile pengine up -d pengine-web || warn "Pengine web failed to start (registry auth or PENGINE_WEB_IMAGE)"
+fi
 
 info "Container status:"
 docker compose ps --format "table {{.Name}}\t{{.Status}}" 2>/dev/null || true
