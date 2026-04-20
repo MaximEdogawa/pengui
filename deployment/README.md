@@ -42,7 +42,7 @@ Go to **Settings → Secrets and variables → Actions** and add:
 | `CERTBOT_STAGING` | Use staging SSL (testing) | `0`                  |
 | `PRODUCTION_ENV`  | Multiline env vars        | _(see below)_        |
 
-Optional: set repository variable **`PENGINE_SUBDOMAIN`** to **`pengine.net`** so deploy requests a cert SAN and generates the Pengine vhost — see [Pengine behind Pengui nginx](#pengine-behind-pengui-nginx).
+Optional: set repository variable **`PENGINE_SUBDOMAIN`** to **`pengine.net`** so deploy generates the Pengine HTTPS vhost — see [Pengine behind Pengui nginx](#pengine-behind-pengui-nginx). For **`DOMAIN=penguinpool.space`**, **`deploy.sh`** also adds **`pengine.net`** to the Let’s Encrypt cert (SAN) by default unless **`CERT_EXTRA_DOMAINS`** is explicitly set (use empty to omit).
 
 ### 2. Configure GitHub Variables
 
@@ -92,6 +92,7 @@ NODE_ENV=production
 - Go to Actions → Deploy Release (Docker)
 - Click "Run workflow"
 - Select environment and optionally specify a tag
+- Enable **need_cert** to force a new or expanded Let’s Encrypt certificate on that run (releases and normal deploys otherwise reuse a valid cert)
 
 ## Manual Deployment
 
@@ -155,9 +156,10 @@ Two ways to expose it:
 
 ### B. Dedicated subdomain (recommended for SPAs)
 
-- Set **`PENGINE_SUBDOMAIN`** to **`pengine.net`** in the server environment or as a GitHub **Actions variable** so CI passes it into [`scripts/deploy.sh`](scripts/deploy.sh).
+- **TLS / SAN:** For production **`penguinpool.space`**, the deploy script requests a cert that includes **`pengine.net`** by default (same nginx stack, HTTP-01 on port 80). Override with **`CERT_EXTRA_DOMAINS`** (space-separated) or set **`CERT_EXTRA_DOMAINS=`** empty to keep only **`DOMAIN`** on the cert.
+- Set **`PENGINE_SUBDOMAIN`** to **`pengine.net`** (or rely on the default above: if **`pengine.net`** is in **`CERT_EXTRA_DOMAINS`** and **`PENGINE_SUBDOMAIN`** is unset, deploy sets it) so nginx includes [`nginx/templates/pengine-subdomain.conf.template`](nginx/templates/pengine-subdomain.conf.template).
 - **DNS:** A/AAAA record for **`pengine.net`** → same server as Pengui (or your Pengine host).
-- **TLS:** Deploy adds `-d $PENGINE_SUBDOMAIN` to certbot when the variable is set; nginx includes [`nginx/templates/pengine-subdomain.conf.template`](nginx/templates/pengine-subdomain.conf.template).
+- **Certbot:** All configured names are passed as **`-d`** flags (deduplicated); **`--expand`** is used when any extra hostname is present.
 - **Pengine build:** default `base: '/'` is fine.
 
 Ensure the Pengine stack is up on the host before relying on the proxy (`docker ps` / curl `http://127.0.0.1:1422`).

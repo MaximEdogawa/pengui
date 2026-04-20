@@ -67,6 +67,18 @@ log "Starting deployment for ${DOMAIN:-'unknown domain'}..."
 [ -z "$EMAIL" ] && err "EMAIL environment variable is required"
 [ -z "$STAGING" ] && err "STAGING environment variable is required"
 
+# Multi-SAN cert: optional extra hostnames (space-separated), e.g. pengine.net alongside DOMAIN.
+# When unset, penguinpool.space production includes pengine.net; set CERT_EXTRA_DOMAINS= to opt out.
+if [ "${DOMAIN}" = "penguinpool.space" ] && [ -z "${CERT_EXTRA_DOMAINS+x}" ]; then
+    CERT_EXTRA_DOMAINS="pengine.net"
+fi
+CERT_EXTRA_DOMAINS="${CERT_EXTRA_DOMAINS:-}"
+
+# If pengine.net is in the cert SAN but PENGINE_SUBDOMAIN was not set, use the Pengine apex vhost template.
+if [ -z "${PENGINE_SUBDOMAIN:-}" ] && echo " $CERT_EXTRA_DOMAINS " | grep -q ' pengine\.net '; then
+    PENGINE_SUBDOMAIN=pengine.net
+fi
+
 # Create required directories
 log "Creating directories..."
 mkdir -p certbot/{conf,www} nginx/conf.d
@@ -104,9 +116,26 @@ else
     NEED_CERT=true
 fi
 
-# If DOMAIN cert exists but a configured hostname is missing from SAN (e.g. added PENGINE_SUBDOMAIN later), expand
+# Build optional -d names for certbot (dedupe: same hostname must not appear twice)
+CERTBOT_RELAY_DOMAINS=""
+CERTBOT_EXTRA_NAMES=""
+add_cert_name() {
+    local n="$1"
+    [ -z "$n" ] && return
+    case " $CERTBOT_EXTRA_NAMES " in *" $n "*) return ;; esac
+    CERTBOT_EXTRA_NAMES="$CERTBOT_EXTRA_NAMES $n"
+    CERTBOT_RELAY_DOMAINS="$CERTBOT_RELAY_DOMAINS -d $n"
+}
+[ -n "${RELAY_MAINNET_SUBDOMAIN:-}" ] && add_cert_name "$RELAY_MAINNET_SUBDOMAIN"
+[ -n "${RELAY_TESTNET_SUBDOMAIN:-}" ] && add_cert_name "$RELAY_TESTNET_SUBDOMAIN"
+[ -n "${PENGINE_SUBDOMAIN:-}" ] && add_cert_name "$PENGINE_SUBDOMAIN"
+for _extra in $CERT_EXTRA_DOMAINS; do
+    add_cert_name "$_extra"
+done
+
+# If DOMAIN cert exists but a configured hostname is missing from SAN (e.g. added relay or pengine.net later), expand
 if [ "$NEED_CERT" = false ] && [ -f "$CERT" ]; then
-    for SAN in "${PENGINE_SUBDOMAIN:-}" "${RELAY_MAINNET_SUBDOMAIN:-}" "${RELAY_TESTNET_SUBDOMAIN:-}"; do
+    for SAN in $DOMAIN $CERTBOT_EXTRA_NAMES; do
         [ -z "$SAN" ] && continue
         if ! openssl x509 -in "$CERT" -noout -text 2>/dev/null | grep -Fq "DNS:${SAN}"; then
             warn "Certificate missing SAN for ${SAN} — will request expanded certificate"
@@ -116,12 +145,11 @@ if [ "$NEED_CERT" = false ] && [ -f "$CERT" ]; then
     done
 fi
 
-# Optional: extra -d for relay subdomains (so cert covers wss://relay subdomains)
-CERTBOT_RELAY_DOMAINS=""
-[ -n "${RELAY_MAINNET_SUBDOMAIN:-}" ] && CERTBOT_RELAY_DOMAINS="$CERTBOT_RELAY_DOMAINS -d $RELAY_MAINNET_SUBDOMAIN"
-[ -n "${RELAY_TESTNET_SUBDOMAIN:-}" ] && CERTBOT_RELAY_DOMAINS="$CERTBOT_RELAY_DOMAINS -d $RELAY_TESTNET_SUBDOMAIN"
-# Optional: Pengine web on its own subdomain (see deployment/README.md — Pengine)
-[ -n "${PENGINE_SUBDOMAIN:-}" ] && CERTBOT_RELAY_DOMAINS="$CERTBOT_RELAY_DOMAINS -d $PENGINE_SUBDOMAIN"
+# Force new/expanded certificate (e.g. GitHub Actions "Run workflow" → need_cert)
+if [ "${NEED_CERT_FORCE:-false}" = "true" ] || [ "${NEED_CERT_FORCE:-}" = "1" ]; then
+    NEED_CERT=true
+    log "NEED_CERT_FORCE set — will request SSL certificate"
+fi
 
 # Request SSL certificate if needed
 if [ "$NEED_CERT" = true ]; then
