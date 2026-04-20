@@ -295,6 +295,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
 
+      - name: Resolve NEED_CERT_FORCE (workflow_dispatch need_cert toggle)
+        id: cert_force
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            case "${{ github.event.inputs.need_cert }}" in
+              true|True) echo "need_cert_force=true" >> "$GITHUB_OUTPUT" ;;
+              *)        echo "need_cert_force=false" >> "$GITHUB_OUTPUT" ;;
+            esac
+          else
+            echo "need_cert_force=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Ensure deployment directory exists
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -331,7 +343,7 @@ jobs:
           PENGINE_SUBDOMAIN: ${{ vars.PENGINE_SUBDOMAIN }}
           PENGINE_ENABLE: ${{ vars.PENGINE_ENABLE }}
           PENGINE_WEB_IMAGE: ${{ vars.PENGINE_WEB_IMAGE }}
-          NEED_CERT_FORCE: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.need_cert || false }}
+          NEED_CERT_FORCE: ${{ steps.cert_force.outputs.need_cert_force }}
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}

@@ -71,12 +71,24 @@ log "Starting deployment for ${DOMAIN:-'unknown domain'}..."
 # When unset, penguinpool.space production includes pengine.net; set CERT_EXTRA_DOMAINS= to opt out.
 if [ "${DOMAIN}" = "penguinpool.space" ] && [ -z "${CERT_EXTRA_DOMAINS+x}" ]; then
     CERT_EXTRA_DOMAINS="pengine.net"
+    log "CERT_EXTRA_DOMAINS default: pengine.net (Let’s Encrypt SAN alongside ${DOMAIN})"
 fi
 CERT_EXTRA_DOMAINS="${CERT_EXTRA_DOMAINS:-}"
 
 # If pengine.net is in the cert SAN but PENGINE_SUBDOMAIN was not set, use the Pengine apex vhost template.
 if [ -z "${PENGINE_SUBDOMAIN:-}" ] && echo " $CERT_EXTRA_DOMAINS " | grep -q ' pengine\.net '; then
     PENGINE_SUBDOMAIN=pengine.net
+fi
+
+# PENGINE_SUBDOMAIN must never equal DOMAIN: nginx would use an exact server_name match for the apex and
+# route the entire main site to Pengine (Pengui would appear "unavailable" on https://$DOMAIN/).
+if [ -n "${PENGINE_SUBDOMAIN:-}" ] && [ "${PENGINE_SUBDOMAIN}" = "${DOMAIN}" ]; then
+    warn "PENGINE_SUBDOMAIN must not equal DOMAIN (${DOMAIN}); clearing — use pengine.net (or another hostname) for the Pengine vhost"
+    PENGINE_SUBDOMAIN=""
+    if echo " $CERT_EXTRA_DOMAINS " | grep -q ' pengine\.net '; then
+        PENGINE_SUBDOMAIN=pengine.net
+        log "Set PENGINE_SUBDOMAIN=pengine.net (from CERT_EXTRA_DOMAINS)"
+    fi
 fi
 
 # Create required directories
@@ -146,9 +158,14 @@ if [ "$NEED_CERT" = false ] && [ -f "$CERT" ]; then
 fi
 
 # Force new/expanded certificate (e.g. GitHub Actions "Run workflow" → need_cert)
-if [ "${NEED_CERT_FORCE:-false}" = "true" ] || [ "${NEED_CERT_FORCE:-}" = "1" ]; then
+# GitHub may pass boolean as "true", "True", etc.; certbot otherwise often refuses with "not yet due".
+NEED_CERT_FORCE_FLAG="false"
+case "${NEED_CERT_FORCE:-}" in
+    true|True|1|yes|on) NEED_CERT_FORCE_FLAG="true" ;;
+esac
+if [ "$NEED_CERT_FORCE_FLAG" = "true" ]; then
     NEED_CERT=true
-    log "NEED_CERT_FORCE set — will request SSL certificate"
+    log "NEED_CERT_FORCE set — will request SSL certificate (with --force-renewal for certbot)"
 fi
 
 # Request SSL certificate if needed
@@ -185,9 +202,12 @@ if [ "$NEED_CERT" = true ]; then
     # Determine staging flag
     STAGING_ARG=""
     [ "${STAGING:-0}" != "0" ] && STAGING_ARG="--staging" && warn "Using Let's Encrypt staging environment"
-    # When adding relay subdomains to an existing cert, expand it non-interactively
+    # When adding names to an existing lineage, expand non-interactively
     CERTBOT_EXPAND=""
     [ -n "$CERTBOT_RELAY_DOMAINS" ] && CERTBOT_EXPAND="--expand"
+    # Same SANs but operator forced renew: certbot otherwise exits with "not yet due for renewal"
+    CERTBOT_FORCE_RENEWAL=""
+    [ "$NEED_CERT_FORCE_FLAG" = "true" ] && CERTBOT_FORCE_RENEWAL="--force-renewal"
     
     # Request certificate using docker run directly (more reliable output)
     log "Requesting SSL certificate from Let's Encrypt..."
@@ -199,6 +219,7 @@ if [ "$NEED_CERT" = true ]; then
         -w /var/www/certbot \
         $STAGING_ARG \
         $CERTBOT_EXPAND \
+        $CERTBOT_FORCE_RENEWAL \
         --email "$EMAIL" \
         -d "$DOMAIN" \
         $CERTBOT_RELAY_DOMAINS \

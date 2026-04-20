@@ -92,7 +92,7 @@ NODE_ENV=production
 - Go to Actions → Deploy Release (Docker)
 - Click "Run workflow"
 - Select environment and optionally specify a tag
-- Enable **need_cert** to force a new or expanded Let’s Encrypt certificate on that run (releases and normal deploys otherwise reuse a valid cert)
+- Enable **need_cert** to force a new or expanded Let’s Encrypt certificate on that run (runs certbot with **`--force-renewal`** so issuance is not skipped as “not yet due”). Releases and normal deploys otherwise reuse a valid cert.
 
 ## Manual Deployment
 
@@ -163,6 +163,8 @@ Two ways to expose it:
 - **Pengine build:** default `base: '/'` is fine.
 
 Ensure the Pengine stack is up on the host before relying on the proxy (`docker ps` / curl `http://127.0.0.1:1422`).
+
+**Troubleshooting — `https://<DOMAIN>/` shows Pengine, Pengui “unavailable”:** **`PENGINE_SUBDOMAIN` must not be your main apex** (e.g. do not set it to `penguinpool.space`). If it equals **`DOMAIN`**, nginx matches that hostname to the Pengine-only vhost and the main site never reaches Pengui. Set **`PENGINE_SUBDOMAIN=pengine.net`** (or unset and rely on path mode only), redeploy so [`scripts/deploy.sh`](scripts/deploy.sh) regenerates nginx, then **`docker compose exec nginx nginx -s reload`**. Confirm Pengui: **`docker compose ps pengui`** and **`curl -sf http://127.0.0.1:3000/api/health`** on the host (via the `pengui` container).
 
 ## How Pengine differs (Vite vs Next.js)
 
