@@ -42,7 +42,7 @@ Go to **Settings → Secrets and variables → Actions** and add:
 | `CERTBOT_STAGING` | Use staging SSL (testing) | `0`                  |
 | `PRODUCTION_ENV`  | Multiline env vars        | _(see below)_        |
 
-Optional: set repository variable **`PENGINE_SUBDOMAIN`** to **`pengine.net`** so deploy generates the Pengine HTTPS vhost — see [Pengine behind Pengui nginx](#pengine-behind-pengui-nginx). For **`DOMAIN=penguinpool.space`**, **`deploy.sh`** also adds **`pengine.net`** to the Let’s Encrypt cert (SAN) by default unless **`CERT_EXTRA_DOMAINS`** is explicitly set (use empty to omit).
+Optional: set repository variable **`PENGINE_SUBDOMAIN`** to **`pengine.net`** so deploy generates the Pengine HTTPS vhost — see [Pengine behind Pengui nginx](#pengine-behind-pengui-nginx). For **`DOMAIN=penguinpool.space`**, **`deploy.sh`** merges **`pengine.net`** into the Let’s Encrypt request unless **`CERT_SKIP_PENGINE_SAN=1`** (an empty **`CERT_EXTRA_DOMAINS`** in `.env` no longer drops **`pengine.net`**).
 
 ### 2. Configure GitHub Variables
 
@@ -104,6 +104,37 @@ If you need to deploy manually without CI/CD:
 - SSH access to the server
 - Domain pointing to server IP
 
+### Optional: sudo for the deploy user
+
+TLS files under `certbot/` are often **root-owned**; `openssl` to read SANs needs **`sudo`**. To allow the deploy user to run **`openssl`** without a password prompt, install the drop-in from this repo:
+
+```bash
+sudo install -m 440 -o root -g root ~/pengui/sudoers.d/pengui-deploy /etc/sudoers.d/pengui-deploy
+```
+
+(If you keep a full clone with a `deployment/` subfolder, use `~/pengui/deployment/sudoers.d/pengui-deploy` instead.) Edit `/etc/sudoers.d/pengui-deploy` first if your SSH user is not named **`deploy`**. Validate with `sudo visudo -c`. For Docker, prefer adding the user to the **`docker`** group instead of blanket `sudo docker`.
+
+### Inspect certificate SANs on the server
+
+Use the **real** path under your deployment tree — not a placeholder like `/full/path/to/...`. From the directory that contains `certbot/` (often `~/pengui/deployment` if you use a full clone, or `~/pengui` if you copied `deployment/*` there):
+
+```bash
+cd ~/pengui/deployment   # or: cd ~/pengui
+ls certbot/conf/live/
+```
+
+The folder name under `live/` is the Let’s Encrypt **lineage** (usually your `DOMAIN`). Then:
+
+```bash
+sudo openssl x509 -in certbot/conf/live/penguinpool.space/fullchain.pem -noout -text | grep -A5 'Subject Alternative Name'
+```
+
+Adjust `penguinpool.space` if `ls` shows a different directory name. If `sudo` still asks for a password, install the **`sudoers.d/pengui-deploy`** drop-in above (or run the check as root). You can also read the cert **without filesystem access** (uses what the server presents on TLS):
+
+```bash
+echo | openssl s_client -servername penguinpool.space -connect penguinpool.space:443 2>/dev/null | openssl x509 -noout -text | grep -A5 'Subject Alternative Name'
+```
+
 ### Steps
 
 ```bash
@@ -156,8 +187,8 @@ Two ways to expose it:
 
 ### B. Dedicated subdomain (recommended for SPAs)
 
-- **TLS / SAN:** For production **`penguinpool.space`**, the deploy script requests a cert that includes **`pengine.net`** by default (same nginx stack, HTTP-01 on port 80). Override with **`CERT_EXTRA_DOMAINS`** (space-separated) or set **`CERT_EXTRA_DOMAINS=`** empty to keep only **`DOMAIN`** on the cert.
-- Set **`PENGINE_SUBDOMAIN`** to **`pengine.net`** (or rely on the default above: if **`pengine.net`** is in **`CERT_EXTRA_DOMAINS`** and **`PENGINE_SUBDOMAIN`** is unset, deploy sets it) so nginx includes [`nginx/templates/pengine-subdomain.conf.template`](nginx/templates/pengine-subdomain.conf.template).
+- **TLS / SAN:** For **`DOMAIN=penguinpool.space`**, deploy merges **`pengine.net`** into certbot **`-d`** flags unless **`CERT_SKIP_PENGINE_SAN=1`**. Use **`openssl x509 -in fullchain.pem -noout -text`** and check **Subject Alternative Name** — Let’s Encrypt leaf certs often show an opaque **CN** (e.g. **`E8`**) or the first SAN; the full list is under **DNS:** entries, not the CN line alone.
+- Set **`PENGINE_SUBDOMAIN`** to **`pengine.net`** (or leave unset: deploy sets it when **`pengine.net`** is in the merged SAN list for **`DOMAIN=penguinpool.space`**) so nginx includes [`nginx/templates/pengine-subdomain.conf.template`](nginx/templates/pengine-subdomain.conf.template).
 - **DNS:** A/AAAA record for **`pengine.net`** → same server as Pengui (or your Pengine host).
 - **Certbot:** All configured names are passed as **`-d`** flags (deduplicated); **`--expand`** is used when any extra hostname is present.
 - **Pengine build:** default `base: '/'` is fine.

@@ -63,17 +63,24 @@ log "Starting deployment for ${DOMAIN:-'unknown domain'}..."
 
 # Validate required environment variables
 [ -z "$DOMAIN" ] && err "DOMAIN environment variable is required"
+# Trim spaces/newlines so .env mistakes do not skip the penguinpool.space → pengine.net merge
+DOMAIN="$(printf '%s' "$DOMAIN" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+[ -z "$DOMAIN" ] && err "DOMAIN is empty after trim"
+
 [ -z "$DOCKER_IMAGE" ] && err "DOCKER_IMAGE environment variable is required"
 [ -z "$EMAIL" ] && err "EMAIL environment variable is required"
 [ -z "$STAGING" ] && err "STAGING environment variable is required"
 
-# Multi-SAN cert: optional extra hostnames (space-separated), e.g. pengine.net alongside DOMAIN.
-# When unset, penguinpool.space production includes pengine.net; set CERT_EXTRA_DOMAINS= to opt out.
-if [ "${DOMAIN}" = "penguinpool.space" ] && [ -z "${CERT_EXTRA_DOMAINS+x}" ]; then
-    CERT_EXTRA_DOMAINS="pengine.net"
-    log "CERT_EXTRA_DOMAINS default: pengine.net (Let’s Encrypt SAN alongside ${DOMAIN})"
-fi
+# Multi-SAN cert: optional extra hostnames (space-separated). For penguinpool.space, pengine.net is always
+# merged in (so an empty CERT_EXTRA_DOMAINS= in .env does not silently drop it). Opt out: CERT_SKIP_PENGINE_SAN=1.
 CERT_EXTRA_DOMAINS="${CERT_EXTRA_DOMAINS:-}"
+[ -n "${CERT_SKIP_PENGINE_SAN:-}" ] && warn "CERT_SKIP_PENGINE_SAN is set — pengine.net will not be added to the certificate"
+if [ "${DOMAIN}" = "penguinpool.space" ] && [ -z "${CERT_SKIP_PENGINE_SAN:-}" ]; then
+    if ! echo " $CERT_EXTRA_DOMAINS " | grep -q ' pengine\.net '; then
+        CERT_EXTRA_DOMAINS="${CERT_EXTRA_DOMAINS:+${CERT_EXTRA_DOMAINS} }pengine.net"
+        log "Including pengine.net in Let’s Encrypt SANs alongside ${DOMAIN}"
+    fi
+fi
 
 # If pengine.net is in the cert SAN but PENGINE_SUBDOMAIN was not set, use the Pengine apex vhost template.
 if [ -z "${PENGINE_SUBDOMAIN:-}" ] && echo " $CERT_EXTRA_DOMAINS " | grep -q ' pengine\.net '; then
@@ -144,6 +151,10 @@ add_cert_name() {
 for _extra in $CERT_EXTRA_DOMAINS; do
     add_cert_name "$_extra"
 done
+# Always pass pengine.net to certbot for this production domain (deduped inside add_cert_name)
+if [ "${DOMAIN}" = "penguinpool.space" ] && [ -z "${CERT_SKIP_PENGINE_SAN:-}" ]; then
+    add_cert_name "pengine.net"
+fi
 
 # If DOMAIN cert exists but a configured hostname is missing from SAN (e.g. added relay or pengine.net later), expand
 if [ "$NEED_CERT" = false ] && [ -f "$CERT" ]; then
@@ -211,6 +222,7 @@ if [ "$NEED_CERT" = true ]; then
     
     # Request certificate using docker run directly (more reliable output)
     log "Requesting SSL certificate from Let's Encrypt..."
+    log "certbot will use: -d ${DOMAIN}${CERTBOT_RELAY_DOMAINS}"
     docker run --rm \
         -v "$(pwd)/certbot/conf:/etc/letsencrypt" \
         -v "$(pwd)/certbot/www:/var/www/certbot" \
