@@ -264,6 +264,7 @@ if [ "$NEED_CERT" = true ]; then
         $STAGING_ARG \
         $CERTBOT_EXPAND \
         $CERTBOT_FORCE_RENEWAL \
+        --cert-name "$DOMAIN" \
         --email "$EMAIL" \
         -d "$DOMAIN" \
         $CERTBOT_EXTRA_D_ARGS \

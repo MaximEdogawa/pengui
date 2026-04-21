@@ -255,11 +255,12 @@ If the server already has an SSL cert that does not include a new relay name, tr
 
 ## SSL Certificates
 
-SSL certificates are automatically obtained from Let's Encrypt:
+SSL certificates are obtained from Let’s Encrypt by **`deploy.sh`** (via `docker run certbot certonly`, not a long-running certbot service):
 
-- **First deployment**: Obtains new certificate
-- **Renewal**: Certbot container automatically renews certificates every 12 hours (when within 30 days of expiry)
-- **Testing**: Set `CERTBOT_STAGING=1` to use staging environment (avoids rate limits)
+- **First deployment / new names**: Requests a certificate when none exists, when a configured hostname is missing from the current cert’s SANs, or when **`NEED_CERT_FORCE`** is set.
+- **Re-issue before expiry**: On each deploy, the script checks the leaf under **`certbot/conf/live/$DOMAIN/`**. If it expires in **30 days or less**, it requests a renewed certificate on that run (same SAN set as configured in the script).
+- **No background renewer in this repo**: There is no cron or systemd timer checked in by default. If you rarely deploy, add a host cron (or timer) that runs `certbot renew` with the same **`/etc/letsencrypt`** and **`webroot`** volumes while nginx is up, or run deploys periodically. See [Certbot renewal](https://certbot.org/renewal-setup) for the general model; adapt paths to your Docker layout.
+- **Testing**: Set **`STAGING=1`** so Let’s Encrypt uses the staging CA (avoids production rate limits).
 
 ## Monitoring
 
