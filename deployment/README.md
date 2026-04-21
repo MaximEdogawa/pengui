@@ -42,7 +42,7 @@ Go to **Settings → Secrets and variables → Actions** and add:
 | `CERTBOT_STAGING` | Use staging SSL (testing) | `0`                  |
 | `PRODUCTION_ENV`  | Multiline env vars        | _(see below)_        |
 
-Optional: set repository variable **`PENGINE_SUBDOMAIN`** to **`pengine.net`** so deploy generates the Pengine HTTPS vhost — see [Pengine behind Pengui nginx](#pengine-behind-pengui-nginx). For **`DOMAIN=penguinpool.space`**, **`deploy.sh`** merges **`pengine.net`** into the Let’s Encrypt request unless **`CERT_SKIP_PENGINE_SAN=1`** (an empty **`CERT_EXTRA_DOMAINS`** in `.env` no longer drops **`pengine.net`**).
+Optional: set **`DOMAIN2`** (e.g. **`pengine.net`**) so the main Pengui nginx vhost and TLS cert include that hostname — see [Pengine behind Pengui nginx](#pengine-behind-pengui-nginx). For **`DOMAIN=penguinpool.space`**, **`deploy.sh`** still merges **`pengine.net`** into the Let’s Encrypt request unless **`CERT_SKIP_PENGINE_SAN=1`**.
 
 ### 2. Configure GitHub Variables
 
@@ -177,25 +177,15 @@ The **Pengine** web UI (separate repository) is shipped as a Docker image. **Run
 
 **Do not** run a separate `docker network create` for `pengui-network`; Compose creates it with the correct labels. **Do not** run a second Pengine compose on the same host (duplicate `pengine-app`).
 
-Two ways to expose it:
+Expose it under the path **`/pengine/`** on the main site (and, if you set **`DOMAIN2`**, on that hostname too):
 
-### A. Path on the main site (default templates)
+- **URL:** `https://<DOMAIN>/pengine/` (and `https://<DOMAIN2>/pengine/` when **`DOMAIN2`** is set).
+- **Nginx:** [`nginx/templates/https.conf.template`](nginx/templates/https.conf.template) and [`http-only.conf.template`](nginx/templates/http-only.conf.template).
+- **Pengine build:** set Vite [`base`](https://vitejs.dev/config/shared-options.html#base) to **`/pengine/`** so JS/CSS paths resolve under that prefix.
 
-- **URL:** `https://<DOMAIN>/pengine/`
-- **Nginx:** already in [`nginx/templates/https.conf.template`](nginx/templates/https.conf.template) and [`http-only.conf.template`](nginx/templates/http-only.conf.template).
-- **Pengine build:** you must set Vite [`base`](https://vitejs.dev/config/shared-options.html#base) to **`/pengine/`** so JS/CSS paths resolve under that prefix.
-
-### B. Dedicated subdomain (recommended for SPAs)
-
-- **TLS / SAN:** For **`DOMAIN=penguinpool.space`**, deploy merges **`pengine.net`** into certbot **`-d`** flags unless **`CERT_SKIP_PENGINE_SAN=1`**. Use **`openssl x509 -in fullchain.pem -noout -text`** and check **Subject Alternative Name** — Let’s Encrypt leaf certs often show an opaque **CN** (e.g. **`E8`**) or the first SAN; the full list is under **DNS:** entries, not the CN line alone.
-- Set **`PENGINE_SUBDOMAIN`** to **`pengine.net`** (or leave unset: deploy sets it when **`pengine.net`** is in the merged SAN list for **`DOMAIN=penguinpool.space`**) so nginx includes [`nginx/templates/pengine-subdomain.conf.template`](nginx/templates/pengine-subdomain.conf.template).
-- **DNS:** A/AAAA record for **`pengine.net`** → same server as Pengui (or your Pengine host).
-- **Certbot:** All configured names are passed as **`-d`** flags (deduplicated); **`--expand`** is used when any extra hostname is present.
-- **Pengine build:** default `base: '/'` is fine.
+**Second apex (optional):** set **`DOMAIN2=pengine.net`** (or rely on automatic **`penguinpool.space` ↔ `pengine.net`** SAN merge when **`DOMAIN`** is one of those). DNS for every name on the cert must point at this host for HTTP-01. Inspect the leaf with **`openssl x509 -in fullchain.pem -noout -text`** (**Subject Alternative Name** lists **`DNS:`** entries).
 
 Ensure the Pengine stack is up on the host before relying on the proxy (`docker ps` / curl `http://127.0.0.1:1422`).
-
-**Troubleshooting — `https://<DOMAIN>/` shows Pengine, Pengui “unavailable”:** **`PENGINE_SUBDOMAIN` must not be your main apex** (e.g. do not set it to `penguinpool.space`). If it equals **`DOMAIN`**, nginx matches that hostname to the Pengine-only vhost and the main site never reaches Pengui. Set **`PENGINE_SUBDOMAIN=pengine.net`** (or unset and rely on path mode only), redeploy so [`scripts/deploy.sh`](scripts/deploy.sh) regenerates nginx, then **`docker compose exec nginx nginx -s reload`**. Confirm Pengui: **`docker compose ps pengui`** and **`curl -sf http://127.0.0.1:3000/api/health`** on the host (via the `pengui` container).
 
 ## How Pengine differs (Vite vs Next.js)
 
@@ -217,10 +207,11 @@ No zone file or DNS code is stored in this repository; configure these records i
 
 **To make `relay.penguinpool.space` work end-to-end:**
 
-1. **DNS**: A record `relay.penguinpool.space` → your relay server’s public IP (you’ve done this).
-2. **GitHub Actions variable**: Set `NEXT_PUBLIC_DEXIE_SPLASH_RELAY_MAINNET_WS_URL=wss://relay.penguinpool.space` (and optionally `NEXT_PUBLIC_DEXIE_SPLASH_RELAY_WS_URL`). The app build uses this for the Stream tab. The workflow derives the relay subdomain from this URL and passes it to the deploy script, which requests an SSL cert that includes it and generates the nginx WebSocket proxy for the mainnet relay.
+1. **DNS**: A record `relay.penguinpool.space` → your relay server’s public IP (you’ve done this). For testnet, add **`relay-testnet.penguinpool.space`** the same way if you use that hostname.
+2. **GitHub Actions variables**: Set **`NEXT_PUBLIC_SPLASH_RELAY_MAINNET_SUBDOMAIN`** to **`relay.penguinpool.space`** (the workflow builds `wss://…` from it and passes **`RELAY_MAINNET_SUBDOMAIN`** to deploy). Set **`NEXT_PUBLIC_SPLASH_RELAY_TESTNET_SUBDOMAIN`** to **`relay-testnet.penguinpool.space`** so CI passes **`RELAY_TESTNET_SUBDOMAIN`** (nginx testnet vhost + cert SAN).
+3. **TLS:** For **`DOMAIN=penguinpool.space`**, **`deploy.sh`** adds **`relay.penguinpool.space`** and **`relay-testnet.penguinpool.space`** to the Let’s Encrypt request automatically (deduped with **`RELAY_*_SUBDOMAIN`** / **`CERT_EXTRA_DOMAINS`**). Set **`CERT_SKIP_PENGUINPOOL_RELAY_SAN=1`** if you do not use those hostnames or lack DNS for one of them (HTTP-01 will fail for any name on the request that does not resolve to this host).
 
-If the server already has an SSL cert that does not include the relay subdomain, either run certbot once with `-d penguinpool.space -d relay.penguinpool.space` to expand the cert, or trigger a new certificate request (e.g. by removing the existing cert and redeploying).
+If the server already has an SSL cert that does not include a new relay name, trigger an expanded certificate (e.g. **`NEED_CERT_FORCE`**, or remove the existing cert and redeploy).
 
 > Note: the in-repo deployment currently only runs a **mainnet** relay.
 
@@ -239,8 +230,7 @@ If the server already has an SSL cert that does not include the relay subdomain,
 | `splash-relay/Dockerfile`                         | Build for splash-relay (Rust)                                                |
 | `nginx/Dockerfile`                                | Nginx image with relay watchdog                                              |
 | `nginx/nginx.conf`                                | Base nginx configuration                                                     |
-| `nginx/templates/*.conf.template`                 | Domain-specific nginx configs (relay subdomains, optional Pengine subdomain) |
-| `nginx/templates/pengine-subdomain.conf.template` | Optional HTTPS vhost when `PENGINE_SUBDOMAIN` is set                         |
+| `nginx/templates/*.conf.template`                 | Domain-specific nginx configs (relay subdomains, HTTPS + HTTP templates)     |
 | `scripts/deploy.sh`                               | Automated deployment script                                                  |
 | `.env.example`                                    | Environment variable template                                                |
 
