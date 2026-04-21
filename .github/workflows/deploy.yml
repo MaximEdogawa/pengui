@@ -32,6 +32,11 @@ on:
         required: false
         type: boolean
         default: false
+      need_cert:
+        description: "Request a new/expanded Let's Encrypt certificate on this deploy (workflow_dispatch only)"
+        required: false
+        type: boolean
+        default: false
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -290,6 +295,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
 
+      - name: Resolve NEED_CERT_FORCE (workflow_dispatch need_cert toggle)
+        id: cert_force
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            case "${{ github.event.inputs.need_cert }}" in
+              true|True) echo "need_cert_force=true" >> "$GITHUB_OUTPUT" ;;
+              *)        echo "need_cert_force=false" >> "$GITHUB_OUTPUT" ;;
+            esac
+          else
+            echo "need_cert_force=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Ensure deployment directory exists
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -320,12 +337,14 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITHUB_ACTOR: ${{ github.actor }}
           DOMAIN: ${{ vars.DOMAIN }}
+          DOMAIN2: ${{ vars.DOMAIN2 }}
           EMAIL: ${{ vars.EMAIL }}
           STAGING: ${{ vars.STAGING }}
           RELAY_MAINNET_SUBDOMAIN: ${{ vars.NEXT_PUBLIC_SPLASH_RELAY_MAINNET_SUBDOMAIN }}
-          PENGINE_SUBDOMAIN: ${{ vars.PENGINE_SUBDOMAIN }}
+          RELAY_TESTNET_SUBDOMAIN: ${{ vars.NEXT_PUBLIC_SPLASH_RELAY_TESTNET_SUBDOMAIN }}
           PENGINE_ENABLE: ${{ vars.PENGINE_ENABLE }}
           PENGINE_WEB_IMAGE: ${{ vars.PENGINE_WEB_IMAGE }}
+          NEED_CERT_FORCE: ${{ steps.cert_force.outputs.need_cert_force }}
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
@@ -333,10 +352,10 @@ jobs:
           port: 22
           timeout: 10m
           command_timeout: 5m
-          envs: DOCKER_IMAGE,SPLASH_RELAY_IMAGE,GITHUB_TOKEN,GITHUB_ACTOR,DOMAIN,EMAIL,STAGING,RELAY_MAINNET_SUBDOMAIN,PENGINE_SUBDOMAIN,PENGINE_ENABLE,PENGINE_WEB_IMAGE
+          envs: DOCKER_IMAGE,SPLASH_RELAY_IMAGE,GITHUB_TOKEN,GITHUB_ACTOR,DOMAIN,DOMAIN2,EMAIL,STAGING,RELAY_MAINNET_SUBDOMAIN,RELAY_TESTNET_SUBDOMAIN,PENGINE_ENABLE,PENGINE_WEB_IMAGE,NEED_CERT_FORCE
           script: |
             chmod +x ~/pengui/deployment/scripts/deploy.sh
-            STAGING="${STAGING:-0}" RELAY_MAINNET_SUBDOMAIN="${RELAY_MAINNET_SUBDOMAIN:-}" ~/pengui/deployment/scripts/deploy.sh
+            STAGING="${STAGING:-0}" RELAY_MAINNET_SUBDOMAIN="${RELAY_MAINNET_SUBDOMAIN:-}" RELAY_TESTNET_SUBDOMAIN="${RELAY_TESTNET_SUBDOMAIN:-}" NEED_CERT_FORCE="${NEED_CERT_FORCE:-false}" ~/pengui/deployment/scripts/deploy.sh
 
       - name: Verify deployment
         uses: appleboy/ssh-action@v1.2.5

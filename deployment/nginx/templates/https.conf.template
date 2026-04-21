@@ -33,10 +33,11 @@ server {
     }
 }
 
-# HTTPS server
+# HTTPS server (HTTPS_SERVER_NAMES: DOMAIN, or DOMAIN + DOMAIN2 from deploy.sh)
 server {
-    listen 443 ssl http2 default_server;
-    server_name _;
+    listen 443 ssl default_server;
+    http2 on;
+    server_name ${HTTPS_SERVER_NAMES} _;
     
     # SSL certificates
     ssl_certificate /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;

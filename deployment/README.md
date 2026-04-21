@@ -42,7 +42,7 @@ Go to **Settings → Secrets and variables → Actions** and add:
 | `CERTBOT_STAGING` | Use staging SSL (testing) | `0`                  |
 | `PRODUCTION_ENV`  | Multiline env vars        | _(see below)_        |
 
-Optional: set repository variable **`PENGINE_SUBDOMAIN`** to **`pengine.net`** so deploy requests a cert SAN and generates the Pengine vhost — see [Pengine behind Pengui nginx](#pengine-behind-pengui-nginx).
+Optional: set **`DOMAIN2`** (e.g. **`pengine.net`**) so the main Pengui nginx vhost and TLS cert include that hostname — see [Pengine behind Pengui nginx](#pengine-behind-pengui-nginx). For **`DOMAIN=penguinpool.space`**, **`deploy.sh`** still merges **`pengine.net`** into the Let’s Encrypt request unless **`CERT_SKIP_PENGINE_SAN=1`**.
 
 ### 2. Configure GitHub Variables
 
@@ -92,6 +92,7 @@ NODE_ENV=production
 - Go to Actions → Deploy Release (Docker)
 - Click "Run workflow"
 - Select environment and optionally specify a tag
+- Enable **need_cert** to force a new or expanded Let’s Encrypt certificate on that run (runs certbot with **`--force-renewal`** so issuance is not skipped as “not yet due”). Releases and normal deploys otherwise reuse a valid cert.
 
 ## Manual Deployment
 
@@ -102,6 +103,37 @@ If you need to deploy manually without CI/CD:
 - Docker and Docker Compose on the server
 - SSH access to the server
 - Domain pointing to server IP
+
+### Optional: sudo for the deploy user
+
+TLS files under `certbot/` are often **root-owned**; `openssl` to read SANs needs **`sudo`**. To allow the deploy user to run **`openssl`** without a password prompt, install the drop-in from this repo:
+
+```bash
+sudo install -m 440 -o root -g root ~/pengui/sudoers.d/pengui-deploy /etc/sudoers.d/pengui-deploy
+```
+
+(If you keep a full clone with a `deployment/` subfolder, use `~/pengui/deployment/sudoers.d/pengui-deploy` instead.) Edit `/etc/sudoers.d/pengui-deploy` first if your SSH user is not named **`deploy`**. Validate with `sudo visudo -c`. For Docker, prefer adding the user to the **`docker`** group instead of blanket `sudo docker`.
+
+### Inspect certificate SANs on the server
+
+Use the **real** path under your deployment tree — not a placeholder like `/full/path/to/...`. From the directory that contains `certbot/` (often `~/pengui/deployment` if you use a full clone, or `~/pengui` if you copied `deployment/*` there):
+
+```bash
+cd ~/pengui/deployment   # or: cd ~/pengui
+ls certbot/conf/live/
+```
+
+The folder name under `live/` is the Let’s Encrypt **lineage** (usually your `DOMAIN`). Then:
+
+```bash
+sudo openssl x509 -in certbot/conf/live/penguinpool.space/fullchain.pem -noout -text | grep -A5 'Subject Alternative Name'
+```
+
+Adjust `penguinpool.space` if `ls` shows a different directory name. If `sudo` still asks for a password, install the **`sudoers.d/pengui-deploy`** drop-in above (or run the check as root). You can also read the cert **without filesystem access** (uses what the server presents on TLS):
+
+```bash
+echo | openssl s_client -servername penguinpool.space -connect penguinpool.space:443 2>/dev/null | openssl x509 -noout -text | grep -A5 'Subject Alternative Name'
+```
 
 ### Steps
 
@@ -145,20 +177,13 @@ The **Pengine** web UI (separate repository) is shipped as a Docker image. **Run
 
 **Do not** run a separate `docker network create` for `pengui-network`; Compose creates it with the correct labels. **Do not** run a second Pengine compose on the same host (duplicate `pengine-app`).
 
-Two ways to expose it:
+Expose it under the path **`/pengine/`** on the main site (and, if you set **`DOMAIN2`**, on that hostname too):
 
-### A. Path on the main site (default templates)
+- **URL:** `https://<DOMAIN>/pengine/` (and `https://<DOMAIN2>/pengine/` when **`DOMAIN2`** is set).
+- **Nginx:** [`nginx/templates/https.conf.template`](nginx/templates/https.conf.template) and [`http-only.conf.template`](nginx/templates/http-only.conf.template).
+- **Pengine build:** set Vite [`base`](https://vitejs.dev/config/shared-options.html#base) to **`/pengine/`** so JS/CSS paths resolve under that prefix.
 
-- **URL:** `https://<DOMAIN>/pengine/`
-- **Nginx:** already in [`nginx/templates/https.conf.template`](nginx/templates/https.conf.template) and [`http-only.conf.template`](nginx/templates/http-only.conf.template).
-- **Pengine build:** you must set Vite [`base`](https://vitejs.dev/config/shared-options.html#base) to **`/pengine/`** so JS/CSS paths resolve under that prefix.
-
-### B. Dedicated subdomain (recommended for SPAs)
-
-- Set **`PENGINE_SUBDOMAIN`** to **`pengine.net`** in the server environment or as a GitHub **Actions variable** so CI passes it into [`scripts/deploy.sh`](scripts/deploy.sh).
-- **DNS:** A/AAAA record for **`pengine.net`** → same server as Pengui (or your Pengine host).
-- **TLS:** Deploy adds `-d $PENGINE_SUBDOMAIN` to certbot when the variable is set; nginx includes [`nginx/templates/pengine-subdomain.conf.template`](nginx/templates/pengine-subdomain.conf.template).
-- **Pengine build:** default `base: '/'` is fine.
+**Second apex (optional):** set **`DOMAIN2=pengine.net`** (or rely on automatic **`penguinpool.space` ↔ `pengine.net`** SAN merge when **`DOMAIN`** is one of those). DNS for every name on the cert must point at this host for HTTP-01. Inspect the leaf with **`openssl x509 -in fullchain.pem -noout -text`** (**Subject Alternative Name** lists **`DNS:`** entries).
 
 Ensure the Pengine stack is up on the host before relying on the proxy (`docker ps` / curl `http://127.0.0.1:1422`).
 
@@ -182,10 +207,11 @@ No zone file or DNS code is stored in this repository; configure these records i
 
 **To make `relay.penguinpool.space` work end-to-end:**
 
-1. **DNS**: A record `relay.penguinpool.space` → your relay server’s public IP (you’ve done this).
-2. **GitHub Actions variable**: Set `NEXT_PUBLIC_DEXIE_SPLASH_RELAY_MAINNET_WS_URL=wss://relay.penguinpool.space` (and optionally `NEXT_PUBLIC_DEXIE_SPLASH_RELAY_WS_URL`). The app build uses this for the Stream tab. The workflow derives the relay subdomain from this URL and passes it to the deploy script, which requests an SSL cert that includes it and generates the nginx WebSocket proxy for the mainnet relay.
+1. **DNS**: A record `relay.penguinpool.space` → your relay server’s public IP (you’ve done this). For testnet, add **`relay-testnet.penguinpool.space`** the same way if you use that hostname.
+2. **GitHub Actions variables**: Set **`NEXT_PUBLIC_SPLASH_RELAY_MAINNET_SUBDOMAIN`** to **`relay.penguinpool.space`** (the workflow builds `wss://…` from it and passes **`RELAY_MAINNET_SUBDOMAIN`** to deploy). Set **`NEXT_PUBLIC_SPLASH_RELAY_TESTNET_SUBDOMAIN`** to **`relay-testnet.penguinpool.space`** so CI passes **`RELAY_TESTNET_SUBDOMAIN`** (nginx testnet vhost + cert SAN).
+3. **TLS:** For **`DOMAIN=penguinpool.space`**, **`deploy.sh`** adds **`relay.penguinpool.space`** and **`relay-testnet.penguinpool.space`** to the Let’s Encrypt request automatically (deduped with **`RELAY_*_SUBDOMAIN`** / **`CERT_EXTRA_DOMAINS`**). Set **`CERT_SKIP_PENGUINPOOL_RELAY_SAN=1`** if you do not use those hostnames or lack DNS for one of them (HTTP-01 will fail for any name on the request that does not resolve to this host).
 
-If the server already has an SSL cert that does not include the relay subdomain, either run certbot once with `-d penguinpool.space -d relay.penguinpool.space` to expand the cert, or trigger a new certificate request (e.g. by removing the existing cert and redeploying).
+If the server already has an SSL cert that does not include a new relay name, trigger an expanded certificate (e.g. **`NEED_CERT_FORCE`**, or remove the existing cert and redeploy).
 
 > Note: the in-repo deployment currently only runs a **mainnet** relay.
 
@@ -197,17 +223,16 @@ If the server already has an SSL cert that does not include the relay subdomain,
 
 ## Files
 
-| File                                              | Description                                                                  |
-| ------------------------------------------------- | ---------------------------------------------------------------------------- |
-| `Dockerfile`                                      | Multi-stage build for Next.js standalone server                              |
-| `docker-compose.yml`                              | Service orchestration (Next.js + nginx + certbot + splash-relay)             |
-| `splash-relay/Dockerfile`                         | Build for splash-relay (Rust)                                                |
-| `nginx/Dockerfile`                                | Nginx image with relay watchdog                                              |
-| `nginx/nginx.conf`                                | Base nginx configuration                                                     |
-| `nginx/templates/*.conf.template`                 | Domain-specific nginx configs (relay subdomains, optional Pengine subdomain) |
-| `nginx/templates/pengine-subdomain.conf.template` | Optional HTTPS vhost when `PENGINE_SUBDOMAIN` is set                         |
-| `scripts/deploy.sh`                               | Automated deployment script                                                  |
-| `.env.example`                                    | Environment variable template                                                |
+| File                              | Description                                                              |
+| --------------------------------- | ------------------------------------------------------------------------ |
+| `Dockerfile`                      | Multi-stage build for Next.js standalone server                          |
+| `docker-compose.yml`              | Service orchestration (Next.js + nginx + certbot + splash-relay)         |
+| `splash-relay/Dockerfile`         | Build for splash-relay (Rust)                                            |
+| `nginx/Dockerfile`                | Nginx image with relay watchdog                                          |
+| `nginx/nginx.conf`                | Base nginx configuration                                                 |
+| `nginx/templates/*.conf.template` | Domain-specific nginx configs (relay subdomains, HTTPS + HTTP templates) |
+| `scripts/deploy.sh`               | Automated deployment script                                              |
+| `.env.example`                    | Environment variable template                                            |
 
 ## How It Works
 
@@ -230,11 +255,12 @@ If the server already has an SSL cert that does not include the relay subdomain,
 
 ## SSL Certificates
 
-SSL certificates are automatically obtained from Let's Encrypt:
+SSL certificates are obtained from Let’s Encrypt by **`deploy.sh`** (via `docker run certbot certonly`, not a long-running certbot service):
 
-- **First deployment**: Obtains new certificate
-- **Renewal**: Certbot container automatically renews certificates every 12 hours (when within 30 days of expiry)
-- **Testing**: Set `CERTBOT_STAGING=1` to use staging environment (avoids rate limits)
+- **First deployment / new names**: Requests a certificate when none exists, when a configured hostname is missing from the current cert’s SANs, or when **`NEED_CERT_FORCE`** is set.
+- **Re-issue before expiry**: On each deploy, the script checks the leaf under **`certbot/conf/live/$DOMAIN/`**. If it expires in **30 days or less**, it requests a renewed certificate on that run (same SAN set as configured in the script).
+- **No background renewer in this repo**: There is no cron or systemd timer checked in by default. If you rarely deploy, add a host cron (or timer) that runs `certbot renew` with the same **`/etc/letsencrypt`** and **`webroot`** volumes while nginx is up, or run deploys periodically. See [Certbot renewal](https://certbot.org/renewal-setup) for the general model; adapt paths to your Docker layout.
+- **Testing**: Set **`STAGING=1`** so Let’s Encrypt uses the staging CA (avoids production rate limits).
 
 ## Monitoring
 

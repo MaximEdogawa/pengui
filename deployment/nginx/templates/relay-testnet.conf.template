@@ -1,6 +1,7 @@
 # Testnet Splash relay WebSocket proxy (when RELAY_TESTNET_SUBDOMAIN is set)
 server {
-    listen 443 ssl http2;
+    listen 443 ssl;
+    http2 on;
     server_name ${RELAY_TESTNET_SUBDOMAIN};
 
     ssl_certificate /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
