@@ -223,16 +223,16 @@ If the server already has an SSL cert that does not include a new relay name, tr
 
 ## Files
 
-| File                                              | Description                                                                  |
-| ------------------------------------------------- | ---------------------------------------------------------------------------- |
-| `Dockerfile`                                      | Multi-stage build for Next.js standalone server                              |
-| `docker-compose.yml`                              | Service orchestration (Next.js + nginx + certbot + splash-relay)             |
-| `splash-relay/Dockerfile`                         | Build for splash-relay (Rust)                                                |
-| `nginx/Dockerfile`                                | Nginx image with relay watchdog                                              |
-| `nginx/nginx.conf`                                | Base nginx configuration                                                     |
-| `nginx/templates/*.conf.template`                 | Domain-specific nginx configs (relay subdomains, HTTPS + HTTP templates)     |
-| `scripts/deploy.sh`                               | Automated deployment script                                                  |
-| `.env.example`                                    | Environment variable template                                                |
+| File                              | Description                                                              |
+| --------------------------------- | ------------------------------------------------------------------------ |
+| `Dockerfile`                      | Multi-stage build for Next.js standalone server                          |
+| `docker-compose.yml`              | Service orchestration (Next.js + nginx + certbot + splash-relay)         |
+| `splash-relay/Dockerfile`         | Build for splash-relay (Rust)                                            |
+| `nginx/Dockerfile`                | Nginx image with relay watchdog                                          |
+| `nginx/nginx.conf`                | Base nginx configuration                                                 |
+| `nginx/templates/*.conf.template` | Domain-specific nginx configs (relay subdomains, HTTPS + HTTP templates) |
+| `scripts/deploy.sh`               | Automated deployment script                                              |
+| `.env.example`                    | Environment variable template                                            |
 
 ## How It Works
 
