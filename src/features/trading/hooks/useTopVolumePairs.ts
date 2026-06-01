@@ -4,6 +4,8 @@ import { useCatTokens } from "@/entities/asset";
 import { useMemo } from "react";
 import type { AssetPair } from "../lib/orderBookTypes";
 
+const EMPTY_PAIRS: AssetPair[] = [];
+
 /**
  * Returns the top asset pairs ranked by monthly volume.
  */
@@ -11,7 +13,7 @@ export function useTopVolumePairs(count: number = 3): AssetPair[] {
   const { tickers } = useCatTokens();
 
   return useMemo(() => {
-    if (!tickers || tickers.length === 0) return [];
+    if (!tickers || tickers.length === 0) return EMPTY_PAIRS;
 
     return [...tickers]
       .filter((ticker) => ticker.base_code.toLowerCase() !== ticker.target_code.toLowerCase())

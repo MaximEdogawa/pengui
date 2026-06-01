@@ -44,6 +44,11 @@ const nextConfig: NextConfig = {
   env: {
     NEXT_PUBLIC_APP_VERSION: packageJson.version,
     NEXT_PUBLIC_COMMIT_SHA: getCommitSha(),
+    // Forward NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID through the config-time env block so
+    // Turbopack (dev) inlines it inside transpilePackages dist files, not just our source files.
+    NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID: process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID || "",
+    NEXT_PUBLIC_WALLET_CONNECT_RELAY_URL:
+      process.env.NEXT_PUBLIC_WALLET_CONNECT_RELAY_URL || "wss://relay.walletconnect.com",
   },
   async headers() {
     return [

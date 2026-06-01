@@ -1,437 +1,253 @@
 # Pengui
 
-**Premium Financial Intelligence** - A decentralized financial platform built on the Chia Network.
+**Premium Financial Intelligence** — a decentralized financial platform built on the Chia Network.
 
-Pengui is a modern, full-featured DeFi application that enables users to trade assets, manage offers, participate in lending, and interact with the Chia blockchain through a beautiful, intuitive interface.
+Pengui is a full-featured DeFi application for trading assets, managing offers, participating in lending, and interacting with the Chia blockchain.
 
-## 🎯 Overview
+## Overview
 
-Pengui provides a comprehensive suite of financial tools for the Chia ecosystem, including:
+- **Trading & Order Book** — real-time order book with advanced filtering and price discovery
+- **Offer Management** — create, view, and manage Chia offers with persistent IndexedDB storage
+- **Lending Platform** — create and participate in decentralized loans
+- **Wallet Integration** — WalletConnect integration with Sage wallet
+- **Transaction Management** — send transactions and track history
+- **Asset Management** — XCH, CAT tokens, NFTs, and Options
 
-- **Trading & Order Book** - Real-time order book with advanced filtering and price discovery
-- **Offer Management** - Create, view, and manage Chia offers with persistent storage
-- **Lending Platform** - Create and participate in decentralized loans
-- **Wallet Integration** - Seamless WalletConnect integration with Sage wallet
-- **Transaction Management** - Send transactions and track history
-- **Asset Management** - Support for XCH, CAT tokens, NFTs, and Options
+## Tech Stack
 
-## ✨ Features
+| Layer | Technology |
+|---|---|
+| Framework | Next.js 16, React 19, TypeScript |
+| State | TanStack Query, Redux + Redux Persist, Zustand |
+| Styling | Tailwind CSS, Radix UI, Lucide React |
+| Blockchain | @maximedogawa/chia-wallet-connect-react, WalletConnect |
+| Storage | Dexie (IndexedDB) |
+| Testing | Playwright (E2E + component), Bun test (unit/integration) |
+| Tooling | ESLint, Prettier, Husky, lint-staged |
 
-### 🏦 Dashboard
-
-- Real-time wallet balance overview
-- Transaction history and analytics
-- Quick access to all platform features
-- Portfolio tracking
-
-### 📊 Trading
-
-- **Order Book** - View buy/sell orders with real-time updates
-- **Price Discovery** - Advanced filtering b y asset pairs
-- **Market & Limit Orders** - Create and execute trades
-- **Order History** - Track your trading activity
-- **Price Charts** - Visualize market trends (coming soon)
-
-### 💰 Offers
-
-- Create custom offers with multiple assets
-- View and manage your active offers
-- Take offers from other users
-- Persistent offer storage with IndexedDB
-- Offer inspection and validation
-
-### 🏠 Loans
-
-- Create lending opportunities
-- Browse available loans
-- Track loan income and analytics
-- Manage your loan portfolio
-
-### 💳 Wallet
-
-- WalletConnect integration (Sage wallet)
-- Real-time balance updates
-- Send transactions
-- Transaction history
-- Address management
-
-### 🐷 Piggy Bank
-
-- Savings and accumulation features
-- Asset management tools
-
-### 📈 Option Contracts
-
-- Create and manage option contracts
-- Options trading interface
-
-## 🛠️ Tech Stack
-
-### Core Framework
-
-- **Next.js 16** - React framework with App Router
-- **React 19** - UI library
-- **TypeScript** - Type-safe development
-
-### State Management
-
-- **TanStack Query (React Query)** - Server state management and caching
-- **Redux + Redux Persist** - Client state management
-- **React Context** - Component-level state
-
-### Styling
-
-- **Tailwind CSS** - Utility-first CSS framework
-- **next-themes** - Dark/light mode support
-- **Lucide React** - Icon library
-
-### Blockchain Integration
-
-- **@maximedogawa/chia-wallet-connect-react** - WalletConnect for Chia
-- **WalletConnect Sign Client** - Wallet connection protocol
-- **Dexie** - IndexedDB wrapper for local storage
-
-### Development Tools
-
-- **ESLint** - Code linting
-- **Prettier** - Code formatting
-- **TypeScript** - Static type checking
-
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 
-- **Node.js** 20.19.0+ or 22.12.0+
-- **Bun** (recommended) or npm/yarn/pnpm
+- **Node.js** 26.2.0 (see `.nvmrc`) — use `nvm use` or install via [nvm](https://github.com/nvm-sh/nvm)
+- **Bun** — install from [bun.sh](https://bun.sh)
 - **Sage Wallet** or compatible WalletConnect wallet
-- **Rust** and **wasm-pack** (optional, for the Splash Stream tab): install from [rustup.rs](https://rustup.rs) and `cargo install wasm-pack`
+- **Rust + wasm-pack** (optional, for the Splash Stream tab / `build:all`) — see below for per-distro instructions
+
+**Rust + wasm-pack on Arch Linux:**
+
+```bash
+sudo pacman -S rust rust-wasm wasm-pack
+```
+
+> `rust-wasm` adds the `wasm32-unknown-unknown` target to the system Rust toolchain. Without it, `wasm-pack build` fails even if Rust is installed.
+
+**Rust + wasm-pack on other Linux / macOS:**
+
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh  # installs rustup + rust
+rustup target add wasm32-unknown-unknown
+cargo install wasm-pack
+```
 
 ### Installation
 
-1. **Clone the repository**
+1. **Clone and enter the repo**
 
    ```bash
    git clone <repository-url>
-   cd penguin-pool/pengui
+   cd pengui
    ```
 
 2. **Install dependencies**
 
    ```bash
    bun install
-   # or
-   npm install
-   # or
-   yarn install
-   # or
-   pnpm install
    ```
 
-3. **Set up environment variables**
+3. **Install Playwright browsers** (`@playwright/test` is already in devDependencies)
 
    ```bash
-   # Copy example env file (if available)
+   npx playwright install
+   # Linux: also install system dependencies on first run
+   sudo npx playwright install-deps
+   ```
+
+4. **Set up environment variables**
+
+   ```bash
    cp .env.example .env.local
    ```
 
-   Configure your environment variables:
-   - WalletConnect project ID
-   - API endpoints
-   - Other service configurations
+   Key variables to configure:
 
-4. **Run the development server**
+   | Variable | Required | Description |
+   |---|---|---|
+   | `NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID` | Yes — for wallet features | Get a free project ID at [cloud.walletconnect.com](https://cloud.walletconnect.com) |
+   | `NEXT_PUBLIC_WALLET_CONNECT_RELAY_URL` | No | WalletConnect relay, defaults to `wss://relay.walletconnect.com` |
+   | `NEXT_PUBLIC_DEXIE_MAINNET_API_URL` | No | Dexie mainnet API, defaults to `https://api.dexie.app` |
+   | `NEXT_PUBLIC_DEXIE_SPLASH_RELAY_WS_URL` | No | Splash libp2p relay for the Stream tab |
+
+   > If `NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID` is not set, the app starts normally but wallet connection is disabled. You will see a warning in the browser console: _"WalletConnect project ID not set — wallet features disabled."_
+
+5. **Start the development server**
 
    ```bash
    bun dev
-   # or
-   npm run dev
-   # or
-   yarn dev
-   # or
-   pnpm dev
    ```
 
-5. **Open your browser**
-   Navigate to [http://localhost:3000](http://localhost:3000)
+   Open [http://localhost:3000](http://localhost:3000).
 
-### Building for Production
-
-```bash
-bun build
-# or
-npm run build
-```
-
-The production build will be in the `.next` directory.
-
-To include the **Splash Stream** terminal (libp2p WASM), build the WASM first, or run a full build:
+## Building
 
 ```bash
-bun run build:wasm   # Build splash-wasm → public/wasm/ (requires Rust + wasm-pack)
-bun run build:all    # build:wasm then build
+bun build          # Next.js production build → .next/
+bun start          # Serve the production build
 ```
 
-### Running Production Build
+**With Splash Stream (libp2p WASM) — requires Rust + wasm-pack:**
 
 ```bash
-bun start
-# or
-npm start
+bun run build:wasm   # Compile splash-wasm → public/wasm/
+bun run build:relay  # Compile splash-relay binary
+bun run build:all    # build:wasm + build:relay + build
 ```
 
-## 📁 Project Structure
+**Run the Splash relay locally:**
 
-This project follows **Feature-Sliced Design (FSD)** methodology for scalable and maintainable code organization.
+```bash
+bun run relay                  # Mainnet (port 9090)
+bun run relay:testnet          # Testnet (port 9091)
+bun run relay:debug            # With RUST_LOG=debug
+```
+
+## Testing
+
+The project has four test tiers:
+
+| Command | What it runs |
+|---|---|
+| `bun run test:unit` | Bun unit tests in `src/` |
+| `bun run test:integration` | Bun integration tests in `src/tests/integration/` |
+| `bun run test:ct` | Playwright component tests in `tests/ct/` |
+| `bun run test:ct:ui` | Component tests with interactive UI |
+| `bun run test:e2e` | Playwright E2E tests in `tests/e2e/` |
+| `bun run test:e2e:ui` | E2E tests with interactive Playwright UI |
+| `bun run test:all` | All of the above |
+
+**E2E test tiers** (in `tests/e2e/`):
+
+- `smoke/` — fast page-load checks, run on every PR
+- `regression/` — authenticated WalletConnect flows via SageMockWallet (needs `NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID`)
+- `acceptance/` — feature behaviour, mostly unauthenticated
+
+The E2E config auto-starts the app (`bun dev` locally, `bun start` on CI). Set `PLAYWRIGHT_TEST_BASE_URL` to point at an already-running server.
+
+**Component tests** (`tests/ct/`) run in a Vite sandbox — no Next.js internals (`next/navigation`, `useRouter`, etc.).
+
+## Scripts Reference
+
+```bash
+# Dev
+bun dev              # Next.js dev server (Turbopack)
+
+# Build
+bun build            # Production build
+bun run build:wasm   # WASM (requires Rust + wasm-pack)
+bun run build:relay  # Relay binary (requires Rust)
+bun run build:all    # WASM + relay + build
+bun start            # Serve production build
+
+# Test
+bun run test:unit
+bun run test:integration
+bun run test:ct          # Playwright component tests
+bun run test:ct:ui
+bun run test:e2e         # Playwright E2E tests
+bun run test:e2e:ui
+bun run test:all
+
+# Code quality
+bun lint             # ESLint
+bun run type-check   # TypeScript (tsc --noEmit)
+bun run format       # Prettier (write)
+bun run format:check # Prettier (check)
+```
+
+## Project Structure
+
+This project follows **Feature-Sliced Design (FSD)**.
 
 ```text
 pengui/
 ├── src/
-│   ├── app/                    # Next.js App Router (Application Layer)
-│   │   ├── dashboard/         # Dashboard page
-│   │   ├── trading/           # Trading interface
-│   │   ├── offers/            # Offers management
-│   │   ├── loans/             # Lending platform
-│   │   ├── wallet/            # Wallet management
-│   │   ├── piggy-bank/        # Savings features
-│   │   ├── option-contracts/  # Options trading
-│   │   ├── profile/           # User profile
-│   │   ├── login/             # Authentication page
-│   │   ├── layout.tsx         # Root layout
-│   │   └── globals.css        # Global styles
-│   │
-│   ├── widgets/                # Widgets Layer (Large composite UI blocks)
-│   │   ├── dashboard-layout/  # Main dashboard layout with sidebar
-│   │   │   ├── ui/            # Layout components
-│   │   │   └── model/         # Layout hooks & logic
-│   │   └── trading-layout/    # Trading interface layout
-│   │       └── ui/            # Trading layout components
-│   │
-│   ├── features/               # Features Layer (User interactions)
-│   │   ├── auth/              # Authentication features
-│   │   │   └── login/         # Login functionality
-│   │   ├── trading/           # Trading feature
-│   │   │   ├── model/         # Business logic & hooks
-│   │   │   ├── ui/            # UI components
-│   │   │   ├── api/           # API calls
-│   │   │   └── lib/           # Trading utilities
-│   │   ├── offers/            # Offers feature
-│   │   ├── loans/             # Loans feature
-│   │   └── wallet/            # Wallet feature
-│   │
-│   ├── entities/               # Entities Layer (Business domain entities)
-│   │   ├── asset/             # Asset types & definitions
-│   │   ├── offer/             # Offer types & structures
-│   │   ├── loan/              # Loan types & structures
-│   │   └── transaction/       # Transaction types & utilities
-│   │
-│   └── shared/                 # Shared Layer (Reusable infrastructure)
-│       ├── ui/                # Design system components
-│       │   ├── button/        # Button component
-│       │   ├── modal/         # Modal component
-│       │   ├── asset-selector/# Asset selector & sub-components
-│       │   └── ...            # Other UI components
-│       ├── hooks/             # Shared React hooks
-│       ├── lib/               # Utilities organized by domain
-│       │   ├── formatting/    # Date, currency, number formatting
-│       │   ├── web3/          # Web3/wallet utilities
-│       │   ├── validation/   # Validation schemas
-│       │   ├── utils/         # Generic utilities
-│       │   ├── walletConnect/ # WalletConnect integration
-│       │   ├── database/      # IndexedDB setup
-│       │   └── config/        # Configuration
-│       └── providers/         # React context providers
+│   ├── app/          # Next.js App Router (pages, layouts, global styles)
+│   ├── widgets/      # Large composite UI blocks
+│   ├── features/     # User-interaction features (auth, trading, offers, loans, wallet)
+│   ├── entities/     # Business domain types (asset, offer, loan, transaction)
+│   └── shared/       # Reusable infrastructure (ui/, hooks/, lib/, providers/)
 │
-├── docs/                       # Documentation
-│   └── architecture/          # Architecture documentation
-│       └── fsd-structure.md   # FSD structure guide
+├── tests/
+│   ├── e2e/          # Playwright E2E tests (smoke/, regression/, acceptance/)
+│   └── ct/           # Playwright component tests
 │
-├── public/                     # Static assets
-│   ├── icons/                 # App icons
-│   └── assets/                # Images & assets
+├── crates/
+│   ├── splash-wasm/  # libp2p WASM for the Stream tab
+│   └── splash-relay/ # Splash relay server (Rust)
 │
-├── .storybook/                 # Storybook configuration
-├── .husky/                     # Git hooks
-├── eslint.config.mjs          # ESLint configuration
-├── tailwind.config.ts          # Tailwind configuration
-├── tsconfig.json               # TypeScript configuration
-└── package.json                # Dependencies & scripts
+├── public/           # Static assets
+├── playwright.config.ts
+├── playwright-ct.config.ts
+├── tailwind.config.ts
+├── tsconfig.json
+└── package.json
 ```
 
-### Architecture Principles
+**Layer rules:** each layer may only import from layers below it: `app → widgets → features → entities → shared`.
 
-- **Layer Separation**: Clear boundaries between app, widgets, features, entities, and shared
-- **Colocation**: Related files (component, styles, tests, types) stay together
-- **Public API**: Barrel exports (`index.ts`) control module boundaries
-- **Vertical Slicing**: Organized by feature/domain, not by technical role
+## Troubleshooting
 
-See [Architecture Documentation](./docs/architecture/fsd-structure.md) for detailed guidelines.
+**Infinite loop / continuous compilation**
 
-## 🎨 UI Components
+- Check the browser console for loop warnings
+- Review `useEffect` dependency arrays — hooks that update state included in their own deps cause cycles
+- Run `bun lint` and look for React Hooks rule violations
 
-Pengui includes a comprehensive, custom-built component library with Storybook documentation.
+**`ExperimentalWarning: localStorage is not available` during build**
 
-### View Components in Storybook
+This is a Node.js 22+ warning emitted during static page generation — it is harmless and does not affect the app. Node.js's experimental Web Storage API requires `--localstorage-file` to be passed to the process, which Next.js does not do. The app guards all `localStorage` access with `typeof window !== "undefined"` checks so nothing breaks at runtime.
 
-```bash
-bun run storybook
-```
+**Wallet features disabled / "WalletConnect project ID not set" in console**
 
-Then open [http://localhost:6006](http://localhost:6006) to browse all components interactively.
+- `NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID` is missing from `.env`, or the dev server hasn't been restarted since it was added
+- Get a free project ID at [cloud.walletconnect.com](https://cloud.walletconnect.com), add it to `.env`, then **restart `bun dev`**
+- Without it the app still loads but all wallet features are disabled
 
-See the [UI Component Documentation](./src/shared/ui/README.md) and [Component Catalog](./src/shared/ui/COMPONENT_CATALOG.md) for details.
+> **Turbopack dev mode note:** Unlike the production webpack build, Turbopack does not inline `process.env.NEXT_PUBLIC_*` inside pre-compiled `dist/` files of packages in `transpilePackages`. The WalletConnect project ID is worked around by forwarding it through `next.config.ts`'s `env` block, which Turbopack does process. If you add new `NEXT_PUBLIC_*` vars that need to be visible inside library code, add them to the `env` block in `next.config.ts` as well.
 
-### Quick Component Examples
+**Wallet connection issues**
 
-```tsx
-// Button
-import { Button } from "@/shared/ui";
-<Button variant="primary" onClick={handleClick}>
-  Click Me
-</Button>;
-
-// Modal
-import { Modal } from "@/shared/ui";
-<Modal onClose={handleClose}>Content</Modal>;
-
-// Asset Selector
-import { AssetSelector } from "@/shared/ui";
-<AssetSelector assets={assets} onAssetsChange={handleChange} />;
-```
-
-## 🔌 Wallet Integration
-
-Pengui uses WalletConnect to connect with Chia wallets (primarily Sage wallet).
-
-### Connecting a Wallet
-
-1. Navigate to the login page
-2. Click "Connect Wallet"
-3. Select your wallet (Sage, Goby, etc.)
-4. Approve the connection in your wallet
-
-### Available Wallet Operations
-
-- View balance
-- Send transactions
-- Create offers
-- Sign messages
-- Manage assets
-
-See [WalletConnect Documentation](./src/shared/lib/walletConnect/README.md) for implementation details.
-
-## 📦 Key Dependencies
-
-- **next** - React framework
-- **react** & **react-dom** - UI library
-- **@tanstack/react-query** - Data fetching & caching
-- **@maximedogawa/chia-wallet-connect-react** - Chia wallet integration
-- **dexie** - IndexedDB wrapper
-- **lucide-react** - Icons
-- **next-themes** - Theme management
-- **tailwindcss** - Styling
-
-## 🧪 Development
-
-### Available Scripts
-
-```bash
-# Development
-bun dev              # Start development server
-bun storybook        # Start Storybook component library
-
-# Building
-bun build            # Build for production
-bun run build:wasm   # Build Splash WASM (public/wasm/) — requires Rust + wasm-pack
-bun run build:all    # Build WASM then Next.js
-bun build-storybook  # Build Storybook for production
-bun start            # Start production server
-
-# Code Quality
-bun lint             # Run ESLint
-bun type-check       # Run TypeScript type checking
-```
-
-### Code Style
-
-- **ESLint** - Follows Next.js and React best practices
-- **Prettier** - Automatic code formatting
-- **TypeScript** - Strict type checking enabled
-
-### Git Hooks
-
-Pre-commit hooks are configured via Husky and lint-staged to ensure code quality:
-
-- **Lint & Type Check**: ESLint and TypeScript checks on staged files (with auto-fix)
-- **Build**: Ensures the project builds successfully
-- **Test**: Runs the test suite
-
-## 🔒 Security
-
-- All wallet operations require explicit user approval
-- Private keys never leave the wallet
-- Secure WalletConnect protocol for wallet communication
-- Client-side validation for all transactions
-
-## 🌐 Browser Support
-
-- Chrome/Edge (latest)
-- Firefox (latest)
-- Safari (latest)
-- Mobile browsers with WalletConnect support
-
-## 📝 License
-
-See [LICENSE](./LICENSE) file for details.
-
-## 🤝 Contributing
-
-Contributions are welcome! Please ensure:
-
-- Code follows the project's style guidelines
-- All tests pass
-- TypeScript types are properly defined
-- Components are documented
-
-## 📚 Additional Resources
-
-- [Architecture Documentation](./docs/architecture/fsd-structure.md) - Feature-Sliced Design structure and guidelines
-- [UI Component Library](./src/shared/ui/README.md) - Detailed component documentation
-- [Component Catalog](./src/shared/ui/COMPONENT_CATALOG.md) - Quick component reference
-- [WalletConnect Integration](./src/shared/lib/walletConnect/README.md) - Wallet integration details
-- [Infinite Loop Guardrails](./docs/development/infinite-loop-guardrails.md) - Preventing infinite loops in useEffect hooks
-
-## 🐛 Troubleshooting
-
-### Infinite Loop / Continuous Compilation
-
-If Turbopack shows "compiling..." indefinitely or pages won't switch:
-
-- Check browser console for infinite loop warnings
-- Review `useEffect` dependency arrays (see [Infinite Loop Guardrails](./docs/development/infinite-loop-guardrails.md))
-- Run `bun run lint` to check for React Hooks issues
-- Look for `useEffect` hooks that update state included in their dependency array
-
-### Wallet Connection Issues
-
+- Verify `NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID` is set in `.env.local`
 - Ensure your wallet supports WalletConnect
-- Check that the WalletConnect project ID is configured
 - Try disconnecting and reconnecting
 
-### Build Errors
+**Build errors**
 
-- Clear `.next` directory and rebuild
-- Ensure all dependencies are installed
-- Check Node.js version compatibility
+- Delete `.next/` and rebuild
+- Run `bun install` to ensure all dependencies are installed
+- Check the Node version matches `.nvmrc` (`node --version`)
 
-### Database Issues
+**Playwright system dependencies (Linux)**
 
-- Clear browser IndexedDB if offers aren't persisting
-- Check browser console for database errors
+- Run `sudo npx playwright install-deps` to install browser system libraries
+- Or install the packages manually: `sudo apt-get install libicu74 libxml2 libflite1`
+- Browser binaries are cached in `~/.cache/ms-playwright/`
 
-## 📞 Support
+**Database (IndexedDB) issues**
 
-For issues, questions, or contributions, please refer to the main project repository.
+- Clear the browser's IndexedDB if offers are not persisting
+- Check the browser console for Dexie errors
 
 ---
 
-**Pengui** - Premium Financial Intelligence on Chia Network 🐧
+**Pengui** — Premium Financial Intelligence on Chia Network

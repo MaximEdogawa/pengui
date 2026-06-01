@@ -29,7 +29,7 @@ export function useSignClient() {
         throw error;
       }
     },
-    enabled: true,
+    enabled: !!process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID,
     staleTime: Infinity,
     refetchOnMount: false,
     refetchOnWindowFocus: false,

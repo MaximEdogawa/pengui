@@ -28,6 +28,9 @@ import { NavigationProgressProvider } from "@/shared/providers/NavigationProgres
 import { NavigationQueryCleanup } from "@/shared/providers/NavigationQueryCleanup";
 import { PersistGateLoadingFallback } from "./PersistGateLoadingFallback";
 
+const isWalletConnectConfigured = (): boolean =>
+  !!process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID;
+
 // Wallet metadata configuration (shared between WalletManager and restoreConnectionState)
 const getWalletConnectConfig = () => {
   if (typeof window === "undefined") {
@@ -106,21 +109,24 @@ export default function AppProviders({ children }: { children: React.ReactNode }
       setStoredNetwork("mainnet");
     }
 
-    try {
-      const { penguiIcon, metadata } = getWalletConnectConfig();
-      const walletManager = new WalletManager(penguiIcon, metadata);
-      walletManager.detectEvents();
-
-      // Initialize IndexedDB
-      import("@/shared/lib/database/indexedDB").then(({ initializeDatabase }) => {
-        initializeDatabase().catch(() => {
-          logger.error("IndexedDB initialization failed. Offers may not persist.");
-        });
-      });
-    } catch (error) {
-      logger.error("❌ Failed to initialize WalletManager:", error);
-      // Don't throw - let ErrorBoundary handle render errors
+    if (isWalletConnectConfigured()) {
+      try {
+        const { penguiIcon, metadata } = getWalletConnectConfig();
+        const walletManager = new WalletManager(penguiIcon, metadata);
+        walletManager.detectEvents();
+      } catch (error) {
+        logger.error("❌ Failed to initialize WalletManager:", error);
+      }
+    } else {
+      logger.warn("WalletConnect project ID not set — wallet features disabled. Set NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID in .env.local.");
     }
+
+    // Initialize IndexedDB regardless of WalletConnect config
+    import("@/shared/lib/database/indexedDB").then(({ initializeDatabase }) => {
+      initializeDatabase().catch(() => {
+        logger.error("IndexedDB initialization failed. Offers may not persist.");
+      });
+    });
   }, []);
 
   return (
@@ -173,6 +179,10 @@ export default function AppProviders({ children }: { children: React.ReactNode }
               if (storedChainId && storedChainId !== appChainId) {
                 return;
               }
+            }
+
+            if (!isWalletConnectConfigured()) {
+              return;
             }
 
             const PERSIST_LIFT_TIMEOUT_MS = 10_000;

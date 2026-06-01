@@ -11,6 +11,10 @@ import { useMemo } from "react";
 const DEXIE_KEY = "dexie";
 const TICKERS_KEY = "tickers";
 
+// Stable empty-array sentinels so hooks that depend on these never get a new
+// reference on every render while data is still loading.
+const EMPTY_TICKERS: DexieTicker[] = [];
+
 /**
  * Legacy CAT token info interface (for backward compatibility)
  * @deprecated Use Asset type from @/entities/asset instead
@@ -260,7 +264,7 @@ export function useCatTokens() {
     availableAssets,
 
     // Raw tickers data
-    tickers: tickersQuery.data?.data || [],
+    tickers: tickersQuery.data?.data ?? EMPTY_TICKERS,
 
     // Loading states
     isLoading: tickersQuery.isLoading,

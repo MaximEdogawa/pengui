@@ -3,7 +3,7 @@
 import { useCallback } from "react";
 import { useMyOffersData } from "./useMyOffersData";
 import { useMyOffersActions } from "./useMyOffersActions";
-import { useMyOffersUtils } from "./useMyOffersUtils";
+import { useMyOffersUtils } from "./useMyOffersUtils"
 
 /**
  * Hook for managing user's offers
@@ -15,14 +15,12 @@ export function useMyOffers() {
 
   const actions = useMyOffersActions({ state, refreshOffers });
   const utils = useMyOffersUtils({ state });
-
   const goToPage = useCallback(
     (page: number) => {
       state.setCurrentPage(Math.max(1, Math.min(page, state.totalPages || 1)));
     },
     [state]
   );
-
   const changePageSize = useCallback(
     (newPageSize: number) => {
       state.setPageSize(newPageSize);
