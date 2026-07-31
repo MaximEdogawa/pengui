@@ -150,7 +150,11 @@ openssl_cert() {
     return 1
 }
 
-cert_exists() { [ -f "$CERT" ] || [ -e "$CERT" ]; }
+# True if live fullchain exists and is readable (broken cross-lineage symlinks fail -e).
+cert_exists() {
+    { [ -f "$CERT" ] || [ -e "$CERT" ]; } || return 1
+    openssl_cert x509 -noout -in "$CERT" >/dev/null 2>&1
+}
 
 normalize_host() {
     printf '%s' "$1" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | tr '[:upper:]' '[:lower:]'
@@ -384,10 +388,16 @@ if [ "$NEED_CERT" = true ]; then
     CERTBOT_RC=$?
     cat "$CERTBOT_LOG"
     if [ "$CERTBOT_RC" -ne 0 ]; then
-        if grep -q 'FileExistsError' "$CERTBOT_LOG"; then
+        # FileExistsError: orphan next-slot. FileNotFoundError: live→wrong archive lineage.
+        if grep -Eq 'FileExistsError|FileNotFoundError' "$CERTBOT_LOG"; then
             CONFLICT_VER=$(sed -n 's/.*privkey\([0-9][0-9]*\)\.pem.*/\1/p' "$CERTBOT_LOG" | head -n1)
-            warn "Certbot FileExistsError — repair archive (v${CONFLICT_VER:-?}) and retry once"
-            repair_certbot_archive "$DOMAIN" "$CONFLICT_VER"
+            warn "Certbot archive error — repair (privkey v${CONFLICT_VER:-?}) and retry once"
+            # FileNotFoundError: do not pass conflict ver as "delete this"; just fix lineage links.
+            if grep -q 'FileNotFoundError' "$CERTBOT_LOG"; then
+                repair_certbot_archive "$DOMAIN"
+            else
+                repair_certbot_archive "$DOMAIN" "$CONFLICT_VER"
+            fi
             if ! run_certbot_certonly; then
                 rm -f "$CERTBOT_LOG"
                 err "Failed to obtain SSL certificate"
