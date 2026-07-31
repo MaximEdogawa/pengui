@@ -126,56 +126,47 @@ if [ -n "$GITHUB_TOKEN" ] && [ -n "$GITHUB_ACTOR" ]; then
     echo "$GITHUB_TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin || warn "Registry login failed"
 fi
 
-# Check SSL certificate status
+# =============================================================================
+# SSL / Let's Encrypt
+# =============================================================================
+# 1. Collect hostnames (SANs) for the cert
+# 2. Drop any that have no public DNS (NXDOMAIN would fail HTTP-01)
+# 3. Decide if we need to issue/renew
+# 4. If yes: HTTP-01 nginx → repair archive orphans → certbot (+ one retry)
+# Helper for step 4 orphans: scripts/repair-certbot-archive.sh
+# =============================================================================
+
 CERT="certbot/conf/live/$DOMAIN/fullchain.pem"
 NEED_CERT=false
-
-if [ -f "$CERT" ]; then
-    # Check certificate expiration
-    EXPIRY_DATE=$(openssl x509 -enddate -noout -in "$CERT" 2>/dev/null | cut -d= -f2)
-    if [ -n "$EXPIRY_DATE" ]; then
-        EXPIRY_EPOCH=$(date -d "$EXPIRY_DATE" +%s 2>/dev/null || date -j -f "%b %d %T %Y %Z" "$EXPIRY_DATE" +%s 2>/dev/null)
-        CURRENT_EPOCH=$(date +%s)
-        DAYS=$(( (EXPIRY_EPOCH - CURRENT_EPOCH) / 86400 ))
-        
-        if [ $DAYS -gt 30 ]; then
-            log "SSL certificate valid ($DAYS days remaining)"
-        else
-            warn "SSL certificate expires in $DAYS days - will renew"
-            NEED_CERT=true
-        fi
-    else
-        warn "Could not check certificate expiry - will request new one"
-        NEED_CERT=true
-    fi
-else
-    log "No SSL certificate found - will request one"
-    NEED_CERT=true
-fi
-
-# Extra `-d` flags for certbot (relays, DOMAIN2, CERT_EXTRA_DOMAINS, sibling apex). Primary name is always `-d "$DOMAIN"` below.
-CERTBOT_EXTRA_D_ARGS=""
+NEED_CERT_FORCE_FLAG="false"
 CERTBOT_EXTRA_NAMES=""
+CERTBOT_EXTRA_D_ARGS=""
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Root-owned live certs: try openssl, then passwordless sudo (sudoers.d/pengui-deploy).
+openssl_cert() {
+    openssl "$@" 2>/dev/null && return 0
+    command -v sudo >/dev/null 2>&1 && sudo -n openssl "$@" 2>/dev/null && return 0
+    return 1
+}
+
+cert_exists() { [ -f "$CERT" ] || [ -e "$CERT" ]; }
+
+normalize_host() {
+    printf '%s' "$1" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | tr '[:upper:]' '[:lower:]'
+}
+
+# --- helpers: SAN list -------------------------------------------------------
+
 add_cert_name() {
-    local n="$1"
-    [ -z "$n" ] && return
-    n="$(printf '%s' "$n" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | tr '[:upper:]' '[:lower:]')"
+    local n
+    n="$(normalize_host "${1:-}")"
     [ -z "$n" ] && return
     case " $CERTBOT_EXTRA_NAMES " in *" $n "*) return ;; esac
     CERTBOT_EXTRA_NAMES="$CERTBOT_EXTRA_NAMES $n"
     CERTBOT_EXTRA_D_ARGS="$CERTBOT_EXTRA_D_ARGS -d $n"
 }
-[ -n "${RELAY_MAINNET_SUBDOMAIN:-}" ] && add_cert_name "$RELAY_MAINNET_SUBDOMAIN"
-[ -n "${RELAY_TESTNET_SUBDOMAIN:-}" ] && add_cert_name "$RELAY_TESTNET_SUBDOMAIN"
-for _extra in $CERT_EXTRA_DOMAINS; do
-    add_cert_name "$_extra"
-done
-# Ensure DOMAIN2 is always on the cert when set (does not rely only on CERT_EXTRA_DOMAINS iteration).
-[ -n "$DOMAIN2" ] && add_cert_name "$DOMAIN2"
 
-# Let's Encrypt HTTP-01 requires every -d name to resolve publicly (A/AAAA). Drop unresolved
-# extras so a missing relay-testnet DNS record (NXDOMAIN) does not fail the whole deploy.
-# Primary DOMAIN is never filtered here.
 cert_hostname_resolves() {
     local h="$1"
     if command -v getent >/dev/null 2>&1; then
@@ -186,62 +177,124 @@ cert_hostname_resolves() {
         host -W 3 "$h" 2>/dev/null | grep -Eq 'has (IPv6 )?address'
         return $?
     fi
-    warn "No getent/host available — cannot preflight DNS for $h; including in cert request"
+    warn "No getent/host — cannot preflight DNS for $h; keeping it on the cert request"
     return 0
 }
+
+drop_hostname_if_not_on_cert() {
+    # Clear an env hostname when DNS preflight removed it from the cert request.
+    local var="$1" host
+    host="$(normalize_host "${!var:-}")"
+    [ -z "$host" ] && return
+    case " $CERTBOT_EXTRA_NAMES " in
+        *" $host "*) ;;
+        *)
+            warn "$var ($host) omitted from TLS — clearing for this deploy"
+            printf -v "$var" '%s' ""
+            ;;
+    esac
+}
+
+# Run repair-certbot-archive.sh as root inside Docker (archive/ is usually mode 700).
+repair_certbot_archive() {
+    local lineage="$1" conflict_ver="${2:-}"
+    local repair_script="$SCRIPT_DIR/repair-certbot-archive.sh"
+    [ -f "$repair_script" ] || { warn "Missing $repair_script"; return 1; }
+    log "Repairing Certbot archive for $lineage${conflict_ver:+ (conflict v$conflict_ver)}..."
+    docker run --rm \
+        -v "$(pwd)/certbot/conf:/etc/letsencrypt" \
+        -v "$repair_script:/repair-certbot-archive.sh:ro" \
+        alpine:3.20 \
+        sh /repair-certbot-archive.sh "$lineage" "$conflict_ver" \
+        || warn "Archive repair failed (continuing)"
+}
+
+run_certbot_certonly() {
+    docker run --rm \
+        -v "$(pwd)/certbot/conf:/etc/letsencrypt" \
+        -v "$(pwd)/certbot/www:/var/www/certbot" \
+        certbot/certbot certonly \
+        --webroot \
+        -w /var/www/certbot \
+        $STAGING_ARG \
+        $CERTBOT_EXPAND \
+        $CERTBOT_FORCE_RENEWAL \
+        --cert-name "$DOMAIN" \
+        --email "$EMAIL" \
+        -d "$DOMAIN" \
+        $CERTBOT_EXTRA_D_ARGS \
+        --rsa-key-size 4096 \
+        --agree-tos \
+        --non-interactive
+}
+
+# --- 1) Collect SANs ---------------------------------------------------------
+
+[ -n "${RELAY_MAINNET_SUBDOMAIN:-}" ] && add_cert_name "$RELAY_MAINNET_SUBDOMAIN"
+[ -n "${RELAY_TESTNET_SUBDOMAIN:-}" ] && add_cert_name "$RELAY_TESTNET_SUBDOMAIN"
+for _extra in $CERT_EXTRA_DOMAINS; do
+    add_cert_name "$_extra"
+done
+[ -n "$DOMAIN2" ] && add_cert_name "$DOMAIN2"
+
+# --- 2) Drop SANs without public DNS -----------------------------------------
+
 if [ -n "$CERTBOT_EXTRA_NAMES" ]; then
-    _filtered_names=""
-    _filtered_d_args=""
+    _keep_names=""
+    _keep_args=""
     for n in $CERTBOT_EXTRA_NAMES; do
         if cert_hostname_resolves "$n"; then
-            _filtered_names="${_filtered_names} $n"
-            _filtered_d_args="${_filtered_d_args} -d $n"
+            _keep_names="${_keep_names} $n"
+            _keep_args="${_keep_args} -d $n"
         else
-            warn "Skipping $n on Let’s Encrypt request — no DNS A/AAAA record (NXDOMAIN or unresolved). Add DNS, then redeploy with need_cert / NEED_CERT_FORCE to include it."
+            warn "Skipping $n — no DNS A/AAAA. Add DNS, then redeploy with need_cert to include it."
         fi
     done
-    CERTBOT_EXTRA_NAMES="${_filtered_names# }"
-    CERTBOT_EXTRA_D_ARGS="$_filtered_d_args"
-    unset _filtered_names _filtered_d_args
+    CERTBOT_EXTRA_NAMES="${_keep_names# }"
+    CERTBOT_EXTRA_D_ARGS="$_keep_args"
+    unset _keep_names _keep_args
 fi
-# Keep nginx / server_name in sync with names that made it onto the cert request.
+
+# nginx must not advertise hostnames that are not on the cert
 if [ -n "$DOMAIN2" ]; then
     case " $CERTBOT_EXTRA_NAMES " in
         *" $DOMAIN2 "*) ;;
         *)
-            warn "DOMAIN2 ($DOMAIN2) omitted from TLS — clearing DOMAIN2 for this deploy"
+            warn "DOMAIN2 ($DOMAIN2) omitted from TLS — clearing for this deploy"
             DOMAIN2=""
             ;;
     esac
 fi
-if [ -n "${RELAY_MAINNET_SUBDOMAIN:-}" ]; then
-    _rm="$(printf '%s' "$RELAY_MAINNET_SUBDOMAIN" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | tr '[:upper:]' '[:lower:]')"
-    case " $CERTBOT_EXTRA_NAMES " in
-        *" $_rm "*) ;;
-        *)
-            warn "RELAY_MAINNET_SUBDOMAIN ($_rm) omitted from TLS — clearing for this deploy"
-            RELAY_MAINNET_SUBDOMAIN=""
-            ;;
-    esac
-    unset _rm
-fi
-if [ -n "${RELAY_TESTNET_SUBDOMAIN:-}" ]; then
-    _rt="$(printf '%s' "$RELAY_TESTNET_SUBDOMAIN" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | tr '[:upper:]' '[:lower:]')"
-    case " $CERTBOT_EXTRA_NAMES " in
-        *" $_rt "*) ;;
-        *)
-            warn "RELAY_TESTNET_SUBDOMAIN ($_rt) omitted from TLS — clearing for this deploy"
-            RELAY_TESTNET_SUBDOMAIN=""
-            ;;
-    esac
-    unset _rt
+drop_hostname_if_not_on_cert RELAY_MAINNET_SUBDOMAIN
+drop_hostname_if_not_on_cert RELAY_TESTNET_SUBDOMAIN
+
+# --- 3) Do we need to issue/renew? -------------------------------------------
+
+if cert_exists; then
+    EXPIRY_DATE=$(openssl_cert x509 -enddate -noout -in "$CERT" | cut -d= -f2)
+    if [ -n "$EXPIRY_DATE" ]; then
+        EXPIRY_EPOCH=$(date -d "$EXPIRY_DATE" +%s 2>/dev/null || date -j -f "%b %d %T %Y %Z" "$EXPIRY_DATE" +%s 2>/dev/null)
+        DAYS=$(( (EXPIRY_EPOCH - $(date +%s)) / 86400 ))
+        if [ "$DAYS" -gt 30 ]; then
+            log "SSL certificate valid ($DAYS days remaining)"
+        else
+            warn "SSL certificate expires in $DAYS days — will renew"
+            NEED_CERT=true
+        fi
+    else
+        warn "Could not check certificate expiry — will request a new one"
+        NEED_CERT=true
+    fi
+else
+    log "No SSL certificate found — will request one"
+    NEED_CERT=true
 fi
 
-# If DOMAIN cert exists but a configured hostname is missing from SAN (e.g. new DOMAIN2, relay, or sibling apex), expand
-if [ "$NEED_CERT" = false ] && [ -f "$CERT" ]; then
+# Expand if any requested hostname is missing from the live cert
+if [ "$NEED_CERT" = false ] && cert_exists; then
     for SAN in $DOMAIN ${DOMAIN2:+$DOMAIN2} $CERTBOT_EXTRA_NAMES; do
         [ -z "$SAN" ] && continue
-        if ! openssl x509 -in "$CERT" -noout -text 2>/dev/null | grep -Fq "DNS:${SAN}"; then
+        if ! openssl_cert x509 -in "$CERT" -noout -text | grep -Fq "DNS:${SAN}"; then
             warn "Certificate missing SAN for ${SAN} — will request expanded certificate"
             NEED_CERT=true
             break
@@ -249,28 +302,24 @@ if [ "$NEED_CERT" = false ] && [ -f "$CERT" ]; then
     done
 fi
 
-# Force new/expanded certificate (e.g. GitHub Actions "Run workflow" → need_cert)
-# GitHub may pass boolean as "true", "True", etc.; certbot otherwise often refuses with "not yet due".
-NEED_CERT_FORCE_FLAG="false"
 case "${NEED_CERT_FORCE:-}" in
-    true|True|1|yes|on) NEED_CERT_FORCE_FLAG="true" ;;
+    true|True|1|yes|on)
+        NEED_CERT_FORCE_FLAG="true"
+        NEED_CERT=true
+        log "NEED_CERT_FORCE set — will request cert with --force-renewal"
+        ;;
 esac
-if [ "$NEED_CERT_FORCE_FLAG" = "true" ]; then
-    NEED_CERT=true
-    log "NEED_CERT_FORCE set — will request SSL certificate (with --force-renewal for certbot)"
-fi
 
-# Dropping SANs (DNS preflight) while reissuing: Certbot needs --force-renewal to shrink a lineage
-# non-interactively; otherwise it may keep renewing the old name set and fail HTTP-01 again.
-if [ "$NEED_CERT" = true ] && [ -f "$CERT" ] && [ "$NEED_CERT_FORCE_FLAG" != "true" ]; then
-    _live_sans=$(openssl x509 -in "$CERT" -noout -text 2>/dev/null \
+# Shrinking the SAN list (e.g. dropped relay-testnet) needs --force-renewal
+if [ "$NEED_CERT" = true ] && cert_exists && [ "$NEED_CERT_FORCE_FLAG" != "true" ]; then
+    _live_sans=$(openssl_cert x509 -in "$CERT" -noout -text \
         | grep -oE 'DNS:[^,[:space:]]+' | sed 's/^DNS://' | tr '[:upper:]' '[:lower:]' || true)
     for _ls in $_live_sans; do
         case " $DOMAIN $CERTBOT_EXTRA_NAMES " in
             *" $_ls "*) ;;
             *)
                 NEED_CERT_FORCE_FLAG="true"
-                log "Live cert SAN $_ls not in this request — using --force-renewal so Certbot can drop it"
+                log "Live cert still has $_ls (not in this request) — using --force-renewal"
                 break
                 ;;
         esac
@@ -278,36 +327,32 @@ if [ "$NEED_CERT" = true ] && [ -f "$CERT" ] && [ "$NEED_CERT_FORCE_FLAG" != "tr
     unset _live_sans _ls
 fi
 
-# Request SSL certificate if needed
+# --- 4) Issue / renew --------------------------------------------------------
+
 if [ "$NEED_CERT" = true ]; then
     log "Setting up SSL certificate..."
-    
-    # Create ACME challenge directory
     mkdir -p certbot/www/.well-known/acme-challenge
-    
-    # Copy HTTP-only config for ACME challenge (atomic write)
+
+    # Temporary HTTP-only nginx so Let's Encrypt can fetch the ACME challenge
     cp nginx/templates/http-only.conf.template nginx/conf.d/default.conf.tmp
     mv nginx/conf.d/default.conf.tmp nginx/conf.d/default.conf
-    
-    # Pull and start services for certificate request
+
     log "Starting services for ACME challenge..."
     docker compose pull pengui || true
     docker compose up -d pengui
     sleep 5
-    # ACME: nginx without relay watchdog (relay may not exist yet)
     docker compose build nginx || true
     RELAY_WATCHDOG=0 docker compose up -d --no-deps nginx
     sleep 5
-    
-    # Verify ACME challenge path is accessible
+
     log "Verifying ACME challenge path..."
     echo "acme-test" > certbot/www/.well-known/acme-challenge/test
     if curl -sf --max-time 5 "http://$DOMAIN/.well-known/acme-challenge/test" | grep -q "acme-test"; then
         log "ACME challenge path verified (http://$DOMAIN)"
-        rm -f certbot/www/.well-known/acme-challenge/test
     else
-        warn "ACME challenge path may not be accessible - continuing anyway"
+        warn "ACME challenge path may not be accessible — continuing anyway"
     fi
+    rm -f certbot/www/.well-known/acme-challenge/test
     if [ -n "$DOMAIN2" ]; then
         echo "acme-test" > certbot/www/.well-known/acme-challenge/test
         if curl -sf --max-time 5 "http://$DOMAIN2/.well-known/acme-challenge/test" | grep -q "acme-test"; then
@@ -317,93 +362,32 @@ if [ "$NEED_CERT" = true ]; then
         fi
         rm -f certbot/www/.well-known/acme-challenge/test
     fi
-    
-    # Determine staging flag
+
     STAGING_ARG=""
-    [ "${STAGING:-0}" != "0" ] && STAGING_ARG="--staging" && warn "Using Let's Encrypt staging environment"
-    # When adding names to an existing lineage, expand non-interactively (any extra -d beyond DOMAIN)
+    [ "${STAGING:-0}" != "0" ] && STAGING_ARG="--staging" && warn "Using Let's Encrypt staging"
     CERTBOT_EXPAND=""
-    if [ -n "$CERTBOT_EXTRA_D_ARGS" ]; then
-        CERTBOT_EXPAND="--expand"
-    fi
-    # Same SANs but operator forced renew: certbot otherwise exits with "not yet due for renewal"
+    [ -n "$CERTBOT_EXTRA_D_ARGS" ] && CERTBOT_EXPAND="--expand"
     CERTBOT_FORCE_RENEWAL=""
     [ "$NEED_CERT_FORCE_FLAG" = "true" ] && CERTBOT_FORCE_RENEWAL="--force-renewal"
 
-    # Certbot versions the next archive slot from live/*/privkey.pem (e.g. …/privkey7.pem → 8).
-    # A failed prior issuance can leave orphan archive files at that next slot, which then fails with
-    # FileExistsError: …/privkeyN.pem. Remove versions higher than the live symlink target.
-    # Runs in Docker as root because archive/ is usually root-owned.
-    repair_certbot_archive_skew() {
-        local lineage="$1"
-        [ -d "certbot/conf/live/$lineage" ] && [ -d "certbot/conf/archive/$lineage" ] || return 0
-        log "Checking Certbot archive for orphan versions beyond live symlink ($lineage)..."
-        LINEAGE="$lineage" docker run --rm \
-            -e LINEAGE \
-            -v "$(pwd)/certbot/conf:/etc/letsencrypt" \
-            alpine:3.20 \
-            sh -c '
-                lineage="$LINEAGE"
-                live="/etc/letsencrypt/live/$lineage/privkey.pem"
-                archive="/etc/letsencrypt/archive/$lineage"
-                [ -L "$live" ] || exit 0
-                target=$(readlink "$live")
-                live_ver=$(printf "%s" "$target" | sed -n "s/.*privkey\([0-9][0-9]*\)\.pem$/\1/p")
-                [ -n "$live_ver" ] || exit 0
-                removed=""
-                for f in "$archive"/privkey*.pem; do
-                    [ -e "$f" ] || continue
-                    ver=$(basename "$f" | sed -n "s/^privkey\([0-9][0-9]*\)\.pem$/\1/p")
-                    [ -n "$ver" ] || continue
-                    if [ "$ver" -gt "$live_ver" ] 2>/dev/null; then
-                        rm -f \
-                            "$archive/privkey${ver}.pem" \
-                            "$archive/cert${ver}.pem" \
-                            "$archive/chain${ver}.pem" \
-                            "$archive/fullchain${ver}.pem"
-                        removed="$removed $ver"
-                    fi
-                done
-                if [ -n "$removed" ]; then
-                    echo "Removed orphan Certbot archive version(s) for $lineage (live→$live_ver):$removed"
-                fi
-            ' || warn "Could not repair Certbot archive skew (continuing anyway)"
-    }
-    repair_certbot_archive_skew "$DOMAIN"
-    
-    # Request certificate using docker run directly (more reliable output)
+    repair_certbot_archive "$DOMAIN"
+
     log "Requesting SSL certificate from Let's Encrypt..."
     if [ -n "$CERTBOT_EXTRA_D_ARGS" ]; then
         log "Certbot SANs: ${DOMAIN}$(echo "$CERTBOT_EXTRA_D_ARGS" | sed 's/ -d / + /g')"
     else
         log "Certbot SANs: ${DOMAIN}"
     fi
-    run_certbot_certonly() {
-        docker run --rm \
-            -v "$(pwd)/certbot/conf:/etc/letsencrypt" \
-            -v "$(pwd)/certbot/www:/var/www/certbot" \
-            certbot/certbot certonly \
-            --webroot \
-            -w /var/www/certbot \
-            $STAGING_ARG \
-            $CERTBOT_EXPAND \
-            $CERTBOT_FORCE_RENEWAL \
-            --cert-name "$DOMAIN" \
-            --email "$EMAIL" \
-            -d "$DOMAIN" \
-            $CERTBOT_EXTRA_D_ARGS \
-            --rsa-key-size 4096 \
-            --agree-tos \
-            --non-interactive
-    }
+
     CERTBOT_LOG=$(mktemp)
     run_certbot_certonly >"$CERTBOT_LOG" 2>&1
     CERTBOT_RC=$?
     cat "$CERTBOT_LOG"
     if [ "$CERTBOT_RC" -ne 0 ]; then
         if grep -q 'FileExistsError' "$CERTBOT_LOG"; then
-            warn "Certbot FileExistsError — repairing archive skew and retrying once"
-            repair_certbot_archive_skew "$DOMAIN"
+            CONFLICT_VER=$(sed -n 's/.*privkey\([0-9][0-9]*\)\.pem.*/\1/p' "$CERTBOT_LOG" | head -n1)
+            warn "Certbot FileExistsError — repair archive (v${CONFLICT_VER:-?}) and retry once"
+            repair_certbot_archive "$DOMAIN" "$CONFLICT_VER"
             if ! run_certbot_certonly; then
                 rm -f "$CERTBOT_LOG"
                 err "Failed to obtain SSL certificate"
@@ -414,7 +398,6 @@ if [ "$NEED_CERT" = true ]; then
         fi
     fi
     rm -f "$CERTBOT_LOG"
-    
     log "SSL certificate obtained successfully"
 fi
 

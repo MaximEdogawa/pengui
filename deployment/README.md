@@ -259,7 +259,7 @@ SSL certificates are obtained from Let’s Encrypt by **`deploy.sh`** (via `dock
 
 - **First deployment / new names**: Requests a certificate when none exists, when a configured hostname is missing from the current cert’s SANs, or when **`NEED_CERT_FORCE`** is set.
 - **Re-issue before expiry**: On each deploy, the script checks the leaf under **`certbot/conf/live/$DOMAIN/`**. If it expires in **30 days or less**, it requests a renewed certificate on that run (same SAN set as configured in the script).
-- **Archive skew repair**: Before Certbot runs, **`deploy.sh`** removes orphan **`archive/$DOMAIN/privkeyN.pem`** (and sibling) files with **N** greater than the version **`live/$DOMAIN/privkey.pem`** points at. That clears **`FileExistsError: …/privkeyN.pem`** left by a failed prior issuance; on that error it repairs and retries once.
+- **Archive skew repair**: **`scripts/repair-certbot-archive.sh`** (run as root via Docker from **`deploy.sh`**) removes orphan **`privkeyN.pem`** versions above the live symlink. On Certbot **`FileExistsError`**, deploy passes the conflicting version into that script, retargets live backward if needed, then retries once.
 - **No background renewer in this repo**: There is no cron or systemd timer checked in by default. If you rarely deploy, add a host cron (or timer) that runs `certbot renew` with the same **`/etc/letsencrypt`** and **`webroot`** volumes while nginx is up, or run deploys periodically. See [Certbot renewal](https://certbot.org/renewal-setup) for the general model; adapt paths to your Docker layout.
 - **Testing**: Set **`STAGING=1`** so Let’s Encrypt uses the staging CA (avoids production rate limits).
 
