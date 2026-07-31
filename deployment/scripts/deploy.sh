@@ -329,6 +329,47 @@ if [ "$NEED_CERT" = true ]; then
     # Same SANs but operator forced renew: certbot otherwise exits with "not yet due for renewal"
     CERTBOT_FORCE_RENEWAL=""
     [ "$NEED_CERT_FORCE_FLAG" = "true" ] && CERTBOT_FORCE_RENEWAL="--force-renewal"
+
+    # Certbot versions the next archive slot from live/*/privkey.pem (e.g. …/privkey7.pem → 8).
+    # A failed prior issuance can leave orphan archive files at that next slot, which then fails with
+    # FileExistsError: …/privkeyN.pem. Remove versions higher than the live symlink target.
+    # Runs in Docker as root because archive/ is usually root-owned.
+    repair_certbot_archive_skew() {
+        local lineage="$1"
+        [ -d "certbot/conf/live/$lineage" ] && [ -d "certbot/conf/archive/$lineage" ] || return 0
+        log "Checking Certbot archive for orphan versions beyond live symlink ($lineage)..."
+        LINEAGE="$lineage" docker run --rm \
+            -e LINEAGE \
+            -v "$(pwd)/certbot/conf:/etc/letsencrypt" \
+            alpine:3.20 \
+            sh -c '
+                lineage="$LINEAGE"
+                live="/etc/letsencrypt/live/$lineage/privkey.pem"
+                archive="/etc/letsencrypt/archive/$lineage"
+                [ -L "$live" ] || exit 0
+                target=$(readlink "$live")
+                live_ver=$(printf "%s" "$target" | sed -n "s/.*privkey\([0-9][0-9]*\)\.pem$/\1/p")
+                [ -n "$live_ver" ] || exit 0
+                removed=""
+                for f in "$archive"/privkey*.pem; do
+                    [ -e "$f" ] || continue
+                    ver=$(basename "$f" | sed -n "s/^privkey\([0-9][0-9]*\)\.pem$/\1/p")
+                    [ -n "$ver" ] || continue
+                    if [ "$ver" -gt "$live_ver" ] 2>/dev/null; then
+                        rm -f \
+                            "$archive/privkey${ver}.pem" \
+                            "$archive/cert${ver}.pem" \
+                            "$archive/chain${ver}.pem" \
+                            "$archive/fullchain${ver}.pem"
+                        removed="$removed $ver"
+                    fi
+                done
+                if [ -n "$removed" ]; then
+                    echo "Removed orphan Certbot archive version(s) for $lineage (live→$live_ver):$removed"
+                fi
+            ' || warn "Could not repair Certbot archive skew (continuing anyway)"
+    }
+    repair_certbot_archive_skew "$DOMAIN"
     
     # Request certificate using docker run directly (more reliable output)
     log "Requesting SSL certificate from Let's Encrypt..."
@@ -337,22 +378,42 @@ if [ "$NEED_CERT" = true ]; then
     else
         log "Certbot SANs: ${DOMAIN}"
     fi
-    docker run --rm \
-        -v "$(pwd)/certbot/conf:/etc/letsencrypt" \
-        -v "$(pwd)/certbot/www:/var/www/certbot" \
-        certbot/certbot certonly \
-        --webroot \
-        -w /var/www/certbot \
-        $STAGING_ARG \
-        $CERTBOT_EXPAND \
-        $CERTBOT_FORCE_RENEWAL \
-        --cert-name "$DOMAIN" \
-        --email "$EMAIL" \
-        -d "$DOMAIN" \
-        $CERTBOT_EXTRA_D_ARGS \
-        --rsa-key-size 4096 \
-        --agree-tos \
-        --non-interactive || err "Failed to obtain SSL certificate"
+    run_certbot_certonly() {
+        docker run --rm \
+            -v "$(pwd)/certbot/conf:/etc/letsencrypt" \
+            -v "$(pwd)/certbot/www:/var/www/certbot" \
+            certbot/certbot certonly \
+            --webroot \
+            -w /var/www/certbot \
+            $STAGING_ARG \
+            $CERTBOT_EXPAND \
+            $CERTBOT_FORCE_RENEWAL \
+            --cert-name "$DOMAIN" \
+            --email "$EMAIL" \
+            -d "$DOMAIN" \
+            $CERTBOT_EXTRA_D_ARGS \
+            --rsa-key-size 4096 \
+            --agree-tos \
+            --non-interactive
+    }
+    CERTBOT_LOG=$(mktemp)
+    run_certbot_certonly >"$CERTBOT_LOG" 2>&1
+    CERTBOT_RC=$?
+    cat "$CERTBOT_LOG"
+    if [ "$CERTBOT_RC" -ne 0 ]; then
+        if grep -q 'FileExistsError' "$CERTBOT_LOG"; then
+            warn "Certbot FileExistsError — repairing archive skew and retrying once"
+            repair_certbot_archive_skew "$DOMAIN"
+            if ! run_certbot_certonly; then
+                rm -f "$CERTBOT_LOG"
+                err "Failed to obtain SSL certificate"
+            fi
+        else
+            rm -f "$CERTBOT_LOG"
+            err "Failed to obtain SSL certificate"
+        fi
+    fi
+    rm -f "$CERTBOT_LOG"
     
     log "SSL certificate obtained successfully"
 fi
