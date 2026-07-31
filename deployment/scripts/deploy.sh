@@ -173,6 +173,70 @@ done
 # Ensure DOMAIN2 is always on the cert when set (does not rely only on CERT_EXTRA_DOMAINS iteration).
 [ -n "$DOMAIN2" ] && add_cert_name "$DOMAIN2"
 
+# Let's Encrypt HTTP-01 requires every -d name to resolve publicly (A/AAAA). Drop unresolved
+# extras so a missing relay-testnet DNS record (NXDOMAIN) does not fail the whole deploy.
+# Primary DOMAIN is never filtered here.
+cert_hostname_resolves() {
+    local h="$1"
+    if command -v getent >/dev/null 2>&1; then
+        [ -n "$(getent ahosts "$h" 2>/dev/null | head -n1)" ] && return 0
+        return 1
+    fi
+    if command -v host >/dev/null 2>&1; then
+        host -W 3 "$h" 2>/dev/null | grep -Eq 'has (IPv6 )?address'
+        return $?
+    fi
+    warn "No getent/host available — cannot preflight DNS for $h; including in cert request"
+    return 0
+}
+if [ -n "$CERTBOT_EXTRA_NAMES" ]; then
+    _filtered_names=""
+    _filtered_d_args=""
+    for n in $CERTBOT_EXTRA_NAMES; do
+        if cert_hostname_resolves "$n"; then
+            _filtered_names="${_filtered_names} $n"
+            _filtered_d_args="${_filtered_d_args} -d $n"
+        else
+            warn "Skipping $n on Let’s Encrypt request — no DNS A/AAAA record (NXDOMAIN or unresolved). Add DNS, then redeploy with need_cert / NEED_CERT_FORCE to include it."
+        fi
+    done
+    CERTBOT_EXTRA_NAMES="${_filtered_names# }"
+    CERTBOT_EXTRA_D_ARGS="$_filtered_d_args"
+    unset _filtered_names _filtered_d_args
+fi
+# Keep nginx / server_name in sync with names that made it onto the cert request.
+if [ -n "$DOMAIN2" ]; then
+    case " $CERTBOT_EXTRA_NAMES " in
+        *" $DOMAIN2 "*) ;;
+        *)
+            warn "DOMAIN2 ($DOMAIN2) omitted from TLS — clearing DOMAIN2 for this deploy"
+            DOMAIN2=""
+            ;;
+    esac
+fi
+if [ -n "${RELAY_MAINNET_SUBDOMAIN:-}" ]; then
+    _rm="$(printf '%s' "$RELAY_MAINNET_SUBDOMAIN" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | tr '[:upper:]' '[:lower:]')"
+    case " $CERTBOT_EXTRA_NAMES " in
+        *" $_rm "*) ;;
+        *)
+            warn "RELAY_MAINNET_SUBDOMAIN ($_rm) omitted from TLS — clearing for this deploy"
+            RELAY_MAINNET_SUBDOMAIN=""
+            ;;
+    esac
+    unset _rm
+fi
+if [ -n "${RELAY_TESTNET_SUBDOMAIN:-}" ]; then
+    _rt="$(printf '%s' "$RELAY_TESTNET_SUBDOMAIN" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//' | tr '[:upper:]' '[:lower:]')"
+    case " $CERTBOT_EXTRA_NAMES " in
+        *" $_rt "*) ;;
+        *)
+            warn "RELAY_TESTNET_SUBDOMAIN ($_rt) omitted from TLS — clearing for this deploy"
+            RELAY_TESTNET_SUBDOMAIN=""
+            ;;
+    esac
+    unset _rt
+fi
+
 # If DOMAIN cert exists but a configured hostname is missing from SAN (e.g. new DOMAIN2, relay, or sibling apex), expand
 if [ "$NEED_CERT" = false ] && [ -f "$CERT" ]; then
     for SAN in $DOMAIN ${DOMAIN2:+$DOMAIN2} $CERTBOT_EXTRA_NAMES; do
@@ -194,6 +258,24 @@ esac
 if [ "$NEED_CERT_FORCE_FLAG" = "true" ]; then
     NEED_CERT=true
     log "NEED_CERT_FORCE set — will request SSL certificate (with --force-renewal for certbot)"
+fi
+
+# Dropping SANs (DNS preflight) while reissuing: Certbot needs --force-renewal to shrink a lineage
+# non-interactively; otherwise it may keep renewing the old name set and fail HTTP-01 again.
+if [ "$NEED_CERT" = true ] && [ -f "$CERT" ] && [ "$NEED_CERT_FORCE_FLAG" != "true" ]; then
+    _live_sans=$(openssl x509 -in "$CERT" -noout -text 2>/dev/null \
+        | grep -oE 'DNS:[^,[:space:]]+' | sed 's/^DNS://' | tr '[:upper:]' '[:lower:]' || true)
+    for _ls in $_live_sans; do
+        case " $DOMAIN $CERTBOT_EXTRA_NAMES " in
+            *" $_ls "*) ;;
+            *)
+                NEED_CERT_FORCE_FLAG="true"
+                log "Live cert SAN $_ls not in this request — using --force-renewal so Certbot can drop it"
+                break
+                ;;
+        esac
+    done
+    unset _live_sans _ls
 fi
 
 # Request SSL certificate if needed
