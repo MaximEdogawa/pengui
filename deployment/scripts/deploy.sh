@@ -130,9 +130,20 @@ fi
 CERT="certbot/conf/live/$DOMAIN/fullchain.pem"
 NEED_CERT=false
 
-if [ -f "$CERT" ]; then
+# live/ fullchain is often root-owned; use passwordless sudo openssl when needed (sudoers.d/pengui-deploy).
+openssl_cert() {
+    if openssl "$@" 2>/dev/null; then
+        return 0
+    fi
+    if command -v sudo >/dev/null 2>&1 && sudo -n openssl "$@" 2>/dev/null; then
+        return 0
+    fi
+    return 1
+}
+
+if [ -f "$CERT" ] || [ -e "$CERT" ]; then
     # Check certificate expiration
-    EXPIRY_DATE=$(openssl x509 -enddate -noout -in "$CERT" 2>/dev/null | cut -d= -f2)
+    EXPIRY_DATE=$(openssl_cert x509 -enddate -noout -in "$CERT" | cut -d= -f2)
     if [ -n "$EXPIRY_DATE" ]; then
         EXPIRY_EPOCH=$(date -d "$EXPIRY_DATE" +%s 2>/dev/null || date -j -f "%b %d %T %Y %Z" "$EXPIRY_DATE" +%s 2>/dev/null)
         CURRENT_EPOCH=$(date +%s)
@@ -238,10 +249,10 @@ if [ -n "${RELAY_TESTNET_SUBDOMAIN:-}" ]; then
 fi
 
 # If DOMAIN cert exists but a configured hostname is missing from SAN (e.g. new DOMAIN2, relay, or sibling apex), expand
-if [ "$NEED_CERT" = false ] && [ -f "$CERT" ]; then
+if [ "$NEED_CERT" = false ] && { [ -f "$CERT" ] || [ -e "$CERT" ]; }; then
     for SAN in $DOMAIN ${DOMAIN2:+$DOMAIN2} $CERTBOT_EXTRA_NAMES; do
         [ -z "$SAN" ] && continue
-        if ! openssl x509 -in "$CERT" -noout -text 2>/dev/null | grep -Fq "DNS:${SAN}"; then
+        if ! openssl_cert x509 -in "$CERT" -noout -text | grep -Fq "DNS:${SAN}"; then
             warn "Certificate missing SAN for ${SAN} — will request expanded certificate"
             NEED_CERT=true
             break
@@ -262,8 +273,8 @@ fi
 
 # Dropping SANs (DNS preflight) while reissuing: Certbot needs --force-renewal to shrink a lineage
 # non-interactively; otherwise it may keep renewing the old name set and fail HTTP-01 again.
-if [ "$NEED_CERT" = true ] && [ -f "$CERT" ] && [ "$NEED_CERT_FORCE_FLAG" != "true" ]; then
-    _live_sans=$(openssl x509 -in "$CERT" -noout -text 2>/dev/null \
+if [ "$NEED_CERT" = true ] && { [ -f "$CERT" ] || [ -e "$CERT" ]; } && [ "$NEED_CERT_FORCE_FLAG" != "true" ]; then
+    _live_sans=$(openssl_cert x509 -in "$CERT" -noout -text \
         | grep -oE 'DNS:[^,[:space:]]+' | sed 's/^DNS://' | tr '[:upper:]' '[:lower:]' || true)
     for _ls in $_live_sans; do
         case " $DOMAIN $CERTBOT_EXTRA_NAMES " in
@@ -333,40 +344,98 @@ if [ "$NEED_CERT" = true ]; then
     # Certbot versions the next archive slot from live/*/privkey.pem (e.g. …/privkey7.pem → 8).
     # A failed prior issuance can leave orphan archive files at that next slot, which then fails with
     # FileExistsError: …/privkeyN.pem. Remove versions higher than the live symlink target.
-    # Runs in Docker as root because archive/ is usually root-owned.
+    # Always run as root in Docker — host [ -d archive/ ] fails when archive is root-owned mode 700.
+    # Optional CONFLICT_VER: also remove that exact archive version when it is not the live target
+    # (parsed from FileExistsError).
     repair_certbot_archive_skew() {
         local lineage="$1"
-        [ -d "certbot/conf/live/$lineage" ] && [ -d "certbot/conf/archive/$lineage" ] || return 0
-        log "Checking Certbot archive for orphan versions beyond live symlink ($lineage)..."
-        LINEAGE="$lineage" docker run --rm \
+        local conflict_ver="${2:-}"
+        log "Repairing Certbot archive skew for $lineage${conflict_ver:+ (conflict ver $conflict_ver)}..."
+        LINEAGE="$lineage" CONFLICT_VER="$conflict_ver" docker run --rm \
             -e LINEAGE \
+            -e CONFLICT_VER \
             -v "$(pwd)/certbot/conf:/etc/letsencrypt" \
             alpine:3.20 \
             sh -c '
                 lineage="$LINEAGE"
+                conflict_ver="$CONFLICT_VER"
                 live="/etc/letsencrypt/live/$lineage/privkey.pem"
                 archive="/etc/letsencrypt/archive/$lineage"
-                [ -L "$live" ] || exit 0
-                target=$(readlink "$live")
-                live_ver=$(printf "%s" "$target" | sed -n "s/.*privkey\([0-9][0-9]*\)\.pem$/\1/p")
-                [ -n "$live_ver" ] || exit 0
-                removed=""
-                for f in "$archive"/privkey*.pem; do
-                    [ -e "$f" ] || continue
-                    ver=$(basename "$f" | sed -n "s/^privkey\([0-9][0-9]*\)\.pem$/\1/p")
-                    [ -n "$ver" ] || continue
-                    if [ "$ver" -gt "$live_ver" ] 2>/dev/null; then
-                        rm -f \
-                            "$archive/privkey${ver}.pem" \
-                            "$archive/cert${ver}.pem" \
-                            "$archive/chain${ver}.pem" \
-                            "$archive/fullchain${ver}.pem"
-                        removed="$removed $ver"
-                    fi
-                done
-                if [ -n "$removed" ]; then
-                    echo "Removed orphan Certbot archive version(s) for $lineage (live→$live_ver):$removed"
+                if [ ! -d "$archive" ]; then
+                    echo "No archive dir for $lineage — nothing to repair"
+                    exit 0
                 fi
+                live_ver=""
+                if [ -L "$live" ]; then
+                    target=$(readlink "$live")
+                    live_ver=$(printf "%s" "$target" | sed -n "s/.*privkey\([0-9][0-9]*\)\.pem$/\1/p")
+                    echo "live privkey symlink → version ${live_ver:-unknown} ($target)"
+                elif [ -e "$live" ]; then
+                    echo "live privkey is not a symlink — skipping live-based orphan scan"
+                else
+                    echo "No live privkey for $lineage"
+                fi
+                remove_ver() {
+                    ver="$1"
+                    reason="$2"
+                    [ -n "$ver" ] || return 0
+                    if [ -n "$live_ver" ] && [ "$ver" = "$live_ver" ]; then
+                        echo "Conflict version $ver is the live target — will retarget live first if possible"
+                        return 1
+                    fi
+                    rm -f \
+                        "$archive/privkey${ver}.pem" \
+                        "$archive/cert${ver}.pem" \
+                        "$archive/chain${ver}.pem" \
+                        "$archive/fullchain${ver}.pem"
+                    echo "Removed archive version $ver ($reason)"
+                    return 0
+                }
+                retarget_live_to() {
+                    ver="$1"
+                    livedir="/etc/letsencrypt/live/$lineage"
+                    [ -f "$archive/privkey${ver}.pem" ] && [ -f "$archive/fullchain${ver}.pem" ] || return 1
+                    ln -sfn "../../archive/$lineage/privkey${ver}.pem" "$livedir/privkey.pem"
+                    ln -sfn "../../archive/$lineage/cert${ver}.pem" "$livedir/cert.pem"
+                    ln -sfn "../../archive/$lineage/chain${ver}.pem" "$livedir/chain.pem"
+                    ln -sfn "../../archive/$lineage/fullchain${ver}.pem" "$livedir/fullchain.pem"
+                    live_ver="$ver"
+                    echo "Retargeted live symlinks → archive version $ver"
+                }
+                if [ -n "$live_ver" ]; then
+                    for f in "$archive"/privkey*.pem; do
+                        [ -e "$f" ] || continue
+                        ver=$(basename "$f" | sed -n "s/^privkey\([0-9][0-9]*\)\.pem$/\1/p")
+                        [ -n "$ver" ] || continue
+                        if [ "$ver" -gt "$live_ver" ] 2>/dev/null; then
+                            remove_ver "$ver" "orphan above live" || true
+                        fi
+                    done
+                fi
+                if [ -n "$conflict_ver" ]; then
+                    if ! remove_ver "$conflict_ver" "FileExistsError conflict"; then
+                        # live already points at the conflicting slot — step live back one complete version, then remove it
+                        prev=""
+                        for f in "$archive"/privkey*.pem; do
+                            [ -e "$f" ] || continue
+                            ver=$(basename "$f" | sed -n "s/^privkey\([0-9][0-9]*\)\.pem$/\1/p")
+                            [ -n "$ver" ] || continue
+                            if [ "$ver" -lt "$conflict_ver" ] 2>/dev/null; then
+                                if [ -z "$prev" ] || [ "$ver" -gt "$prev" ] 2>/dev/null; then
+                                    prev="$ver"
+                                fi
+                            fi
+                        done
+                        if [ -n "$prev" ] && retarget_live_to "$prev"; then
+                            remove_ver "$conflict_ver" "FileExistsError after live retarget" || true
+                        else
+                            echo "Could not retarget live away from conflict version $conflict_ver"
+                        fi
+                    fi
+                fi
+                echo -n "Archive privkeys now: "
+                ls -1 "$archive"/privkey*.pem 2>/dev/null | while read -r p; do basename "$p"; done | tr "\n" " "
+                echo
             ' || warn "Could not repair Certbot archive skew (continuing anyway)"
     }
     repair_certbot_archive_skew "$DOMAIN"
@@ -402,8 +471,9 @@ if [ "$NEED_CERT" = true ]; then
     cat "$CERTBOT_LOG"
     if [ "$CERTBOT_RC" -ne 0 ]; then
         if grep -q 'FileExistsError' "$CERTBOT_LOG"; then
-            warn "Certbot FileExistsError — repairing archive skew and retrying once"
-            repair_certbot_archive_skew "$DOMAIN"
+            CONFLICT_VER=$(sed -n 's/.*privkey\([0-9][0-9]*\)\.pem.*/\1/p' "$CERTBOT_LOG" | head -n1)
+            warn "Certbot FileExistsError — repairing archive skew (conflict ver ${CONFLICT_VER:-unknown}) and retrying once"
+            repair_certbot_archive_skew "$DOMAIN" "$CONFLICT_VER"
             if ! run_certbot_certonly; then
                 rm -f "$CERTBOT_LOG"
                 err "Failed to obtain SSL certificate"
