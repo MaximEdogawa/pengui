@@ -241,10 +241,6 @@ pengui/
 │       │   └── config/        # Configuration
 │       └── providers/         # React context providers
 │
-├── docs/                       # Documentation
-│   └── architecture/          # Architecture documentation
-│       └── fsd-structure.md   # FSD structure guide
-│
 ├── public/                     # Static assets
 │   ├── icons/                 # App icons
 │   └── assets/                # Images & assets
@@ -264,7 +260,7 @@ pengui/
 - **Public API**: Barrel exports (`index.ts`) control module boundaries
 - **Vertical Slicing**: Organized by feature/domain, not by technical role
 
-See [Architecture Documentation](./docs/architecture/fsd-structure.md) for detailed guidelines.
+See [Architecture Documentation](https://github.com/maximedogawa/pengui-wiki/blob/main/architecture/fsd-structure.md) for detailed guidelines.
 
 ## 🎨 UI Components
 
@@ -394,11 +390,13 @@ Contributions are welcome! Please ensure:
 
 ## 📚 Additional Resources
 
-- [Architecture Documentation](./docs/architecture/fsd-structure.md) - Feature-Sliced Design structure and guidelines
+- [Architecture Documentation](https://github.com/maximedogawa/pengui-wiki/blob/main/architecture/fsd-structure.md) - Feature-Sliced Design structure and guidelines
 - [UI Component Library](./src/shared/ui/README.md) - Detailed component documentation
 - [Component Catalog](./src/shared/ui/COMPONENT_CATALOG.md) - Quick component reference
 - [WalletConnect Integration](./src/shared/lib/walletConnect/README.md) - Wallet integration details
-- [Infinite Loop Guardrails](./docs/development/infinite-loop-guardrails.md) - Preventing infinite loops in useEffect hooks
+- [Pengui Wiki](https://github.com/maximedogawa/pengui-wiki) - Architecture, development and testing documentation
+- [Pengui Backlog](https://github.com/maximedogawa/pengui-backlog) - Tasks and bugs
+- [Infinite Loop Guardrails](https://github.com/maximedogawa/pengui-wiki/blob/main/development/infinite-loop-guardrails.md) - Preventing infinite loops in useEffect hooks
 
 ## 🐛 Troubleshooting
 
@@ -407,7 +405,7 @@ Contributions are welcome! Please ensure:
 If Turbopack shows "compiling..." indefinitely or pages won't switch:
 
 - Check browser console for infinite loop warnings
-- Review `useEffect` dependency arrays (see [Infinite Loop Guardrails](./docs/development/infinite-loop-guardrails.md))
+- Review `useEffect` dependency arrays (see [Infinite Loop Guardrails](https://github.com/maximedogawa/pengui-wiki/blob/main/development/infinite-loop-guardrails.md))
 - Run `bun run lint` to check for React Hooks issues
 - Look for `useEffect` hooks that update state included in their dependency array
 
