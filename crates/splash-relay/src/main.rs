@@ -36,14 +36,29 @@ struct MinimalSplashOffer {
 /// accidentally drop fields if Dexie adds or changes them.
 type EnrichedOffer = serde_json::Value;
 
+/// What a client on the public port is asking for.
+#[derive(Debug, PartialEq, Eq)]
+enum Incoming {
+    /// The `/up` health check that hosting platforms (ONCE/kamal-proxy) poll.
+    HealthCheck,
+    /// A WebSocket handshake, which belongs to libp2p.
+    WebSocket,
+    /// Ordinary HTTP: bots, scanners, someone opening the host in a browser.
+    Other,
+}
+
 /// The single public port: browser WebSocket traffic plus the `/up` health
 /// check that hosting platforms (ONCE/kamal-proxy) require.
 ///
 /// libp2p's WebSocket transport speaks only the WebSocket handshake, so a plain
 /// `GET /up` against it fails. Rather than run a separate proxy alongside the
-/// relay, this answers `/up` itself and passes every other connection straight
-/// through to libp2p's listener on loopback. The request bytes are only peeked,
-/// never consumed, so libp2p sees the handshake exactly as the client sent it.
+/// relay, this answers `/up` itself and hands only genuine WebSocket handshakes
+/// to libp2p's listener on loopback. Those bytes are peeked at, never consumed,
+/// so libp2p sees the handshake exactly as the client sent it.
+///
+/// Anything else is answered here too. A public hostname attracts constant
+/// scanner and browser traffic, and passing that to libp2p would make it log a
+/// failed handshake for every stray request.
 async fn serve_public_port(listener: TcpListener, internal_ws_port: oneshot::Receiver<u16>) -> Result<()> {
     let internal_ws_port = internal_ws_port.await?;
     info!(
@@ -61,29 +76,43 @@ async fn serve_public_port(listener: TcpListener, internal_ws_port: oneshot::Rec
         };
 
         tokio::spawn(async move {
-            match is_health_check(&mut inbound).await {
-                Ok(true) => {
-                    let response = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\
-                                    Content-Length: 3\r\nConnection: close\r\n\r\nup\n";
-                    let _ = inbound.write_all(response.as_bytes()).await;
+            match classify_incoming(&mut inbound).await {
+                Ok(Incoming::HealthCheck) => {
+                    let _ = inbound
+                        .write_all(
+                            b"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\
+                              Content-Length: 3\r\nConnection: close\r\n\r\nup\n",
+                        )
+                        .await;
                     let _ = inbound.shutdown().await;
                 }
-                Ok(false) => match TcpStream::connect(("127.0.0.1", internal_ws_port)).await {
+                Ok(Incoming::WebSocket) => match TcpStream::connect(("127.0.0.1", internal_ws_port)).await {
                     Ok(mut outbound) => {
                         let _ = tokio::io::copy_bidirectional(&mut inbound, &mut outbound).await;
                     }
                     Err(e) => warn!("Cannot reach WebSocket listener: {}", e),
                 },
+                Ok(Incoming::Other) => {
+                    debug!("Non-WebSocket request from {}", peer);
+                    let _ = inbound
+                        .write_all(
+                            b"HTTP/1.1 404 Not Found\r\nContent-Type: text/plain\r\n\
+                              Content-Length: 38\r\nConnection: close\r\n\r\n\
+                              splash-relay: WebSocket endpoint only\n",
+                        )
+                        .await;
+                    let _ = inbound.shutdown().await;
+                }
                 Err(e) => debug!("Dropping connection from {}: {}", peer, e),
             }
         });
     }
 }
 
-/// Peeks at the request line to tell a `/up` health check from a WebSocket
-/// handshake. Peeking leaves the bytes in the socket for libp2p to read.
-async fn is_health_check(stream: &mut TcpStream) -> Result<bool> {
-    let mut buf = [0u8; 1024];
+/// Peeks at the request head to decide what a connection is. Peeking leaves the
+/// bytes in the socket so libp2p can read the handshake itself.
+async fn classify_incoming(stream: &mut TcpStream) -> Result<Incoming> {
+    let mut buf = [0u8; 8192];
     let deadline = tokio::time::Instant::now() + Duration::from_secs(5);
 
     loop {
@@ -91,18 +120,44 @@ async fn is_health_check(stream: &mut TcpStream) -> Result<bool> {
         if n == 0 {
             anyhow::bail!("closed before sending a request");
         }
+        let head = String::from_utf8_lossy(&buf[..n]);
 
-        // Decide only once the whole request line has arrived.
-        if let Some(eol) = buf[..n].windows(2).position(|w| w == b"\r\n") {
-            let line = String::from_utf8_lossy(&buf[..eol]);
-            return Ok(line.starts_with("GET /up ") || line == "GET /up");
+        // A WebSocket handshake may target any path, so this outranks /up.
+        if has_websocket_upgrade(&head) {
+            return Ok(Incoming::WebSocket);
+        }
+
+        // Only rule out an upgrade once the whole header block has arrived.
+        if head.contains("\r\n\r\n") {
+            let request_line = head.lines().next().unwrap_or_default();
+            return Ok(if is_health_check_request(request_line) {
+                Incoming::HealthCheck
+            } else {
+                Incoming::Other
+            });
         }
 
         if n == buf.len() {
-            return Ok(false);
+            return Ok(Incoming::Other);
         }
         tokio::time::sleep(Duration::from_millis(10)).await;
     }
+}
+
+fn has_websocket_upgrade(head: &str) -> bool {
+    head.lines().any(|line| {
+        let line = line.to_ascii_lowercase();
+        line.starts_with("upgrade:") && line.contains("websocket")
+    })
+}
+
+fn is_health_check_request(request_line: &str) -> bool {
+    let mut parts = request_line.split_whitespace();
+    let method = parts.next().unwrap_or_default();
+    let path = parts.next().unwrap_or_default();
+    let path = path.split('?').next().unwrap_or_default();
+
+    (method.eq_ignore_ascii_case("GET") || method.eq_ignore_ascii_case("HEAD")) && path == "/up"
 }
 
 async fn fetch_enriched_offer(
@@ -822,4 +877,51 @@ async fn resolve_peers_from_dns(network_name: &str) -> Result<Vec<String>> {
         .collect();
 
     Ok(peers)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn detects_websocket_upgrade_regardless_of_casing() {
+        assert!(has_websocket_upgrade(
+            "GET / HTTP/1.1\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n\r\n"
+        ));
+        assert!(has_websocket_upgrade(
+            "GET / HTTP/1.1\r\nUPGRADE: WebSocket\r\n\r\n"
+        ));
+        assert!(has_websocket_upgrade(
+            "GET / HTTP/1.1\r\nupgrade:websocket\r\n\r\n"
+        ));
+    }
+
+    #[test]
+    fn plain_http_is_not_a_websocket_upgrade() {
+        // Stray scanner and browser traffic must never reach libp2p, or it logs
+        // a failed handshake for every request.
+        assert!(!has_websocket_upgrade("GET / HTTP/1.1\r\nHost: example\r\n\r\n"));
+        assert!(!has_websocket_upgrade("POST /x HTTP/1.1\r\n\r\n"));
+        assert!(!has_websocket_upgrade("HEAD / HTTP/1.1\r\n\r\n"));
+        // A path mentioning websocket is not an upgrade request.
+        assert!(!has_websocket_upgrade("GET /websocket HTTP/1.1\r\n\r\n"));
+        // Upgrading to something other than WebSocket is not ours either.
+        assert!(!has_websocket_upgrade("GET / HTTP/1.1\r\nUpgrade: h2c\r\n\r\n"));
+    }
+
+    #[test]
+    fn recognises_the_health_check() {
+        assert!(is_health_check_request("GET /up HTTP/1.1"));
+        assert!(is_health_check_request("HEAD /up HTTP/1.1"));
+        assert!(is_health_check_request("GET /up?ts=1 HTTP/1.1"));
+        assert!(is_health_check_request("get /up HTTP/1.1"));
+    }
+
+    #[test]
+    fn other_paths_are_not_the_health_check() {
+        assert!(!is_health_check_request("GET / HTTP/1.1"));
+        assert!(!is_health_check_request("GET /upload HTTP/1.1"));
+        assert!(!is_health_check_request("POST /up HTTP/1.1"));
+        assert!(!is_health_check_request(""));
+    }
 }
