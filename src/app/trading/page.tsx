@@ -12,6 +12,7 @@ import {
   useOrderBookFilters,
 } from "@/features/trading/hooks/OrderBookFiltersProvider";
 import { SelectedOrderProvider } from "@/features/trading/hooks/SelectedOrderProvider";
+import { StreamOffersProvider } from "@/features/trading/hooks/StreamOffersProvider";
 import { SplashConnectionProvider } from "@/features/splash-terminal";
 
 export default function TradingPage() {
@@ -45,13 +46,15 @@ export default function TradingPage() {
       <OrderBookFiltersProvider>
         <SelectedOrderProvider>
           <SplashConnectionProvider>
-            <TradingPageContent
-              activeView={activeView}
-              setActiveView={setActiveView}
-              views={views}
-              isDark={isDark}
-              t={t}
-            />
+            <StreamOffersProvider>
+              <TradingPageContent
+                activeView={activeView}
+                setActiveView={setActiveView}
+                views={views}
+                isDark={isDark}
+                t={t}
+              />
+            </StreamOffersProvider>
           </SplashConnectionProvider>
         </SelectedOrderProvider>
       </OrderBookFiltersProvider>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useEffect, useState, useCallback } from "react";
+import { useMemo } from "react";
 import { useThemeClasses } from "@/shared/hooks";
 import { useNetwork } from "@/shared/hooks/useNetwork";
 import { getDexieSplashRelayUrl } from "@/shared/lib/utils/networkUtils";
@@ -11,6 +11,7 @@ import type { OrderBookOrder } from "@/features/trading/lib/orderBookTypes";
 import type { DexieOffer } from "@/entities/offer";
 import { useSplashConnection } from "@/features/splash-terminal/SplashConnectionProvider";
 import { useOrderBookFilterStore } from "@/features/trading/hooks/orderBookFilterStore";
+import { useStreamOffers } from "@/features/trading/hooks/StreamOffersProvider";
 import { Radio } from "lucide-react";
 import { offerMatchesPairFilter } from "@/features/trading/lib/offerPairFilter";
 
@@ -30,8 +31,8 @@ export default function StreamContainer({ onOfferClick }: StreamContainerProps) 
   const { t } = useThemeClasses();
   const { network } = useNetwork();
   const relayUrl = getDexieSplashRelayUrl(network);
-  const [offers, setOffers] = useState<DexieOffer[]>([]);
-  const [streamReceived, setStreamReceived] = useState(0);
+  // Offers live in StreamOffersProvider (above the view switch) so they survive tab switches.
+  const { offers, streamReceived, isSnapshotLoading } = useStreamOffers();
 
   const buyAssets = useOrderBookFilterStore((s) => s.filters.buyAsset ?? []);
   const sellAssets = useOrderBookFilterStore((s) => s.filters.sellAsset ?? []);
@@ -39,27 +40,6 @@ export default function StreamContainer({ onOfferClick }: StreamContainerProps) 
   // Use the shared WASM connection from SplashConnectionProvider
   const wasm = useSplashConnection();
   const { sortTrades, sortConfig, setSort } = useTradeHistorySorting();
-
-  // Accumulate offers in local state for the stream table
-  const appendStreamOffers = useCallback((newOffers: DexieOffer[]) => {
-    if (newOffers.length === 0) return;
-    setOffers((prev) => {
-      const byKey = new Map<string, DexieOffer>();
-      for (const o of prev) byKey.set(o.id || o.offer?.slice(0, 64) || String(prev.indexOf(o)), o);
-      for (const o of newOffers) {
-        const k = o.id || o.offer?.slice(0, 64) || "";
-        if (!byKey.has(k)) byKey.set(k, o);
-      }
-      return Array.from(byKey.values());
-    });
-    setStreamReceived((n) => n + newOffers.length);
-  }, []);
-
-  // Subscribe to stream offers (provider handles init/connect and order book invalidation)
-  useEffect(() => {
-    const cleanup = wasm.onOffers(appendStreamOffers);
-    return cleanup;
-  }, [wasm, appendStreamOffers]);
 
   // Only display offers matching the global asset pair filter
   const filteredOffers = useMemo(
@@ -110,7 +90,8 @@ export default function StreamContainer({ onOfferClick }: StreamContainerProps) 
                 {connectionLabel}
               </span>
               <span className={`text-[10px] sm:text-xs ${t.textSecondary}`}>
-                {filteredOffers.length} of {streamReceived} offer{streamReceived !== 1 ? "s" : ""}
+                {filteredOffers.length} of {offers.length} offer{offers.length !== 1 ? "s" : ""}
+                {streamReceived > 0 ? ` (${streamReceived} streamed)` : ""}
               </span>
             </>
           ) : (
@@ -145,13 +126,15 @@ export default function StreamContainer({ onOfferClick }: StreamContainerProps) 
             className={`flex flex-col items-center justify-center h-full gap-1 px-4 ${t.textSecondary}`}
           >
             <p className="text-sm">
-              {relayUrl
-                ? isConnected
-                  ? "Waiting for offers…"
-                  : wasm.status === "connecting"
-                    ? "Connecting…"
-                    : "Reconnecting…"
-                : "Stream is not configured."}
+              {isSnapshotLoading
+                ? "Loading offers…"
+                : relayUrl
+                  ? isConnected
+                    ? "Waiting for offers…"
+                    : wasm.status === "connecting"
+                      ? "Connecting…"
+                      : "Reconnecting…"
+                  : "Stream is not configured."}
             </p>
             <p className="text-xs text-center max-w-sm">
               {isConnected
