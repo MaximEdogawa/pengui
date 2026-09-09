@@ -52,7 +52,7 @@ async function mockExternalApis(page: import("@playwright/test").Page) {
     route.fulfill({ json: { status: "success", data: [] } })
   );
   // Dexie tickers (useCatTokens)
-  await page.route("**/api.dexie.app/**", (route) =>
+  await page.route("**/api.dexie.space/**", (route) =>
     route.fulfill({ json: { offers: [], count: 0 } })
   );
   await page.route("**/api-testnet.dexie.space/**", (route) =>

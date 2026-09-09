@@ -102,7 +102,7 @@ Decentralised exchange protocol for Chia offers. The app supports both mainnet a
 
 | Network | URL                               | Env override                        |
 | ------- | --------------------------------- | ----------------------------------- |
-| Mainnet | `https://api.dexie.app`           | `NEXT_PUBLIC_DEXIE_MAINNET_API_URL` |
+| Mainnet | `https://api.dexie.space`         | `NEXT_PUBLIC_DEXIE_MAINNET_API_URL` |
 | Testnet | `https://api-testnet.dexie.space` | `NEXT_PUBLIC_DEXIE_TESTNET_API_URL` |
 
 ---
@@ -176,7 +176,7 @@ issues with external APIs or to process WASM files.
 | `NEXT_PUBLIC_WALLET_CONNECT_CHAIN_ID`           | No       | `chia:mainnet`                          | Default chain                                         |
 | `NEXT_PUBLIC_SPACESCAN_API_URL`                 | No       | `https://api.spacescan.io`              | SpaceScan mainnet                                     |
 | `NEXT_PUBLIC_SPACESCAN_TESTNET_API_URL`         | No       | `https://api-testnet11.spacescan.io`    | SpaceScan testnet11                                   |
-| `NEXT_PUBLIC_DEXIE_MAINNET_API_URL`             | No       | `https://api.dexie.app`                 | Dexie mainnet                                         |
+| `NEXT_PUBLIC_DEXIE_MAINNET_API_URL`             | No       | `https://api.dexie.space`               | Dexie mainnet                                         |
 | `NEXT_PUBLIC_DEXIE_TESTNET_API_URL`             | No       | `https://api-testnet.dexie.space`       | Dexie testnet                                         |
 | `NEXT_PUBLIC_TIBET_API_URL`                     | No       | `https://api.v2.tibetswap.io`           | Tibet default                                         |
 | `NEXT_PUBLIC_TIBET_MAINNET_API_URL`             | No       | `https://api.v2.tibetswap.io`           | Tibet mainnet                                         |
@@ -219,7 +219,7 @@ issues with external APIs or to process WASM files.
 | `regression/wallet-connected.spec.ts` | None (WalletConnect relay is real)                              |
 | `regression/wallet-assets.spec.ts`    | `/api/spacescan/tokens` → empty list                            |
 | `regression/offers-flow.spec.ts`      | None                                                            |
-| `regression/trading-flow.spec.ts`     | `api.dexie.app`, `api.dexie.space`, `api.v2.tibetswap.io/*`     |
+| `regression/trading-flow.spec.ts`     | `api.dexie.space`, `api.v2.tibetswap.io/*`     |
 | `acceptance/*.spec.ts`                | None                                                            |
 | `testnet/wallet-real-balance.spec.ts` | `/api/spacescan/tokens` → empty list; SpaceScan balance is REAL |
 | `testnet/send-transaction.spec.ts`    | `/api/spacescan/tokens` → empty list                            |

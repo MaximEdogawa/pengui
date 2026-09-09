@@ -82,7 +82,6 @@ export class TradingPage {
       count: offerFixture ? 1 : 0,
     };
 
-    await this.page.route("**/api.dexie.app/**", (r) => r.fulfill({ json: dexieResponse }));
     await this.page.route("**/api.dexie.space/**", (r) => r.fulfill({ json: dexieResponse }));
 
     await this.page.route("**/api.v2.tibetswap.io/tokens", (r) =>
