@@ -152,8 +152,12 @@ jobs:
             NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID=${{ secrets.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID }}
             NEXT_PUBLIC_WALLET_CONNECT_RELAY_URL=${{ vars.NEXT_PUBLIC_WALLET_CONNECT_RELAY_URL }}
             NEXT_PUBLIC_DEXIE_MAINNET_API_URL=${{ vars.NEXT_PUBLIC_DEXIE_MAINNET_API_URL }}
+            NEXT_PUBLIC_TIBET_MAINNET_API_URL=${{ vars.NEXT_PUBLIC_TIBET_MAINNET_API_URL || 'https://api.v2.tibetswap.io' }}
+            NEXT_PUBLIC_TIBET_TESTNET_API_URL=${{ vars.NEXT_PUBLIC_TIBET_TESTNET_API_URL || 'https://api.v2.tibetswap.io' }}
             NEXT_PUBLIC_API_BASE_URL=${{ vars.NEXT_PUBLIC_API_BASE_URL }}
             NEXT_PUBLIC_APP_URL=${{ vars.NEXT_PUBLIC_APP_URL }}
             NEXT_PUBLIC_DEXIE_SPLASH_RELAY_MAINNET_WS_URL=wss://${{ vars.NEXT_PUBLIC_SPLASH_RELAY_MAINNET_SUBDOMAIN }}
             NEXT_PUBLIC_DEXIE_SPLASH_RELAY_TESTNET_WS_URL=wss://${{ vars.NEXT_PUBLIC_SPLASH_RELAY_TESTNET_SUBDOMAIN }}
-            NEXT_PUBLIC_FEATURE_FLAGS=${{ vars.NEXT_PUBLIC_FEATURE_FLAGS }}
+            # Fall back to the baseline so an unset repo variable cannot ship an
+            # image with trading (and therefore swap) switched off.
+            NEXT_PUBLIC_FEATURE_FLAGS=${{ vars.NEXT_PUBLIC_FEATURE_FLAGS || 'dashboard,offers,trading,wallet' }}
