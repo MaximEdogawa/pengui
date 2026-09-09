@@ -104,7 +104,7 @@ Pengui provides a comprehensive suite of financial tools for the Chia ecosystem,
 - **Node.js** 20.19.0+ or 22.12.0+
 - **Bun** (recommended) or npm/yarn/pnpm
 - **Sage Wallet** or compatible WalletConnect wallet
-- **Rust** and **wasm-pack** (optional, for the Splash Stream tab): install from [rustup.rs](https://rustup.rs) and `cargo install wasm-pack`
+- **Rust** (optional, for the Splash Stream tab and the relay): install from [rustup.rs](https://rustup.rs). wasm-pack ships as a devDependency, so `bun install` is enough — no global install needed.
 
 ### Installation
 
@@ -167,9 +167,13 @@ The production build will be in the `.next` directory.
 To include the **Splash Stream** terminal (libp2p WASM), build the WASM first, or run a full build:
 
 ```bash
-bun run build:wasm   # Build splash-wasm → public/wasm/ (requires Rust + wasm-pack)
-bun run build:all    # build:wasm then build
+bun run build:wasm   # Build splash-wasm → public/wasm/ (requires Rust)
+bun run build:relay  # Build the splash-relay binary (requires Rust)
+bun run build:all    # WASM, then relay, then Next.js
 ```
+
+`build:wasm` adds the `wasm32-unknown-unknown` Rust target if it is missing and uses the
+wasm-pack that `bun install` provides, so the only prerequisite is a Rust toolchain.
 
 ### Running Production Build
 
@@ -341,8 +345,9 @@ bun storybook        # Start Storybook component library
 
 # Building
 bun build            # Build for production
-bun run build:wasm   # Build Splash WASM (public/wasm/) — requires Rust + wasm-pack
-bun run build:all    # Build WASM then Next.js
+bun run build:wasm   # Build Splash WASM (public/wasm/) — requires Rust
+bun run build:relay  # Build the splash-relay binary — requires Rust
+bun run build:all    # Build WASM, relay, then Next.js
 bun build-storybook  # Build Storybook for production
 bun start            # Start production server
 

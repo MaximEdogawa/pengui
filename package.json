@@ -8,9 +8,9 @@
   "scripts": {
     "dev": "bun next dev",
     "build": "bun next build",
-    "build:wasm": "cd crates/splash-wasm && wasm-pack build --target web --out-dir ../../public/wasm",
+    "build:wasm": "bun run scripts/build-wasm.ts",
     "build:all": "bun run build:wasm && bun run build:relay && bun run build",
-    "build:relay": "cd crates/splash-relay && cargo build --release --",
+    "build:relay": "cargo build --release --manifest-path crates/splash-relay/Cargo.toml",
     "relay": "cd crates/splash-relay && cargo run --release --",
     "relay:debug": "cd crates/splash-relay && RUST_LOG=debug cargo run --release --",
     "relay:testnet": "cd crates/splash-relay && cargo run --release -- --testnet --ws-port 9091 --tcp-port 11512",
@@ -76,6 +76,10 @@
     "postcss": "^8.5.6",
     "prettier": "^3.8.1",
     "tailwindcss": "^3.4.19",
-    "typescript": "^5.9.3"
-  }
+    "typescript": "^5.9.3",
+    "wasm-pack": "^0.15.0"
+  },
+  "trustedDependencies": [
+    "wasm-pack"
+  ]
 }
