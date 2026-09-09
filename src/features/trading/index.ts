@@ -7,6 +7,7 @@
 export { useOrderBook } from "./hooks/useOrderBook";
 export { useOrderBookFilters, OrderBookFiltersProvider } from "./hooks/OrderBookFiltersProvider";
 export { useOrderBookOfferSubmission } from "./hooks/useOrderBookOfferSubmission";
+export { StreamOffersProvider, useStreamOffers } from "./hooks/StreamOffersProvider";
 
 // UI exports
 export { default as OrderBookContainer } from "./ui/widgets/orderbook/OrderBookContainer";

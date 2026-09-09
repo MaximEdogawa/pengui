@@ -10,3 +10,4 @@ export {
 } from "./orderBookFilterStore";
 export { useOrderBookOfferSubmission } from "./useOrderBookOfferSubmission";
 export { SelectedOrderProvider, useSelectedOrder } from "./SelectedOrderProvider";
+export { StreamOffersProvider, useStreamOffers } from "./StreamOffersProvider";
