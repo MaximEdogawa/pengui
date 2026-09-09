@@ -9,7 +9,7 @@
  *     The active tab's content renders below.
  *
  * ── External API mocks ──────────────────────────────────────────────────────
- *   Dexie: api.dexie.app  →  one XCH/USDS pair + one open offer
+ *   Dexie: api.dexie.space  →  one XCH/USDS pair + one open offer
  *   Tibet: api.v2.tibetswap.io  →  tokens, pair, quote, offer response
  *
  * ── Note on mempool propagation ─────────────────────────────────────────────
@@ -62,9 +62,6 @@ const TIBET_QUOTE = {
 /** Register all trading-page external API mocks. */
 async function mockTradingApis(page: import("@playwright/test").Page) {
   // Dexie order book
-  await page.route("**/api.dexie.app/**", (r) =>
-    r.fulfill({ json: { offers: [DEXIE_OFFER], count: 1 } })
-  );
   await page.route("**/api.dexie.space/**", (r) =>
     r.fulfill({ json: { offers: [DEXIE_OFFER], count: 1 } })
   );
