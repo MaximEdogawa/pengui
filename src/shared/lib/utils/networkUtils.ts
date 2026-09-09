@@ -62,7 +62,7 @@ function isLocalhostForRelay(): boolean {
 /**
  * Splash relay WebSocket URL for the given network.
  * Set via env (e.g. NEXT_PUBLIC_DEXIE_SPLASH_RELAY_WS_URL).
- * When unset, dev and production use remote relays (relay.penguinpool.space).
+ * When unset, dev and production use remote relays (relay.pengui.space).
  *
  * @returns Relay URL (ws:// or wss://), or '' so the stream uses REST only.
  */

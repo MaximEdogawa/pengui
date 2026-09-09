@@ -56,16 +56,22 @@ FROM node:20-alpine AS runner
 
 WORKDIR /app
 
-# Install curl for health checks
-RUN apk add --no-cache curl
+# Install curl for health checks; libcap so non-root `node` can bind port 80
+RUN apk add --no-cache curl libcap
 
 # Add non-root user for security
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
+# Allow the non-root user to bind port 80 (privileged port) without running as root.
+# /usr/local/bin/node is the fixed install path in the official node:*-alpine images.
+RUN setcap 'cap_net_bind_service=+ep' /usr/local/bin/node
+
 # Set production environment
+# PORT=80 because ONCE (https://github.com/basecamp/once) requires apps to
+# serve HTTP on port 80; it terminates TLS and reverse-proxies to this port.
 ENV NODE_ENV=production
-ENV PORT=3000
+ENV PORT=80
 ENV HOSTNAME="0.0.0.0"
 
 # Copy necessary files from builder
@@ -76,11 +82,11 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 # Switch to non-root user
 USER nextjs
 
-EXPOSE 3000
+EXPOSE 80
 
-# Health check using curl
+# Health check using curl (ONCE also polls /up itself before routing traffic)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost:3000/api/health || exit 1
+    CMD curl -f http://localhost:80/up || exit 1
 
 # Start the server
 CMD ["node", "server.js"]

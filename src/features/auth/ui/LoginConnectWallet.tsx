@@ -49,7 +49,7 @@ export function LoginConnectWallet() {
       metadata: {
         name: "Pengui",
         description: "Pengui - Decentralized lending platform on Chia Network",
-        url: typeof window !== "undefined" ? window.location.origin : "https://penguinpool.space",
+        url: typeof window !== "undefined" ? window.location.origin : "https://pengui.space",
         icons: [penguiIcon],
       },
     };

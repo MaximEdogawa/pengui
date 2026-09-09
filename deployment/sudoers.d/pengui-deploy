@@ -1,9 +1,0 @@
-# Pengui server: passwordless sudo for common deploy/ops commands.
-# Install on the server (as root):
-#   sudo install -m 440 -o root -g root sudoers.d/pengui-deploy /etc/sudoers.d/pengui-deploy
-# Or: sudo visudo -f /etc/sudoers.d/pengui-deploy   (paste contents, save)
-#
-# Replace "deploy" with your SSH/deploy username if different.
-
-# Inspect Let’s Encrypt certs (root-owned under certbot/conf/live/)
-deploy ALL=(root) NOPASSWD: /usr/bin/openssl

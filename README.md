@@ -112,7 +112,7 @@ Pengui provides a comprehensive suite of financial tools for the Chia ecosystem,
 
    ```bash
    git clone <repository-url>
-   cd penguin-pool/pengui
+   cd pengui
    ```
 
 2. **Install dependencies**

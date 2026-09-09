@@ -24,7 +24,7 @@ jobs:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
-          port: 22
+          port: ${{ secrets.DEPLOY_PORT || 22 }}
           debug: true
           script: |
             echo "✓ SSH connection successful!"
@@ -33,11 +33,4 @@ jobs:
             echo "Current directory: $(pwd)"
             echo "Server hostname: $(hostname)"
             echo "Docker installed: $(docker --version || echo 'Docker not found')"
-            echo "Docker Compose installed: $(docker compose version || echo 'Docker Compose not found')"
-
-            # Create pengui directory if it doesn't exist
-            mkdir -p ~/pengui/deployment
-            # Test write permissions
-            touch ~/pengui/deployment/test.txt
-            rm ~/pengui/deployment/test.txt
-            echo "✓ Write permissions OK"
+            echo "ONCE installed: $(once --help >/dev/null 2>&1 && echo yes || echo 'once not found - see https://github.com/basecamp/once')"
