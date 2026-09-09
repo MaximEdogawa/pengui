@@ -28,7 +28,12 @@ const wasmMock = {
   onOffers: () => () => {},
 };
 
+// bun's mock.module is global and outlives this file, so keep every other export
+// intact - other suites import broadcastOfferToSplash through the feature barrel.
+const actualSplashWasm = await import("./useSplashWasm");
+
 mock.module("./useSplashWasm", () => ({
+  ...actualSplashWasm,
   useSplashWasm: () => wasmMock,
 }));
 
