@@ -20,7 +20,7 @@ export const CHIA_METADATA = {
 /** Config for WalletConnect class (penguiIcon + metadata). Used by disconnect and connect flows. */
 export function getWalletConnectAppConfig() {
   const origin =
-    typeof window !== "undefined" ? window.location.origin : "https://penguinpool.space";
+    typeof window !== "undefined" ? window.location.origin : "https://pengui.space";
   const penguiIcon = `${origin}/pengui-logo.png`;
   return {
     penguiIcon,

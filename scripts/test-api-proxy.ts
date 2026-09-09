@@ -5,13 +5,13 @@
  * Run against a running app (e.g. bun run dev) or production:
  *
  *   bun run test:api-proxy
- *   BASE_URL=https://penguinpool.space bun run test:api-proxy
+ *   BASE_URL=https://pengui.space bun run test:api-proxy
  *
  * On the server, run against localhost to verify nginx + app:
  *   BASE_URL=http://localhost bun run test:api-proxy
  *
  * If tokens returns 502 in production (server can't reach Space Scan), use:
- *   ALLOW_TOKENS_502=1 BASE_URL=https://penguinpool.space bun run test:api-proxy
+ *   ALLOW_TOKENS_502=1 BASE_URL=https://pengui.space bun run test:api-proxy
  */
 
 const BASE = process.env.BASE_URL ?? "http://localhost:3000";

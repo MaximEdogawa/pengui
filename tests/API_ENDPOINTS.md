@@ -113,12 +113,12 @@ Real-time offer streaming via libp2p Splash protocol. Used by the "Stream" termi
 
 | Purpose          | URL                                     | Env                                             |
 | ---------------- | --------------------------------------- | ----------------------------------------------- |
-| Mainnet relay    | `wss://relay.penguinpool.space`         | `NEXT_PUBLIC_DEXIE_SPLASH_RELAY_MAINNET_WS_URL` |
-| Testnet relay    | `wss://relay-testnet.penguinpool.space` | `NEXT_PUBLIC_DEXIE_SPLASH_RELAY_TESTNET_WS_URL` |
+| Mainnet relay    | `wss://relay.pengui.space`         | `NEXT_PUBLIC_DEXIE_SPLASH_RELAY_MAINNET_WS_URL` |
+| Testnet relay    | `wss://relay-testnet.pengui.space` | `NEXT_PUBLIC_DEXIE_SPLASH_RELAY_TESTNET_WS_URL` |
 | Generic override | (mainnet or testnet)                    | `NEXT_PUBLIC_DEXIE_SPLASH_RELAY_WS_URL`         |
 
-Self-hosted relay: see `deployment/docker-compose.yml` — `splash-relay` (port 9090) and
-`splash-relay-testnet` (port 9091). nginx proxies these through subdomain SSL.
+Self-hosted relay: see `deployment/splash-relay/Dockerfile`. Deployed as two ONCE apps
+(`relay.pengui.space`, `relay-testnet.pengui.space`) — see `deployment/README.md`.
 
 ---
 
@@ -182,8 +182,8 @@ issues with external APIs or to process WASM files.
 | `NEXT_PUBLIC_TIBET_MAINNET_API_URL`             | No       | `https://api.v2.tibetswap.io`           | Tibet mainnet                                         |
 | `NEXT_PUBLIC_TIBET_TESTNET_API_URL`             | No       | `https://api.v2.tibetswap.io`           | Tibet testnet                                         |
 | `NEXT_PUBLIC_DEXIE_SPLASH_RELAY_WS_URL`         | No       | `ws://localhost:9090`                   | Splash relay (generic)                                |
-| `NEXT_PUBLIC_DEXIE_SPLASH_RELAY_MAINNET_WS_URL` | No       | `wss://relay.penguinpool.space`         | Splash mainnet                                        |
-| `NEXT_PUBLIC_DEXIE_SPLASH_RELAY_TESTNET_WS_URL` | No       | `wss://relay-testnet.penguinpool.space` | Splash testnet                                        |
+| `NEXT_PUBLIC_DEXIE_SPLASH_RELAY_MAINNET_WS_URL` | No       | `wss://relay.pengui.space`         | Splash mainnet                                        |
+| `NEXT_PUBLIC_DEXIE_SPLASH_RELAY_TESTNET_WS_URL` | No       | `wss://relay-testnet.pengui.space` | Splash testnet                                        |
 | `NEXT_PUBLIC_APP_ENV`                           | No       | `production`                            | Info banner mode (`demo`/`alpha`/`beta`/`production`) |
 
 ### Test-only
@@ -200,14 +200,14 @@ issues with external APIs or to process WASM files.
 | `TESTNET_FUNDING_TIMEOUT_MS` | No                  | Poll timeout ms (default `600_000`)            |
 | `TESTNET_SPACESCAN_API_URL`  | No                  | Override SpaceScan base for testnet balance    |
 
-### Deployment (server-side only)
+### Deployment (server-side only, see deployment/README.md)
 
-| Variable                  | Description                              |
+| Variable                  | Description                             |
 | ------------------------- | ---------------------------------------- |
-| `RELAY_MAINNET_SUBDOMAIN` | nginx subdomain for mainnet Splash relay |
-| `RELAY_TESTNET_SUBDOMAIN` | nginx subdomain for testnet Splash relay |
-| `SPLASH_RELAY_IMAGE`      | Docker image for Splash relay containers |
-| `DOMAIN`                  | Root domain for SSL and nginx            |
+| `RELAY_MAINNET_SUBDOMAIN` | ONCE hostname for mainnet Splash relay   |
+| `RELAY_TESTNET_SUBDOMAIN` | ONCE hostname for testnet Splash relay   |
+| `RELAY_IMAGE`             | Docker image for Splash relay ONCE apps  |
+| `DOMAIN`                  | Root domain for the app's ONCE hostname  |
 
 ---
 

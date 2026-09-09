@@ -71,7 +71,7 @@ function WalletComponent() {
 
 ## All Implemented Wallet Queries
 
-All wallet queries from penguin-pool are implemented:
+All wallet queries from pengui are implemented:
 
 1. ✅ `getWalletAddress` - Get wallet address
 2. ✅ `getAssetBalance` - Get asset balance

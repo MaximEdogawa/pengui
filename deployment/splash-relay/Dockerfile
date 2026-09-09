@@ -19,12 +19,19 @@ RUN /app/target/release/splash-relay --help 2>&1 | grep -q "Maximum concurrent W
 
 FROM debian:bookworm-slim
 
-RUN apt-get update && apt-get install -y ca-certificates netcat-openbsd && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && apt-get install -y ca-certificates netcat-openbsd nginx-light \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /app/target/release/splash-relay /usr/local/bin/splash-relay
+COPY deployment/splash-relay/nginx.conf.template /etc/nginx/nginx.conf.template
+COPY deployment/splash-relay/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
 
-EXPOSE 11511 9090
+# 80    = HTTP shim for ONCE (https://github.com/basecamp/once): /up health
+#         check + WebSocket proxy to 127.0.0.1:9090 (see nginx.conf)
+# 9090  = WebSocket for browsers (used directly when not run under ONCE)
+# 11511 = Splash network TCP (P2P peering; publish with `docker run -p` for
+#         the manual side-channel container - see deployment/README.md)
+EXPOSE 80 9090 11511
 
-# TCP 11511 = Splash network, 9090 = WebSocket for browsers
-ENTRYPOINT ["splash-relay"]
-CMD ["--tcp-port", "11511", "--ws-port", "9090"]
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

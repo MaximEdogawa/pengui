@@ -18,7 +18,7 @@ This doc describes how pengui implements the Splash network using **libp2p in th
 - **Network**: Same protocol IDs as Splash (`/splash/kad/1`, `/splash/id/1`, `/splash/offers/1`; testnet: `splash-testnet`).
 - **Bootstrap**: DNS TXT from `_dnsaddr.splash.dexie.space` or `_dnsaddr.splash-testnet.dexie.space`.
 - **Listen**: TCP (default 11511), WebSocket (default 9090) for browser connections.
-- **Deploy**: Docker image built from `deployment/splash-relay/Dockerfile`; services `splash-relay` and `splash-relay-testnet` in `deployment/docker-compose.yml`.
+- **Deploy**: Docker image built from `deployment/splash-relay/Dockerfile`, deployed as two [ONCE](https://github.com/basecamp/once) apps (mainnet: `relay.pengui.space`, testnet: `relay-testnet.pengui.space`) — see `deployment/README.md`.
 
 ### 3. Pengui frontend
 

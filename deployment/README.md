@@ -1,428 +1,249 @@
 # Pengui Deployment Guide
 
-This directory contains everything needed to deploy Pengui to production with **zero manual configuration** using Docker, nginx, and automatic SSL.
+Pengui deploys as plain Docker images pulled and run by [ONCE](https://github.com/basecamp/once),
+Basecamp's self-hosting platform. ONCE owns TLS (Let's Encrypt), the reverse proxy, and the
+container lifecycle for each hostname - there's no nginx, Certbot, or bespoke deploy script to
+maintain here anymore.
 
-## Architecture
+**CI only builds and pushes images - it never SSHes into the server.** Deploying is a separate,
+manual `once deploy` step: once per app, ONCE takes over from there (it fetches and runs new
+images on its own - that's the platform's whole point). **The app and the relay are two
+completely independent deployments** - separate Dockerfiles, separate GitHub Actions workflows,
+separate `once deploy` calls, separate hostnames. Nothing about deploying one depends on the
+other. Start with the app.
 
-```
-┌──────────────────────────────────────────────────────────────────┐
-│                       Production Server                          │
-│  ┌──────────┐   ┌─────────────┐   ┌──────────────────────────┐   │
-│  │ Certbot  │──▶│   Nginx     │──▶│  Pengui (Next.js)        │   │
-│  │ (certs)  │   │ (TLS + path │   │  pengui:3000 (Docker)    │   │
-│  └──────────┘   │  routing)   │   └──────────────────────────┘   │
-│                 └──────┬──────┘                                    │
-│                        │ proxy (optional)                         │
-│                        ▼                                          │
-│              host:1422  ◀── Pengine (Vite SPA, separate compose) │
-│              (static-web-server; repo: pengine)                 │
-│  ┌─────────────┐    ┌─────────────┐   Docker Network             │
-│  │splash-relay │    │splash-relay │                                 │
-│  │ (mainnet)   │    │ (testnet)   │                                 │
-│  └─────────────┘    └─────────────┘                                 │
-└──────────────────────────────────────────────────────────────────┘
-```
+## 1. Deploy the app (do this first)
 
-Pengui’s app image is built from [`Dockerfile`](Dockerfile): **Next.js** `standalone` output (`node server.js`), not a static export — see [How Pengui is built](#how-pengine-differs-vite--nextjs) vs Pengine.
-
-## Quick Start (Automated CI/CD)
-
-### 1. Configure GitHub Secrets
-
-Go to **Settings → Secrets and variables → Actions** and add:
-
-| Secret            | Description               | Example              |
-| ----------------- | ------------------------- | -------------------- |
-| `DEPLOY_HOST`     | Server hostname/IP        | `deploy.example.com` |
-| `DEPLOY_USER`     | SSH username              | `deploy`             |
-| `DEPLOY_SSH_KEY`  | Private SSH key           | _(see below)_        |
-| `DEPLOY_PORT`     | SSH port (optional)       | `22`                 |
-| `DOMAIN`          | Your domain name          | `pengui.example.com` |
-| `CERTBOT_EMAIL`   | Email for SSL certs       | `admin@example.com`  |
-| `CERTBOT_STAGING` | Use staging SSL (testing) | `0`                  |
-| `PRODUCTION_ENV`  | Multiline env vars        | _(see below)_        |
-
-Optional: set **`DOMAIN2`** (e.g. **`pengine.net`**) so the main Pengui nginx vhost and TLS cert include that hostname — see [Pengine behind Pengui nginx](#pengine-behind-pengui-nginx). For **`DOMAIN=penguinpool.space`**, **`deploy.sh`** still merges **`pengine.net`** into the Let’s Encrypt request unless **`CERT_SKIP_PENGINE_SAN=1`**.
-
-### 2. Configure GitHub Variables
-
-Go to **Settings → Secrets and variables → Actions → Variables** and add:
-
-| Variable                                | Description              |
-| --------------------------------------- | ------------------------ |
-| `NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID` | WalletConnect project ID |
-| `NEXT_PUBLIC_WALLET_CONNECT_RELAY_URL`  | WalletConnect relay URL  |
-| `NEXT_PUBLIC_DEXIE_MAINNET_API_URL`     | Dexie mainnet API        |
-| `NEXT_PUBLIC_DEXIE_TESTNET_API_URL`     | Dexie testnet API        |
-| `NEXT_PUBLIC_API_BASE_URL`              | Your API base URL        |
-| `NEXT_PUBLIC_APP_URL`                   | Your app URL             |
-
-### 3. Create SSH Key Pair
-
-```bash
-# Generate key pair
-ssh-keygen -t ed25519 -f deploy_key -C "GitHub Actions"
-
-# Copy public key to server
-ssh-copy-id -i deploy_key.pub user@server
-
-# Add private key content to DEPLOY_SSH_KEY secret
-cat deploy_key
-```
-
-### 4. Prepare PRODUCTION_ENV Secret
-
-Create a multiline secret with runtime environment variables:
-
-```
-NODE_ENV=production
-```
-
-### 5. Deploy
-
-**Option A: Create a GitHub Release**
-
-- Go to Releases → Create new release
-- Tag with version (e.g., `v1.0.0`)
-- Publish release
-- Deployment starts automatically
-
-**Option B: Manual Dispatch**
-
-- Go to Actions → Deploy Release (Docker)
-- Click "Run workflow"
-- Select environment and optionally specify a tag
-- Enable **need_cert** to force a new or expanded Let’s Encrypt certificate on that run (runs certbot with **`--force-renewal`** so issuance is not skipped as “not yet due”). Releases and normal deploys otherwise reuse a valid cert.
-
-## Manual Deployment
-
-If you need to deploy manually without CI/CD:
+This is the fast path to get something running and testable.
 
 ### Prerequisites
 
-- Docker and Docker Compose on the server
-- SSH access to the server
-- Domain pointing to server IP
+- A server (VPS, Raspberry Pi, etc.) reachable on the public Internet, with Docker installable.
+- A DNS **A record** for `pengui.space` pointing at the server's IP.
+- [ONCE](https://github.com/basecamp/once) installed on the server:
 
-### Optional: sudo for the deploy user
+  ```bash
+  curl https://get.once.com | sh
+  ```
 
-TLS files under `certbot/` are often **root-owned**; `openssl` to read SANs needs **`sudo`**. To allow the deploy user to run **`openssl`** without a password prompt, install the drop-in from this repo:
+  For a non-interactive/scripted install, use `ONCE_INTERACTIVE=false`. Manual install and
+  background-service registration are documented in the
+  [ONCE README](https://github.com/basecamp/once#installing-manually).
 
-```bash
-sudo install -m 440 -o root -g root ~/pengui/sudoers.d/pengui-deploy /etc/sudoers.d/pengui-deploy
-```
+### Build the image
 
-(If you keep a full clone with a `deployment/` subfolder, use `~/pengui/deployment/sudoers.d/pengui-deploy` instead.) Edit `/etc/sudoers.d/pengui-deploy` first if your SSH user is not named **`deploy`**. Validate with `sudo visudo -c`. For Docker, prefer adding the user to the **`docker`** group instead of blanket `sudo docker`.
-
-### Inspect certificate SANs on the server
-
-Use the **real** path under your deployment tree — not a placeholder like `/full/path/to/...`. From the directory that contains `certbot/` (often `~/pengui/deployment` if you use a full clone, or `~/pengui` if you copied `deployment/*` there):
-
-```bash
-cd ~/pengui/deployment   # or: cd ~/pengui
-ls certbot/conf/live/
-```
-
-The folder name under `live/` is the Let’s Encrypt **lineage** (usually your `DOMAIN`). Then:
+[`.github/workflows/build-app.yml`](../.github/workflows/build-app.yml) builds WASM, then the app
+image, then pushes `ghcr.io/maximedogawa/pengui:<tag>` - on every GitHub release, or by hand via
+`workflow_dispatch`. It does nothing else: no SSH, no server, no relay involved. To build locally
+instead:
 
 ```bash
-sudo openssl x509 -in certbot/conf/live/penguinpool.space/fullchain.pem -noout -text | grep -A5 'Subject Alternative Name'
+docker build -f deployment/splash-wasm/Dockerfile -t pengui:splash-wasm .
+docker build -f deployment/Dockerfile --build-arg SPLASH_WASM_IMAGE=pengui:splash-wasm -t pengui:app .
 ```
 
-Adjust `penguinpool.space` if `ls` shows a different directory name. If `sudo` still asks for a password, install the **`sudoers.d/pengui-deploy`** drop-in above (or run the check as root). You can also read the cert **without filesystem access** (uses what the server presents on TLS):
+The image serves plain HTTP on port 80 with a `/up` health route (`src/app/up/route.ts`) - that's
+the whole ONCE contract, nothing else required.
+
+### Deploy it (one-time)
 
 ```bash
-echo | openssl s_client -servername penguinpool.space -connect penguinpool.space:443 2>/dev/null | openssl x509 -noout -text | grep -A5 'Subject Alternative Name'
+once deploy ghcr.io/maximedogawa/pengui:latest --host pengui.space
 ```
 
-### Steps
+Run this once, on the server, to register the app with ONCE. ONCE fetches, installs, boots, and
+TLS-provisions it - then keeps it updated on its own as CI pushes new images to the same tag
+(ONCE's ["automatic updates"](https://github.com/basecamp/once) feature). Nothing in CI re-runs
+this command. If you ever need to point the hostname at a different tag, re-run `once deploy`
+by hand with that tag. Check it:
 
 ```bash
-# 1. Clone/copy deployment files to server
-scp -r deployment/* user@server:~/pengui/
-
-# 2. SSH into server
-ssh user@server
-cd ~/pengui
-
-# 3. Create environment file
-cp .env.example .env
-nano .env  # Edit with your values
-
-# 4. Run deployment
-export DOMAIN="your-domain.com"
-export EMAIL="your-email@example.com"
-chmod +x scripts/deploy.sh
-./scripts/deploy.sh
+curl https://pengui.space/up
 ```
 
-## Splash relay (Stream tab)
+## 2. Deploy the relay (separate, optional, do this whenever)
 
-The **splash-relay** services join the Splash network (libp2p) and expose WebSocket so the app’s Stream tab can receive live offers. They are included in `docker-compose.yml`.
+The Splash relay (`crates/splash-relay`, image built from
+[`splash-relay/Dockerfile`](splash-relay/Dockerfile)) powers the Stream tab's live offers. The app
+works without it - the Stream tab just won't have anything to stream. Deploy it on your own
+schedule via [`.github/workflows/deploy-relay.yml`](../.github/workflows/deploy-relay.yml)
+(`workflow_dispatch`, or automatically on release - see [below](#why-two-relay-hostnames-and-a-manual-step)
+for why a release only rebuilds it when relay files actually changed).
 
-The Docker images compile both `splash-wasm` and `splash-relay` from source during the CI image build, so you only need to pull the versioned images for a reproducible deployment.
+### DNS
 
-- **splash-relay** (mainnet): WebSocket on port **9090**, TCP on 11511.
+A records for `relay.pengui.space` and `relay-testnet.pengui.space`, pointing at whichever server
+runs the relay (can be the same box as the app, or a different one).
 
-To have the app **auto-connect** to these relays, set at **build time** (e.g. in CI or when building the image):
-
-- `NEXT_PUBLIC_DEXIE_SPLASH_RELAY_WS_URL` – default relay (e.g. `wss://relay.penguinpool.space`)
-- `NEXT_PUBLIC_DEXIE_SPLASH_RELAY_MAINNET_WS_URL` – mainnet relay (e.g. `wss://relay.penguinpool.space`)
-
-For production with your own domain, set the relay subdomain in GitHub vars (see “DNS for relays” below) and use `wss://relay.yourdomain.com` in the app build vars. For local testing, use `ws://localhost:9090` and `ws://localhost:9091`.
-
-## Pengine behind Pengui nginx
-
-The **Pengine** web UI (separate repository) is shipped as a Docker image. **Run it in this stack** using the Compose **profile `pengine`** ([`docker-compose.yml`](docker-compose.yml) service `pengine-web`): set **`PENGINE_ENABLE=1`** and **`PENGINE_WEB_IMAGE`** (e.g. in GitHub Actions variables or `.env`). [`deploy.sh`](scripts/deploy.sh) runs **`docker compose --profile pengine up -d pengine-web`** so Pengine shares **`pengui-network`** with nginx — no second compose file and no `external` network. Nginx proxies to **`http://pengine-app:1422`**.
-
-**Do not** run a separate `docker network create` for `pengui-network`; Compose creates it with the correct labels. **Do not** run a second Pengine compose on the same host (duplicate `pengine-app`).
-
-Expose it under the path **`/pengine/`** on the main site (and, if you set **`DOMAIN2`**, on that hostname too):
-
-- **URL:** `https://<DOMAIN>/pengine/` (and `https://<DOMAIN2>/pengine/` when **`DOMAIN2`** is set).
-- **Nginx:** [`nginx/templates/https.conf.template`](nginx/templates/https.conf.template) and [`http-only.conf.template`](nginx/templates/http-only.conf.template).
-- **Pengine build:** set Vite [`base`](https://vitejs.dev/config/shared-options.html#base) to **`/pengine/`** so JS/CSS paths resolve under that prefix.
-
-**Second apex (optional):** set **`DOMAIN2=pengine.net`** (or rely on automatic **`penguinpool.space` ↔ `pengine.net`** SAN merge when **`DOMAIN`** is one of those). DNS for every name on the cert must point at this host for HTTP-01. Inspect the leaf with **`openssl x509 -in fullchain.pem -noout -text`** (**Subject Alternative Name** lists **`DNS:`** entries).
-
-Ensure the Pengine stack is up on the host before relying on the proxy (`docker ps` / curl `http://127.0.0.1:1422`).
-
-## How Pengine differs (Vite vs Next.js)
-
-|            | **Pengui** ([`deployment/Dockerfile`](Dockerfile))      | **Pengine** (typical separate repo)                       |
-| ---------- | ------------------------------------------------------- | --------------------------------------------------------- |
-| Framework  | Next.js (App/Pages router)                              | Vite + React                                              |
-| Production | Node `standalone` server on **3000**                    | Static files + small HTTP server on **80→1422**           |
-| Image      | Multi-stage: Bun build → `node:alpine` runs `server.js` | Multi-stage: Bun build → e.g. static-web-server / similar |
-
-## DNS for relays (penguinpool.space)
-
-DNS for your domain (e.g. penguinpool.space) is managed at your DNS provider, not in this repo. To expose the Splash relay so the app can connect via `wss://…`:
-
-1. **Add a subdomain** for the relay (e.g. `relay.penguinpool.space`).
-2. **Create an A record** (or CNAME if you use a hostname) pointing that subdomain to the **relay server’s public IP** (the host where the relay container runs; it can be the same machine as the app or a different one).
-3. (Optional) Add additional mainnet relay subdomains later (e.g. `relay-2.penguinpool.space`).
-
-No zone file or DNS code is stored in this repository; configure these records in your DNS provider’s dashboard.
-
-**To make `relay.penguinpool.space` work end-to-end:**
-
-1. **DNS**: A record `relay.penguinpool.space` → your relay server’s public IP (you’ve done this). For testnet, add **`relay-testnet.penguinpool.space`** the same way if you use that hostname.
-2. **GitHub Actions variables**: Set **`NEXT_PUBLIC_SPLASH_RELAY_MAINNET_SUBDOMAIN`** to **`relay.penguinpool.space`** (the workflow builds `wss://…` from it and passes **`RELAY_MAINNET_SUBDOMAIN`** to deploy). Set **`NEXT_PUBLIC_SPLASH_RELAY_TESTNET_SUBDOMAIN`** to **`relay-testnet.penguinpool.space`** so CI passes **`RELAY_TESTNET_SUBDOMAIN`** (nginx testnet vhost + cert SAN).
-3. **TLS:** For **`DOMAIN=penguinpool.space`**, **`deploy.sh`** adds **`relay.penguinpool.space`** and **`relay-testnet.penguinpool.space`** to the Let’s Encrypt request automatically (deduped with **`RELAY_*_SUBDOMAIN`** / **`CERT_EXTRA_DOMAINS`**). Before calling Certbot, **`deploy.sh`** drops any extra SAN that has no public DNS A/AAAA (e.g. NXDOMAIN for **`relay-testnet…`**) so one missing record cannot fail the deploy; add the DNS record and redeploy with **`need_cert`** / **`NEED_CERT_FORCE`** to put that name on the cert. Set **`CERT_SKIP_PENGUINPOOL_RELAY_SAN=1`** to skip both default relay names entirely.
-
-If the server already has an SSL cert that does not include a new relay name, trigger an expanded certificate (e.g. **`NEED_CERT_FORCE`**, or remove the existing cert and redeploy).
-
-> Note: the in-repo deployment currently only runs a **mainnet** relay.
-
-### Nginx and relay coupling
-
-- **Nginx image** is built from `deployment/nginx/` (Alpine + relay watchdog).
-- With **`RELAY_WATCHDOG=1`** (default in `.env.example`), the nginx container **exits** if `splash-relay` stops accepting TCP on **9090** (and the relay healthcheck requires **9090** and **11511**). Docker’s `restart: unless-stopped` brings nginx back; once the relay is healthy again, nginx stays up.
-- **`deploy.sh`** sets **`RELAY_WATCHDOG=0`** only for the initial **ACME / HTTP-only** nginx step (before the relay must be up). After HTTPS is configured, deploy uses **`RELAY_WATCHDOG=1`**.
-
-## Files
-
-| File                              | Description                                                              |
-| --------------------------------- | ------------------------------------------------------------------------ |
-| `Dockerfile`                      | Multi-stage build for Next.js standalone server                          |
-| `docker-compose.yml`              | Service orchestration (Next.js + nginx + certbot + splash-relay)         |
-| `splash-relay/Dockerfile`         | Build for splash-relay (Rust)                                            |
-| `nginx/Dockerfile`                | Nginx image with relay watchdog                                          |
-| `nginx/nginx.conf`                | Base nginx configuration                                                 |
-| `nginx/templates/*.conf.template` | Domain-specific nginx configs (relay subdomains, HTTPS + HTTP templates) |
-| `scripts/deploy.sh`               | Automated deployment script                                              |
-| `.env.example`                    | Environment variable template                                            |
-
-## How It Works
-
-1. **Build Phase** (GitHub Actions)
-   - Builds Next.js in standalone mode
-   - Creates optimized Docker image (~150MB)
-   - Pushes to GitHub Container Registry
-
-2. **Deploy Phase** (GitHub Actions)
-   - Copies deployment files to server
-   - Pulls Docker image
-   - Runs `deploy.sh` script
-
-3. **Deploy Script** (`deploy.sh`)
-   - Creates required directories
-   - Checks/obtains SSL certificate via Let's Encrypt
-   - Configures nginx as reverse proxy
-   - Starts all services
-   - Verifies deployment health
-
-## SSL Certificates
-
-SSL certificates are obtained from Let’s Encrypt by **`deploy.sh`** (via `docker run certbot certonly`, not a long-running certbot service):
-
-- **First deployment / new names**: Requests a certificate when none exists, when a configured hostname is missing from the current cert’s SANs, or when **`NEED_CERT_FORCE`** is set.
-- **Re-issue before expiry**: On each deploy, the script checks the leaf under **`certbot/conf/live/$DOMAIN/`**. If it expires in **30 days or less**, it requests a renewed certificate on that run (same SAN set as configured in the script).
-- **Archive repair**: **`scripts/repair-certbot-archive.sh`** (root via Docker) fixes (1) **cross-lineage** `live/` symlinks that point at `archive/<name>-0001/` while Certbot uses `archive/<name>/` (**`FileNotFoundError`**), and (2) orphan **`privkeyN`** slots above live (**`FileExistsError`**). Deploy retries Certbot once after repair.
-- **No background renewer in this repo**: There is no cron or systemd timer checked in by default. If you rarely deploy, add a host cron (or timer) that runs `certbot renew` with the same **`/etc/letsencrypt`** and **`webroot`** volumes while nginx is up, or run deploys periodically. See [Certbot renewal](https://certbot.org/renewal-setup) for the general model; adapt paths to your Docker layout.
-- **Testing**: Set **`STAGING=1`** so Let’s Encrypt uses the staging CA (avoids production rate limits).
-
-## Monitoring
-
-### View Logs
+### Deploy
 
 ```bash
-# All services
-docker compose logs -f
-
-# Specific service
-docker compose logs -f pengui
-docker compose logs -f nginx
-docker compose logs -f splash-relay
+once deploy ghcr.io/maximedogawa/pengui:splash-relay --host relay.pengui.space
+once deploy ghcr.io/maximedogawa/pengui:splash-relay --host relay-testnet.pengui.space
 ```
 
-### Check Health
+Plus the P2P side-channel containers - see [below](#why-two-relay-hostnames-and-a-manual-step).
+
+### Why two relay hostnames, and a manual step
+
+`splash-relay` speaks libp2p over two ports: a WebSocket port (what the browser's Stream tab
+connects to) and a raw TCP port (peer-to-peer bonding with other relay nodes on the wider Splash
+network). ONCE's model is "one hostname -> one container's port 80", which is a perfect fit for
+the WebSocket side but has no way to also publish a second raw TCP port. So:
+
+- The **ONCE-managed container** (one per network, hence the two hostnames) serves the WebSocket
+  side. Since `splash-relay` isn't itself an HTTP server, the image bakes in a tiny internal nginx
+  (`splash-relay/nginx.conf.template`) that listens on port 80, answers `/up` for ONCE's health
+  check, and proxies everything else to the relay's WebSocket port on localhost. This satisfies
+  [ONCE's app contract](https://github.com/basecamp/once#making-a-once-compatible-application)
+  without touching the Rust relay code.
+- **First-time only:** the testnet app needs `RELAY_TESTNET=1` set so it joins `splash-testnet`
+  instead of mainnet - via the ONCE dashboard (select the app, press `s`) or `once update --help`
+  on your server (the public ONCE docs don't yet pin down the exact env-var flag for this
+  release). Without it, the testnet app is just a second mainnet relay.
+- A **second, plain `docker run` container per network** (same image) keeps the raw TCP port open
+  for P2P peering:
+
+  ```bash
+  docker run -d --name pengui-relay-p2p-mainnet --restart unless-stopped \
+    -p 11511:11511 ghcr.io/maximedogawa/pengui:splash-relay
+
+  docker run -d --name pengui-relay-p2p-testnet --restart unless-stopped \
+    -p 11512:11511 -e RELAY_TESTNET=1 ghcr.io/maximedogawa/pengui:splash-relay
+  ```
+
+  These aren't managed by ONCE and don't need TLS/a hostname - other relay nodes dial them
+  directly by IP:port. If you don't care about this node acting as a bootstrap/peering node for
+  others (the app's own WebSocket connectivity works fine either way), skip these two containers
+  entirely.
+
+## 3. Server SSH access (only needed for the relay CI pipeline)
+
+[`build-app.yml`](../.github/workflows/build-app.yml) never touches the server - it only builds
+and pushes images (see [above](#1-deploy-the-app-do-this-first)). **Only
+[`deploy-relay.yml`](../.github/workflows/deploy-relay.yml) SSHes in**, to run `once deploy` and
+manage the P2P side-channel containers on every relay-affecting release. Set this up once, on
+whichever server runs the relay.
+
+### 3.1 Create a dedicated deploy user on the server
+
+Don't reuse your personal login or `root`. As root (or via `sudo`) on the server:
 
 ```bash
-# Container status
-docker compose ps
-
-# Application health
-curl https://your-domain.com/api/health
-
-# SSL certificate info
-echo | openssl s_client -servername your-domain.com -connect your-domain.com:443 2>/dev/null | openssl x509 -noout -dates
+adduser deploy --disabled-password --gecos ""
+usermod -aG docker deploy
 ```
 
-### Resource Usage
+`docker` group membership means `deploy` can run `docker`/`once` without `sudo` - important,
+because [ONCE's own docs](https://github.com/basecamp/once#installing) note that if you need
+`sudo` for Docker, you'll also need `sudo` for `once`, and `appleboy/ssh-action` runs a
+non-interactive shell where an unattended `sudo` prompt would just hang the job. If ONCE was
+installed as root before this user existed, confirm `deploy` can actually run it:
 
 ```bash
-docker stats
+su - deploy -c 'once --help'   # should print usage, not a permissions error
 ```
 
-## Troubleshooting
-
-### Application won't start
+### 3.2 Generate an SSH key pair (on your own machine, not the server)
 
 ```bash
-docker compose logs pengui --tail 100
+ssh-keygen -t ed25519 -f pengui_deploy_key -C "github-actions-pengui-relay" -N ""
 ```
 
-### SSL certificate issues
+This writes `pengui_deploy_key` (private) and `pengui_deploy_key.pub` (public) to your current
+directory. Never commit either file to git.
+
+### 3.3 Install the public key on the server
 
 ```bash
-# Check certificate files
-ls -la certbot/conf/live/your-domain.com/
-
-# Request new certificate manually
-docker compose run --rm certbot certonly \
-  --webroot -w /var/www/certbot \
-  --email your-email@example.com \
-  -d your-domain.com \
-  --agree-tos --non-interactive
+ssh-copy-id -i pengui_deploy_key.pub deploy@your-server-ip
 ```
 
-### Nginx configuration errors
+Or, if `ssh-copy-id` isn't available:
 
 ```bash
-# Test nginx config
-docker compose exec nginx nginx -t
-
-# Reload nginx
-docker compose exec nginx nginx -s reload
+cat pengui_deploy_key.pub | ssh deploy@your-server-ip \
+  'mkdir -p ~/.ssh && chmod 700 ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys'
 ```
 
-### Splash relay (Docker)
+Confirm it works before moving on: `ssh -i pengui_deploy_key deploy@your-server-ip`.
 
-Deployment sets **`RUST_LOG=info`** by default (startup line, peer warnings, errors). **`deploy.sh`** warns if the relay is **restarting** during deploy and prints the **last 60 log lines** after the relay start window.
+### 3.4 Add the key and connection details as GitHub secrets
 
-#### Where the logs are
+Repo → **Settings → Secrets and variables → Actions → Secrets**, add:
 
-- **Service**: `splash-relay` (mainnet) · **Container**: `pengui-splash-relay`
-- Relay uses **json-file** with **max-size 5m, max-file 1**: `docker compose logs` works; only the latest 5MB is kept. After a container restart the log file is new, so no long-term log storage.
+| Secret          | Value                                                    |
+| ---------------- | --------------------------------------------------------- |
+| `DEPLOY_SSH_KEY` | The full contents of `pengui_deploy_key` (the private key, `cat pengui_deploy_key`) |
+| `DEPLOY_HOST`    | The server's hostname or IP                              |
+| `DEPLOY_USER`    | `deploy`                                                 |
+| `DEPLOY_PORT`    | Only if SSH isn't on port 22 - the workflows default to 22 |
 
-#### View relay logs on the server
+Then delete `pengui_deploy_key`/`pengui_deploy_key.pub` from your machine (or move them to a
+password manager) - once they're in GitHub Secrets there's no reason to keep a plaintext copy
+lying around.
+
+### 3.5 Verify
+
+Actions → **Test SSH Connection** ([`test-connection.yml`](../.github/workflows/test-connection.yml))
+→ **Run workflow**. It confirms the key works and that both `docker` and `once` are reachable for
+the `deploy` user without `sudo`.
+
+## Relay image configuration
+
+Configured entirely via environment variables, since ONCE deploys by image + env vars, not custom
+commands/CLI flags:
+
+| Variable                  | Default | Purpose                                         |
+| -------------------------- | ------- | ------------------------------------------------ |
+| `RELAY_TCP_PORT`           | `11511` | libp2p TCP port (P2P peering)                   |
+| `RELAY_WS_PORT`            | `9090`  | libp2p WebSocket port (internal; nginx proxies port 80 -> this) |
+| `RELAY_TESTNET`            | unset   | Set to `1` to join `splash-testnet`             |
+| `RELAY_MAX_WS_CONNECTIONS` | `500`   | Passed through as `--max-ws-connections`        |
+| `RELAY_KNOWN_PEERS`        | unset   | Space-separated multiaddrs, passed as repeated `--known-peer` |
+
+## Building the images
+
+Two independent workflows, matching the two independent deployments:
+
+- [`build-app.yml`](../.github/workflows/build-app.yml) - builds `splash-wasm` (build-time input
+  from `crates/splash-wasm`) then the app image (`deployment/Dockerfile`), and pushes it to
+  `ghcr.io`. That's all it does - it never deploys (see [above](#1-deploy-the-app-do-this-first)
+  for the one-time `once deploy` step ONCE needs, and it fetches new images automatically after
+  that). Runs on every GitHub release, or manually via `workflow_dispatch`.
+- [`deploy-relay.yml`](../.github/workflows/deploy-relay.yml) - builds the relay image
+  (`deployment/splash-relay/Dockerfile`, from `crates/splash-relay`) **and** deploys it (unlike the
+  app, it still SSHes in and runs `once deploy` plus the P2P side-channel containers on every run -
+  those aren't fully ONCE-managed, see [below](#why-two-relay-hostnames-and-a-manual-step)). Runs
+  on every GitHub release too, but **skips the build/deploy entirely if nothing under
+  `crates/splash-relay` or `deployment/splash-relay` changed since the previous release** - so
+  shipping an app-only release stays fast and doesn't bounce the relay containers for no reason.
+  `workflow_dispatch` always runs (that's an explicit "redeploy the relay" request).
+
+`NEXT_PUBLIC_*` build args come from GitHub Actions variables/secrets - see
+[`build-app.yml`](../.github/workflows/build-app.yml) for the full list.
+
+## Monitoring, logs, rollback
+
+Managed through ONCE's TUI dashboard (run `once` on the server) rather than `docker compose`:
+
+- Dashboard shows live status for every app; select one to see logs.
+- Press `s` on an app for settings (backups, hostname, image, environment variables).
+- Press `a` for actions (start/stop/remove).
+- To roll back, `once deploy <previous-image-tag> --host <hostname>`.
+
+For the manual P2P side-channel containers (not visible in the ONCE dashboard):
 
 ```bash
-# From the deployment directory
-cd /path/to/deployment
-
-# Follow mainnet relay logs (live)
-docker compose logs -f splash-relay
-
-# Last 200 lines
-docker compose logs splash-relay --tail 200
-
-# By container name
-docker logs -f pengui-splash-relay
-docker logs pengui-splash-relay --tail 200
+docker logs -f pengui-relay-p2p-mainnet
+docker logs -f pengui-relay-p2p-testnet
+docker ps --filter name=pengui-relay-p2p
 ```
 
-#### Verbose logging (troubleshooting)
+## Health checks
 
-Default in compose is **`RUST_LOG=info`**. For more detail, in **`deployment/.env`** set:
+- App: `https://pengui.space/up`
+- Relay: `https://relay.pengui.space/up` / `https://relay-testnet.pengui.space/up`
 
-```bash
-RUST_LOG=debug
-```
-
-Then `docker compose up -d splash-relay`. Use **`debug`** only while troubleshooting (higher log volume). Remove or set back to **`info`** afterward.
-
-#### Check relay status and restart
-
-```bash
-# Container status (running / exit code)
-docker compose ps splash-relay
-
-# Restart relay
-docker compose restart splash-relay
-
-# View last log lines after restart
-docker compose logs splash-relay --tail 50
-```
-
-#### Look for errors in logs
-
-```bash
-# Lines containing "warn" or "error" (case-insensitive)
-docker compose logs splash-relay 2>&1 | grep -iE 'warn|error'
-
-# Common messages:
-# - "Failed to resolve DNS peers"     → DNS or network issue on host
-# - "Failed to dial bootstrap peer"   → Bootstrap peers down or unreachable
-# - "No peers connected"             → Network/DNS or no bootstrap peers
-# - "WS connection limit reached"    → Too many browser clients; increase --max-ws-connections or scale
-# - "Rejecting oversized offer"      → Normal; a peer sent an offer over size limit
-# - "Incoming connection error"      → Client or network issue
-```
-
-#### Common issues
-
-| Issue                                             | What to do                                                                                                                                                                                                                                                                                                                                                                                                         |
-| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Relay in restart loop** (e.g. `Restarting (0)`) | The relay exits and Docker keeps restarting it. Run it in the foreground to see the real error: `docker compose run --rm splash-relay` (or `docker run --rm -it <SPLASH_RELAY_IMAGE> splash-relay --tcp-port 11511 --ws-port 9090`). You should see `splash-relay starting...` then either the ready line or an error (e.g. bind failure, DNS, or panic). Fix the cause (ports, image platform, DNS) and redeploy. |
-| Container exits immediately                       | Run `docker compose logs splash-relay --tail 100` and check for bind/port errors (e.g. 9090 or 11511 in use). Or run the container in the foreground (see "Relay in restart loop" above). Ensure ports are free or change `command`/port mapping.                                                                                                                                                                  |
-| "No peers connected"                              | Check DNS from the host (`nslookup _dnsaddr.splash.dexie.space` or similar). If using `--known-peer`, ensure addresses are correct. Restart relay after fixing network.                                                                                                                                                                                                                                            |
-| Stream tab in app not updating                    | Confirm app is using the correct relay URL (e.g. `wss://relay.yourdomain.com`). Check nginx is proxying to `splash-relay:9090` and that `docker compose logs splash-relay` shows no repeated errors.                                                                                                                                                                                                               |
-| Too many WS connections                           | Increase `--max-ws-connections` in the relay `command` in docker-compose (e.g. `--max-ws-connections 1000`) and redeploy.                                                                                                                                                                                                                                                                                          |
-| Need to see what the relay is doing               | Set `RUST_LOG=info` or `RUST_LOG=debug` (see above), reproduce, then turn verbose logging off.                                                                                                                                                                                                                                                                                                                     |
-
-#### Log retention (minimal; no long-term storage)
-
-- Relay uses **json-file** with one 5MB file. After a container restart the log file is new, so no logs are kept from previous runs.
-- For longer-term auditing or metrics, use a log aggregator and point it at Docker log files or configure a logging driver that ships to your stack.
-
-### Rollback
-
-```bash
-# Pull specific version
-export DOCKER_IMAGE=ghcr.io/maximedogawa/pengui:v1.0.0
-docker compose pull pengui
-docker compose up -d
-```
-
-## Cleanup
-
-```bash
-# Remove unused images
-docker image prune -a
-
-# Full cleanup (careful!)
-docker system prune -a --volumes
-```
+Both are served by ONCE itself before it'll route traffic to a new container, and are what ONCE
+polls to decide an app is healthy.

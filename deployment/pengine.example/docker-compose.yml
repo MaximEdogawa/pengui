@@ -1,2 +1,0 @@
-# This file is reference only. Prefer enabling Pengine inside Pengui’s docker-compose.yml
-# (service pengine-web, profile `pengine`) — same network as nginx, one deploy.
