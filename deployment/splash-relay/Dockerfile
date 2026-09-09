@@ -19,19 +19,24 @@ RUN /app/target/release/splash-relay --help 2>&1 | grep -q "Maximum concurrent W
 
 FROM debian:bookworm-slim
 
-RUN apt-get update && apt-get install -y ca-certificates netcat-openbsd nginx-light \
+RUN apt-get update && apt-get install -y ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=builder /app/target/release/splash-relay /usr/local/bin/splash-relay
-COPY deployment/splash-relay/nginx.conf.template /etc/nginx/nginx.conf.template
-COPY deployment/splash-relay/entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
 
-# 80    = HTTP shim for ONCE (https://github.com/basecamp/once): /up health
-#         check + WebSocket proxy to 127.0.0.1:9090 (see nginx.conf)
-# 9090  = WebSocket for browsers (used directly when not run under ONCE)
-# 11511 = Splash network TCP (P2P peering; publish with `docker run -p` for
-#         the manual side-channel container - see deployment/README.md)
-EXPOSE 80 9090 11511
+# The relay serves both the `/up` health check and browser WebSocket traffic on
+# this one port, so it satisfies ONCE's app contract directly - no proxy or
+# entrypoint script in the image. ONCE routes its hostname to port 80.
+ENV RELAY_WS_PORT=80
 
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+# Inbound P2P peering is off by default: ONCE's proxy handles HTTP/TLS only and
+# can't publish a raw TCP port, and the relay still dials out to Splash
+# bootstrap peers without a listener. Override to run a full peering node.
+ENV RELAY_TCP_PORT=0
+
+EXPOSE 80
+
+# Every setting is env-var driven (RELAY_WS_PORT, RELAY_TCP_PORT, RELAY_TESTNET,
+# RELAY_MAX_WS_CONNECTIONS, RELAY_KNOWN_PEERS), which is how ONCE configures an
+# app: `once deploy --env KEY=VALUE`.
+ENTRYPOINT ["splash-relay"]

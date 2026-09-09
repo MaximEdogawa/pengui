@@ -1,249 +1,185 @@
 # Pengui Deployment Guide
 
-Pengui deploys as plain Docker images pulled and run by [ONCE](https://github.com/basecamp/once),
+Pengui runs as Docker images pulled and managed by [ONCE](https://github.com/basecamp/once),
 Basecamp's self-hosting platform. ONCE owns TLS (Let's Encrypt), the reverse proxy, and the
-container lifecycle for each hostname - there's no nginx, Certbot, or bespoke deploy script to
-maintain here anymore.
+container lifecycle for every hostname - there's no nginx, Certbot, or bespoke deploy script to
+maintain here.
 
-**CI only builds and pushes images - it never SSHes into the server.** Deploying is a separate,
-manual `once deploy` step: once per app, ONCE takes over from there (it fetches and runs new
-images on its own - that's the platform's whole point). **The app and the relay are two
-completely independent deployments** - separate Dockerfiles, separate GitHub Actions workflows,
-separate `once deploy` calls, separate hostnames. Nothing about deploying one depends on the
-other. Start with the app.
+**How deploys work:** CI only ever builds and pushes images to `ghcr.io` - it never touches the
+server. You run `once deploy` **once per app, by hand**. After that ONCE keeps that app updated
+itself, because `once deploy` sets `--auto-update` (on by default) and polls the registry for new
+images on the tag you deployed. So shipping a new version is just: merge/release → CI pushes the
+image → ONCE picks it up.
 
-## 1. Deploy the app (do this first)
+**Everything runs behind the single `once-proxy`** - the app and both relays, each a plain ONCE
+app with one image and one hostname. No sidecars, no side-channel containers, nothing to babysit.
 
-This is the fast path to get something running and testable.
+| What | Image | Hostname |
+| --- | --- | --- |
+| App (Next.js) | `ghcr.io/maximedogawa/pengui:latest` | `pengui.space` |
+| Relay (mainnet) | `ghcr.io/maximedogawa/pengui:splash-relay` | `relay.pengui.space` |
+| Relay (testnet) | `ghcr.io/maximedogawa/pengui:splash-relay` | `relay-testnet.pengui.space` |
 
-### Prerequisites
+## Prerequisites (once per server)
 
-- A server (VPS, Raspberry Pi, etc.) reachable on the public Internet, with Docker installable.
-- A DNS **A record** for `pengui.space` pointing at the server's IP.
-- [ONCE](https://github.com/basecamp/once) installed on the server:
+- A server reachable on the public Internet with Docker installed.
+- A DNS **A record per hostname**, all pointing at the server's IP. A hostname without a record
+  makes `once deploy` fail with *"The application couldn't be verified. Please check that you have
+  a valid DNS record set up"* - ONCE needs the name to resolve before it can issue a certificate.
+  If you'll add more apps later, a wildcard `*.pengui.space` record covers them all at once.
+- [ONCE](https://github.com/basecamp/once) installed:
 
   ```bash
   curl https://get.once.com | sh
   ```
 
-  For a non-interactive/scripted install, use `ONCE_INTERACTIVE=false`. Manual install and
-  background-service registration are documented in the
-  [ONCE README](https://github.com/basecamp/once#installing-manually).
+Check what's currently deployed any time with `once list`.
 
-### Build the image
-
-[`.github/workflows/build-app.yml`](../.github/workflows/build-app.yml) builds WASM, then the app
-image, then pushes `ghcr.io/maximedogawa/pengui:<tag>` - on every GitHub release, or by hand via
-`workflow_dispatch`. It does nothing else: no SSH, no server, no relay involved. To build locally
-instead:
-
-```bash
-docker build -f deployment/splash-wasm/Dockerfile -t pengui:splash-wasm .
-docker build -f deployment/Dockerfile --build-arg SPLASH_WASM_IMAGE=pengui:splash-wasm -t pengui:app .
-```
-
-The image serves plain HTTP on port 80 with a `/up` health route (`src/app/up/route.ts`) - that's
-the whole ONCE contract, nothing else required.
-
-### Deploy it (one-time)
+## Deploy the app
 
 ```bash
 once deploy ghcr.io/maximedogawa/pengui:latest --host pengui.space
 ```
 
-Run this once, on the server, to register the app with ONCE. ONCE fetches, installs, boots, and
-TLS-provisions it - then keeps it updated on its own as CI pushes new images to the same tag
-(ONCE's ["automatic updates"](https://github.com/basecamp/once) feature). Nothing in CI re-runs
-this command. If you ever need to point the hostname at a different tag, re-run `once deploy`
-by hand with that tag. Check it:
+Run once, on the server. ONCE fetches the image, boots it, provisions TLS, and from then on
+auto-updates it as CI pushes new `:latest` images. Verify:
 
 ```bash
 curl https://pengui.space/up
 ```
 
-## 2. Deploy the relay (separate, optional, do this whenever)
+The image serves plain HTTP on port 80 with a `/up` health route (`src/app/up/route.ts`) - that's
+ONCE's whole app contract.
 
-The Splash relay (`crates/splash-relay`, image built from
-[`splash-relay/Dockerfile`](splash-relay/Dockerfile)) powers the Stream tab's live offers. The app
-works without it - the Stream tab just won't have anything to stream. Deploy it on your own
-schedule via [`.github/workflows/deploy-relay.yml`](../.github/workflows/deploy-relay.yml)
-(`workflow_dispatch`, or automatically on release - see [below](#why-two-relay-hostnames-and-a-manual-step)
-for why a release only rebuilds it when relay files actually changed).
+## Deploy the relays
 
-### DNS
-
-A records for `relay.pengui.space` and `relay-testnet.pengui.space`, pointing at whichever server
-runs the relay (can be the same box as the app, or a different one).
-
-### Deploy
+The Splash relay (`crates/splash-relay`) powers the Stream tab's live offers. The app works
+without it; the Stream tab just won't have anything to stream. Two instances, one per network:
 
 ```bash
+# mainnet
 once deploy ghcr.io/maximedogawa/pengui:splash-relay --host relay.pengui.space
-once deploy ghcr.io/maximedogawa/pengui:splash-relay --host relay-testnet.pengui.space
+
+# testnet - the --env flag is what makes it join splash-testnet instead of mainnet
+once deploy ghcr.io/maximedogawa/pengui:splash-relay --host relay-testnet.pengui.space --env RELAY_TESTNET=1
 ```
 
-Plus the P2P side-channel containers - see [below](#why-two-relay-hostnames-and-a-manual-step).
-
-### Why two relay hostnames, and a manual step
-
-`splash-relay` speaks libp2p over two ports: a WebSocket port (what the browser's Stream tab
-connects to) and a raw TCP port (peer-to-peer bonding with other relay nodes on the wider Splash
-network). ONCE's model is "one hostname -> one container's port 80", which is a perfect fit for
-the WebSocket side but has no way to also publish a second raw TCP port. So:
-
-- The **ONCE-managed container** (one per network, hence the two hostnames) serves the WebSocket
-  side. Since `splash-relay` isn't itself an HTTP server, the image bakes in a tiny internal nginx
-  (`splash-relay/nginx.conf.template`) that listens on port 80, answers `/up` for ONCE's health
-  check, and proxies everything else to the relay's WebSocket port on localhost. This satisfies
-  [ONCE's app contract](https://github.com/basecamp/once#making-a-once-compatible-application)
-  without touching the Rust relay code.
-- **First-time only:** the testnet app needs `RELAY_TESTNET=1` set so it joins `splash-testnet`
-  instead of mainnet - via the ONCE dashboard (select the app, press `s`) or `once update --help`
-  on your server (the public ONCE docs don't yet pin down the exact env-var flag for this
-  release). Without it, the testnet app is just a second mainnet relay.
-- A **second, plain `docker run` container per network** (same image) keeps the raw TCP port open
-  for P2P peering:
-
-  ```bash
-  docker run -d --name pengui-relay-p2p-mainnet --restart unless-stopped \
-    -p 11511:11511 ghcr.io/maximedogawa/pengui:splash-relay
-
-  docker run -d --name pengui-relay-p2p-testnet --restart unless-stopped \
-    -p 11512:11511 -e RELAY_TESTNET=1 ghcr.io/maximedogawa/pengui:splash-relay
-  ```
-
-  These aren't managed by ONCE and don't need TLS/a hostname - other relay nodes dial them
-  directly by IP:port. If you don't care about this node acting as a bootstrap/peering node for
-  others (the app's own WebSocket connectivity works fine either way), skip these two containers
-  entirely.
-
-## 3. Server SSH access (only needed for the relay CI pipeline)
-
-[`build-app.yml`](../.github/workflows/build-app.yml) never touches the server - it only builds
-and pushes images (see [above](#1-deploy-the-app-do-this-first)). **Only
-[`deploy-relay.yml`](../.github/workflows/deploy-relay.yml) SSHes in**, to run `once deploy` and
-manage the P2P side-channel containers on every relay-affecting release. Set this up once, on
-whichever server runs the relay.
-
-### 3.1 Create a dedicated deploy user on the server
-
-Don't reuse your personal login or `root`. As root (or via `sudo`) on the server:
+Verify:
 
 ```bash
-adduser deploy --disabled-password --gecos ""
-usermod -aG docker deploy
+curl https://relay.pengui.space/up
+curl https://relay-testnet.pengui.space/up
 ```
 
-`docker` group membership means `deploy` can run `docker`/`once` without `sudo` - important,
-because [ONCE's own docs](https://github.com/basecamp/once#installing) note that if you need
-`sudo` for Docker, you'll also need `sudo` for `once`, and `appleboy/ssh-action` runs a
-non-interactive shell where an unattended `sudo` prompt would just hang the job. If ONCE was
-installed as root before this user existed, confirm `deploy` can actually run it:
+The app connects to these over `wss://` - which is why they must be behind ONCE's TLS proxy
+rather than exposed as plain ports: a page served over `https://` cannot open a `ws://`
+connection, browsers block it as mixed content.
 
-```bash
-su - deploy -c 'once --help'   # should print usage, not a permissions error
-```
+### How the relay satisfies ONCE's contract
 
-### 3.2 Generate an SSH key pair (on your own machine, not the server)
+The relay binary serves the `/up` health check and browser WebSocket traffic on the **same single
+port**, so it meets ONCE's contract directly - the image is just the binary, with no proxy,
+sidecar, or entrypoint script inside it.
 
-```bash
-ssh-keygen -t ed25519 -f pengui_deploy_key -C "github-actions-pengui-relay" -N ""
-```
+libp2p's WebSocket transport can't answer a plain `GET /up` on its own, so the relay listens on
+the public port itself: it replies to `/up`, and hands every other connection straight to libp2p's
+WebSocket listener on loopback. Incoming bytes are only peeked at, never consumed, so the libp2p
+handshake arrives exactly as the browser sent it (`serve_public_port` in
+[`crates/splash-relay/src/main.rs`](../crates/splash-relay/src/main.rs)).
 
-This writes `pengui_deploy_key` (private) and `pengui_deploy_key.pub` (public) to your current
-directory. Never commit either file to git.
+The two roles are cleanly separated, which is what makes the relay deployable as an ordinary ONCE
+app:
 
-### 3.3 Install the public key on the server
+- **Browser/WebSocket side** - one public HTTP port, proxied and TLS-terminated by ONCE.
+- **P2P peering side** - a libp2p TCP listener, **off by default** (`RELAY_TCP_PORT=0` in the
+  image). ONCE's proxy handles HTTP/TLS only and can't publish a raw TCP port, and the relay
+  still dials *out* to Splash bootstrap peers without a listener, so it receives and relays
+  offers normally. The only thing it gives up is being dialable *by* other nodes as a bootstrap
+  peer, which doesn't affect the Stream tab. To run a full peering node, set `RELAY_TCP_PORT` and
+  publish that port outside ONCE.
 
-```bash
-ssh-copy-id -i pengui_deploy_key.pub deploy@your-server-ip
-```
+### Relay configuration
 
-Or, if `ssh-copy-id` isn't available:
+Set with `--env KEY=VALUE` on `once deploy` (repeatable), or later via `once update`:
 
-```bash
-cat pengui_deploy_key.pub | ssh deploy@your-server-ip \
-  'mkdir -p ~/.ssh && chmod 700 ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys'
-```
-
-Confirm it works before moving on: `ssh -i pengui_deploy_key deploy@your-server-ip`.
-
-### 3.4 Add the key and connection details as GitHub secrets
-
-Repo → **Settings → Secrets and variables → Actions → Secrets**, add:
-
-| Secret          | Value                                                    |
-| ---------------- | --------------------------------------------------------- |
-| `DEPLOY_SSH_KEY` | The full contents of `pengui_deploy_key` (the private key, `cat pengui_deploy_key`) |
-| `DEPLOY_HOST`    | The server's hostname or IP                              |
-| `DEPLOY_USER`    | `deploy`                                                 |
-| `DEPLOY_PORT`    | Only if SSH isn't on port 22 - the workflows default to 22 |
-
-Then delete `pengui_deploy_key`/`pengui_deploy_key.pub` from your machine (or move them to a
-password manager) - once they're in GitHub Secrets there's no reason to keep a plaintext copy
-lying around.
-
-### 3.5 Verify
-
-Actions → **Test SSH Connection** ([`test-connection.yml`](../.github/workflows/test-connection.yml))
-→ **Run workflow**. It confirms the key works and that both `docker` and `once` are reachable for
-the `deploy` user without `sudo`.
-
-## Relay image configuration
-
-Configured entirely via environment variables, since ONCE deploys by image + env vars, not custom
-commands/CLI flags:
-
-| Variable                  | Default | Purpose                                         |
-| -------------------------- | ------- | ------------------------------------------------ |
-| `RELAY_TCP_PORT`           | `11511` | libp2p TCP port (P2P peering)                   |
-| `RELAY_WS_PORT`            | `9090`  | libp2p WebSocket port (internal; nginx proxies port 80 -> this) |
-| `RELAY_TESTNET`            | unset   | Set to `1` to join `splash-testnet`             |
-| `RELAY_MAX_WS_CONNECTIONS` | `500`   | Passed through as `--max-ws-connections`        |
-| `RELAY_KNOWN_PEERS`        | unset   | Space-separated multiaddrs, passed as repeated `--known-peer` |
+| Variable | Default in image | Purpose |
+| --- | --- | --- |
+| `RELAY_TESTNET` | unset | Set to `1` to join `splash-testnet` instead of mainnet |
+| `RELAY_MAX_WS_CONNECTIONS` | `500` | Max concurrent browser WebSocket connections |
+| `RELAY_KNOWN_PEERS` | unset | Space-separated multiaddrs to dial explicitly |
+| `RELAY_WS_PORT` | `80` | Public port serving `/up` + WebSocket |
+| `RELAY_TCP_PORT` | `0` (disabled) | Inbound libp2p peering port; `0` disables the listener |
+| `RUST_LOG` | `info` | Set to `debug` for verbose libp2p logs while troubleshooting |
 
 ## Building the images
 
-Two independent workflows, matching the two independent deployments:
+Two independent build pipelines. Neither one deploys, and neither needs SSH access to the server:
 
-- [`build-app.yml`](../.github/workflows/build-app.yml) - builds `splash-wasm` (build-time input
-  from `crates/splash-wasm`) then the app image (`deployment/Dockerfile`), and pushes it to
-  `ghcr.io`. That's all it does - it never deploys (see [above](#1-deploy-the-app-do-this-first)
-  for the one-time `once deploy` step ONCE needs, and it fetches new images automatically after
-  that). Runs on every GitHub release, or manually via `workflow_dispatch`.
-- [`deploy-relay.yml`](../.github/workflows/deploy-relay.yml) - builds the relay image
-  (`deployment/splash-relay/Dockerfile`, from `crates/splash-relay`) **and** deploys it (unlike the
-  app, it still SSHes in and runs `once deploy` plus the P2P side-channel containers on every run -
-  those aren't fully ONCE-managed, see [below](#why-two-relay-hostnames-and-a-manual-step)). Runs
-  on every GitHub release too, but **skips the build/deploy entirely if nothing under
-  `crates/splash-relay` or `deployment/splash-relay` changed since the previous release** - so
-  shipping an app-only release stays fast and doesn't bounce the relay containers for no reason.
-  `workflow_dispatch` always runs (that's an explicit "redeploy the relay" request).
+- [`build-app.yml`](../.github/workflows/build-app.yml) - builds `splash-wasm` (a build-time input
+  baked into the app image) then the app image, and pushes both. Runs on every GitHub release, or
+  manually via `workflow_dispatch`. `NEXT_PUBLIC_*` build args come from GitHub Actions
+  variables/secrets - see the workflow for the full list.
+- [`build-relay.yml`](../.github/workflows/build-relay.yml) - builds and pushes the relay image.
+  Runs on release, on pushes to `main` that touch `crates/splash-relay` or
+  `deployment/splash-relay` (GitHub's native path filter), or manually.
 
-`NEXT_PUBLIC_*` build args come from GitHub Actions variables/secrets - see
-[`build-app.yml`](../.github/workflows/build-app.yml) for the full list.
-
-## Monitoring, logs, rollback
-
-Managed through ONCE's TUI dashboard (run `once` on the server) rather than `docker compose`:
-
-- Dashboard shows live status for every app; select one to see logs.
-- Press `s` on an app for settings (backups, hostname, image, environment variables).
-- Press `a` for actions (start/stop/remove).
-- To roll back, `once deploy <previous-image-tag> --host <hostname>`.
-
-For the manual P2P side-channel containers (not visible in the ONCE dashboard):
+To build locally instead:
 
 ```bash
-docker logs -f pengui-relay-p2p-mainnet
-docker logs -f pengui-relay-p2p-testnet
-docker ps --filter name=pengui-relay-p2p
+docker build -f deployment/splash-wasm/Dockerfile -t pengui:splash-wasm .
+docker build -f deployment/Dockerfile --build-arg SPLASH_WASM_IMAGE=pengui:splash-wasm -t pengui:app .
+docker build -f deployment/splash-relay/Dockerfile -t pengui:splash-relay .
+```
+
+## Operating
+
+`once` on the server opens a dashboard listing every app, with logs and status. Useful commands:
+
+```bash
+once list                                   # what's deployed
+once update <host> --env KEY=VALUE          # change settings on a deployed app
+once stop <host> / once start <host>        # stop or start an app
+once exec <host> -- <command>               # run a command in the app's container
+once remove <host>                          # remove an app entirely
+```
+
+To roll back or pin a version, deploy an explicit tag - this also turns off auto-update drift by
+pinning what ONCE tracks:
+
+```bash
+once deploy ghcr.io/maximedogawa/pengui:v1.2.3 --host pengui.space
+```
+
+Raw Docker still works for inspection, since ONCE is Docker underneath:
+
+```bash
+docker ps
+docker logs -f <container>
+```
+
+## Server access
+
+Nothing in CI needs SSH anymore - deploys are manual, so the server only needs to be reachable by
+you. The [`test-connection.yml`](../.github/workflows/test-connection.yml) workflow can verify a
+deploy user's SSH key and that `docker`/`once` are usable, if you keep the `DEPLOY_HOST`,
+`DEPLOY_USER`, and `DEPLOY_SSH_KEY` secrets configured for it.
+
+To set up a dedicated non-root deploy user for your own SSH access:
+
+```bash
+# on the server, as root
+adduser deploy --disabled-password --gecos ""
+usermod -aG docker deploy          # lets it run docker and once without sudo
+
+# from your machine
+ssh-keygen -t ed25519 -f ~/.ssh/pengui_deploy_key -C "pengui-deploy" -N ""
+ssh-copy-id -i ~/.ssh/pengui_deploy_key.pub deploy@<server-ip>
+ssh -i ~/.ssh/pengui_deploy_key deploy@<server-ip> 'docker --version && once list'
 ```
 
 ## Health checks
 
 - App: `https://pengui.space/up`
-- Relay: `https://relay.pengui.space/up` / `https://relay-testnet.pengui.space/up`
+- Relays: `https://relay.pengui.space/up`, `https://relay-testnet.pengui.space/up`
 
-Both are served by ONCE itself before it'll route traffic to a new container, and are what ONCE
-polls to decide an app is healthy.
+ONCE polls these itself and won't route traffic to a container that isn't answering.

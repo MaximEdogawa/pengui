@@ -14,6 +14,9 @@ use std::collections::hash_map::DefaultHasher;
 use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 use std::time::Duration;
+use tokio::io::AsyncWriteExt;
+use tokio::net::{TcpListener, TcpStream};
+use tokio::sync::oneshot;
 
 const NETWORK_NAME: &str = "splash";
 const MAX_OFFER_SIZE: usize = 300 * 1024;
@@ -32,6 +35,75 @@ struct MinimalSplashOffer {
 /// We intentionally avoid a strict Rust schema so we don't
 /// accidentally drop fields if Dexie adds or changes them.
 type EnrichedOffer = serde_json::Value;
+
+/// The single public port: browser WebSocket traffic plus the `/up` health
+/// check that hosting platforms (ONCE/kamal-proxy) require.
+///
+/// libp2p's WebSocket transport speaks only the WebSocket handshake, so a plain
+/// `GET /up` against it fails. Rather than run a separate proxy alongside the
+/// relay, this answers `/up` itself and passes every other connection straight
+/// through to libp2p's listener on loopback. The request bytes are only peeked,
+/// never consumed, so libp2p sees the handshake exactly as the client sent it.
+async fn serve_public_port(listener: TcpListener, internal_ws_port: oneshot::Receiver<u16>) -> Result<()> {
+    let internal_ws_port = internal_ws_port.await?;
+    info!(
+        "public listener ready: /up health check + WebSocket -> 127.0.0.1:{}",
+        internal_ws_port
+    );
+
+    loop {
+        let (mut inbound, peer) = match listener.accept().await {
+            Ok(conn) => conn,
+            Err(e) => {
+                warn!("Accept failed on public port: {}", e);
+                continue;
+            }
+        };
+
+        tokio::spawn(async move {
+            match is_health_check(&mut inbound).await {
+                Ok(true) => {
+                    let response = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\
+                                    Content-Length: 3\r\nConnection: close\r\n\r\nup\n";
+                    let _ = inbound.write_all(response.as_bytes()).await;
+                    let _ = inbound.shutdown().await;
+                }
+                Ok(false) => match TcpStream::connect(("127.0.0.1", internal_ws_port)).await {
+                    Ok(mut outbound) => {
+                        let _ = tokio::io::copy_bidirectional(&mut inbound, &mut outbound).await;
+                    }
+                    Err(e) => warn!("Cannot reach WebSocket listener: {}", e),
+                },
+                Err(e) => debug!("Dropping connection from {}: {}", peer, e),
+            }
+        });
+    }
+}
+
+/// Peeks at the request line to tell a `/up` health check from a WebSocket
+/// handshake. Peeking leaves the bytes in the socket for libp2p to read.
+async fn is_health_check(stream: &mut TcpStream) -> Result<bool> {
+    let mut buf = [0u8; 1024];
+    let deadline = tokio::time::Instant::now() + Duration::from_secs(5);
+
+    loop {
+        let n = tokio::time::timeout_at(deadline, stream.peek(&mut buf)).await??;
+        if n == 0 {
+            anyhow::bail!("closed before sending a request");
+        }
+
+        // Decide only once the whole request line has arrived.
+        if let Some(eol) = buf[..n].windows(2).position(|w| w == b"\r\n") {
+            let line = String::from_utf8_lossy(&buf[..eol]);
+            return Ok(line.starts_with("GET /up ") || line == "GET /up");
+        }
+
+        if n == buf.len() {
+            return Ok(false);
+        }
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+}
 
 async fn fetch_enriched_offer(
     dexie_api_base: &str,
@@ -111,25 +183,39 @@ fn is_inbound_ws(endpoint: &libp2p::core::ConnectedPoint) -> bool {
 #[command(name = "splash-relay")]
 #[command(about = "libp2p relay for the Splash network (WebSocket for browsers, TCP for network)")]
 struct Args {
-    /// TCP listen port for Splash network connections
-    #[arg(short = 't', long, default_value = "11511")]
-    tcp_port: u16,
-
-    /// WebSocket listen port for browser connections
-    #[arg(short = 'w', long, default_value = "9090")]
+    /// Public port: browser WebSocket traffic and the `/up` health check. This
+    /// is the only port that has to be reachable from outside.
+    #[arg(short = 'w', long, env = "RELAY_WS_PORT", default_value = "9090")]
     ws_port: u16,
 
-    /// Known peer multiaddrs (can be specified multiple times)
-    #[arg(short = 'k', long)]
+    /// TCP listen port for inbound Splash network peering. Set to 0 to disable
+    /// the listener; outbound dialing to bootstrap peers still works.
+    #[arg(short = 't', long, env = "RELAY_TCP_PORT", default_value = "11511")]
+    tcp_port: u16,
+
+    /// Known peer multiaddrs (can be specified multiple times, or space-separated via env)
+    #[arg(short = 'k', long, env = "RELAY_KNOWN_PEERS", value_delimiter = ' ')]
     known_peer: Vec<String>,
 
-    /// Use testnet (splash-testnet)
+    /// Use testnet (splash-testnet). Also settable with RELAY_TESTNET=1.
     #[arg(long)]
     testnet: bool,
 
     /// Maximum concurrent WebSocket (browser/app) connections. Incoming WS over this limit are disconnected.
-    #[arg(long, default_value = "500")]
+    #[arg(long, env = "RELAY_MAX_WS_CONNECTIONS", default_value = "500")]
     max_ws_connections: u32,
+}
+
+impl Args {
+    /// `--testnet` is a bare flag, so its env equivalent is read explicitly
+    /// rather than relying on clap's boolean-from-env parsing.
+    fn testnet(&self) -> bool {
+        self.testnet
+            || matches!(
+                std::env::var("RELAY_TESTNET").ok().as_deref(),
+                Some("1") | Some("true") | Some("TRUE") | Some("yes")
+            )
+    }
 }
 
 #[derive(libp2p::swarm::NetworkBehaviour)]
@@ -164,7 +250,8 @@ async fn main() -> Result<()> {
 
 async fn run() -> Result<()> {
     let args = Args::parse();
-    let network_name = if args.testnet {
+    let testnet = args.testnet();
+    let network_name = if testnet {
         "splash-testnet"
     } else {
         NETWORK_NAME
@@ -249,11 +336,33 @@ async fn run() -> Result<()> {
         })
         .build();
 
-    let tcp_addr: Multiaddr = format!("/ip4/0.0.0.0/tcp/{}", args.tcp_port).parse()?;
-    swarm.listen_on(tcp_addr)?;
-
-    let ws_addr: Multiaddr = format!("/ip4/0.0.0.0/tcp/{}/ws", args.ws_port).parse()?;
+    // libp2p's WebSocket listener stays on loopback behind serve_public_port,
+    // which adds the `/up` health check libp2p can't answer by itself. Port 0
+    // lets the OS choose; the actual port arrives via NewListenAddr below.
+    let ws_addr: Multiaddr = "/ip4/127.0.0.1/tcp/0/ws".parse()?;
     swarm.listen_on(ws_addr)?;
+
+    // Inbound peering is optional: behind a hostname-routed proxy there is no
+    // way to publish this port, and outbound dialing works without a listener.
+    if args.tcp_port != 0 {
+        let tcp_addr: Multiaddr = format!("/ip4/0.0.0.0/tcp/{}", args.tcp_port).parse()?;
+        swarm.listen_on(tcp_addr)?;
+    } else {
+        info!("Inbound P2P TCP listener disabled (--tcp-port 0); outbound dialing still active");
+    }
+
+    // Bind before entering the event loop so a port clash fails immediately and
+    // visibly, instead of leaving a relay that is up but unreachable.
+    let public_listener = TcpListener::bind(("0.0.0.0", args.ws_port)).await?;
+    let (internal_ws_port_tx, internal_ws_port_rx) = oneshot::channel();
+    let mut internal_ws_port_tx = Some(internal_ws_port_tx);
+    let public_port = args.ws_port;
+    tokio::spawn(async move {
+        if let Err(e) = serve_public_port(public_listener, internal_ws_port_rx).await {
+            error!("Public listener on port {} stopped: {}", public_port, e);
+            std::process::exit(1);
+        }
+    });
 
     let topic = gossipsub::IdentTopic::new(format!("/{}/offers/1", network_name));
     swarm.behaviour_mut().gossipsub.subscribe(&topic)?;
@@ -290,12 +399,20 @@ async fn run() -> Result<()> {
         .collect();
 
     info!(
-        "splash-relay ready | network={} tcp={} ws={} max_ws={} peer_id={}",
-        network_name, args.tcp_port, args.ws_port, max_ws_connections, local_peer_id
+        "splash-relay ready | network={} public_port={} inbound_tcp={} max_ws={} peer_id={}",
+        network_name,
+        args.ws_port,
+        if args.tcp_port == 0 {
+            "disabled".to_string()
+        } else {
+            args.tcp_port.to_string()
+        },
+        max_ws_connections,
+        local_peer_id
     );
 
     // Dexie API base URL (can be configured via env; defaults match frontend getDexieApiUrl).
-    let dexie_api_base = if args.testnet {
+    let dexie_api_base = if testnet {
         std::env::var("DEXIE_TESTNET_API_BASE")
             .unwrap_or_else(|_| "https://api-testnet.dexie.space".to_string())
     } else {
@@ -341,6 +458,19 @@ async fn run() -> Result<()> {
                     }
                     SwarmEvent::NewListenAddr { address, .. } => {
                         debug!("Listening on {}", address.clone().with(Protocol::P2p(local_peer_id)));
+                        // Hand the OS-assigned loopback WebSocket port to the
+                        // public listener, which is waiting to start accepting.
+                        if address.iter().any(|p| matches!(p, Protocol::Ws(_))) {
+                            if let (Some(tx), Some(port)) = (
+                                internal_ws_port_tx.take(),
+                                address.iter().find_map(|p| match p {
+                                    Protocol::Tcp(port) => Some(port),
+                                    _ => None,
+                                }),
+                            ) {
+                                let _ = tx.send(port);
+                            }
+                        }
                     }
                     SwarmEvent::ConnectionEstablished { peer_id, endpoint, .. } => {
                         connected_peers += 1;
