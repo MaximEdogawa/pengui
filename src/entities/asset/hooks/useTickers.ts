@@ -250,6 +250,11 @@ export function useCatTokens() {
     });
   }, [assetMap]);
 
+  // Raw ticker list - memoized so consumers can use it as a stable effect/memo
+  // dependency. An inline `?? []` would hand out a new array on every render and
+  // cascade into render loops (see infinite-loop-guardrails in the wiki).
+  const tickers = useMemo(() => tickersQuery.data?.data ?? [], [tickersQuery.data]);
+
   return {
     // Legacy format (backward compatibility)
     catTokenMap,
@@ -260,7 +265,7 @@ export function useCatTokens() {
     availableAssets,
 
     // Raw tickers data
-    tickers: tickersQuery.data?.data || [],
+    tickers,
 
     // Loading states
     isLoading: tickersQuery.isLoading,
