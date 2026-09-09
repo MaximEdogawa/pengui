@@ -1,0 +1,106 @@
+name: Build Relay (Docker)
+
+# Builds and pushes the splash-relay image to ghcr.io - that's it. Deploying is
+# a manual, one-time `once deploy` on the server (see deployment/README.md);
+# ONCE (https://github.com/basecamp/once) then keeps it current on its own,
+# since `once deploy` sets --auto-update by default. The app has its own
+# separate pipeline: .github/workflows/build-app.yml.
+
+on:
+  release:
+    types: [published]
+  # Keep `:splash-relay` fresh whenever relay sources actually change. GitHub's
+  # native path filter does this reliably (it only applies to push events, which
+  # is why release builds below are unconditional).
+  push:
+    branches: [main]
+    paths:
+      - "crates/splash-relay/**"
+      - "deployment/splash-relay/**"
+      - ".github/workflows/build-relay.yml"
+  workflow_dispatch:
+    inputs:
+      relay_tag:
+        description: "Optional relay version tag to publish as `splash-relay-<tag>` (empty => `:splash-relay` only)"
+        required: false
+        type: string
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-push-relay:
+    name: Build and Push Splash Relay Image
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Compute image tags
+        id: relay_meta
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "release" ]; then
+            RELAY_BUILD_TAG="${{ github.ref_name }}"
+          else
+            RELAY_BUILD_TAG="${{ github.event.inputs.relay_tag }}"
+          fi
+
+          # `:splash-relay` is what the server runs; a versioned
+          # `:splash-relay-<tag>` is added only when a tag is actually known,
+          # so an empty input can't push a bare `:splash-relay-` tag.
+          TAGS="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:splash-relay"
+          if [ -n "${RELAY_BUILD_TAG:-}" ] && [ "$RELAY_BUILD_TAG" != "latest" ]; then
+            TAGS="$TAGS"$'\n'"${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:splash-relay-${RELAY_BUILD_TAG}"
+          fi
+
+          {
+            echo "tags<<__EOF__"
+            echo "$TAGS"
+            echo "__EOF__"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Build and push splash-relay image (use cache)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./deployment/splash-relay/Dockerfile
+          push: true
+          tags: ${{ steps.relay_meta.outputs.tags }}
+          cache-from: |
+            type=gha,scope=pengui-relay
+            type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:splash-relay
+          cache-to: type=gha,mode=max,scope=pengui-relay
+
+      - name: Summary
+        run: |
+          {
+            echo "### Relay image pushed"
+            echo
+            echo '```'
+            echo "${{ steps.relay_meta.outputs.tags }}"
+            echo '```'
+            echo
+            echo "ONCE pulls this automatically (\`--auto-update\` is on by default)."
+            echo "First-time setup only - see \`deployment/README.md\`:"
+            echo
+            echo '```'
+            echo "once deploy ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:splash-relay --host relay.pengui.space"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

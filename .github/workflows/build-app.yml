@@ -4,7 +4,7 @@ name: Build App (Docker)
 # (https://github.com/basecamp/once) fetches and deploys the latest image on
 # its own once the app is registered with it (see deployment/README.md for
 # the one-time `once deploy` step). The relay has its own separate pipeline:
-# .github/workflows/deploy-relay.yml.
+# .github/workflows/build-relay.yml.
 
 on:
   release:
