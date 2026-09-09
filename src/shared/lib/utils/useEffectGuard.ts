@@ -14,7 +14,7 @@
  * }, [dependencies])
  * ```
  *
- * @see docs/development/infinite-loop-guardrails.md
+ * @see https://github.com/maximedogawa/pengui-wiki/blob/main/development/infinite-loop-guardrails.md
  */
 
 import { logger } from "../logger";
@@ -70,7 +70,7 @@ export function trackEffectRun(effectName: string): void {
           `  - Runs in last second: ${newCount}\n` +
           `  - Time since last run: ${timeSinceLastRun}ms\n` +
           `  - Check dependency array and state updates\n` +
-          `  - See: docs/development/infinite-loop-guardrails.md`
+          `  - See: https://github.com/maximedogawa/pengui-wiki/blob/main/development/infinite-loop-guardrails.md`
       );
 
       if (newCount >= MAX_RUNS_PER_SECOND) {
