@@ -17,6 +17,10 @@ import { useTopVolumePairs } from "./useTopVolumePairs";
 
 const DEFAULT_PAGINATION: OrderBookPagination = 50;
 
+// Shared fallback so the recentPairs selector always returns a cached snapshot.
+// Zustand v5 re-renders in a loop when a selector hands back a new reference each call.
+const EMPTY_RECENT_PAIRS: AssetPair[] = [];
+
 export function useOrderBookFilters() {
   const queryClient = useQueryClient();
   const { network } = useNetwork();
@@ -35,7 +39,7 @@ export function useOrderBookFilters() {
   const hasHydrated = useHasHydrated();
   const userClearedFilters = useOrderBookFilterStore((state) => state.userClearedFilters);
   const recentPairs = useOrderBookFilterStore((state) =>
-    Array.isArray(state.recentPairs) ? state.recentPairs : []
+    Array.isArray(state.recentPairs) ? state.recentPairs : EMPTY_RECENT_PAIRS
   );
 
   // Get action functions directly from store (these are stable references)
