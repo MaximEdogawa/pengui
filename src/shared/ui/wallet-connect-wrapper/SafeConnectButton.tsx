@@ -6,17 +6,12 @@ import Wallet from "lucide-react/dist/esm/icons/wallet";
 import ChevronDown from "lucide-react/dist/esm/icons/chevron-down";
 import LogOut from "lucide-react/dist/esm/icons/log-out";
 import RefreshCw from "lucide-react/dist/esm/icons/refresh-cw";
-import {
-  WalletConnect,
-  store,
-  setPairingUri,
-  connectSession as connectSessionAction,
-  setConnectedWallet,
-  setSelectedFingerprint,
-  useWalletConnectionState,
-} from "@maximedogawa/chia-wallet-connect-react";
 import { useNetwork } from "@/shared/hooks/useNetwork";
-import { useThemeClasses } from "@/shared/hooks";
+import { useThemeClasses, useWalletState } from "@/shared/hooks";
+import {
+  connectWalletConnect,
+  resetWalletConnectSessions,
+} from "@/shared/lib/wallet/walletconnect/connectWalletConnect";
 import {
   getStoredNetwork,
   hasNetworkPreference,
@@ -36,7 +31,6 @@ import {
 import { cn } from "@/lib/utils";
 import { ConnectWalletModal } from "./ConnectWalletModal";
 import toast from "react-hot-toast";
-import type { SessionTypes } from "@walletconnect/types";
 
 /**
  * SafeConnectButton
@@ -50,7 +44,7 @@ export function SafeConnectButton() {
   const { network } = useNetwork();
   const { isDark } = useThemeClasses();
 
-  const { isConnected, address, walletName } = useWalletConnectionState();
+  const { isConnected, address, walletName } = useWalletState();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [uri, setUri] = useState<string | null>(null);
@@ -89,64 +83,6 @@ export function SafeConnectButton() {
     }
   }, [network]);
 
-  // ── config helper ──────────────────────────────────────
-
-  const getConfig = useCallback(() => {
-    const penguiIcon =
-      typeof window !== "undefined"
-        ? `${window.location.origin}/pengui-logo.png`
-        : "/pengui-logo.png";
-    return {
-      penguiIcon,
-      metadata: {
-        name: "Pengui",
-        description: "Pengui - Decentralized lending platform on Chia Network",
-        url: typeof window !== "undefined" ? window.location.origin : "https://pengui.space",
-        icons: [penguiIcon],
-      },
-    };
-  }, []);
-
-  // ── session processing ─────────────────────────────────
-
-  const processSession = useCallback(
-    async (session: SessionTypes.Struct, wc: InstanceType<typeof WalletConnect>) => {
-      store.dispatch(setPairingUri(null));
-      setUri(null);
-
-      await wc.detectEvents();
-      await wc.updateSessions();
-      store.dispatch(connectSessionAction(session));
-
-      const fp = Number(session.namespaces.chia.accounts[0].split(":")[2]);
-      store.dispatch(setSelectedFingerprint({ topic: session.topic, selectedFingerprint: fp }));
-
-      wc.topic = session.topic;
-      wc.session = session;
-      wc.selectedFingerprint = fp;
-
-      let addr: string | null = null;
-      try {
-        addr = await wc.verifyConnectionWithSageMethod();
-        if (!addr) addr = await wc.getAddress();
-      } catch {
-        try {
-          addr = await wc.getAddress();
-        } catch {
-          /* ok */
-        }
-      }
-
-      store.dispatch(
-        setConnectedWallet({ wallet: "WalletConnect", address: addr, name: "WalletConnect" })
-      );
-
-      toast.success("Wallet connected!");
-      setIsModalOpen(false);
-    },
-    []
-  );
-
   // ── initiate connection ────────────────────────────────
 
   const initConnection = useCallback(async () => {
@@ -156,47 +92,33 @@ export function SafeConnectButton() {
     setError(null);
     setUri(null);
 
-    try {
-      if (!hasNetworkPreference()) setStoredNetwork("mainnet");
+    const outcome = await connectWalletConnect({
+      isActive: () => mountedRef.current,
+      onPairingUri: (pairingUri) => setUri(pairingUri),
+      onPairingReady: () => setIsInitializing(false),
+    });
 
-      const { penguiIcon, metadata } = getConfig();
-      const wc = new WalletConnect(penguiIcon, metadata);
-      const signClient = await wc.signClient();
+    if (!mountedRef.current) return;
 
-      if (!signClient || !mountedRef.current) {
+    switch (outcome.status) {
+      case "connected":
+        toast.success("Wallet connected!");
+        setIsModalOpen(false);
+        break;
+      case "rejected":
+        setError("Connection was rejected in the wallet");
+        break;
+      case "unavailable":
         setIsInitializing(false);
-        return;
-      }
-
-      const net = getStoredNetwork();
-      const ns = getRequiredNamespaces(net);
-      const { uri: pairingUri, approval } = await signClient.connect({ optionalNamespaces: ns });
-
-      if (!mountedRef.current) return;
-      if (pairingUri) {
-        setUri(pairingUri);
-        store.dispatch(setPairingUri(pairingUri));
-      }
-      setIsInitializing(false);
-
-      if (approval) {
-        try {
-          const session = await approval();
-          if (!mountedRef.current) return;
-          await processSession(session, wc);
-        } catch {
-          if (mountedRef.current) {
-            setError("Connection was rejected in the wallet");
-          }
-        }
-      }
-    } catch (err) {
-      if (mountedRef.current) {
-        setError(err instanceof Error ? err.message : "Connection failed");
+        break;
+      case "failed":
+        setError(outcome.error);
         setIsInitializing(false);
-      }
+        break;
+      case "cancelled":
+        break;
     }
-  }, [getConfig, processSession]);
+  }, []);
 
   // ── disconnect ─────────────────────────────────────────
 
@@ -214,26 +136,12 @@ export function SafeConnectButton() {
 
   const handleReconnect = useCallback(async () => {
     try {
-      const { penguiIcon, metadata } = getConfig();
-      const wc = new WalletConnect(penguiIcon, metadata);
-
-      const state = store.getState();
-      const sessions = state.walletConnect?.sessions ?? [];
-      for (const s of sessions) {
-        try {
-          await wc.disconnectSession(s.topic);
-        } catch {
-          /* ok */
-        }
-      }
-
-      store.dispatch(setConnectedWallet(null));
-      store.dispatch(connectSessionAction(null));
+      await resetWalletConnectSessions();
       toast.success("Redirecting to login. Reconnect your wallet there.");
     } catch {
       toast.error("Failed to disconnect");
     }
-  }, [getConfig]);
+  }, []);
 
   // ── clipboard ──────────────────────────────────────────
 

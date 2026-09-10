@@ -1,7 +1,8 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { useWalletConnectionState, useAppSelector } from "@maximedogawa/chia-wallet-connect-react";
+import { useWalletConnectSessionState } from "@/shared/lib/wallet/walletconnect/useWalletConnectSessionState";
+import { useWalletRuntimeKind } from "@/shared/lib/wallet/walletRuntimeContext";
 import { createContext, useContext, useEffect, useRef, useState, useCallback } from "react";
 import { chainIdToNetwork, networkToChainId } from "@/shared/lib/utils/networkUtils";
 import {
@@ -26,8 +27,12 @@ const NetworkContext = createContext<NetworkContextType | undefined>(undefined);
 
 export function NetworkProvider({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
-  const { isConnected, walletConnectSession } = useWalletConnectionState();
-  const selectedSession = useAppSelector((state) => state.walletConnect?.selectedSession);
+  const runtimeKind = useWalletRuntimeKind();
+  const isWalletConnectRuntime = runtimeKind === "walletconnect";
+  // The WalletConnect session drives SignClient invalidation and network
+  // auto-sync. Inside Sage the network comes from the host instead, so these
+  // effects are skipped (see TASK-001.02).
+  const { isConnected, walletConnectSession, selectedSession } = useWalletConnectSessionState();
   const [network, setNetworkState] = useState<Network>(() => {
     const stored = getStoredNetwork();
     if (!hasNetworkPreference()) {
@@ -50,6 +55,7 @@ export function NetworkProvider({ children }: { children: React.ReactNode }) {
   // Cooldown prevents repeated invalidation when session/relay updates cause re-renders (infinite loop).
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (!isWalletConnectRuntime) return;
     if (!isConnected) {
       wasConnectedRef.current = false;
       return;
@@ -64,7 +70,7 @@ export function NetworkProvider({ children }: { children: React.ReactNode }) {
     wasConnectedRef.current = true;
     queryClient.invalidateQueries({ queryKey: ["walletConnect", "instance"] });
     queryClient.invalidateQueries({ queryKey: ["walletConnect"] });
-  }, [isConnected, walletConnectSession, selectedSession, queryClient]);
+  }, [isWalletConnectRuntime, isConnected, walletConnectSession, selectedSession, queryClient]);
 
   // Ensure network is initialized to mainnet on mount if no preference exists
   useEffect(() => {
@@ -102,6 +108,7 @@ export function NetworkProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     trackEffectRun("NetworkProvider: auto-sync");
     if (typeof window === "undefined") return;
+    if (!isWalletConnectRuntime) return;
 
     // Check if we've already auto-synced or if there's a user preference
     if (!isConnected || hasNetworkPreference() || hasAutoSyncedRef.current) {
@@ -134,7 +141,7 @@ export function NetworkProvider({ children }: { children: React.ReactNode }) {
       applyNetworkChange(walletNetwork);
       hasAutoSyncedRef.current = true;
     }
-  }, [isConnected, walletConnectSession, applyNetworkChange]);
+  }, [isWalletConnectRuntime, isConnected, walletConnectSession, applyNetworkChange]);
 
   // Reset auto-sync flag when wallet disconnects
   useEffect(() => {
@@ -174,7 +181,7 @@ export function NetworkProvider({ children }: { children: React.ReactNode }) {
         applyNetworkChange(newNetwork);
 
         // After network switch, test wallet connection with a balance request
-        if (isConnected && walletConnectSession) {
+        if (isWalletConnectRuntime && isConnected && walletConnectSession) {
           // Clear any existing timeout
           if (testRequestTimeoutRef.current) {
             clearTimeout(testRequestTimeoutRef.current);
@@ -269,6 +276,7 @@ export function NetworkProvider({ children }: { children: React.ReactNode }) {
       network,
       isSwitching,
       queryClient,
+      isWalletConnectRuntime,
       isConnected,
       walletConnectSession,
       selectedSession,

@@ -18,7 +18,7 @@
     "start": "bun next start",
     "lint": "bun eslint . --config eslint.config.mjs --max-warnings=1000",
     "type-check": "bunx tsc --noEmit",
-    "test:unit": "bun test src/shared/**/*.test.{ts,tsx} src/features/**/*.test.{ts,tsx} src/entities/**/*.test.{ts,tsx}",
+    "test:unit": "bun test src/shared src/features src/entities src/widgets",
     "test:integration": "bun test src/tests/integration/**/*.test.{ts,tsx}",
     "test:ct": "playwright test --config playwright-ct.config.ts",
     "test:ct:ui": "playwright test --config playwright-ct.config.ts --ui",

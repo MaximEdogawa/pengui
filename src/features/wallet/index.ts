@@ -11,9 +11,7 @@ export {
   useTakeOffer,
   useRefreshBalance,
 } from "./hooks/useWalletQueries";
-export { useWalletSession } from "./hooks/useWalletSession";
 export { useWalletFingerprint } from "./hooks/useWalletFingerprint";
-export { useSignClient } from "./hooks/useSignClient";
 export { useTransactionForm } from "./hooks/useTransactionForm";
 export { useTransactionHistory } from "./hooks/useTransactionHistory";
 export { useBalanceLoading } from "./hooks/useBalanceLoading";

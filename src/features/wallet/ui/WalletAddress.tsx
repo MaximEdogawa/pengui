@@ -1,15 +1,15 @@
 "use client";
 
 import { formatAddress } from "@/shared/lib/utils/addressUtils";
-import { useThemeClasses } from "@/shared/hooks";
-import { useWalletConnectionState } from "@maximedogawa/chia-wallet-connect-react";
+import { useThemeClasses, useWalletState } from "@/shared/hooks";
+
 import { Wallet, Copy } from "lucide-react";
 import { useState } from "react";
 
 export default function WalletAddress() {
   const [isAddressCopied, setIsAddressCopied] = useState(false);
   const { isDark, t } = useThemeClasses();
-  const { isConnected, address } = useWalletConnectionState();
+  const { isConnected, address } = useWalletState();
 
   const copyAddress = async () => {
     if (!address) return;

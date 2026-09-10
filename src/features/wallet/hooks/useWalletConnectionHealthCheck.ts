@@ -4,8 +4,7 @@ import { logger } from "@/shared/lib/logger";
 import { getAdaptiveConfig } from "@/shared/lib/utils/networkQuality";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import toast from "react-hot-toast";
-import { useSignClient } from "./useSignClient";
-import { useWalletSession } from "./useWalletSession";
+import { useWalletProvider, useWalletState } from "@/shared/providers/WalletRuntimeProvider";
 
 /**
  * Monitors wallet connection health. Shows "connection lost" only after 2 consecutive
@@ -13,8 +12,8 @@ import { useWalletSession } from "./useWalletSession";
  * Adapts ping frequency and timeout to network quality.
  */
 export function useWalletConnectionHealthCheck() {
-  const { signClient } = useSignClient();
-  const session = useWalletSession();
+  const provider = useWalletProvider();
+  const { isConnected } = useWalletState();
   const [connectionLost, setConnectionLost] = useState(false);
   const isCheckingRef = useRef(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -23,24 +22,21 @@ export function useWalletConnectionHealthCheck() {
   const netCfg = useMemo(() => getAdaptiveConfig(), []);
 
   const checkConnection = useCallback(async (): Promise<boolean> => {
-    if (!signClient || !session.isConnected || !session.topic) return true;
     if (isCheckingRef.current) return true;
     isCheckingRef.current = true;
     try {
-      const activeSessions = signClient.session.getAll();
-      const activeSession = activeSessions.find((s) => s.topic === session.topic);
-      if (!activeSession) {
+      const result = await provider.ping({ timeoutMs: netCfg.healthCheckPingTimeoutMs });
+      if (result.success) return true;
+
+      // The transport is not usable yet (no client / no session): not a failure.
+      if (result.code === "not-connected") return true;
+
+      if (result.code === "session-missing") {
         logger.warn("Wallet health check: session no longer exists locally");
         return false;
       }
-      const pingPromise = signClient.ping({ topic: session.topic });
-      const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("Ping timeout")), netCfg.healthCheckPingTimeoutMs)
-      );
-      await Promise.race([pingPromise, timeoutPromise]);
-      return true;
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
+
+      const msg = result.error ?? "";
       const isSessionError =
         msg.includes("No matching key") ||
         msg.includes("Missing or invalid") ||
@@ -51,10 +47,10 @@ export function useWalletConnectionHealthCheck() {
     } finally {
       isCheckingRef.current = false;
     }
-  }, [signClient, session.isConnected, session.topic, netCfg.healthCheckPingTimeoutMs]);
+  }, [provider, netCfg.healthCheckPingTimeoutMs]);
 
   const runHealthCheck = useCallback(async () => {
-    if (!session.isConnected) return;
+    if (!isConnected) return;
     const ok = await checkConnection();
     if (ok) {
       failCountRef.current = 0;
@@ -62,14 +58,14 @@ export function useWalletConnectionHealthCheck() {
       failCountRef.current += 1;
       if (failCountRef.current >= 2) setConnectionLost(true);
     }
-  }, [checkConnection, session.isConnected]);
+  }, [checkConnection, isConnected]);
 
   useEffect(() => {
-    if (!session.isConnected) {
+    if (!isConnected) {
       setConnectionLost(false);
       failCountRef.current = 0;
     }
-  }, [session.isConnected]);
+  }, [isConnected]);
 
   // When health check detects connection lost, only notify; do NOT auto-redirect (user must click Disconnect)
   useEffect(() => {
@@ -79,13 +75,13 @@ export function useWalletConnectionHealthCheck() {
   }, [connectionLost]);
 
   useEffect(() => {
-    if (!session.isConnected) return;
+    if (!isConnected) return;
     const t = setTimeout(() => runHealthCheck(), 15_000);
     return () => clearTimeout(t);
-  }, [session.isConnected, runHealthCheck]);
+  }, [isConnected, runHealthCheck]);
 
   useEffect(() => {
-    if (!session.isConnected) return;
+    if (!isConnected) return;
     const onVisible = () => {
       if (document.visibilityState === "visible") {
         setTimeout(runHealthCheck, 5000);
@@ -98,10 +94,10 @@ export function useWalletConnectionHealthCheck() {
       document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener("online", onOnline);
     };
-  }, [session.isConnected, runHealthCheck]);
+  }, [isConnected, runHealthCheck]);
 
   useEffect(() => {
-    if (!session.isConnected) {
+    if (!isConnected) {
       if (intervalRef.current) clearInterval(intervalRef.current);
       intervalRef.current = null;
       return;
@@ -113,7 +109,7 @@ export function useWalletConnectionHealthCheck() {
       if (intervalRef.current) clearInterval(intervalRef.current);
       intervalRef.current = null;
     };
-  }, [session.isConnected, runHealthCheck, netCfg.healthCheckIntervalMs]);
+  }, [isConnected, runHealthCheck, netCfg.healthCheckIntervalMs]);
 
   return { connectionLost };
 }
