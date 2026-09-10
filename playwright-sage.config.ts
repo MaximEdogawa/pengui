@@ -24,7 +24,10 @@ export default defineConfig({
     screenshot: "only-on-failure",
   },
 
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  // Use the system-installed Google Chrome instead of Playwright's bundled Chromium: this
+  // sandbox has no headless-shell download available, and the CSP behaviour under test
+  // (script-src / connect-src / img-src enforcement) is the same Chromium engine either way.
+  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"], channel: "chrome" } }],
 
   webServer: {
     command: "bun run scripts/sage/serve-snapshot.ts --dir out --port 4173",
