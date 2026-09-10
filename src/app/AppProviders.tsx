@@ -9,6 +9,7 @@ import {
 } from "@/shared/providers/WalletRuntimeProvider";
 import { DashboardLayout } from "@/features/dashboard";
 import { WalletConnectionGuard, ErrorBoundary } from "@/shared/ui";
+import { isLoginPath } from "@/shared/lib/routes/appPath";
 import { applyWebSocketBufferedAmountPatch } from "@/shared/lib/websocketBufferedAmountPatch";
 import { store } from "@maximedogawa/chia-wallet-connect-react";
 import { ThemeProvider } from "next-themes";
@@ -94,7 +95,7 @@ function WalletTransportBootstrap({ children }: { children: React.ReactNode }) {
 
 function DashboardLayoutWrapper({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isLoginPage = pathname === "/login" || pathname === "/";
+  const isLoginPage = isLoginPath(pathname);
 
   if (isLoginPage) {
     return <>{children}</>;

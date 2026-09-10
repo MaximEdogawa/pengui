@@ -1,6 +1,8 @@
 "use client";
 
 import { useWalletConnection } from "@/shared/hooks/useWalletConnection";
+import { logger } from "@/shared/lib/logger";
+import { isLoginPath } from "@/shared/lib/routes/appPath";
 import { useWalletRuntimeKind } from "@/shared/lib/wallet/walletRuntimeContext";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -74,7 +76,7 @@ export default function WalletConnectionGuard({ children }: { children: React.Re
     }
     lastPathnameRef.current = pathname;
 
-    const isLoginPage = pathname === "/login" || pathname === "/";
+    const isLoginPage = isLoginPath(pathname);
 
     // Track if connection state just changed (new connection)
     const isNewConnection = isConnected && !wasConnected;
@@ -96,6 +98,13 @@ export default function WalletConnectionGuard({ children }: { children: React.Re
         if (isLoginPage && !hasRedirectedRef.current) {
           hasRedirectedRef.current = true;
           router.replace("/dashboard");
+        } else if (!hasRedirectedRef.current) {
+          // Sage serves the app from a custom protocol, so if its webview ever
+          // reports a path shape `isLoginPath` does not recognise, the redirect
+          // silently does not happen. Say so instead of spinning forever.
+          logger.warn(
+            `Sage wallet connected but pathname "${pathname}" is not recognised as the login screen; not redirecting.`
+          );
         }
         return;
       }
