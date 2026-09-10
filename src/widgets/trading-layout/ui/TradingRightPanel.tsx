@@ -6,6 +6,7 @@ import CreateOfferForm from "@/features/trading/ui/componets/limit/CreateOfferFo
 import LimitOfferTab from "./OfferTab";
 import MarketOfferTab from "@/features/trading/ui/widgets/market/MarketOfferContent";
 import { SwapTabContent } from "@/features/tibet-swap/ui/SwapTabContent";
+import { isFeatureEnabled } from "@/shared/config/featureFlags";
 import type { OrderBookPanelMode } from "./types";
 
 interface TradingRightPanelProps {
@@ -109,11 +110,13 @@ export default function TradingRightPanel({
           </div>
         </div>
 
-        <div className={`${currentMode === "swap" ? "" : "hidden"}`}>
-          <div className="w-full px-1 py-0.5">
-            <SwapTabContent mode="inline" />
+        {isFeatureEnabled("swap") && (
+          <div className={`${currentMode === "swap" ? "" : "hidden"}`}>
+            <div className="w-full px-1 py-0.5">
+              <SwapTabContent mode="inline" />
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

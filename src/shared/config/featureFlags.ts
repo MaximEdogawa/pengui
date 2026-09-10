@@ -16,13 +16,16 @@
  * `NEXT_PUBLIC_FEATURE_FLAGS=dashboard`) — an explicit list is always honoured
  * exactly as written.
  *
- * Note: the Tibet **swap / add liquidity / remove liquidity** UI has no flag of
- * its own. It lives in the Trading page's right panel, so it is available in
- * every environment whose flag list contains `trading`.
+ * Note: the Tibet **swap / add liquidity / remove liquidity** UI has its own
+ * `swap` flag and is **off** unless a flag list names it explicitly - it is not
+ * part of {@link DEFAULT_FEATURE_FLAGS}. TibetSwap, the AMM behind it, is winding
+ * down (refunds announced, farewell posted), so the UI stays disabled until there
+ * is a working backend to point it at.
  */
 
 export type FeatureFlag =
   | "dashboard"
+  | "swap"
   | "offers"
   | "trading"
   | "loans"
@@ -32,6 +35,7 @@ export type FeatureFlag =
 
 export const ALL_FEATURE_FLAGS: readonly FeatureFlag[] = [
   "dashboard",
+  "swap",
   "offers",
   "trading",
   "loans",
@@ -43,7 +47,7 @@ export const ALL_FEATURE_FLAGS: readonly FeatureFlag[] = [
 /**
  * Baseline used when `NEXT_PUBLIC_FEATURE_FLAGS` is unset or blank.
  * Mirrors `deployment/.env.example` so every environment ships the same core
- * features — including `trading`, which carries the swap UI.
+ * features. `swap` is deliberately absent: it must be opted into explicitly.
  */
 export const DEFAULT_FEATURE_FLAGS: readonly FeatureFlag[] = [
   "dashboard",

@@ -5,7 +5,7 @@ import { useThemeClasses } from "@/shared/hooks";
 import TradeHistoryTable from "./TradeHistoryTable";
 import { Loader2 } from "lucide-react";
 import { OrderBookOrder } from "@/features/trading/lib/orderBookTypes";
-import { useOrderBookFilters } from "@/features/trading/hooks/useOrderBookFilters";
+import { useOrderBookFilters } from "@/features/trading/hooks/OrderBookFiltersProvider";
 import { useTradeHistory, type TradeHistoryResult } from "@/features/trading/hooks/useTradeHistory";
 import { useTradeHistoryFilters } from "@/features/trading/hooks/useTradeHistoryFilters";
 import { useTradeHistorySorting } from "@/features/trading/hooks/useTradeHistorySorting";

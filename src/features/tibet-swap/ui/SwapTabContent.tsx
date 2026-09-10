@@ -15,7 +15,7 @@ import {
   useSwapTabLpRemoveAmountsSync,
   useSwapTabConfirmSwap,
 } from "../hooks";
-import { useOrderBookFilters } from "@/features/trading/hooks/useOrderBookFilters";
+import { useOrderBookFilters } from "@/features/trading/hooks/OrderBookFiltersProvider";
 import { useSelectedOrder } from "@/features/trading/hooks/SelectedOrderProvider";
 import { isXchTicker } from "../lib/tibetUiUtils";
 import { removeReceiveEstimate } from "../lib/swapLiquidityMath";
@@ -70,9 +70,9 @@ export function SwapTabContent({ mode }: SwapTabContentProps = {}) {
     setAmountDriver,
   });
 
-  const { data: allPairs = [], isLoading: pairsLoading } = useTibetPairs({
-    limit: 100,
-  });
+  // The whole pair list: the selected pair is resolved by looking the token up
+  // here, and Tibet lists common tokens well past the first page.
+  const { data: allPairs = [], isLoading: pairsLoading } = useTibetPairs();
 
   useSwapTabPairFromFilters(filters, allPairs, selectedPair, setSelectedPair);
 

@@ -4,7 +4,7 @@ import { ArrowUpDown } from "lucide-react";
 import { useThemeClasses } from "@/shared/hooks";
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
-import { useOrderBookFilters } from "@/features/trading/hooks/useOrderBookFilters";
+import { useOrderBookFilters } from "@/features/trading/hooks/OrderBookFiltersProvider";
 
 export default function AssetSwapToggle() {
   const { t } = useThemeClasses();
