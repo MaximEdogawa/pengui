@@ -1,0 +1,71 @@
+{
+  "manifestVersion": 0,
+  "name": "Pengui",
+  "version": "0.0.1",
+  "icon": "icons/icon-512x512.png",
+  "entry": "index.html",
+  "sageVersion": {
+    "min": "0.13.0"
+  },
+  "author": {
+    "name": "Pengui",
+    "avatar": "icons/icon-192x192.png"
+  },
+  "permissions": {
+    "network": {
+      "whitelist": {
+        "required": [
+          "https://pengui.space",
+          "wss://relay.pengui.space",
+          "https://api.v2.tibetswap.io",
+          "https://assets.spacescan.io",
+          "https://images.spacescan.io"
+        ],
+        "optional": []
+      },
+      "whitelistByNetwork": {
+        "mainnet": {
+          "required": ["https://api.dexie.space", "https://api.spacescan.io"],
+          "optional": []
+        },
+        "testnet11": {
+          "required": ["https://api-testnet.dexie.space", "https://api-testnet11.spacescan.io"],
+          "optional": []
+        }
+      }
+    },
+    "capabilities": {
+      "required": [
+        "app.get_info",
+        "app.get_capabilities",
+        "app.request_permission_grants",
+        "app.lifecycle.set_before_stop_listener",
+        "app.lifecycle.ready_to_stop",
+        "environment.get_network",
+        "environment.theme.get_current",
+        "environment.theme.css_vars",
+        "environment.theme.listen_changed",
+        "storage.persistent_webview",
+        "wallet.get_key",
+        "wallet.get_sync_status",
+        "wallet.get_asset_balance",
+        "wallet.get_asset_coins",
+        "wallet.listen_selected_wallet_changed"
+      ],
+      "optional": [
+        "environment.open_external_url",
+        "wallet.send_xch",
+        "wallet.sign_coin_spends",
+        "wallet.send_transaction",
+        "wallet.sign_message",
+        "wallet.get_public_keys",
+        "wallet.filter_unlocked_coins",
+        "wallet.get_coins_by_ids",
+        "wallet.get_transactions",
+        "wallet.get_xch_usd_price",
+        "wallet.check_address",
+        "wallet.get_derivations"
+      ]
+    }
+  }
+}

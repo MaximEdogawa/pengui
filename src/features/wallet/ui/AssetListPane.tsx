@@ -2,17 +2,12 @@
 
 import { useWalletAssets } from "../hooks/useWalletAssets";
 import { useAssetFilter } from "../hooks/useAssetFilter";
-import { CHIA_ASSET_IDS } from "@/shared/lib/constants/chia-assets";
+import { assetDetailHref } from "@/shared/lib/routes/assetDetail";
 import Card from "./shared/Card";
 import EmptyState from "./shared/EmptyState";
 import WalletFilterBar from "./WalletFilterBar";
 import AssetPane from "./AssetPane";
 import { Wallet } from "lucide-react";
-
-function assetDetailHref(assetId: string): string {
-  const slug = assetId === CHIA_ASSET_IDS.XCH || assetId === "" ? "xch" : assetId;
-  return `/wallet/${encodeURIComponent(slug)}`;
-}
 
 export default function AssetListPane() {
   const { assets, isLoading } = useWalletAssets();

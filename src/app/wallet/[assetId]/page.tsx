@@ -1,19 +1,16 @@
-"use client";
+import { STATIC_ASSET_DETAIL_PARAMS } from "@/shared/lib/routes/assetDetail";
+import WalletAssetDetailClient from "./WalletAssetDetailClient";
 
-import { useParams, useRouter } from "next/navigation";
-import { useEffect } from "react";
-import { AssetDetailView } from "@/features/wallet";
+/**
+ * `output: "export"` (the Sage snapshot) requires a fixed param list for every
+ * dynamic segment. Only the XCH slug is pre-rendered; inside Sage the asset list
+ * links to the static `/wallet/asset?id=…` route instead. The hosted deployment
+ * keeps rendering every asset id on demand (`dynamicParams` defaults to true).
+ */
+export function generateStaticParams() {
+  return STATIC_ASSET_DETAIL_PARAMS;
+}
 
 export default function WalletAssetPage() {
-  const params = useParams();
-  const router = useRouter();
-  const assetId = typeof params?.assetId === "string" ? params.assetId : "";
-
-  useEffect(() => {
-    if (!assetId) router.replace("/wallet");
-  }, [assetId, router]);
-
-  if (!assetId) return null;
-
-  return <AssetDetailView assetIdSlug={assetId} />;
+  return <WalletAssetDetailClient />;
 }

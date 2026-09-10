@@ -10,8 +10,11 @@ function getCommitSha(): string {
   }
 }
 
+const isSageBuild = process.env.SAGE_BUILD === "1";
+
 const nextConfig: NextConfig = {
-  output: "standalone",
+  output: isSageBuild ? "export" : "standalone",
+  ...(isSageBuild ? { images: { unoptimized: true }, pageExtensions: ["tsx", "jsx"] } : {}),
   compress: true,
   poweredByHeader: false,
   transpilePackages: ["@maximedogawa/chia-wallet-connect-react", "lightweight-charts"],

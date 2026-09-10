@@ -7,6 +7,7 @@ export default [
     ignores: [
       "**/dist/**",
       "**/.next/**",
+      "**/out/**",
       "**/node_modules/**",
       "**/*.d.ts",
       "**/next-env.d.ts",
