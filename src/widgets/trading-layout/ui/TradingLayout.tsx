@@ -13,6 +13,7 @@ import LimitOfferTab from "./OfferTab";
 import TradingContent from "./TradingContent";
 import TradingRightPanel from "./TradingRightPanel";
 import { SwapTabContent } from "@/features/tibet-swap/ui/SwapTabContent";
+import { isFeatureEnabled } from "@/shared/config/featureFlags";
 import type { OrderBookPanelMode } from "./types";
 
 export type { OrderBookPanelMode } from "./types";
@@ -123,7 +124,7 @@ export default function TradingLayout({
           </div>
         )}
         <div className="flex-1 min-h-0">
-          {isMobile && currentMode === "swap" ? (
+          {isMobile && currentMode === "swap" && isFeatureEnabled("swap") ? (
             <div
               className={`h-full overflow-y-auto ${t.card} rounded-lg border ${t.border} px-1.5 py-1`}
               style={{ scrollbarGutter: "stable" }}

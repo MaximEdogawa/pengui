@@ -5,6 +5,7 @@ import { useThemeClasses } from "@/shared/hooks";
 import { useCatTokens } from "@/entities/asset";
 import { getNativeTokenTickerForNetwork } from "@/shared/lib/config/environment";
 import { useNetwork } from "@/shared/hooks/useNetwork";
+import { isFeatureEnabled } from "@/shared/config/featureFlags";
 import { useMemo } from "react";
 import type { OrderBookOrder } from "@/features/trading/lib/orderBookTypes";
 
@@ -167,17 +168,19 @@ export default function LimitOfferTab({
           </span>
         </button>
 
-        <button
-          type="button"
-          onClick={() => onModeChange("swap")}
-          className={tabButtonClass(activeMode === "swap")}
-        >
-          {activeOverlay(activeMode === "swap")}
-          <span className="relative inline-flex items-center gap-1">
-            <ArrowLeftRight size={10} />
-            Swap
-          </span>
-        </button>
+        {isFeatureEnabled("swap") && (
+          <button
+            type="button"
+            onClick={() => onModeChange("swap")}
+            className={tabButtonClass(activeMode === "swap")}
+          >
+            {activeOverlay(activeMode === "swap")}
+            <span className="relative inline-flex items-center gap-1">
+              <ArrowLeftRight size={10} />
+              Swap
+            </span>
+          </button>
+        )}
       </div>
     </div>
   );
