@@ -11,6 +11,33 @@ import type {
 
 const DEFAULT_PAGINATION: OrderBookPagination = 50;
 
+/**
+ * Compare two suggestion lists by content.
+ *
+ * The suggestion list is recomputed from scratch whenever the search input or the
+ * available assets change, so writing it unconditionally hands every subscriber a new
+ * array identity. If any input to that computation is itself unstable, the resulting
+ * re-render recomputes the list again and the app spins into a "maximum update depth
+ * exceeded" crash. Bailing out on an unchanged list keeps that loop from forming.
+ */
+const areSuggestionsEqual = (a: SuggestionItem[], b: SuggestionItem[]): boolean => {
+  if (a === b) return true;
+  if (a.length !== b.length) return false;
+
+  return a.every((item, index) => {
+    const other = b[index];
+    return (
+      item.value === other.value &&
+      item.column === other.column &&
+      item.label === other.label &&
+      item.type === other.type &&
+      item.sublabel === other.sublabel &&
+      item.pairBuyAsset === other.pairBuyAsset &&
+      item.pairSellAsset === other.pairSellAsset
+    );
+  });
+};
+
 interface OrderBookFilterState {
   // Filter state
   filters: OrderBookFilters;
@@ -112,7 +139,12 @@ export const useOrderBookFilterStore = create<OrderBookFilterStore>()(
 
       setSearchValue: (searchValue) => set({ searchValue }),
 
-      setFilteredSuggestions: (filteredSuggestions) => set({ filteredSuggestions }),
+      setFilteredSuggestions: (filteredSuggestions) =>
+        set((state) =>
+          areSuggestionsEqual(state.filteredSuggestions, filteredSuggestions)
+            ? state
+            : { filteredSuggestions }
+        ),
 
       setAssetsSwapped: (assetsSwapped) => set({ assetsSwapped }),
 

@@ -25,4 +25,16 @@ describe("useCatTokens", () => {
 
     expect(result.current.tickers).toBe(firstTickers);
   });
+
+  it("keeps the derived collections stable across re-renders while no data is loaded", () => {
+    const { result, rerender } = renderHook(() => useCatTokens(), { wrapper: AllTheProviders });
+
+    const { catTokenMap, assetMap, availableCatTokens, availableAssets } = result.current;
+    rerender();
+
+    expect(result.current.catTokenMap).toBe(catTokenMap);
+    expect(result.current.assetMap).toBe(assetMap);
+    expect(result.current.availableCatTokens).toBe(availableCatTokens);
+    expect(result.current.availableAssets).toBe(availableAssets);
+  });
 });
