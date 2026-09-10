@@ -75,6 +75,19 @@ if (packageVersion !== manifestVersion) {
   );
 }
 
+// Sage keys its update flow on the manifest `version`. Rebuilding without
+// bumping it serves a new snapshot under a version Sage already has, so the
+// installed app silently keeps running the old code — which reads exactly like
+// "my change didn't land". Compare against the snapshot we are about to
+// replace and say so loudly.
+const previousBuiltVersion = (() => {
+  try {
+    return JSON.parse(readFileSync(join(OUT_DIR, "sage-manifest.json"), "utf8")).version as string;
+  } catch {
+    return null;
+  }
+})();
+
 // 2. Static export ------------------------------------------------------------------
 rmSync(OUT_DIR, { recursive: true, force: true });
 console.log("📦 next build (output: export)");
@@ -103,7 +116,16 @@ await run(["bun", "x", "sage-app", "finalize-manifest", "--source", SOURCE_MANIF
 await run(["bun", "run", join("scripts", "sage", "verify-snapshot.ts"), OUT_DIR]);
 
 console.log(
-  `\n✅ Sage snapshot ready in out/.\n` +
+  `\n✅ Sage snapshot ready in out/ (version ${manifestVersion}).\n` +
     `   Serve it:   bun run sage:serve\n` +
     `   Install it: Sage → Apps → Install from URL → http://localhost:4173`
 );
+
+if (previousBuiltVersion === manifestVersion) {
+  console.warn(
+    `\n⚠️  Version ${manifestVersion} is unchanged from the snapshot you just replaced.\n` +
+      `   Sage updates an installed app only when the manifest version changes, so it\n` +
+      `   will keep running the previously installed code and your changes will not\n` +
+      `   appear. Bump "version" in sage-manifest.json and rebuild.`
+  );
+}
