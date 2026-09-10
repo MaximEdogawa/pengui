@@ -18,6 +18,7 @@ import {
 import type { ThemeClasses } from "@/shared/lib/theme";
 import type { TabId } from "./ProfileTabs";
 import { appInfo } from "@/shared/lib/config/appInfo";
+import { ExternalUrlLink } from "@/shared/ui";
 
 interface ProfileTabContentProps {
   activeTab: TabId;
@@ -180,10 +181,8 @@ export function ProfileTabContent({ activeTab, isDark, t, onThemeChange }: Profi
               <h2 className={`${t.text} text-sm font-semibold`}>Contact Info</h2>
             </div>
             <div className="space-y-2">
-              <a
+              <ExternalUrlLink
                 href="https://x.com/MaximEdogawa"
-                target="_blank"
-                rel="noopener noreferrer"
                 className={`flex items-center gap-2 p-2 rounded-lg ${isDark ? "hover:bg-white/5" : "hover:bg-white/40"} transition-colors group`}
               >
                 <svg
@@ -200,11 +199,9 @@ export function ProfileTabContent({ activeTab, isDark, t, onThemeChange }: Profi
                   size={12}
                   className={`${t.textSecondary} opacity-0 group-hover:opacity-100 transition-opacity`}
                 />
-              </a>
-              <a
+              </ExternalUrlLink>
+              <ExternalUrlLink
                 href="https://github.com/maximedogawa"
-                target="_blank"
-                rel="noopener noreferrer"
                 className={`flex items-center gap-2 p-2 rounded-lg ${isDark ? "hover:bg-white/5" : "hover:bg-white/40"} transition-colors group`}
               >
                 <ExternalLink
@@ -217,7 +214,7 @@ export function ProfileTabContent({ activeTab, isDark, t, onThemeChange }: Profi
                   size={12}
                   className={`${t.textSecondary} opacity-0 group-hover:opacity-100 transition-opacity`}
                 />
-              </a>
+              </ExternalUrlLink>
             </div>
           </div>
 
@@ -320,14 +317,12 @@ export function ProfileTabContent({ activeTab, isDark, t, onThemeChange }: Profi
                   When using Wallet Connect (optional), your browser sends encrypted requests to
                   Wallet Connect&apos;s servers that then proxy the request to your wallet. For more
                   information, please read{" "}
-                  <a
+                  <ExternalUrlLink
                     href="https://walletconnect.network/privacy"
-                    target="_blank"
-                    rel="noopener noreferrer"
                     className={`${isDark ? "text-cyan-400 hover:text-cyan-300" : "text-cyan-600 hover:text-cyan-700"} underline`}
                   >
                     Wallet Connect&apos;s privacy policy
-                  </a>
+                  </ExternalUrlLink>
                   .
                 </p>
               </div>
@@ -366,14 +361,12 @@ export function ProfileTabContent({ activeTab, isDark, t, onThemeChange }: Profi
               <div className="pt-2">
                 <p className="text-xs">
                   For questions or concerns, contact us on{" "}
-                  <a
+                  <ExternalUrlLink
                     href="https://x.com/MaximEdogawa"
-                    target="_blank"
-                    rel="noopener noreferrer"
                     className={`${isDark ? "text-cyan-400 hover:text-cyan-300" : "text-cyan-600 hover:text-cyan-700"} underline`}
                   >
                     X (Twitter)
-                  </a>
+                  </ExternalUrlLink>
                   .
                 </p>
               </div>
