@@ -2,7 +2,10 @@
  * Sage app manifest constraints, mirrored from the Sage 0.13.0 sources so the packaging
  * scripts can validate `sage-manifest.json` before it ever reaches a Sage install.
  *
- * Capability names: docs/generated/user-bridge-capabilities.md (xch-dev/sage, main).
+ * Capability names: the `Capability` enum accepted by the shipped Sage 0.13 binary.
+ * Verified against a real Sage install-time rejection; the generated docs list names
+ * (app.request_permission_grants, wallet.listen_selected_wallet_changed,
+ * environment.open_external_url) that the shipped binary does NOT accept.
  * Whitelist rules and CSP: crates/sage-apps/src/security/csp.rs and the app platform docs.
  * Snapshot limits: packages/sage-app-sdk/cli/finalize-manifest.mjs.
  */
@@ -16,7 +19,6 @@ export const SAGE_CAPABILITIES = [
   "app.get_capabilities",
   "app.request_capability_grant",
   "app.request_network_whitelist_grant",
-  "app.request_permission_grants",
   "wallet.get_key",
   "wallet.get_secret_key",
   "wallet.send_xch",
@@ -39,12 +41,10 @@ export const SAGE_CAPABILITIES = [
   "wallet.get_pending_transactions",
   "wallet.get_transaction",
   "wallet.get_transactions",
-  "wallet.listen_selected_wallet_changed",
   "environment.theme.get_current",
   "environment.theme.css_vars",
   "environment.theme.listen_changed",
   "environment.get_network",
-  "environment.open_external_url",
   "storage.persistent_webview",
 ] as const;
 
@@ -64,7 +64,6 @@ export const EXTERNALLY_OBSERVABLE_CAPABILITIES = [
   "wallet.sign_coin_spends",
   "wallet.sign_message",
   "wallet.send_transaction",
-  "environment.open_external_url",
 ] as const;
 
 /** Network ids the whitelist can be scoped to. */
