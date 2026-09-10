@@ -10,7 +10,7 @@ import OrderTooltip from "./OrderTooltip";
 import { User } from "lucide-react";
 import { useThemeClasses } from "@/shared/hooks";
 import { OrderBookOrder } from "@/features/trading/lib/orderBookTypes";
-import { useOrderBookFilters } from "@/features/trading/hooks/useOrderBookFilters";
+import { useOrderBookFilters } from "@/features/trading/hooks/OrderBookFiltersProvider";
 import { useOrderBook } from "@/features/trading/hooks/useOrderBook";
 import { useTickers } from "@/entities/asset/hooks/useTickers";
 import { useOrderBookDetails } from "@/features/trading/hooks/useOrderBookDetails";

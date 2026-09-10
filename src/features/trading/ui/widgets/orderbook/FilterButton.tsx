@@ -2,7 +2,7 @@
 
 import { Filter } from "lucide-react";
 import { useThemeClasses } from "@/shared/hooks";
-import { useOrderBookFilters } from "@/features/trading/hooks/useOrderBookFilters";
+import { useOrderBookFilters } from "@/features/trading/hooks/OrderBookFiltersProvider";
 
 export default function FilterButton() {
   const { t } = useThemeClasses();

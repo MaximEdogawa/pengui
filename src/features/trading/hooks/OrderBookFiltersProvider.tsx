@@ -3,28 +3,17 @@
 import { createContext, useContext, ReactNode } from "react";
 import { useOrderBookFilters as useOrderBookFiltersImpl } from "./useOrderBookFilters";
 
-interface OrderBookFiltersContextValue {
-  filters: ReturnType<typeof useOrderBookFiltersImpl>["filters"];
-  searchValue: ReturnType<typeof useOrderBookFiltersImpl>["searchValue"];
-  filteredSuggestions: ReturnType<typeof useOrderBookFiltersImpl>["filteredSuggestions"];
-  assetsSwapped: ReturnType<typeof useOrderBookFiltersImpl>["assetsSwapped"];
-  showFilterPane: ReturnType<typeof useOrderBookFiltersImpl>["showFilterPane"];
-  hasActiveFilters: ReturnType<typeof useOrderBookFiltersImpl>["hasActiveFilters"];
-  pagination: ReturnType<typeof useOrderBookFiltersImpl>["pagination"];
-  setSearchValue: ReturnType<typeof useOrderBookFiltersImpl>["setSearchValue"];
-  setFilteredSuggestions: ReturnType<typeof useOrderBookFiltersImpl>["setFilteredSuggestions"];
-  addFilter: ReturnType<typeof useOrderBookFiltersImpl>["addFilter"];
-  removeFilter: ReturnType<typeof useOrderBookFiltersImpl>["removeFilter"];
-  clearAllFilters: ReturnType<typeof useOrderBookFiltersImpl>["clearAllFilters"];
-  clearRecentPairs: ReturnType<typeof useOrderBookFiltersImpl>["clearRecentPairs"];
-  swapBuySellAssets: ReturnType<typeof useOrderBookFiltersImpl>["swapBuySellAssets"];
-  toggleFilterPane: ReturnType<typeof useOrderBookFiltersImpl>["toggleFilterPane"];
-  setShowFilterPane: ReturnType<typeof useOrderBookFiltersImpl>["setShowFilterPane"];
-  setPagination: ReturnType<typeof useOrderBookFiltersImpl>["setPagination"];
-  setBuyAsset: ReturnType<typeof useOrderBookFiltersImpl>["setBuyAsset"];
-  setSellAsset: ReturnType<typeof useOrderBookFiltersImpl>["setSellAsset"];
-  refreshOrderBook: ReturnType<typeof useOrderBookFiltersImpl>["refreshOrderBook"];
-}
+/**
+ * Everything the filters hook exposes.
+ *
+ * The hook is not a passive reader - it owns the effects that apply network
+ * defaults, invalidate queries and write `filteredSuggestions`. Every component
+ * that calls the implementation directly gets its own copy of those effects
+ * writing to the same store, which is how the "maximum update depth exceeded"
+ * loop gets fed. Consumers must go through this context so exactly one instance
+ * runs per page.
+ */
+type OrderBookFiltersContextValue = ReturnType<typeof useOrderBookFiltersImpl>;
 
 const OrderBookFiltersContext = createContext<OrderBookFiltersContextValue | undefined>(undefined);
 

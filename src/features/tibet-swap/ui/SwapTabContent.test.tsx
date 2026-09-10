@@ -1,6 +1,7 @@
 import { describe, it, expect, afterEach, beforeEach } from "bun:test";
 import { render, screen, waitFor, cleanup } from "@/test-utils";
 import { SelectedOrderProvider } from "@/features/trading/hooks/SelectedOrderProvider";
+import { OrderBookFiltersProvider } from "@/features/trading/hooks/OrderBookFiltersProvider";
 import { useOrderBookFilterStore } from "@/features/trading/hooks/orderBookFilterStore";
 import { SwapTabContent } from "./SwapTabContent";
 import type { TibetApiPair } from "../lib/tibetTypes";
@@ -37,7 +38,9 @@ function jsonResponse(body: unknown): Response {
 function renderSwapTab() {
   return render(
     <SelectedOrderProvider>
-      <SwapTabContent mode="inline" />
+      <OrderBookFiltersProvider>
+        <SwapTabContent mode="inline" />
+      </OrderBookFiltersProvider>
     </SelectedOrderProvider>
   );
 }

@@ -15,7 +15,7 @@ import {
   useSwapTabLpRemoveAmountsSync,
   useSwapTabConfirmSwap,
 } from "../hooks";
-import { useOrderBookFilters } from "@/features/trading/hooks/useOrderBookFilters";
+import { useOrderBookFilters } from "@/features/trading/hooks/OrderBookFiltersProvider";
 import { useSelectedOrder } from "@/features/trading/hooks/SelectedOrderProvider";
 import { isXchTicker } from "../lib/tibetUiUtils";
 import { removeReceiveEstimate } from "../lib/swapLiquidityMath";

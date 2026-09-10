@@ -6,7 +6,7 @@ import { getNativeTokenTickerForNetwork } from "@/shared/lib/config/environment"
 import { useNetwork } from "@/shared/hooks/useNetwork";
 import { X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useOrderBookFilters } from "@/features/trading/hooks/useOrderBookFilters";
+import { useOrderBookFilters } from "@/features/trading/hooks/OrderBookFiltersProvider";
 import AssetSwapToggle from "./AssetSwapToggle";
 import FilterButton from "./FilterButton";
 import OrderBookPaginationControls from "./OrderBookPaginationControls";
