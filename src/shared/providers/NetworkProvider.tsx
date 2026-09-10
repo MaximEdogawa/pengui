@@ -1,7 +1,8 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { useWalletConnectionState, useAppSelector } from "@maximedogawa/chia-wallet-connect-react";
+import { useWalletConnectSessionState } from "@/shared/lib/wallet/walletconnect/useWalletConnectSessionState";
+import { useWalletRuntimeKind } from "@/shared/lib/wallet/walletRuntimeContext";
 import { createContext, useContext, useEffect, useRef, useState, useCallback } from "react";
 import { chainIdToNetwork, networkToChainId } from "@/shared/lib/utils/networkUtils";
 import {
@@ -10,6 +11,7 @@ import {
   hasNetworkPreference,
 } from "@/shared/lib/utils/networkStorage";
 import { getAssetBalance } from "@/shared/lib/walletConnect/repositories/walletQueries.repository";
+import { fetchSageNetwork } from "@/shared/lib/wallet/sage-bridge/sageNetwork";
 import { logger } from "@/shared/lib/logger";
 import { trackEffectRun } from "@/shared/lib/utils/useEffectGuard";
 
@@ -20,14 +22,20 @@ interface NetworkContextType {
   setNetwork: (network: Network) => Promise<boolean>;
   isMainnet: boolean;
   isTestnet: boolean;
+  /** True inside Sage: the active network follows the host and cannot be switched from the app. */
+  isNetworkReadOnly: boolean;
 }
 
 const NetworkContext = createContext<NetworkContextType | undefined>(undefined);
 
 export function NetworkProvider({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
-  const { isConnected, walletConnectSession } = useWalletConnectionState();
-  const selectedSession = useAppSelector((state) => state.walletConnect?.selectedSession);
+  const runtimeKind = useWalletRuntimeKind();
+  const isWalletConnectRuntime = runtimeKind === "walletconnect";
+  // The WalletConnect session drives SignClient invalidation and network
+  // auto-sync. Inside Sage the network comes from the host instead, so these
+  // effects are skipped (see TASK-001.02).
+  const { isConnected, walletConnectSession, selectedSession } = useWalletConnectSessionState();
   const [network, setNetworkState] = useState<Network>(() => {
     const stored = getStoredNetwork();
     if (!hasNetworkPreference()) {
@@ -50,6 +58,7 @@ export function NetworkProvider({ children }: { children: React.ReactNode }) {
   // Cooldown prevents repeated invalidation when session/relay updates cause re-renders (infinite loop).
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (!isWalletConnectRuntime) return;
     if (!isConnected) {
       wasConnectedRef.current = false;
       return;
@@ -64,7 +73,7 @@ export function NetworkProvider({ children }: { children: React.ReactNode }) {
     wasConnectedRef.current = true;
     queryClient.invalidateQueries({ queryKey: ["walletConnect", "instance"] });
     queryClient.invalidateQueries({ queryKey: ["walletConnect"] });
-  }, [isConnected, walletConnectSession, selectedSession, queryClient]);
+  }, [isWalletConnectRuntime, isConnected, walletConnectSession, selectedSession, queryClient]);
 
   // Ensure network is initialized to mainnet on mount if no preference exists
   useEffect(() => {
@@ -73,6 +82,24 @@ export function NetworkProvider({ children }: { children: React.ReactNode }) {
       setNetworkState("mainnet");
     }
   }, []);
+
+  // Inside Sage the active network is the host's, not a Pengui preference:
+  // read it once from the bridge and follow it read-only (AC #3). There is no
+  // "network changed" bridge event to subscribe to (only capability and
+  // wallet-selection events exist), so this is a one-shot sync on mount.
+  useEffect(() => {
+    if (runtimeKind !== "sage-bridge") return;
+    let cancelled = false;
+    fetchSageNetwork().then((sageNetwork) => {
+      if (!cancelled && sageNetwork) {
+        setNetworkState(sageNetwork);
+        setStoredNetwork(sageNetwork);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [runtimeKind]);
 
   // Helper function to perform core network switch operations
   // This ensures both manual network switches and auto-sync perform the same cache invalidation
@@ -102,6 +129,7 @@ export function NetworkProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     trackEffectRun("NetworkProvider: auto-sync");
     if (typeof window === "undefined") return;
+    if (!isWalletConnectRuntime) return;
 
     // Check if we've already auto-synced or if there's a user preference
     if (!isConnected || hasNetworkPreference() || hasAutoSyncedRef.current) {
@@ -134,7 +162,7 @@ export function NetworkProvider({ children }: { children: React.ReactNode }) {
       applyNetworkChange(walletNetwork);
       hasAutoSyncedRef.current = true;
     }
-  }, [isConnected, walletConnectSession, applyNetworkChange]);
+  }, [isWalletConnectRuntime, isConnected, walletConnectSession, applyNetworkChange]);
 
   // Reset auto-sync flag when wallet disconnects
   useEffect(() => {
@@ -164,6 +192,12 @@ export function NetworkProvider({ children }: { children: React.ReactNode }) {
         return true;
       }
 
+      // Sage owns the active network; the app cannot switch it (AC #3).
+      if (!isWalletConnectRuntime) {
+        logger.warn("Network is controlled by Sage; ignoring in-app network switch request.");
+        return false;
+      }
+
       setIsSwitching(true);
 
       try {
@@ -174,7 +208,7 @@ export function NetworkProvider({ children }: { children: React.ReactNode }) {
         applyNetworkChange(newNetwork);
 
         // After network switch, test wallet connection with a balance request
-        if (isConnected && walletConnectSession) {
+        if (isWalletConnectRuntime && isConnected && walletConnectSession) {
           // Clear any existing timeout
           if (testRequestTimeoutRef.current) {
             clearTimeout(testRequestTimeoutRef.current);
@@ -269,6 +303,7 @@ export function NetworkProvider({ children }: { children: React.ReactNode }) {
       network,
       isSwitching,
       queryClient,
+      isWalletConnectRuntime,
       isConnected,
       walletConnectSession,
       selectedSession,
@@ -281,6 +316,7 @@ export function NetworkProvider({ children }: { children: React.ReactNode }) {
     setNetwork,
     isMainnet: network === "mainnet",
     isTestnet: network === "testnet",
+    isNetworkReadOnly: !isWalletConnectRuntime,
   };
 
   return <NetworkContext.Provider value={value}>{children}</NetworkContext.Provider>;

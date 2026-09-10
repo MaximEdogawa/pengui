@@ -81,4 +81,4 @@ test-results/
 /crates/splash-relay/target
 /crates/splash-wasm/target
 /crates/splash-wasm/pkg
-/crates/splash-wasm/public
+/crates/splash-wasm/public.sage-manifest.generated.json

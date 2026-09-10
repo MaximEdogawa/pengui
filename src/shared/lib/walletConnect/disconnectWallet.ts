@@ -6,11 +6,19 @@ import {
 } from "@maximedogawa/chia-wallet-connect-react";
 import { WALLET_CONNECT_STORAGE_KEY, getWalletConnectAppConfig } from "./constants/wallet-connect";
 
+const LOGIN_PATH = "/login";
+
 export interface DisconnectWalletOptions {
   /** Clear all redux-persist keys from localStorage (use on loading fallback before redirect). */
   clearPersist?: boolean;
-  /** Redirect to /login after disconnecting. */
+  /** Navigate to /login after disconnecting. */
   redirectToLogin?: boolean;
+  /**
+   * Client-side navigation used for `redirectToLogin`, normally the Next.js
+   * router's `replace`. A hard `window.location` navigation would 404 inside
+   * the Sage app webview, where only the manifest entry resolves.
+   */
+  navigate?: (path: string) => void;
 }
 
 /**
@@ -18,7 +26,7 @@ export interface DisconnectWalletOptions {
  * Reusable from SafeConnectButton (disconnect only) and PersistGateLoadingFallback (disconnect + clear persist + redirect).
  */
 export async function disconnectWallet(options: DisconnectWalletOptions = {}): Promise<void> {
-  const { clearPersist = false, redirectToLogin = false } = options;
+  const { clearPersist = false, redirectToLogin = false, navigate } = options;
 
   try {
     const { penguiIcon, metadata } = getWalletConnectAppConfig();
@@ -51,8 +59,8 @@ export async function disconnectWallet(options: DisconnectWalletOptions = {}): P
       }
     }
 
-    if (redirectToLogin && typeof window !== "undefined") {
-      window.location.href = "/login";
+    if (redirectToLogin) {
+      navigate?.(LOGIN_PATH);
     }
   } catch {
     throw new Error("Failed to disconnect");

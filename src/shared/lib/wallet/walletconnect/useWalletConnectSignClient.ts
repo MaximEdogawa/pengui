@@ -5,16 +5,18 @@ import { getSignClientConfig } from "@/shared/lib/walletConnect/constants/wallet
 import type { WalletConnectInstance } from "@/shared/lib/walletConnect/types/walletConnect.types";
 import { useQuery } from "@tanstack/react-query";
 import { useLayoutEffect } from "react";
-import SignClient from "@walletconnect/sign-client";
-import { registerWalletConnectListeners } from "./useWalletConnectEventListeners";
+import { SignClient } from "@walletconnect/sign-client";
+import { registerWalletConnectListeners } from "./eventListeners";
 import { useNetwork } from "@/shared/hooks/useNetwork";
 
 /**
  * Hook to get the WalletConnect SignClient instance.
+ * Implementation detail of the WalletConnect adapter — features talk to the
+ * WalletProvider instead.
  * SignClient is initialized once and cached with TanStack Query.
  * Listeners are registered immediately on creation and again in useLayoutEffect when using cached data.
  */
-export function useSignClient() {
+export function useWalletConnectSignClient() {
   const { network } = useNetwork();
   const instanceQuery = useQuery<WalletConnectInstance | undefined>({
     queryKey: ["walletConnect", "instance", network],

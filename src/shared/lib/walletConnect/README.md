@@ -1,6 +1,13 @@
 # Wallet Connect Queries Implementation
 
-This directory contains the implementation of all wallet queries for Sage wallet using WalletConnect and TanStack Query.
+This directory holds the WalletConnect RPC layer: the CHIP-0002 / `chia_*` method
+names, request and response types, and the repository functions that talk to a
+SignClient.
+
+Nothing outside `src/shared/lib/wallet/walletconnect/` should import from here.
+Features and UI go through the provider-agnostic `WalletProvider` interface in
+`src/shared/lib/wallet` (see `pengui-wiki/architecture/sage-in-app-integration.md`),
+which is what lets a second transport (the Sage in-app bridge) be added.
 
 ## Structure
 
@@ -12,11 +19,16 @@ This directory contains the implementation of all wallet queries for Sage wallet
 
 ### Core Hooks
 
-- **`useSignClient()`** - Hook to get the WalletConnect SignClient instance
-  - Returns: `{ signClient, isInitializing, isInitialized, error }`
+- **`useWalletState()`** (`@/shared/hooks`) - Connection state of the active
+  wallet provider
+  - Returns: `{ kind, isConnected, isReady, fingerprint, address, network, walletName, capabilities }`
 
-- **`useWalletSession()`** - Hook to get the current wallet session data
-  - Returns: `{ session, chainId, fingerprint, topic, isConnected }`
+- **`useWalletProvider()`** (`@/shared/hooks`) - The active `WalletProvider`
+  adapter for imperative calls
+
+- **`useWalletConnectSignClient()`** (`@/shared/lib/wallet/walletconnect`) -
+  Internal to the WalletConnect adapter
+  - Returns: `{ signClient, isInitializing, isInitialized, error }`
 
 ### Query Hooks (TanStack Query)
 
@@ -38,10 +50,11 @@ This directory contains the implementation of all wallet queries for Sage wallet
 ## Usage Example
 
 ```tsx
-import { useSignClient, useWalletBalance, useSendTransaction } from "@/hooks";
+import { useWalletBalance, useSendTransaction } from "@/features/wallet";
+import { useWalletState } from "@/shared/hooks";
 
 function WalletComponent() {
-  const { signClient, isInitialized } = useSignClient();
+  const { isReady } = useWalletState();
   const { data: balance, isLoading } = useWalletBalance();
   const sendTransaction = useSendTransaction();
 
@@ -58,7 +71,7 @@ function WalletComponent() {
     }
   };
 
-  if (!isInitialized) return <div>Initializing...</div>;
+  if (!isReady) return <div>Initializing...</div>;
 
   return (
     <div>

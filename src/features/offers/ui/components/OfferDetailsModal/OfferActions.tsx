@@ -2,7 +2,7 @@
 
 import { ExternalLink, Loader2, Play, RefreshCw, Trash2, Upload, X } from "lucide-react";
 import type { OfferDetails } from "@/entities/offer";
-import { Button } from "@/shared/ui";
+import { Button, ExternalUrlLink } from "@/shared/ui";
 import type { ThemeClasses } from "@/shared/lib/theme";
 
 interface OfferActionsProps {
@@ -127,7 +127,7 @@ export function OfferActions({
             )}
           </Button>
           {dexieUrl && (
-            <a href={dexieUrl} target="_blank" rel="noopener noreferrer" className="inline-flex">
+            <ExternalUrlLink href={dexieUrl} className="inline-flex">
               <Button
                 variant="success"
                 icon={ExternalLink}
@@ -136,7 +136,7 @@ export function OfferActions({
               >
                 View on Dexie
               </Button>
-            </a>
+            </ExternalUrlLink>
           )}
         </>
       )}

@@ -10,6 +10,7 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchAllTokens } from "@/shared/lib/services/spaceScanService";
 import {
   getSpaceScanIconProxyUrl,
+  IS_SAGE_BUILD,
   isSpaceScanIconOrigin,
   isSpaceScanIconProxyUrl,
 } from "@/shared/lib/constants/apiProxy";
@@ -52,6 +53,11 @@ function rememberObjectUrl(proxyUrl: string, objectUrl: string) {
 
 function toIconUrl(previewUrl: string): string {
   if (typeof window === "undefined") return previewUrl;
+  // Inside Sage the icon proxy is unreachable (cross-origin, no CORS headers).
+  // Use the Space Scan URL directly: `<img>` loads are not CORS-gated, and both
+  // icon hosts are in the manifest's img-src whitelist. Returning a non-proxy
+  // URL also skips the blob fetch below, which would need CORS.
+  if (IS_SAGE_BUILD) return previewUrl.trim();
   return isSpaceScanIconOrigin(previewUrl)
     ? getSpaceScanIconProxyUrl(previewUrl)
     : previewUrl.trim();

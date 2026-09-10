@@ -2,27 +2,16 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNetwork } from "@/shared/hooks/useNetwork";
+import { useWalletProvider, useWalletState } from "@/shared/providers/WalletRuntimeProvider";
 import type {
   AssetType,
-  CoinSpend,
   CancelOfferRequest,
   OfferRequest,
+  SignCoinSpendsRequest,
   SignMessageRequest,
   TakeOfferRequest,
   TransactionRequest,
-} from "@/shared/lib/walletConnect/types/command.types";
-import {
-  cancelOffer,
-  createOffer,
-  getAssetBalance,
-  getWalletAddress,
-  sendTransaction,
-  signCoinSpends,
-  signMessage,
-  takeOffer,
-} from "@/shared/lib/walletConnect/repositories/walletQueries.repository";
-import { useSignClient } from "./useSignClient";
-import { useWalletSession } from "./useWalletSession";
+} from "@/shared/lib/wallet";
 
 const WALLET_CONNECT_KEY = "walletConnect";
 const BALANCE_KEY = "balance";
@@ -33,8 +22,8 @@ const ADDRESS_KEY = "address";
  * Query keys normalise undefined → null so every call-site shares one cache entry.
  */
 export function useWalletBalance(type?: AssetType | null, assetId?: string | null) {
-  const { signClient } = useSignClient();
-  const session = useWalletSession();
+  const provider = useWalletProvider();
+  const { isReady } = useWalletState();
   const { network } = useNetwork();
 
   const normalType = type ?? null;
@@ -43,11 +32,11 @@ export function useWalletBalance(type?: AssetType | null, assetId?: string | nul
   return useQuery({
     queryKey: [WALLET_CONNECT_KEY, BALANCE_KEY, normalType, normalAssetId, network],
     queryFn: async () => {
-      const result = await getAssetBalance(signClient, session, normalType, normalAssetId);
+      const result = await provider.getAssetBalance(normalType, normalAssetId);
       if (!result.success) throw new Error(result.error);
       return result.data;
     },
-    enabled: signClient != null && session.isConnected,
+    enabled: isReady,
     staleTime: Infinity,
     retry: 1,
   });
@@ -57,31 +46,30 @@ export function useWalletBalance(type?: AssetType | null, assetId?: string | nul
  * Hook to get wallet address
  */
 export function useWalletAddress() {
-  const { signClient } = useSignClient();
-  const session = useWalletSession();
+  const provider = useWalletProvider();
+  const { isReady } = useWalletState();
   const { network } = useNetwork();
 
   return useQuery({
     queryKey: [WALLET_CONNECT_KEY, ADDRESS_KEY, network],
     queryFn: async () => {
-      const result = await getWalletAddress(signClient, session);
+      const result = await provider.getAddress();
       if (!result.success) throw new Error(result.error);
       return result.data;
     },
-    enabled: signClient != null && session.isConnected,
+    enabled: isReady,
     staleTime: Infinity,
     retry: 1,
   });
 }
 
 export function useSignCoinSpends() {
-  const { signClient } = useSignClient();
-  const session = useWalletSession();
+  const provider = useWalletProvider();
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (params: { walletId: number; coinSpends: CoinSpend[] }) => {
-      const result = await signCoinSpends(params, signClient, session);
+    mutationFn: async (params: SignCoinSpendsRequest) => {
+      const result = await provider.signCoinSpends(params);
       if (!result.success) throw new Error(result.error);
       return result.data;
     },
@@ -93,12 +81,11 @@ export function useSignCoinSpends() {
 }
 
 export function useSignMessage() {
-  const { signClient } = useSignClient();
-  const session = useWalletSession();
+  const provider = useWalletProvider();
 
   return useMutation({
     mutationFn: async (data: SignMessageRequest) => {
-      const result = await signMessage(data, signClient, session);
+      const result = await provider.signMessage(data);
       if (!result.success) throw new Error(result.error);
       return result.data;
     },
@@ -107,13 +94,12 @@ export function useSignMessage() {
 }
 
 export function useSendTransaction() {
-  const { signClient } = useSignClient();
-  const session = useWalletSession();
+  const provider = useWalletProvider();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (data: TransactionRequest) => {
-      const result = await sendTransaction(data, signClient, session);
+      const result = await provider.sendXch(data);
       if (!result.success) throw new Error(result.error);
       return result.data;
     },
@@ -125,13 +111,12 @@ export function useSendTransaction() {
 }
 
 export function useCreateOffer() {
-  const { signClient } = useSignClient();
-  const session = useWalletSession();
+  const provider = useWalletProvider();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (data: OfferRequest) => {
-      const result = await createOffer(data, signClient, session);
+      const result = await provider.createOffer(data);
       if (!result.success) throw new Error(result.error);
       return result.data;
     },
@@ -143,13 +128,12 @@ export function useCreateOffer() {
 }
 
 export function useCancelOffer() {
-  const { signClient } = useSignClient();
-  const session = useWalletSession();
+  const provider = useWalletProvider();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (data: CancelOfferRequest) => {
-      const result = await cancelOffer(data, signClient, session);
+      const result = await provider.cancelOffer(data);
       if (!result.success) throw new Error(result.error);
       return result.data;
     },
@@ -161,13 +145,12 @@ export function useCancelOffer() {
 }
 
 export function useTakeOffer() {
-  const { signClient } = useSignClient();
-  const session = useWalletSession();
+  const provider = useWalletProvider();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (data: TakeOfferRequest) => {
-      const result = await takeOffer(data, signClient, session);
+      const result = await provider.takeOffer(data);
       if (!result.success) throw new Error(result.error);
       return result.data;
     },
@@ -180,7 +163,7 @@ export function useTakeOffer() {
 
 /**
  * Refresh all wallet data: first re-fetch asset list from SpaceScan,
- * then reload all balances from WalletConnect.
+ * then reload all balances from the wallet provider.
  */
 export function useRefreshBalance() {
   const queryClient = useQueryClient();

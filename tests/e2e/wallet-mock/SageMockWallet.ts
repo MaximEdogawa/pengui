@@ -233,7 +233,7 @@ export class SageMockWallet {
 
   /**
    * Build the response payload for a given Sage method name.
-   * Subclasses (e.g. TestnetSageWallet) override this to mix in real data.
+   * Subclasses may override this to mix in real data.
    */
   protected buildResponse(method: string): unknown {
     return (

@@ -192,11 +192,6 @@ issues with external APIs or to process WASM files.
 | ---------------------------- | ------------------- | ---------------------------------------------- |
 | `WC_PROJECT_ID`              | Alt to NEXT*PUBLIC* | WalletConnect project ID for Playwright        |
 | `WC_CHAIN_ID`                | No                  | Override chain for SageMockWallet              |
-| `TESTNET_WALLET_ADDRESS`     | Testnet tests       | `txch1...` address                             |
-| `TESTNET_WALLET_FINGERPRINT` | Testnet tests       | Integer fingerprint                            |
-| `TESTNET_WALLET_MNEMONIC`    | Future              | Seed phrase (reserved for signing)             |
-| `TESTNET_MIN_BALANCE_MOJOS`  | No                  | Min balance to run tests (default `1_000_000`) |
-| `TESTNET_WAIT_FOR_FUNDING`   | No                  | `"true"` to poll until funded                  |
 | `TESTNET_FUNDING_TIMEOUT_MS` | No                  | Poll timeout ms (default `600_000`)            |
 | `TESTNET_SPACESCAN_API_URL`  | No                  | Override SpaceScan base for testnet balance    |
 
@@ -219,7 +214,5 @@ issues with external APIs or to process WASM files.
 | `regression/wallet-connected.spec.ts` | None (WalletConnect relay is real)                              |
 | `regression/wallet-assets.spec.ts`    | `/api/spacescan/tokens` → empty list                            |
 | `regression/offers-flow.spec.ts`      | None                                                            |
-| `regression/trading-flow.spec.ts`     | `api.dexie.space`, `api.v2.tibetswap.io/*`     |
+| `regression/trading-flow.spec.ts`     | `api.dexie.space`                                                |
 | `acceptance/*.spec.ts`                | None                                                            |
-| `testnet/wallet-real-balance.spec.ts` | `/api/spacescan/tokens` → empty list; SpaceScan balance is REAL |
-| `testnet/send-transaction.spec.ts`    | `/api/spacescan/tokens` → empty list                            |

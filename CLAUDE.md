@@ -15,17 +15,22 @@ Pengui is split across three sibling repositories, all checked out next to each 
 This repo holds code only. Documentation belongs in the wiki, work items belong in the backlog —
 do not re-create a `docs/` folder here.
 
-## Tasks and bugs — `../pengui-backlog`
+## Tasks, bugs and milestones — `../pengui-backlog`
 
-All tasks and bugs are tracked with the [Backlog.md](https://github.com/MrLesk/Backlog.md) CLI in
-`../pengui-backlog`. Look there whenever the user mentions a task ID (`task-042`), asks what is in
-progress, or asks you to pick up / record work.
+All tasks, bugs and milestones are tracked with the [Backlog.md](https://github.com/MrLesk/Backlog.md)
+CLI in `../pengui-backlog`. Look there whenever the user mentions a task ID (`task-042`) or a
+milestone, asks what is in progress or what comes next on the roadmap, or asks you to pick up /
+record work. Milestones define delivery order (for example Sage Wallet Integration, then Loans as
+Offers, then Circuit Loans); check a task's milestone before starting it.
 
 Run `backlog` commands **from `../pengui-backlog`**, not from this repo:
 
 ```bash
 cd ../pengui-backlog && backlog task list --plain
 cd ../pengui-backlog && backlog task 42 --plain
+cd ../pengui-backlog && backlog milestone list --plain
+cd ../pengui-backlog && backlog task list -m m-1 --plain   # tasks in one milestone
+cd ../pengui-backlog && backlog search "sage" --plain
 ```
 
 At the start of a conversation that touches backlog work, run `backlog instructions overview`
@@ -43,10 +48,16 @@ for unfamiliar commands.
 
 Project documentation lives in `../pengui-wiki` (index in its `README.md`):
 
-- `architecture/` — Feature-Sliced Design structure, Splash/Pengenius integration
-- `development/` — build optimizations, git hooks, infinite loop guardrails, WalletConnect notes
-- `testing/` — unit, integration and E2E testing guides
+- `architecture/` — `overview.md` (routes, providers, state, feature flags, WASM), `fsd-structure.md`,
+  `wallet-integration.md` (WalletConnect + Sage today, commands used, abstraction seam),
+  `sage-in-app-integration.md` (m-0 design), `loans-and-option-contracts.md` (m-1),
+  `splash-pengenius-integration.md`
+- `development/` — `workflow.md` (three repos, Backlog.md, branches, bun scripts, env, CI, deploy),
+  `git-hooks.md`, `build-optimizations.md`, `infinite-loop-guardrails.md`, WalletConnect notes
+- `testing/` — overview, writing, unit, integration, E2E and component test guides
 - `request-collections/` — Bruno collections for dexie.space and Spacescan
+
+Read `architecture/overview.md` first when orienting in the codebase.
 
 Read the wiki before answering architecture or testing questions, and when a change makes a
 document stale, update it in `../pengui-wiki` rather than adding docs to this repo. The wiki is its

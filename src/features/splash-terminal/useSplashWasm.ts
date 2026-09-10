@@ -221,13 +221,17 @@ export interface UseSplashWasmResult {
  * so once the streaming hook has initialised and connected it is ready.
  */
 function getWasmBaseUrl(): string {
-  if (typeof window !== "undefined" && window.location?.origin) {
-    return window.location.origin;
-  }
-  return "";
+  // Inside the Sage snapshot the page is served from the `sage-app://` custom protocol,
+  // whose origin serialises to "null"; a root-relative path resolves correctly there.
+  const origin = typeof window !== "undefined" ? window.location?.origin : undefined;
+  return origin && /^https?:\/\//.test(origin) ? origin : "";
 }
 
-/** WASM via API route so Content-Type is correct in production (no reverse-proxy MIME issues). */
+/**
+ * WASM path. The hosted deployment goes through the API route so Content-Type is correct
+ * behind the reverse proxy; the Sage snapshot has no routes and reads the static
+ * `/wasm/` files (WASM_PATH_PREFIX, see src/shared/lib/constants/apiProxy.ts).
+ */
 function getWasmPaths(): { js: string; wasm: string } {
   const base = getWasmBaseUrl();
   return {
