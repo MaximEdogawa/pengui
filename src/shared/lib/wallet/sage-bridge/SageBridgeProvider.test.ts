@@ -40,15 +40,16 @@ function createFakeSageClient(options: FakeSageClientOptions = {}) {
       "wallet.get_asset_coins",
     ]
   );
-  const key =
+  let key =
     options.key === undefined
-      ? { fingerprint: 987654321, name: "Main Wallet", public_key: `aa${  "11".repeat(23)}` }
+      ? { fingerprint: 987654321, name: "Main Wallet", public_key: `aa${"11".repeat(23)}` }
       : options.key;
   const receiveAddress = options.receiveAddress ?? "xch1testreceiveaddress";
   const networkId = options.networkId ?? "mainnet";
   const networkKind = options.networkKind ?? "mainnet";
 
   const capabilityChangeHandlers: CapabilityChangeHandler[] = [];
+  const beforeStopHandlers: Array<(event: { requestId: string }) => void | Promise<void>> = [];
 
   const client: SageClient = {
     initialAppInfo: {
@@ -90,7 +91,10 @@ function createFakeSageClient(options: FakeSageClientOptions = {}) {
       },
       onGrantedNetworkWhitelistChange: () => () => {},
       lifecycle: {
-        onBeforeStop: () => () => {},
+        onBeforeStop: (handler) => {
+          beforeStopHandlers.push(handler);
+          return () => {};
+        },
       },
     },
     wallet: {
@@ -192,6 +196,11 @@ function createFakeSageClient(options: FakeSageClientOptions = {}) {
     emitCapabilityChange: (event: { removed: string[]; added: string[]; full: string[] }) => {
       capabilityChangeHandlers.forEach((handler) => handler(event));
     },
+    beforeStopHandlers,
+    /** Simulate Sage switching to a different wallet: the next getKey() call sees this. */
+    setKey: (nextKey: typeof key) => {
+      key = nextKey;
+    },
   };
 }
 
@@ -291,6 +300,36 @@ describe("createSageBridgeProvider", () => {
     await Promise.resolve();
 
     expect(provider.getState().capabilities.sendXch).toBe(true);
+  });
+
+  it("a wallet.selectedWallet.changed bridge event refreshes connection state (AC #7)", async () => {
+    // sage-app-sdk 0.13.0's typed client has no selectedWallet-change
+    // listener; the adapter falls back to the SDK's own window re-dispatch
+    // (`sage:event:<type>`) instead (see sage-bridge/SageBridgeProvider.ts,
+    // registerEventListeners), so this drives that path directly.
+    const { provider, setKey } = providerWith();
+    await provider.initialize();
+    expect(provider.getState().fingerprint).toBe(987654321);
+
+    setKey({ fingerprint: 111222333, name: "Second Wallet", public_key: "bb".repeat(24) });
+    window.dispatchEvent(
+      new CustomEvent("sage:event:wallet.selectedWallet.changed", {
+        detail: { type: "wallet.selectedWallet.changed", payload: { fingerprint: 111222333 } },
+      })
+    );
+    // The handler kicks off an async refreshConnectionState(); let it settle.
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(provider.getState().fingerprint).toBe(111222333);
+    expect(provider.getState().walletName).toBe("Second Wallet");
+  });
+
+  it("registers a lifecycle.onBeforeStop handler during initialize() (AC #7)", async () => {
+    const { provider, beforeStopHandlers } = providerWith();
+    expect(beforeStopHandlers).toHaveLength(0);
+    await provider.initialize();
+    expect(beforeStopHandlers).toHaveLength(1);
   });
 
   it("getNetwork maps Sage's network id to Pengui's", async () => {
