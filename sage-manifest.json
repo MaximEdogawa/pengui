@@ -1,7 +1,7 @@
 {
   "manifestVersion": 0,
   "name": "Pengui",
-  "version": "0.0.5",
+  "version": "0.0.7",
   "icon": "icons/icon-512x512.png",
   "entry": "index.html",
   "sageVersion": {
@@ -19,15 +19,15 @@
           "wss://relay.pengui.space",
           "https://api.v2.tibetswap.io",
           "https://assets.spacescan.io",
-          "https://images.spacescan.io"
+          "https://images.spacescan.io",
+          "https://api.spacescan.io"
         ],
         "optional": []
       },
       "whitelistByNetwork": {
         "mainnet": {
           "required": [
-            "https://api.dexie.space",
-            "https://api.spacescan.io"
+            "https://api.dexie.space"
           ],
           "optional": []
         },

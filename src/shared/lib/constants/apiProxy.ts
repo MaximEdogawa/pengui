@@ -12,11 +12,25 @@
 /** Origin the proxy routes are served from. Empty (same origin) unless overridden. */
 export const API_PROXY_ORIGIN = (process.env.NEXT_PUBLIC_API_PROXY_ORIGIN ?? "").replace(/\/+$/, "");
 
-/** Token list: GET returns Space Scan /tokens JSON. Browser uses this to avoid CORS. */
-export const SPACESCAN_TOKENS_PATH = `${API_PROXY_ORIGIN}/api/spacescan/tokens`;
+/**
+ * True in the Sage snapshot build (`bun run build:sage` sets NEXT_PUBLIC_SAGE_BUILD).
+ *
+ * Inside Sage the proxy routes are a dead end: they live on the hosted
+ * deployment, and a cross-origin fetch from `sage-app://` needs
+ * Access-Control-Allow-Origin, which the deployment does not send. Space Scan's
+ * own API does send `access-control-allow-origin: *`, and `<img>` loads are not
+ * CORS-gated at all — they only need the host in the manifest's img-src
+ * whitelist. So the Sage build talks to Space Scan directly and skips the proxy.
+ */
+export const IS_SAGE_BUILD = process.env.NEXT_PUBLIC_SAGE_BUILD === "1";
 
-/** External Space Scan API (used by server-side proxy only). */
+/** External Space Scan API (server-side proxy, and the Sage build's direct path). */
 export const SPACESCAN_API_TOKENS_URL = "https://api.spacescan.io/tokens";
+
+/** Token list: GET returns Space Scan /tokens JSON. Browser uses this to avoid CORS. */
+export const SPACESCAN_TOKENS_PATH = IS_SAGE_BUILD
+  ? SPACESCAN_API_TOKENS_URL
+  : `${API_PROXY_ORIGIN}/api/spacescan/tokens`;
 
 /** Icon image: GET ?url=<encoded Space Scan image URL>. Server fetches and streams image. */
 export const SPACESCAN_ICON_PATH = `${API_PROXY_ORIGIN}/api/spacescan/icon`;
