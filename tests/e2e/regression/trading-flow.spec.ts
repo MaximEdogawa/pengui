@@ -1,20 +1,23 @@
 /**
- * Trading page & TibetSwap E2E tests — authenticated via suite-level WalletConnect setup.
+ * Trading page E2E tests — authenticated via suite-level WalletConnect setup.
  *
  * ── Trading page layout ─────────────────────────────────────────────────────
  *   Top row: view-toggle buttons (plain <button>, NOT role="tab"):
  *     "Order Book" | "Chart" | "Depth" | "Trades" | "Stream"
  *   Right panel (desktop only, hidden lg:flex):
- *     LimitOfferTab buttons: "Limit" | "Market" | "Swap"
+ *     LimitOfferTab buttons: "Limit" | "Market"
  *     The active tab's content renders below.
  *
  * ── External API mocks ──────────────────────────────────────────────────────
  *   Dexie: api.dexie.space  →  one XCH/USDS pair + one open offer
- *   Tibet: api.v2.tibetswap.io  →  tokens, pair, quote, offer response
  *
  * ── Note on mempool propagation ─────────────────────────────────────────────
  *   Tests verify the dApp sends the right RPC call and shows a success or
  *   pending state.  On-chain confirmation is NOT tested here.
+ *
+ * The TibetSwap ("Swap" tab / SwapTabContent) flow is not covered here: the
+ * TibetSwap AMM is winding down and the "swap" feature flag is off by default,
+ * so those tests were removed rather than kept flaky against a dying API.
  */
 
 import { test, expect, MOCK } from "../fixtures/regression";
@@ -33,30 +36,6 @@ const DEXIE_OFFER = {
   date_created: new Date().toISOString(),
 };
 
-const TIBET_PAIR = {
-  pair_id: "tibet-pair-xch-usds",
-  launcher_id: "tibet-pair-xch-usds",
-  asset_id: USDS_ASSET_ID,
-  asset_hidden_puzzle_hash: null,
-  asset_name: "Stably USD",
-  asset_short_name: "USDS",
-  asset_image_url: null,
-  asset_verified: true,
-  liquidity_asset_id: "tibet-lp-xch-usds",
-  xch_reserve: 100_000_000_000_000,
-  token_reserve: 2_500_000_000,
-  inverse_fee: 9_995,
-  liquidity: 1_000_000_000,
-  last_coin_id_on_chain: "0x1234abcd",
-};
-
-const TIBET_QUOTE = {
-  amount_in: 1_000_000_000_000,
-  amount_out: 24_500_000,
-  price_warning: false,
-  price_impact: 0.02,
-};
-
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 /** Register all trading-page external API mocks. */
@@ -64,22 +43,6 @@ async function mockTradingApis(page: import("@playwright/test").Page) {
   // Dexie order book
   await page.route("**/api.dexie.space/**", (r) =>
     r.fulfill({ json: { offers: [DEXIE_OFFER], count: 1 } })
-  );
-
-  // Tibet swap
-  await page.route("**/api.v2.tibetswap.io/tokens", (r) =>
-    r.fulfill({
-      json: [
-        { asset_id: null, name: "Chia", short_name: "XCH" },
-        { asset_id: USDS_ASSET_ID, name: "Stably USD", short_name: "USDS" },
-      ],
-    })
-  );
-  await page.route("**/api.v2.tibetswap.io/pairs", (r) => r.fulfill({ json: [TIBET_PAIR] }));
-  await page.route("**/api.v2.tibetswap.io/pair/**", (r) => r.fulfill({ json: TIBET_PAIR }));
-  await page.route("**/api.v2.tibetswap.io/quote/**", (r) => r.fulfill({ json: TIBET_QUOTE }));
-  await page.route("**/api.v2.tibetswap.io/offer/**", (r) =>
-    r.fulfill({ json: { success: true, offer_id: "tibet-offer-1" } })
   );
 }
 
@@ -142,79 +105,21 @@ test.describe("Authenticated — Trading page views", () => {
   });
 });
 
-test.describe("Authenticated — Right panel (Limit / Market / Swap)", () => {
+test.describe("Authenticated — Right panel (Limit / Market)", () => {
   test.slow();
 
-  test("right panel Limit, Market, Swap buttons are present on desktop", async ({ page }) => {
+  test("right panel Limit and Market buttons are present on desktop", async ({ page }) => {
     await mockTradingApis(page);
     await page.goto("/trading");
     await page.waitForLoadState("domcontentloaded");
 
     // These buttons are in TradingRightPanel → LimitOfferTab.
     // The panel is hidden on mobile (hidden lg:flex), but Playwright uses a desktop viewport by default.
-    for (const label of ["Limit", "Market", "Swap"]) {
+    for (const label of ["Limit", "Market"]) {
       await expect(page.getByRole("button", { name: label }).first()).toBeVisible({
         timeout: 10_000,
       });
     }
-  });
-
-  test("clicking Swap in right panel shows Tibet SwapTabContent", async ({ page }) => {
-    await mockTradingApis(page);
-    await page.goto("/trading");
-    await page.waitForLoadState("domcontentloaded");
-
-    // Click the Swap button in the right-panel LimitOfferTab.
-    const swapPanelBtn = page.getByRole("button", { name: "Swap" }).last();
-    await expect(swapPanelBtn).toBeVisible({ timeout: 10_000 });
-    await swapPanelBtn.click();
-
-    // SwapTabContent renders a "Swap" action button and a pair selector.
-    // Wait for the main Swap action button to appear inside the right panel.
-    await expect(page.getByRole("button", { name: /^swap$/i }).first()).toBeVisible({
-      timeout: 15_000,
-    });
-  });
-});
-
-test.describe("Authenticated — TibetSwap flow", () => {
-  test.slow();
-
-  test("Swap panel shows pair selector once Tibet pairs load", async ({ page }) => {
-    await mockTradingApis(page);
-    await page.goto("/trading");
-    await page.waitForLoadState("domcontentloaded");
-
-    await page.getByRole("button", { name: "Swap" }).last().click();
-
-    // SwapTabContent uses useTibetPairs().  After mocked /pairs loads, the pair
-    // selector or at least the "Sell" / "Buy" amount inputs should appear.
-    const offeredInput = page
-      .locator('[data-testid*="offered"], [placeholder*="Sell" i]')
-      .or(page.locator('input[inputmode="decimal"]').first());
-    await expect(offeredInput.first()).toBeVisible({ timeout: 15_000 });
-  });
-
-  test("swap flow: fill amount computes a quote and enables Swap", async ({ page }) => {
-    await mockTradingApis(page);
-    await page.goto("/trading");
-    await page.waitForLoadState("domcontentloaded");
-
-    await page.getByRole("button", { name: "Swap" }).last().click();
-
-    // Wait for pair content to render.
-    const offeredInput = page.locator('input[inputmode="decimal"]').first();
-    await expect(offeredInput).toBeVisible({ timeout: 15_000 });
-    await offeredInput.fill("1");
-
-    // Quote request is debounced — wait for it.
-    await page.waitForTimeout(1_500);
-
-    const requestedInput = page.locator('input[inputmode="decimal"]').nth(1);
-    await expect(requestedInput).toHaveValue(/\d/, { timeout: 10_000 });
-
-    const swapBtn = page.getByRole("button", { name: /^swap$/i }).first();
-    await expect(swapBtn).toBeEnabled({ timeout: 10_000 });
   });
 });
 
