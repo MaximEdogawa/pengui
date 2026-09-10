@@ -57,7 +57,6 @@ export const SAGE_OPTIONAL_CAPABILITIES: string[] = [
   "wallet.sign_coin_spends",
   "wallet.send_transaction",
   "wallet.sign_message",
-  "wallet.listen_selected_wallet_changed",
   "environment.theme.get_current",
   "environment.theme.listen_changed",
   "storage.persistent_webview",

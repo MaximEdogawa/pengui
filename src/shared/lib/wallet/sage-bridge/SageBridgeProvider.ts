@@ -1,4 +1,5 @@
-import { getSageClient, type SageClient } from "sage-app-sdk";
+import { formatSageError, getSageClient, type SageClient } from "sage-app-sdk";
+import { logger } from "@/shared/lib/logger";
 import type {
   AssetBalance,
   AssetCoins,
@@ -117,6 +118,7 @@ export function createSageBridgeProvider(
   let client: SageClient | null = null;
   let granted: string[] = [];
   let initPromise: Promise<void> | null = null;
+  let lastKeyError: unknown = null;
 
   async function refreshGrantedCapabilities(activeClient: SageClient): Promise<void> {
     try {
@@ -132,6 +134,14 @@ export function createSageBridgeProvider(
       activeClient.wallet.getSyncStatus(),
       activeClient.environment.getNetwork(),
     ]);
+
+    // Keep the rejection reason: `key == null` is the only connection signal, and
+    // without this every failure mode (capability denied, no wallet selected,
+    // bridge error) is indistinguishable to the user.
+    lastKeyError = keyResult.status === "rejected" ? keyResult.reason : null;
+    if (keyResult.status === "rejected") {
+      logger.error("Sage wallet.getKey failed:", keyResult.reason, "granted:", granted);
+    }
 
     const key = keyResult.status === "fulfilled" ? keyResult.value.key : null;
     const address =
@@ -244,9 +254,13 @@ export function createSageBridgeProvider(
 
       const state = store.getState();
       if (!state.isConnected) {
+        const hasCapability = granted.includes("wallet.get_key");
+        const detail = lastKeyError != null ? `: ${formatSageError(lastKeyError)}` : "";
         return {
           success: false,
-          error: "Sage did not grant wallet.get_key. Check the app's permissions.",
+          error: hasCapability
+            ? `Sage granted wallet.get_key but returned no key${detail}. Check that a wallet is selected and unlocked in Sage.`
+            : `Sage has not granted wallet.get_key${detail}. Granted so far: ${granted.length ? granted.join(", ") : "none"}.`,
           code: "not-connected",
         };
       }
