@@ -33,51 +33,104 @@ const API_PROXY_ORIGIN = process.env.SAGE_API_PROXY_ORIGIN || "https://pengui.sp
 
 
 /**
- * Whitelist entries the Splash relay needs, derived from the URLs this build
- * actually bakes in.
+ * Resolve the Splash relay URLs this snapshot should be built with, plus the
+ * whitelist entries they need.
  *
- * The snapshot embeds NEXT_PUBLIC_* at build time, so a build configured
- * against a local relay (`bun run relay` → ws://localhost:9090) ships an app
- * that dials localhost while the source manifest only whitelists the deployed
- * relay — Sage's connect-src then blocks it and the Stream tab shows a relay
- * error. Deriving the entries from the same values the app was built with
- * keeps the two from drifting.
+ * Two constraints collide here. The snapshot embeds NEXT_PUBLIC_* at build
+ * time, so it dials whatever the environment says — and local development
+ * points the relay at `ws://localhost:9090` (`bun run relay`). But Sage's
+ * manifest validator accepts only `https` and `wss` in the network whitelist:
+ * `http` is rejected outright, so a plain-ws loopback relay cannot be reached
+ * from inside Sage at all, whitelist entry or not.
  *
- * Sage's whitelist takes scheme://host[:port] with http | https | wss; `ws` is
- * rejected, and `http` is accepted only for loopback. CSP scheme matching
- * treats an `http` source as covering `ws` to the same host, so a loopback
- * relay is whitelisted as its http origin.
+ * So a Sage build substitutes a `wss` relay for any `ws` one: `SAGE_RELAY_*`
+ * overrides win, otherwise the documented deployed relay is used. When no
+ * `wss` relay is known for a network, the build says the Stream tab will not
+ * connect there rather than shipping a snapshot that silently fails.
  */
-function relayWhitelistEntries(): string[] {
-  const urls = [
-    process.env.NEXT_PUBLIC_DEXIE_SPLASH_RELAY_MAINNET_WS_URL,
-    process.env.NEXT_PUBLIC_DEXIE_SPLASH_RELAY_TESTNET_WS_URL,
-    process.env.NEXT_PUBLIC_DEXIE_SPLASH_RELAY_WS_URL,
-  ].filter((value): value is string => Boolean(value));
+const DEPLOYED_MAINNET_RELAY = "wss://relay.pengui.space";
+const DEPLOYED_TESTNET_RELAY = "wss://relay-testnet.pengui.space";
 
-  const entries = new Set<string>();
-  for (const raw of urls) {
-    let url: URL;
-    try {
-      url = new URL(raw);
-    } catch {
-      console.warn(`⚠️  Ignoring unparseable relay URL ${raw}`);
+interface RelayTarget {
+  /** NEXT_PUBLIC_* variable the app reads. */
+  envName: string;
+  /** Explicit override for Sage builds. */
+  overrideName: string;
+  /** Deployed wss relay to fall back to, when one exists. */
+  fallback?: string;
+  label: string;
+}
+
+const RELAY_TARGETS: RelayTarget[] = [
+  {
+    envName: "NEXT_PUBLIC_DEXIE_SPLASH_RELAY_MAINNET_WS_URL",
+    overrideName: "SAGE_RELAY_MAINNET_WS_URL",
+    fallback: DEPLOYED_MAINNET_RELAY,
+    label: "mainnet",
+  },
+  {
+    envName: "NEXT_PUBLIC_DEXIE_SPLASH_RELAY_TESTNET_WS_URL",
+    overrideName: "SAGE_RELAY_TESTNET_WS_URL",
+    fallback: DEPLOYED_TESTNET_RELAY,
+    label: "testnet11",
+  },
+  {
+    envName: "NEXT_PUBLIC_DEXIE_SPLASH_RELAY_WS_URL",
+    overrideName: "SAGE_RELAY_WS_URL",
+    fallback: DEPLOYED_MAINNET_RELAY,
+    label: "default",
+  },
+];
+
+function parseUrl(raw: string): URL | null {
+  try {
+    return new URL(raw);
+  } catch {
+    return null;
+  }
+}
+
+function resolveRelays(): { env: Record<string, string>; whitelist: string[] } {
+  const env: Record<string, string> = {};
+  const whitelist = new Set<string>();
+
+  for (const target of RELAY_TARGETS) {
+    const configured = process.env[target.envName];
+    const override = process.env[target.overrideName];
+    const chosen = override ?? configured;
+    if (!chosen) continue;
+
+    const url = parseUrl(chosen);
+    if (!url) {
+      console.warn(`⚠️  Ignoring unparseable relay URL ${chosen} (${target.envName})`);
       continue;
     }
 
-    const isLoopback = url.hostname === "localhost" || url.hostname === "127.0.0.1";
     if (url.protocol === "wss:") {
-      entries.add(`wss://${url.host}`);
-    } else if (url.protocol === "ws:" && isLoopback) {
-      entries.add(`http://${url.host}`);
-    } else if (url.protocol === "ws:") {
-      fail(
-        `Relay ${raw} uses ws:// on a non-loopback host. Sage rejects ws:// in the ` +
-          `network whitelist — use wss:// for a deployed relay.`
+      env[target.envName] = chosen;
+      whitelist.add(`wss://${url.host}`);
+      continue;
+    }
+
+    // A ws:// relay cannot be whitelisted, so substitute a deployed wss one.
+    const substitute = target.fallback ? parseUrl(target.fallback) : null;
+    if (substitute && substitute.protocol === "wss:") {
+      env[target.envName] = target.fallback as string;
+      whitelist.add(`wss://${substitute.host}`);
+      console.log(
+        `🔌 ${target.label}: ${chosen} is not reachable inside Sage (only https/wss may be ` +
+          `whitelisted) — building against ${target.fallback}. Set ${target.overrideName} to override.`
+      );
+    } else {
+      console.warn(
+        `⚠️  ${target.label}: ${chosen} is a ws:// relay and no wss:// relay is known for it.\n` +
+          `   Sage only allows https/wss in the network whitelist, so the Stream tab will not\n` +
+          `   connect on ${target.label} in this snapshot. Set ${target.overrideName} to a wss:// URL.`
       );
     }
   }
-  return [...entries];
+
+  return { env, whitelist: [...whitelist] };
 }
 
 function fail(message: string): never {
@@ -137,6 +190,8 @@ const previousBuiltVersion = (() => {
   }
 })();
 
+const relays = resolveRelays();
+
 // 2. Static export ------------------------------------------------------------------
 rmSync(OUT_DIR, { recursive: true, force: true });
 console.log("📦 next build (output: export)");
@@ -145,6 +200,7 @@ await run(["bun", "next", "build"], {
   NEXT_PUBLIC_SAGE_BUILD: "1",
   NEXT_PUBLIC_WASM_PATH_PREFIX: "/wasm",
   NEXT_PUBLIC_API_PROXY_ORIGIN: API_PROXY_ORIGIN,
+  ...relays.env,
 });
 if (!existsSync(OUT_DIR)) fail("next build did not produce out/");
 
@@ -161,7 +217,7 @@ await run(["bun", "run", join("scripts", "sage", "externalize-inline-scripts.ts"
 // Merge in whatever relay this build actually points at before finalising, so
 // the whitelist can never disagree with the baked-in URLs.
 const sourceManifest = JSON.parse(readFileSync(SOURCE_MANIFEST, "utf8"));
-const relayEntries = relayWhitelistEntries();
+const relayEntries = relays.whitelist;
 const existingRequired: string[] = sourceManifest.permissions?.network?.whitelist?.required ?? [];
 const missingRelayEntries = relayEntries.filter((entry) => !existingRequired.includes(entry));
 
