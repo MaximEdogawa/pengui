@@ -195,10 +195,18 @@ export function createSageBridgeProvider(
         ? mapSageNetwork(networkResult.value)
         : store.getState().network;
 
+    // Sage 0.13 can grant wallet.get_key and still answer getKey with
+    // key: null while the wallet is otherwise reachable (getSyncStatus returns
+    // a synced receive address). The fingerprint is only used for display and
+    // query scoping, and WalletState already types it as nullable, so a synced
+    // address is enough to consider the wallet connected. Requiring the key
+    // here left a working wallet stuck on the login screen.
+    const connected = key != null || address != null;
+
     store.setState({
       kind: "sage-bridge",
-      isConnected: key != null,
-      isReady: key != null,
+      isConnected: connected,
+      isReady: connected,
       fingerprint: key?.fingerprint ?? null,
       address,
       network,
@@ -298,16 +306,15 @@ export function createSageBridgeProvider(
 
       const state = store.getState();
       if (!state.isConnected) {
-        const hasCapability = granted.includes("wallet.get_key");
+        // Reaching here now means neither the key nor a receive address
+        // resolved, so the wallet context is genuinely unreachable.
         const detail = lastKeyError != null ? `: ${formatSageError(lastKeyError)}` : "";
-        // Whether the rest of the wallet context resolved separates "Sage cannot
-        // reach this wallet at all" from "only get_key is failing".
-        const reachable = state.address != null ? `address ${state.address}` : "no address";
+        const missing = granted.includes("wallet.get_sync_status")
+          ? "wallet.get_sync_status returned no receive address"
+          : "wallet.get_sync_status is not granted";
         return {
           success: false,
-          error: hasCapability
-            ? `Sage granted wallet.get_key but returned no key${detail}. Sync status reports ${reachable}, network ${state.network}. If a wallet is selected and unlocked in Sage, this is a bridge-side failure, not a permission problem.`
-            : `Sage has not granted wallet.get_key${detail}. Granted so far: ${granted.length ? granted.join(", ") : "none"}.`,
+          error: `Sage returned no wallet identity${detail}. ${missing}. Granted: ${granted.length ? granted.join(", ") : "none"}.`,
           code: "not-connected",
         };
       }

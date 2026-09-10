@@ -291,8 +291,23 @@ describe("createSageBridgeProvider", () => {
     expect(provider.getGrantedCapabilities()).toContain("wallet.send_xch");
   });
 
-  it("connect() reports not-connected when Sage never grants wallet.get_key", async () => {
+  it("connect() succeeds on a synced address when Sage returns no key", async () => {
+    // Observed on a real Sage 0.13 install: wallet.get_key is granted and
+    // getKey still answers key: null while getSyncStatus returns a synced
+    // receive address. The fingerprint is display/scoping only, so this must
+    // connect rather than strand a working wallet on the login screen.
     const { provider } = providerWith({ key: null });
+    const result = await provider.connect();
+
+    expect(result.success).toBe(true);
+    expect(provider.getState().isConnected).toBe(true);
+    expect(provider.getState().address).toBe("xch1testreceiveaddress");
+    expect(provider.getState().fingerprint).toBeNull();
+    expect(provider.getState().walletName).toBeNull();
+  });
+
+  it("connect() reports not-connected when neither key nor address resolves", async () => {
+    const { provider } = providerWith({ key: null, receiveAddress: "" });
     const result = await provider.connect();
 
     expect(result.success).toBe(false);
