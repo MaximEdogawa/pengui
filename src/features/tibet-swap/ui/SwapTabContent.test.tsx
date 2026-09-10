@@ -1,6 +1,7 @@
 import { describe, it, expect, afterEach, beforeEach } from "bun:test";
 import { render, screen, waitFor, cleanup } from "@/test-utils";
 import { SelectedOrderProvider } from "@/features/trading/hooks/SelectedOrderProvider";
+import { OrderBookFiltersProvider } from "@/features/trading/hooks/OrderBookFiltersProvider";
 import { useOrderBookFilterStore } from "@/features/trading/hooks/orderBookFilterStore";
 import { SwapTabContent } from "./SwapTabContent";
 import type { TibetApiPair } from "../lib/tibetTypes";
@@ -37,7 +38,9 @@ function jsonResponse(body: unknown): Response {
 function renderSwapTab() {
   return render(
     <SelectedOrderProvider>
-      <SwapTabContent mode="inline" />
+      <OrderBookFiltersProvider>
+        <SwapTabContent mode="inline" />
+      </OrderBookFiltersProvider>
     </SelectedOrderProvider>
   );
 }
@@ -59,6 +62,36 @@ describe("SwapTabContent", () => {
     globalThis.fetch = originalFetch;
     useOrderBookFilterStore.setState(initialFilterState);
     cleanup();
+  });
+
+  it("resolves a pair that Tibet only returns on a later page", async () => {
+    // Tibet lists BYC - the default mainnet pair - past index 300 of ~374.
+    // Fetching a single first page left the tab showing the placeholder.
+    const PAGE_SIZE = 200;
+    const filler = Array.from({ length: PAGE_SIZE }, (_, i) => makePair(`TK${i}`, `pair-tk-${i}`));
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      const url = new URL(String(input), "http://localhost");
+      if (url.pathname.includes("/pairs")) {
+        const skip = Number(url.searchParams.get("skip") ?? 0);
+        return jsonResponse(skip === 0 ? filler : [makePair("BYC", "pair-byc")]);
+      }
+      return jsonResponse({});
+    }) as typeof fetch;
+
+    useOrderBookFilterStore.setState({
+      filters: { buyAsset: ["XCH"], sellAsset: ["BYC"], status: [], pagination: 50 },
+      searchValue: "",
+      savedNetwork: null,
+      userClearedFilters: false,
+      _hasHydrated: true,
+    });
+
+    renderSwapTab();
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /^Swap$/i })).toBeInTheDocument();
+    });
+    expect(screen.queryByText(PLACEHOLDER)).not.toBeInTheDocument();
   });
 
   it("renders swap, add and remove for an already-selected Sell/Buy pair", async () => {
