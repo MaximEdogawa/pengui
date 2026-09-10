@@ -1,10 +1,14 @@
 "use client";
 
 import { ExternalLink } from "lucide-react";
-import { PenguinLogo, NetworkPicker } from "@/shared/ui";
+import { PenguinLogo, NetworkPicker, ExternalUrlLink } from "@/shared/ui";
+import { useWalletRuntimeKind } from "@/shared/hooks";
 import { LoginConnectWallet } from "./LoginConnectWallet";
+import { SageLoginPanel } from "./SageLoginPanel";
 
 export default function LoginForm() {
+  const isSage = useWalletRuntimeKind() === "sage-bridge";
+
   return (
     <div
       className="fixed inset-0 flex items-center justify-center px-4 py-6 sm:px-4 sm:py-12 md:px-6 md:py-16 lg:px-20 xl:px-80 backdrop-blur-3xl bg-cover bg-center bg-no-repeat overflow-hidden"
@@ -46,8 +50,8 @@ export default function LoginForm() {
           </div>
         </div>
 
-        {/* Wallet Connection Section - QR code shown inline */}
-        <LoginConnectWallet />
+        {/* Wallet Connection Section - QR shown inline for WalletConnect, one-tap connect for Sage */}
+        {isSage ? <SageLoginPanel /> : <LoginConnectWallet />}
 
         {/* Network Picker */}
         <div className="flex justify-center w-full">
@@ -55,17 +59,17 @@ export default function LoginForm() {
         </div>
 
         {/* Footer */}
-        <div className="text-center pt-1">
-          <a
-            href="https://sagewallet.net/"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-sky-200/40 hover:text-sky-100/70 text-[9px] sm:text-[10px] md:text-[11px] leading-relaxed tracking-wide transition-colors duration-200"
-          >
-            <span>Connect with Sage Wallet</span>
-            <ExternalLink className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-          </a>
-        </div>
+        {!isSage && (
+          <div className="text-center pt-1">
+            <ExternalUrlLink
+              href="https://sagewallet.net/"
+              className="inline-flex items-center gap-1.5 text-sky-200/40 hover:text-sky-100/70 text-[9px] sm:text-[10px] md:text-[11px] leading-relaxed tracking-wide transition-colors duration-200"
+            >
+              <span>Connect with Sage Wallet</span>
+              <ExternalLink className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+            </ExternalUrlLink>
+          </div>
+        )}
       </div>
     </div>
   );

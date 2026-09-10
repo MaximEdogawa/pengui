@@ -2,7 +2,7 @@
 
 import type { OfferDetails } from "@/entities/offer";
 import { Check, Copy, CheckCircle, ExternalLink } from "lucide-react";
-import { Button } from "@/shared/ui";
+import { Button, ExternalUrlLink } from "@/shared/ui";
 import type { ThemeClasses } from "@/shared/lib/theme";
 import { OfferStatusSection } from "./OfferStatusSection";
 import { OfferAssetsSection } from "./OfferAssetsSection";
@@ -85,12 +85,7 @@ export function OfferDetailsContent({
                 traders.
               </p>
               {dexieUrl && (
-                <a
-                  href={dexieUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex"
-                >
+                <ExternalUrlLink href={dexieUrl} className="inline-flex">
                   <Button
                     variant="success"
                     icon={ExternalLink}
@@ -99,7 +94,7 @@ export function OfferDetailsContent({
                   >
                     View on Dexie.space
                   </Button>
-                </a>
+                </ExternalUrlLink>
               )}
             </div>
           </div>
