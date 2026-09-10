@@ -5,7 +5,7 @@ import { useState } from "react";
 import { TrendingUp, ArrowRight, Wallet, Download } from "lucide-react";
 import type { ThemeClasses } from "@/shared/lib/theme";
 import { useWalletAssets } from "@/features/wallet";
-import { useWalletConnectionState } from "@maximedogawa/chia-wallet-connect-react";
+import { useWalletState } from "@/shared/hooks";
 import { ReceiveModal } from "./ReceiveModal";
 
 interface BalanceCardProps {
@@ -15,7 +15,7 @@ interface BalanceCardProps {
 
 export function BalanceCard({ isDark, t }: BalanceCardProps) {
   const { assets, isLoading } = useWalletAssets();
-  const { address } = useWalletConnectionState();
+  const { address } = useWalletState();
   const [showReceive, setShowReceive] = useState(false);
 
   const totalUsd = assets.reduce((sum, a) => sum + (a.balanceUsd ?? 0), 0) || null;

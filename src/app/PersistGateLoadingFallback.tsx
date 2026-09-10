@@ -1,6 +1,7 @@
 "use client";
 
 import { disconnectWallet } from "@/shared/lib/walletConnect/disconnectWallet";
+import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 /** Show the disconnect option after 2s so it’s visible for longer during loading. */
@@ -10,9 +11,11 @@ const SHOW_ESCAPE_AFTER_MS = 2_000;
  * Shown while PersistGate is rehydrating / onBeforeLift runs.
  * After a delay, shows disconnect/reload so the user can escape
  * if restoration hangs (e.g. wallet closed, relay unreachable).
- * Uses shared disconnectWallet (no QueryClient/Theme/Network needed).
+ * Uses shared disconnectWallet (no QueryClient/Theme/Network needed) and
+ * client-side routing so the escape hatch also works inside the Sage webview.
  */
 export function PersistGateLoadingFallback() {
+  const router = useRouter();
   const [showEscape, setShowEscape] = useState(false);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
 
@@ -24,7 +27,11 @@ export function PersistGateLoadingFallback() {
   const handleDisconnectAndReload = async () => {
     setIsDisconnecting(true);
     try {
-      await disconnectWallet({ clearPersist: true, redirectToLogin: true });
+      await disconnectWallet({
+        clearPersist: true,
+        redirectToLogin: true,
+        navigate: (path) => router.replace(path),
+      });
     } catch {
       setIsDisconnecting(false);
     }

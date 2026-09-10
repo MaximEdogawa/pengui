@@ -1,8 +1,8 @@
 "use client";
 
 import { formatSpendableBalance } from "@/shared/lib/walletConnect/utils/balanceUtils";
-import { useThemeClasses } from "@/shared/hooks";
-import { useWalletConnectionState } from "@maximedogawa/chia-wallet-connect-react";
+import { useThemeClasses, useWalletState } from "@/shared/hooks";
+
 import { RefreshCw } from "lucide-react";
 import { useMemo } from "react";
 import { useRefreshBalance, useWalletBalance } from "../hooks/useWalletQueries";
@@ -10,7 +10,7 @@ import { useBalanceLoading } from "../hooks/useBalanceLoading";
 
 export default function WalletBalanceCompact() {
   const { isDark, t } = useThemeClasses();
-  const { isConnected } = useWalletConnectionState();
+  const { isConnected } = useWalletState();
   const { data: balance, isLoading: isLoadingBalance, error: balanceError } = useWalletBalance();
   const { refreshBalance } = useRefreshBalance();
   const { showSpinner, setIsRefreshing } = useBalanceLoading({

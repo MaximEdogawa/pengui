@@ -8,9 +8,9 @@ import {
   getMinimumFeeInXch,
 } from "@/shared/lib/utils/chia-units";
 import { extractTransactionId } from "@/shared/lib/walletConnect/utils/transactionUtils";
-import { useWalletConnectionState } from "@maximedogawa/chia-wallet-connect-react";
+
 import { SafeConnectButton } from "@/shared/ui";
-import { useThemeClasses } from "@/shared/hooks";
+import { useThemeClasses, useWalletState } from "@/shared/hooks";
 import { Send, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { TransactionStatus } from "@/entities/transaction";
@@ -43,7 +43,7 @@ export default function SendTransactionForm({
   isXch = true,
 }: SendTransactionFormProps) {
   const { isDark, t } = useThemeClasses();
-  const { isConnected, address } = useWalletConnectionState();
+  const { isConnected, address } = useWalletState();
   const sendTransactionMutation = useSendTransaction();
   const { refreshBalance } = useRefreshBalance();
 

@@ -16,7 +16,7 @@ import { useNetwork } from "@/shared/hooks/useNetwork";
 import { TibetLpPairIcon } from "@/features/tibet-swap/ui/TibetLpPairIcon";
 import { useTibetLpPairMap } from "@/features/tibet-swap/hooks/useTibetLpPairMap";
 import { getLpTicker } from "@/features/tibet-swap/lib/tibetUiUtils";
-import { useThemeClasses } from "@/shared/hooks";
+import { useThemeClasses, useWalletState } from "@/shared/hooks";
 import { useResponsive } from "@/shared/hooks/useResponsive";
 import { useNavigationProgress } from "@/shared/providers/NavigationProgressProvider";
 import { useXchUsdPrice } from "@/shared/hooks/useXchUsdPrice";
@@ -30,7 +30,6 @@ import { Modal } from "@/shared/ui";
 import SendTransactionForm from "./SendTransactionForm";
 import AssetPriceChart from "./AssetPriceChart";
 import { ReceiveModal } from "@/features/dashboard/ui/components/ReceiveModal";
-import { useWalletConnectionState } from "@maximedogawa/chia-wallet-connect-react";
 import {
   ArrowLeft,
   Send,
@@ -87,7 +86,7 @@ export default function AssetDetailView({ assetIdSlug }: AssetDetailViewProps) {
   const { getAsset, tickers } = useCatTokens();
   const [showSendModal, setShowSendModal] = useState(false);
   const [showReceiveModal, setShowReceiveModal] = useState(false);
-  const { address } = useWalletConnectionState();
+  const { address } = useWalletState();
   const setTradingFilters = useOrderBookFilterStore((s) => s.setFilters);
   const clearTradingFilters = useOrderBookFilterStore((s) => s.clearAllFilters);
 

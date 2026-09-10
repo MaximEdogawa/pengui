@@ -4,8 +4,8 @@ import {
   formatConfirmedBalance,
   formatSpendableBalance,
 } from "@/shared/lib/walletConnect/utils/balanceUtils";
-import { useThemeClasses } from "@/shared/hooks";
-import { useWalletConnectionState } from "@maximedogawa/chia-wallet-connect-react";
+import { useThemeClasses, useWalletState } from "@/shared/hooks";
+
 import { Wallet, RefreshCw } from "lucide-react";
 import { useMemo } from "react";
 import { useRefreshBalance, useWalletBalance } from "../hooks/useWalletQueries";
@@ -13,7 +13,7 @@ import { useBalanceLoading } from "../hooks/useBalanceLoading";
 
 export default function WalletBalanceCard() {
   const { isDark, t } = useThemeClasses();
-  const { isConnected, connectedWallet, walletName } = useWalletConnectionState();
+  const { isConnected, walletName } = useWalletState();
   const { data: balance, isLoading: isLoadingBalance, error: balanceError } = useWalletBalance();
   const { refreshBalance } = useRefreshBalance();
 
@@ -62,9 +62,7 @@ export default function WalletBalanceCard() {
         <div className="mt-1">
           {isConnected ? (
             <>
-              <p className={`${t.textSecondary} text-xs`}>
-                {walletName || connectedWallet || "Wallet Connected"}
-              </p>
+              <p className={`${t.textSecondary} text-xs`}>{walletName || "Wallet Connected"}</p>
               {balance && !isLoadingBalance && (
                 <p className={`${t.textSecondary} text-xs mt-1`}>
                   Spendable: {formattedSpendable} XCH
