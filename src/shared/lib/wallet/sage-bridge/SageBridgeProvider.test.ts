@@ -204,6 +204,21 @@ function createFakeSageClient(options: FakeSageClientOptions = {}) {
   };
 }
 
+/**
+ * Let a fire-and-forget `refreshConnectionState()` settle.
+ *
+ * The event handlers kick off an async refresh that is not awaited, so tests
+ * have to yield until it lands. Counting microtask ticks is brittle — it breaks
+ * whenever the adapter's async chain gets one link longer — so poll the state
+ * instead, with a tick budget as the failure mode.
+ */
+async function settle(check: () => boolean, ticks = 50): Promise<void> {
+  for (const _tick of Array.from({ length: ticks })) {
+    if (check()) return;
+    await Promise.resolve();
+  }
+}
+
 function providerWith(options: FakeSageClientOptions = {}) {
   const fake = createFakeSageClient(options);
   const provider = createSageBridgeProvider({ getClient: async () => fake.client });
@@ -295,9 +310,7 @@ describe("createSageBridgeProvider", () => {
       added: ["wallet.send_xch"],
       full: [...provider.getGrantedCapabilities(), "wallet.send_xch"],
     });
-    // The handler kicks off an async refresh; let it settle.
-    await Promise.resolve();
-    await Promise.resolve();
+    await settle(() => provider.getState().capabilities.sendXch);
 
     expect(provider.getState().capabilities.sendXch).toBe(true);
   });
@@ -317,9 +330,7 @@ describe("createSageBridgeProvider", () => {
         detail: { type: "wallet.selectedWallet.changed", payload: { fingerprint: 111222333 } },
       })
     );
-    // The handler kicks off an async refreshConnectionState(); let it settle.
-    await Promise.resolve();
-    await Promise.resolve();
+    await settle(() => provider.getState().fingerprint === 111222333);
 
     expect(provider.getState().fingerprint).toBe(111222333);
     expect(provider.getState().walletName).toBe("Second Wallet");

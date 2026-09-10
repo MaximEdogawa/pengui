@@ -1,4 +1,10 @@
-import { formatSageError, getSageClient, type SageClient } from "sage-app-sdk";
+import {
+  formatSageError,
+  getSageClient,
+  type GetKey,
+  type KeyInfo,
+  type SageClient,
+} from "sage-app-sdk";
 import { logger } from "@/shared/lib/logger";
 import type {
   AssetBalance,
@@ -128,9 +134,47 @@ export function createSageBridgeProvider(
     }
   }
 
+  /**
+   * Resolve the active wallet key.
+   *
+   * `wallet.getKey({})` sends `paramsJson: "{}"`, i.e. `fingerprint: None`,
+   * which `GetKey` documents as "uses currently logged in". On Sage 0.13 that
+   * has been observed returning `key: null` even with a wallet selected and
+   * `wallet.get_key` granted, so fall back to asking for a specific
+   * fingerprint. `getKeys` (all keys) is not part of the app bridge, so the
+   * candidates are the parameter shapes Sage may accept for "the current one".
+   *
+   * Each attempt is logged so the working shape is identifiable from the Sage
+   * console rather than guessed at.
+   */
+  async function resolveActiveKey(activeClient: SageClient): Promise<KeyInfo | null> {
+    const attempts: { label: string; params: GetKey }[] = [
+      { label: "getKey({})", params: {} },
+      { label: "getKey({ fingerprint: null })", params: { fingerprint: null } },
+    ];
+
+    let firstError: unknown = null;
+    for (const { label, params } of attempts) {
+      try {
+        const { key } = await activeClient.wallet.getKey(params);
+        if (key != null) {
+          logger.info(`Sage ${label} resolved fingerprint ${key.fingerprint}`);
+          return key;
+        }
+        logger.warn(`Sage ${label} returned no key`);
+      } catch (error) {
+        firstError ??= error;
+        logger.warn(`Sage ${label} failed:`, error);
+      }
+    }
+
+    if (firstError != null) throw firstError;
+    return null;
+  }
+
   async function refreshConnectionState(activeClient: SageClient): Promise<void> {
     const [keyResult, syncResult, networkResult] = await Promise.allSettled([
-      activeClient.wallet.getKey({}),
+      resolveActiveKey(activeClient),
       activeClient.wallet.getSyncStatus(),
       activeClient.environment.getNetwork(),
     ]);
@@ -143,7 +187,7 @@ export function createSageBridgeProvider(
       logger.error("Sage wallet.getKey failed:", keyResult.reason, "granted:", granted);
     }
 
-    const key = keyResult.status === "fulfilled" ? keyResult.value.key : null;
+    const key = keyResult.status === "fulfilled" ? keyResult.value : null;
     const address =
       syncResult.status === "fulfilled" ? syncResult.value.receive_address || null : null;
     const network: WalletNetwork =
@@ -256,10 +300,13 @@ export function createSageBridgeProvider(
       if (!state.isConnected) {
         const hasCapability = granted.includes("wallet.get_key");
         const detail = lastKeyError != null ? `: ${formatSageError(lastKeyError)}` : "";
+        // Whether the rest of the wallet context resolved separates "Sage cannot
+        // reach this wallet at all" from "only get_key is failing".
+        const reachable = state.address != null ? `address ${state.address}` : "no address";
         return {
           success: false,
           error: hasCapability
-            ? `Sage granted wallet.get_key but returned no key${detail}. Check that a wallet is selected and unlocked in Sage.`
+            ? `Sage granted wallet.get_key but returned no key${detail}. Sync status reports ${reachable}, network ${state.network}. If a wallet is selected and unlocked in Sage, this is a bridge-side failure, not a permission problem.`
             : `Sage has not granted wallet.get_key${detail}. Granted so far: ${granted.length ? granted.join(", ") : "none"}.`,
           code: "not-connected",
         };
