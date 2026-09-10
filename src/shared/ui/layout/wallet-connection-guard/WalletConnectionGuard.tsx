@@ -1,6 +1,7 @@
 "use client";
 
 import { useWalletConnection } from "@/shared/hooks/useWalletConnection";
+import { useWalletRuntimeKind } from "@/shared/lib/wallet/walletRuntimeContext";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
@@ -14,7 +15,11 @@ export default function WalletConnectionGuard({ children }: { children: React.Re
   const router = useRouter();
   const pathname = usePathname();
   const { isConnected } = useWalletConnection();
-  const [isHydrated, setIsHydrated] = useState(false);
+  const runtimeKind = useWalletRuntimeKind();
+  // Sage has no redux-persist store to rehydrate, so there is nothing to wait
+  // for and no reason to gate the redirect behind a timer there.
+  const isSage = runtimeKind === "sage-bridge";
+  const [isHydrated, setIsHydrated] = useState(isSage);
   const [wasConnected, setWasConnected] = useState(false);
   const redirectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const checkModalIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -23,9 +28,10 @@ export default function WalletConnectionGuard({ children }: { children: React.Re
 
   // Wait for Redux store to rehydrate from persistence (short delay so we don't block the UI)
   useEffect(() => {
+    if (isSage) return;
     const timer = setTimeout(() => setIsHydrated(true), 100);
     return () => clearTimeout(timer);
-  }, []);
+  }, [isSage]);
 
   // Check if wallet connect modal is open
   const isModalOpen = () => {
@@ -81,6 +87,19 @@ export default function WalletConnectionGuard({ children }: { children: React.Re
 
     // If connected and on login page → redirect to dashboard (but wait for modal to close)
     if (isConnected) {
+      // Inside Sage there is no WalletConnect modal to wait for, and the whole
+      // delay/poll dance below is timer-driven — timers the Sage webview
+      // throttles or defers when the app is backgrounded and reopened, which
+      // left a connected wallet sitting on the login screen until some other
+      // navigation re-ran this effect. Redirect straight away instead.
+      if (isSage) {
+        if (isLoginPage && !hasRedirectedRef.current) {
+          hasRedirectedRef.current = true;
+          router.replace("/dashboard");
+        }
+        return;
+      }
+
       // If on login page, wait for modal to close before redirecting
       if (isLoginPage && !hasRedirectedRef.current) {
         // Clear any existing timeout
@@ -121,7 +140,7 @@ export default function WalletConnectionGuard({ children }: { children: React.Re
         }, 500);
       }
     }
-  }, [isConnected, isHydrated, pathname, wasConnected, router]);
+  }, [isConnected, isHydrated, pathname, wasConnected, router, isSage]);
 
   // Cleanup timeouts on unmount
   useEffect(() => {
