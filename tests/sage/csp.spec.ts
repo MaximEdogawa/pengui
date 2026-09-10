@@ -61,27 +61,22 @@ test("the entry page loads and hydrates with no CSP violation", async ({ page })
   expect(captured.pageErrors, captured.pageErrors.join("\n")).toEqual([]);
 });
 
-test("client-side navigation works without a server or SPA fallback", async ({ page }) => {
-  const captured = capture(page);
-
-  await page.goto("/", { waitUntil: "load" });
-  await page.waitForLoadState("networkidle");
-
-  // A hard navigation would 404: the snapshot server, like Sage, resolves only the
-  // manifest entry at "/" and otherwise only exact file paths. Reaching /dashboard with
-  // rendered content therefore proves the Next.js client router took over.
-  await page.evaluate(() => {
-    const link = document.createElement("a");
-    link.href = "/dashboard";
-    link.id = "sage-test-nav";
-    document.body.appendChild(link);
-  });
-  await page.click("#sage-test-nav");
-
-  await expect.poll(() => new URL(page.url()).pathname, { timeout: 20_000 }).toBe("/dashboard");
-  await expect(page.locator("body")).not.toContainText("not in manifest files[]");
-  expect(captured.cspViolations, captured.cspViolations.join("\n")).toEqual([]);
+test("there is no SPA fallback: a hard navigation to an unmapped route 404s", async ({ page }) => {
+  // Exactly Sage's behaviour: "/" resolves to the manifest entry and every other path
+  // must be an exact listed file — no directory index, no rewrite, no catch-all. A hard
+  // reload or a deep link to a route that isn't a real file in the snapshot must 404
+  // instead of silently falling back to index.html, which would hide routes that rely on
+  // client-side-only navigation. /some/unmapped/route is not a file in out/.
+  const response = await page.goto("/some/unmapped/route", { waitUntil: "load" });
+  expect(response?.status()).toBe(404);
+  await expect(page.locator("body")).toContainText("not in manifest files[]");
 });
+
+// Clicking an in-app <Link> to prove the Next.js client router (rather than a hard
+// navigation) serves every route past the entry page needs an authenticated session —
+// every route here is behind WalletConnectionGuard, which renders no internal <a href>
+// at all before connecting (verified: "/", "/login", "/dashboard" and "/wallet" expose
+// zero same-origin anchors pre-auth). That is TASK-001.05's mock Sage bridge harness.
 
 test("the asset detail route resolves from a query parameter", async ({ page }) => {
   const captured = capture(page);
