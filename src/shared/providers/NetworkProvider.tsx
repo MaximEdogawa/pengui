@@ -11,6 +11,7 @@ import {
   hasNetworkPreference,
 } from "@/shared/lib/utils/networkStorage";
 import { getAssetBalance } from "@/shared/lib/walletConnect/repositories/walletQueries.repository";
+import { fetchSageNetwork } from "@/shared/lib/wallet/sage-bridge/sageNetwork";
 import { logger } from "@/shared/lib/logger";
 import { trackEffectRun } from "@/shared/lib/utils/useEffectGuard";
 
@@ -21,6 +22,8 @@ interface NetworkContextType {
   setNetwork: (network: Network) => Promise<boolean>;
   isMainnet: boolean;
   isTestnet: boolean;
+  /** True inside Sage: the active network follows the host and cannot be switched from the app. */
+  isNetworkReadOnly: boolean;
 }
 
 const NetworkContext = createContext<NetworkContextType | undefined>(undefined);
@@ -79,6 +82,24 @@ export function NetworkProvider({ children }: { children: React.ReactNode }) {
       setNetworkState("mainnet");
     }
   }, []);
+
+  // Inside Sage the active network is the host's, not a Pengui preference:
+  // read it once from the bridge and follow it read-only (AC #3). There is no
+  // "network changed" bridge event to subscribe to (only capability and
+  // wallet-selection events exist), so this is a one-shot sync on mount.
+  useEffect(() => {
+    if (runtimeKind !== "sage-bridge") return;
+    let cancelled = false;
+    fetchSageNetwork().then((sageNetwork) => {
+      if (!cancelled && sageNetwork) {
+        setNetworkState(sageNetwork);
+        setStoredNetwork(sageNetwork);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [runtimeKind]);
 
   // Helper function to perform core network switch operations
   // This ensures both manual network switches and auto-sync perform the same cache invalidation
@@ -169,6 +190,12 @@ export function NetworkProvider({ children }: { children: React.ReactNode }) {
     async (newNetwork: Network): Promise<boolean> => {
       if (newNetwork === network || isSwitching) {
         return true;
+      }
+
+      // Sage owns the active network; the app cannot switch it (AC #3).
+      if (!isWalletConnectRuntime) {
+        logger.warn("Network is controlled by Sage; ignoring in-app network switch request.");
+        return false;
       }
 
       setIsSwitching(true);
@@ -289,6 +316,7 @@ export function NetworkProvider({ children }: { children: React.ReactNode }) {
     setNetwork,
     isMainnet: network === "mainnet",
     isTestnet: network === "testnet",
+    isNetworkReadOnly: !isWalletConnectRuntime,
   };
 
   return <NetworkContext.Provider value={value}>{children}</NetworkContext.Provider>;
