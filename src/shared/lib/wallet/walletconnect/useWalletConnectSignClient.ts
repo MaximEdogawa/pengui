@@ -5,7 +5,7 @@ import { getSignClientConfig } from "@/shared/lib/walletConnect/constants/wallet
 import type { WalletConnectInstance } from "@/shared/lib/walletConnect/types/walletConnect.types";
 import { useQuery } from "@tanstack/react-query";
 import { useLayoutEffect } from "react";
-import SignClient from "@walletconnect/sign-client";
+import { SignClient } from "@walletconnect/sign-client";
 import { registerWalletConnectListeners } from "./eventListeners";
 import { useNetwork } from "@/shared/hooks/useNetwork";
 

@@ -1,6 +1,22 @@
 import "@testing-library/jest-dom";
 import { Window } from "happy-dom";
-import { afterEach } from "bun:test";
+import { afterEach, mock } from "bun:test";
+
+// WalletRuntimeProvider mounts WalletConnectRuntime on every test render, which
+// calls SignClient.init() and would otherwise open a real relay connection on
+// every single test. Stub it so unit/integration tests never touch the network.
+mock.module("@walletconnect/sign-client", () => {
+  class FakeSignClient {
+    session = { getAll: () => [] };
+    on() {}
+    off() {}
+    removeListener() {}
+    static async init() {
+      return new FakeSignClient();
+    }
+  }
+  return { SignClient: FakeSignClient, default: FakeSignClient };
+});
 
 // Initialize DOM environment for Bun tests
 if (typeof window === "undefined") {
