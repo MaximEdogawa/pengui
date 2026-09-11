@@ -5,13 +5,13 @@ import { useThemeClasses } from "@/shared/hooks";
 import type { OrderBookFilters, OrderBookOrder } from "../../../lib/orderBookTypes";
 import { useOrderBookOfferSubmission } from "../../../hooks/useOrderBookOfferSubmission";
 import { useCreateOfferFormData } from "@/features/trading/hooks/useCreateOfferFormData";
-import { OfferPreview } from "../../componets/create-offer-form/OfferPreview";
-import { FeeInput } from "../../componets/create-offer-form/FeeInput";
-import { FormActionButtons } from "../../componets/create-offer-form/FormActionButtons";
-import { AssetSections } from "../../componets/create-offer-form/AssetSections";
-import { PriceAdjustmentSliders } from "../../componets/create-offer-form/PriceAdjustmentSliders";
-import { FormMessages } from "../../componets/create-offer-form/FormMessages";
-import { AdvancedSettings } from "../../componets/create-offer-form/AdvancedSettings";
+import { OfferPreview } from "../../components/create-offer-form/OfferPreview";
+import { FeeInput } from "../../components/create-offer-form/FeeInput";
+import { FormActionButtons } from "../../components/create-offer-form/FormActionButtons";
+import { AssetSections } from "../../components/create-offer-form/AssetSections";
+import { PriceAdjustmentSliders } from "../../components/create-offer-form/PriceAdjustmentSliders";
+import { FormMessages } from "../../components/create-offer-form/FormMessages";
+import { AdvancedSettings } from "../../components/create-offer-form/AdvancedSettings";
 
 interface CreateOfferFormProps {
   order?: OrderBookOrder;

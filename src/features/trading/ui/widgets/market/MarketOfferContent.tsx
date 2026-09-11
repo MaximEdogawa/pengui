@@ -16,11 +16,11 @@ import { useMarketOfferForm } from "@/features/trading/hooks/useMarketOfferForm"
 import { useOfferParsing } from "@/features/trading/hooks/useOfferParsing";
 import { useOrderPrice } from "@/features/trading/hooks/useOrderPrice";
 import { useMarketOfferSubmission } from "@/features/trading/hooks/useMarketOfferSubmission";
-import MarketOfferFormInputs from "../../componets/market/MarketOfferFormInputs";
-import OfferPreview from "../../componets/market/OfferPreview";
-import MarketOfferActions from "../../componets/market/MarketOfferActions";
-import MarketOfferStatusMessages from "../../componets/market/MarketOfferStatusMessages";
-import OrderDetailsCollapsible from "../../componets/market/OrderDetailsCollapsible";
+import MarketOfferFormInputs from "../../components/market/MarketOfferFormInputs";
+import OfferPreview from "../../components/market/OfferPreview";
+import MarketOfferActions from "../../components/market/MarketOfferActions";
+import MarketOfferStatusMessages from "../../components/market/MarketOfferStatusMessages";
+import OrderDetailsCollapsible from "../../components/market/OrderDetailsCollapsible";
 
 interface MarketOfferTabProps {
   order?: OrderBookOrder;
