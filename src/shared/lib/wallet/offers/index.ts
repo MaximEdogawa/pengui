@@ -42,7 +42,13 @@ export {
   type ChiaWasmSource,
 } from "./driver";
 
-export { OfferBuildError, notarizedPaymentNonce, settlementPuzzleHashFor } from "./internal";
+export {
+  OfferBuildError,
+  bytesToHex,
+  hexToBytes,
+  notarizedPaymentNonce,
+  settlementPuzzleHashFor,
+} from "./internal";
 
 export {
   assembleSpendBundle,

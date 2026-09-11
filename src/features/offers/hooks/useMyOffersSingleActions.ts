@@ -53,6 +53,11 @@ export function useMyOffersSingleActions({
       await cancelOfferMutation.mutateAsync({
         id: state.offerToCancel.tradeId,
         feeInXch: state.offerToCancel.fee,
+        // Only the Sage bridge reads this: it has no offer book of its own, so
+        // cancelling has to re-derive the offer's spendable coins from the
+        // original offer string (see sageOfferAdapter.ts). WalletConnect
+        // ignores it -- CancelOfferRequest allows arbitrary extra fields.
+        offerString: state.offerToCancel.offerString,
       });
       await offerStorage.updateOffer(state.offerToCancel.id, { status: "cancelled" });
       state.setShowCancelConfirmation(false);

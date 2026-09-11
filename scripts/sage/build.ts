@@ -168,6 +168,10 @@ for (const file of ["splash_wasm.js", "splash_wasm_bg.wasm"]) {
   }
 }
 
+// chia-wallet-sdk-wasm (client-side offer driver) is a plain npm dependency, not
+// something built from source, so it is copied rather than checked for and failed on.
+await run(["bun", "run", join("scripts", "copy-chia-wasm.ts")]);
+
 // Keep the snapshot version honest: Sage re-reviews permissions when `version` changes.
 const packageVersion = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")).version as string;
 const manifestVersion = JSON.parse(readFileSync(SOURCE_MANIFEST, "utf8")).version as string;

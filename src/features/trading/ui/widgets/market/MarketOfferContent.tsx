@@ -51,28 +51,40 @@ export default function MarketOfferTab({
     useOrderPrice(order, filters);
 
   // Update offer string when query data changes
+  //
+  // Depends on the individual setters/resetForm (stable across renders --
+  // useState setters and a useCallback with an empty dep array), never on
+  // `formState` itself: useMarketOfferForm() returns a fresh object literal
+  // every render, so a dependency on the whole object re-ran this effect on
+  // every render -- including the one right after handleSubmit's catch block
+  // called setErrorMessage(...), which this effect immediately cleared back
+  // to "" on the very next render. That's why a take/create-offer error only
+  // ever flashed for a moment instead of staying visible.
+  const { setErrorMessage, setSuccessMessage, setOfferString, resetForm } = formState;
   useEffect(() => {
-    formState.setErrorMessage("");
-    formState.setSuccessMessage("");
+    setErrorMessage("");
+    setSuccessMessage("");
 
     if (fetchedOfferString) {
-      formState.setOfferString(fetchedOfferString);
+      setOfferString(fetchedOfferString);
     } else if (!order?.id) {
-      formState.resetForm();
+      resetForm();
     }
-  }, [fetchedOfferString, order?.id, formState]);
+  }, [fetchedOfferString, order?.id, setErrorMessage, setSuccessMessage, setOfferString, resetForm]);
 
   // Handle query errors
+  // Same fix as above: depend on the stable setErrorMessage setter, not the
+  // whole (freshly-recreated-every-render) formState object.
   useEffect(() => {
     if (offerDetailsQuery.isError && order?.id) {
       const errorMsg =
         offerDetailsQuery.error instanceof Error
           ? offerDetailsQuery.error.message
           : "Failed to fetch offer details";
-      formState.setErrorMessage(errorMsg);
+      setErrorMessage(errorMsg);
       logger.error("Error fetching offer details:", offerDetailsQuery.error);
     }
-  }, [offerDetailsQuery.isError, offerDetailsQuery.error, order?.id, formState]);
+  }, [offerDetailsQuery.isError, offerDetailsQuery.error, order?.id, setErrorMessage]);
 
   const isFormValid =
     formState.offerString.trim().length > 0 &&
