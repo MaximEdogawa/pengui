@@ -2,7 +2,7 @@
 
 This directory contains the Playwright browser suite.
 
-Use [`tests/TESTING.md`](/Users/leo-private/Projects/chia/pengui/tests/TESTING.md) for the full testing strategy and runtime plan.
+Use [`tests/TESTING.md`](../TESTING.md) for the full testing strategy and runtime plan.
 
 ## Directory Map
 
@@ -33,5 +33,5 @@ The canonical policy is:
 
 Use these names for future live suites:
 
-- [`E2E_TESTNET_LIVE_SPEC.md`](/Users/leo-private/Projects/chia/pengui/tests/E2E_TESTNET_LIVE_SPEC.md)
-- [`E2E_MAINNET_LIVE_SPEC.md`](/Users/leo-private/Projects/chia/pengui/tests/E2E_MAINNET_LIVE_SPEC.md)
+- [`E2E_TESTNET_LIVE_SPEC.md`](../E2E_TESTNET_LIVE_SPEC.md)
+- [`E2E_MAINNET_LIVE_SPEC.md`](../E2E_MAINNET_LIVE_SPEC.md)

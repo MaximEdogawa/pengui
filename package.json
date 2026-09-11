@@ -21,6 +21,7 @@
     "relay:testnet:debug": "cd crates/splash-relay && RUST_LOG=debug cargo run --release -- --testnet --ws-port 9091 --tcp-port 11512",
     "start": "bun next start",
     "lint": "bun eslint . --config eslint.config.mjs --max-warnings=1000",
+    "check:deps": "bun run scripts/check-deps.ts",
     "type-check": "bunx tsc --noEmit",
     "test:unit": "bun test src/shared src/features src/entities src/widgets",
     "test:integration": "bun test src/tests/integration/**/*.test.{ts,tsx}",
@@ -31,7 +32,8 @@
     "test:all": "bun run test:unit && bun run test:integration && bun run test:e2e && bun run test:ct",
     "test:api-proxy": "bun run scripts/test-api-proxy.ts",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "prepare": "husky"
   },
   "dependencies": {
     "@maximedogawa/chia-wallet-connect-react": "^0.0.5",
@@ -43,6 +45,8 @@
     "@radix-ui/react-slot": "^1.2.4",
     "@radix-ui/react-tooltip": "^1.2.8",
     "@tanstack/react-query": "^5.90.16",
+    "@walletconnect/sign-client": "^2.23.0",
+    "@walletconnect/types": "^2.23.0",
     "chia-wallet-sdk-wasm": "0.36.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -54,6 +58,7 @@
     "qrcode.react": "^4.2.0",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
+    "react-hot-toast": "^2.6.0",
     "react-redux": "^9.2.0",
     "recharts": "^3.7.0",
     "redux-persist": "^6.0.0",
@@ -62,6 +67,9 @@
     "zustand": "^5.0.10"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.2",
+    "@next/env": "^16.1.1",
+    "@playwright/test": "^1.59.1",
     "@tanstack/react-query-devtools": "^5.91.2",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.1.0",
@@ -78,12 +86,12 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "happy-dom": "^20.3.1",
     "husky": "^9.1.7",
-    "lint-staged": "^16.2.7",
     "postcss": "^8.5.6",
     "prettier": "^3.8.1",
     "sage-app-sdk": "0.13.0",
     "tailwindcss": "^3.4.19",
     "typescript": "^5.9.3",
+    "typescript-eslint": "^8.46.4",
     "wasm-pack": "^0.15.0"
   },
   "trustedDependencies": [

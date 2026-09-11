@@ -11,7 +11,7 @@ Pengui provides a comprehensive suite of financial tools for the Chia ecosystem,
 - **Trading & Order Book** - Real-time order book with advanced filtering and price discovery
 - **Offer Management** - Create, view, and manage Chia offers with persistent storage
 - **Lending Platform** - Create and participate in decentralized loans
-- **Wallet Integration** - Seamless WalletConnect integration with Sage wallet
+- **Wallet Integration** - Sage wallet via WalletConnect in the browser, or natively as a Sage in-app
 - **Transaction Management** - Send transactions and track history
 - **Asset Management** - Support for XCH, CAT tokens, NFTs, and Options
 
@@ -89,6 +89,8 @@ Pengui provides a comprehensive suite of financial tools for the Chia ecosystem,
 
 - **@maximedogawa/chia-wallet-connect-react** - WalletConnect for Chia
 - **WalletConnect Sign Client** - Wallet connection protocol
+- **sage-app-sdk** - Sage in-app bridge (no WalletConnect when running inside Sage)
+- **chia-wallet-sdk-wasm** - Client-side offer construction for the Sage build
 - **Dexie** - IndexedDB wrapper for local storage
 
 ### Development Tools
@@ -211,8 +213,7 @@ pengui/
 │   │       └── ui/            # Trading layout components
 │   │
 │   ├── features/               # Features Layer (User interactions)
-│   │   ├── auth/              # Authentication features
-│   │   │   └── login/         # Login functionality
+│   │   ├── auth/              # Login screen (WalletConnect and Sage modes)
 │   │   ├── trading/           # Trading feature
 │   │   │   ├── model/         # Business logic & hooks
 │   │   │   ├── ui/            # UI components
@@ -236,20 +237,20 @@ pengui/
 │       │   └── ...            # Other UI components
 │       ├── hooks/             # Shared React hooks
 │       ├── lib/               # Utilities organized by domain
-│       │   ├── formatting/    # Date, currency, number formatting
-│       │   ├── web3/          # Web3/wallet utilities
-│       │   ├── validation/   # Validation schemas
-│       │   ├── utils/         # Generic utilities
-│       │   ├── walletConnect/ # WalletConnect integration
+│       │   ├── wallet/        # Provider-agnostic wallet layer (WalletConnect + Sage adapters)
+│       │   ├── walletConnect/ # WalletConnect RPC layer
 │       │   ├── database/      # IndexedDB setup
-│       │   └── config/        # Configuration
+│       │   ├── config/        # Configuration
+│       │   └── ...            # Formatting, validation, generic utilities
 │       └── providers/         # React context providers
+│
+├── tests/                      # Playwright E2E, component and Sage snapshot tests
+├── scripts/                    # Build helpers (WASM, Sage snapshot, dependency check)
 │
 ├── public/                     # Static assets
 │   ├── icons/                 # App icons
 │   └── assets/                # Images & assets
 │
-├── .storybook/                 # Storybook configuration
 ├── .husky/                     # Git hooks
 ├── eslint.config.mjs          # ESLint configuration
 ├── tailwind.config.ts          # Tailwind configuration
@@ -268,17 +269,9 @@ See [Architecture Documentation](https://github.com/maximedogawa/pengui-wiki/blo
 
 ## 🎨 UI Components
 
-Pengui includes a comprehensive, custom-built component library with Storybook documentation.
-
-### View Components in Storybook
-
-```bash
-bun run storybook
-```
-
-Then open [http://localhost:6006](http://localhost:6006) to browse all components interactively.
-
-See the [UI Component Documentation](./src/shared/ui/README.md) and [Component Catalog](./src/shared/ui/COMPONENT_CATALOG.md) for details.
+Pengui includes a custom-built component library in `src/shared/ui` (primitives, forms, layout,
+branding and icons); its `index.ts` is the public API. There is no Storybook; Playwright component
+tests under `tests/ct` render the primitives in a real browser (`bun run test:ct`).
 
 ### Quick Component Examples
 
@@ -300,7 +293,11 @@ import { AssetSelector } from "@/shared/ui";
 
 ## 🔌 Wallet Integration
 
-Pengui uses WalletConnect to connect with Chia wallets (primarily Sage wallet).
+In a browser Pengui uses WalletConnect to connect with Chia wallets (primarily Sage wallet).
+Inside the Sage wallet it runs as a Sage app and talks to the wallet through `sage-app-sdk`
+instead; `bun run build:sage` produces that static snapshot. See
+[Sage in-app integration](https://github.com/maximedogawa/pengui-wiki/blob/main/architecture/sage-in-app-integration.md)
+in the wiki.
 
 ### Connecting a Wallet
 
@@ -336,20 +333,29 @@ See [WalletConnect Documentation](./src/shared/lib/walletConnect/README.md) for 
 
 ```bash
 # Development
-bun dev              # Start development server
-bun storybook        # Start Storybook component library
+bun run dev              # Start development server
+bun run start            # Start production server
 
 # Building
-bun build            # Build for production
-bun run build:wasm   # Build Splash WASM (public/wasm/) — requires Rust
-bun run build:relay  # Build the splash-relay binary — requires Rust
-bun run build:all    # Build WASM, relay, then Next.js
-bun build-storybook  # Build Storybook for production
-bun start            # Start production server
+bun run build            # Build for production (.next)
+bun run build:wasm       # Build Splash WASM (public/wasm/) — requires Rust
+bun run build:relay      # Build the splash-relay binary — requires Rust
+bun run build:sage       # Build the static Sage app snapshot (out/)
+bun run build:all        # WASM, relay, Next.js, Chia wasm, Sage snapshot
 
-# Code Quality
-bun lint             # Run ESLint
-bun type-check       # Run TypeScript type checking
+# Code quality
+bun run lint             # ESLint
+bun run type-check       # tsc --noEmit
+bun run format           # Prettier (write) / format:check
+bun run check:deps       # Every imported package is declared in package.json
+
+# Tests (see the wiki testing guide and tests/TESTING.md)
+bun run test:unit        # Bun unit tests
+bun run test:integration # Bun integration tests
+bun run test:e2e         # Playwright E2E (smoke, regression, acceptance)
+bun run test:ct          # Playwright component tests
+bun run test:sage        # Sage snapshot CSP/hydration checks
+bun run test:all         # unit, integration, e2e, ct
 ```
 
 ### Code Style
@@ -360,11 +366,16 @@ bun type-check       # Run TypeScript type checking
 
 ### Git Hooks
 
-Pre-commit hooks are configured via Husky and lint-staged to ensure code quality:
+`bun install` registers the Husky pre-commit hook through the `prepare` script. On every commit,
+`.husky/pre-commit` runs, in order and aborting on the first failure:
 
-- **Lint & Type Check**: ESLint and TypeScript checks on staged files (with auto-fix)
-- **Build**: Ensures the project builds successfully
-- **Test**: Runs the test suite
+- **Build**: `bun run build`
+- **Format & lint**: Prettier and ESLint on the changed `.ts/.tsx/.js/.jsx` (and `.json/.css/.md`
+  for Prettier) files
+- **Test**: `bun run test:unit` and `bun run test:integration`
+
+Type checking is not part of the hook beyond what `next build` performs; run `bun run type-check`
+yourself. Details: [Git hooks](https://github.com/maximedogawa/pengui-wiki/blob/main/development/git-hooks.md).
 
 ## 🔒 Security
 
@@ -396,9 +407,9 @@ Contributions are welcome! Please ensure:
 ## 📚 Additional Resources
 
 - [Architecture Documentation](https://github.com/maximedogawa/pengui-wiki/blob/main/architecture/fsd-structure.md) - Feature-Sliced Design structure and guidelines
-- [UI Component Library](./src/shared/ui/README.md) - Detailed component documentation
-- [Component Catalog](./src/shared/ui/COMPONENT_CATALOG.md) - Quick component reference
-- [WalletConnect Integration](./src/shared/lib/walletConnect/README.md) - Wallet integration details
+- [Testing guide](https://github.com/maximedogawa/pengui-wiki/blob/main/testing/README.md) and [tests/TESTING.md](./tests/TESTING.md) - Test layers and how to run them
+- [Deployment](./deployment/README.md) - ONCE-based deployment of the app and relays
+- [WalletConnect Integration](./src/shared/lib/walletConnect/README.md) - WalletConnect RPC layer details
 - [Pengui Wiki](https://github.com/maximedogawa/pengui-wiki) - Architecture, development and testing documentation
 - [Pengui Backlog](https://github.com/maximedogawa/pengui-backlog) - Tasks and bugs
 - [Infinite Loop Guardrails](https://github.com/maximedogawa/pengui-wiki/blob/main/development/infinite-loop-guardrails.md) - Preventing infinite loops in useEffect hooks

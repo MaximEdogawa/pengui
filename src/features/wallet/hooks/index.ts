@@ -11,7 +11,6 @@ export {
   useTakeOffer,
   useRefreshBalance,
 } from "./useWalletQueries";
-export { useWalletFingerprint } from "./useWalletFingerprint";
 export { useTransactionForm } from "./useTransactionForm";
 export { useTransactionHistory } from "./useTransactionHistory";
 export { useBalanceLoading } from "./useBalanceLoading";

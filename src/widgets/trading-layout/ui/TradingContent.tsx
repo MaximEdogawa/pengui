@@ -5,7 +5,7 @@ import { TradeHistoryContainer } from "@/features/trading/ui/widgets/trade-histo
 import StreamContainer from "@/features/trading/ui/widgets/stream/StreamContainer";
 import type { OrderBookOrder } from "@/features/trading/lib/orderBookTypes";
 import PriceChart from "@/features/trading/ui/widgets/chart/PriceChart";
-import { MarketDepthView } from "@/features/trading/ui/componets/depth";
+import { MarketDepthView } from "@/features/trading/ui/components/depth";
 import { useTradeHistory } from "@/features/trading/hooks/useTradeHistory";
 import { useTradeHistoryFilters } from "@/features/trading/hooks/useTradeHistoryFilters";
 

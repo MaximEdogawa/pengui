@@ -63,6 +63,14 @@ export function useWalletAddress() {
   });
 }
 
+/**
+ * Sign arbitrary coin spends with the active wallet.
+ *
+ * No feature calls this yet: it is kept, together with {@link useSignMessage},
+ * as the generic signing surface the m-1 option-contract work (TASK-008.02)
+ * builds on — both adapters already implement the underlying
+ * `WalletProvider.signCoinSpends` / `signMessage`.
+ */
 export function useSignCoinSpends() {
   const provider = useWalletProvider();
   const queryClient = useQueryClient();
@@ -80,6 +88,7 @@ export function useSignCoinSpends() {
   });
 }
 
+/** Sign a plain message with the active wallet; see {@link useSignCoinSpends}. */
 export function useSignMessage() {
   const provider = useWalletProvider();
 

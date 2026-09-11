@@ -256,17 +256,6 @@ export async function getAssetCoins(
   );
 }
 
-export async function testRpcConnection(
-  signClient: SignClient | undefined,
-  session: WalletConnectSession
-): Promise<{
-  success: boolean;
-  data?: boolean;
-  error?: string;
-}> {
-  return await makeWalletRequest<boolean>(SageMethods.CHIP0002_CONNECT, {}, signClient, session);
-}
-
 export async function signCoinSpends(
   params: {
     walletId: number;

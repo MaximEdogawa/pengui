@@ -2,7 +2,7 @@
 
 import { useThemeClasses } from "@/shared/hooks";
 import type { OrderBookFilters, OrderBookOrder } from "@/features/trading/lib/orderBookTypes";
-import CreateOfferForm from "@/features/trading/ui/componets/limit/CreateOfferForm";
+import CreateOfferForm from "@/features/trading/ui/widgets/limit/CreateOfferForm";
 import LimitOfferTab from "./OfferTab";
 import MarketOfferTab from "@/features/trading/ui/widgets/market/MarketOfferContent";
 import { SwapTabContent } from "@/features/tibet-swap/ui/SwapTabContent";

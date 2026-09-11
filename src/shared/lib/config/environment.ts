@@ -8,13 +8,13 @@ const getCurrentUrl = (): string => {
   if (typeof window !== "undefined") {
     return window.location.origin;
   }
-  return "https://pengui.pool";
+  return "https://pengui.space";
 };
 
 export const environment = {
-  appName: "Penguin Pool",
+  appName: "Pengui",
   appVersion: "1.0.0",
-  appDescription: "Decentralized lending platform on Chia Network",
+  appDescription: "Decentralized trading platform on the Chia blockchain",
 
   isDevelopment: process.env.NODE_ENV === "development",
   isProduction: process.env.NODE_ENV === "production",
@@ -24,8 +24,8 @@ export const environment = {
     walletConnect: {
       projectId: process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID || "",
       metadata: {
-        name: "Penguin Pool",
-        description: "Decentralized lending platform on Chia Network",
+        name: "Pengui",
+        description: "Decentralized trading platform on the Chia blockchain",
         url: getCurrentUrl(),
         icons: [
           `${getCurrentUrl()}/icons/icon-192x192.png`,
@@ -45,16 +45,13 @@ export const environment = {
     },
   },
 
-  // Dexie API configuration
-  dexie: {
-    apiBaseUrl: process.env.NEXT_PUBLIC_DEXIE_API_URL || "https://api-testnet.dexie.space",
-  },
-
-  // Database configuration
+  // Database configuration. The schema itself is declared version by version
+  // in `PenguiDB` (src/shared/lib/database/indexedDB.ts); bump this alongside
+  // the highest `this.version(n)` there.
   database: {
     indexedDB: {
       name: "pengui-db",
-      version: 2, // Updated to version 2 to support network field
+      version: 5,
     },
   },
 } as const;
