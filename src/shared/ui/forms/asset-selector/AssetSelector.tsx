@@ -3,7 +3,8 @@
 import type { AssetType, BaseAsset } from "@/entities/offer";
 import { useThemeClasses } from "@/shared/hooks";
 import { assetInputAmounts, formatAssetAmountForInput } from "@/shared/lib/utils/chia-units";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useState } from "react";
+import { assetCategoryOf, assetTypeForCategory, type AssetCategory } from "./assetCategory";
 import AmountInput from "./AmountInput";
 import AssetIdInput from "./AssetIdInput";
 import AssetTypeSelector from "./AssetTypeSelector";
@@ -14,6 +15,14 @@ export interface ExtendedAsset extends BaseAsset {
   searchQuery?: string;
   showDropdown?: boolean;
   _amountInput?: string; // Temporary string for input while typing
+}
+
+/** A selection set aside while the user looks at another category. */
+interface ParkedAsset {
+  assetId: string;
+  symbol: string;
+  searchQuery: string;
+  type: AssetType;
 }
 
 export interface TokenInfo {
@@ -60,7 +69,6 @@ export default function AssetSelector({
 }: AssetSelectorProps) {
   const { t } = useThemeClasses();
   const [showDropdown, setShowDropdown] = useState(false);
-  const blurTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Use provided tokens or empty array
   const availableTokens = providedTokens;
@@ -102,45 +110,73 @@ export default function AssetSelector({
     [asset, onUpdate]
   );
 
-  const handleTypeChange = useCallback(
-    (newType: AssetType) => {
-      // Merge clear behavior into a single onUpdate call to avoid reintroducing stale data
-      // Explicitly clear assetId, symbol, searchQuery, and showDropdown
-      // Then set type and amount based on the new type
-      const updatedAsset = {
+  /**
+   * What the user had chosen in each category, so switching away and back does not
+   * destroy their work.
+   *
+   * An NFT id is meaningless under "Token", so the *visible* asset still has to change
+   * when the category does. Parking the old selection here instead of discarding it is
+   * what makes the change non-destructive: pick a token, glance at NFT, come back, and
+   * the token is still there. Ephemeral UI state, deliberately not lifted to the parent
+   * — the parent owns the asset that is currently selected, not the ones that are not.
+   */
+  const [parkedByCategory, setParkedByCategory] = useState<
+    Partial<Record<AssetCategory, ParkedAsset>>
+  >({});
+
+  /**
+   * The user picked a different *category* (Token / NFT / Option).
+   *
+   * Switching between XCH and a CAT is not a category change — that happens inside the
+   * token dropdown and never reaches here.
+   */
+  const handleCategoryChange = useCallback(
+    (category: AssetCategory) => {
+      const currentCategory = assetCategoryOf(asset.type);
+      if (category === currentCategory) return;
+
+      setParkedByCategory((parked) => ({
+        ...parked,
+        [currentCategory]: {
+          assetId: asset.assetId,
+          symbol: asset.symbol ?? "",
+          searchQuery: asset.searchQuery ?? "",
+          type: asset.type,
+        },
+      }));
+
+      const restored = parkedByCategory[category];
+
+      // One onUpdate call, so no intermediate render can reintroduce stale data.
+      onUpdate({
         ...asset,
-        assetId: "",
-        symbol: "",
-        searchQuery: "",
+        assetId: restored?.assetId ?? "",
+        symbol: restored?.symbol ?? "",
+        searchQuery: restored?.searchQuery ?? "",
         showDropdown: false,
-        type: newType === "xch" ? "cat" : newType, // Map 'xch' to 'cat' for unified token search
-        amount: newType === "nft" || newType === "option" ? 1 : asset.amount,
-      };
-      onUpdate(updatedAsset);
+        // A restored Token selection may have been XCH, which is not `cat`.
+        type: restored?.type ?? assetTypeForCategory(category),
+        amount: category === "nft" || category === "option" ? 1 : asset.amount,
+      });
     },
-    [asset, onUpdate]
+    [asset, onUpdate, parkedByCategory]
   );
 
   const handleSearchFocus = useCallback(() => {
-    if (blurTimeoutRef.current) {
-      clearTimeout(blurTimeoutRef.current);
-      blurTimeoutRef.current = null;
-    }
     setShowDropdown(true);
   }, []);
 
-  const handleSearchBlur = useCallback(() => {
-    // Delay closing to allow click events on dropdown items
-    blurTimeoutRef.current = setTimeout(() => {
-      setShowDropdown(false);
-    }, 200);
-  }, []);
-
+  /**
+   * Closing is owned entirely by the dropdown.
+   *
+   * There is deliberately no `onBlur` handler. `TokenDropdown` is a modal Radix
+   * `Dialog`: opening it moves focus into the dialog, which blurs this input. The old
+   * code responded to that blur by closing the dropdown 200 ms later — so the dropdown
+   * dismissed itself moments after opening, and selecting anything meant winning a race
+   * against that timer. The Dialog already handles outside-click, Escape and selection,
+   * so blur must not participate in dismissal at all.
+   */
   const handleDropdownClose = useCallback(() => {
-    if (blurTimeoutRef.current) {
-      clearTimeout(blurTimeoutRef.current);
-      blurTimeoutRef.current = null;
-    }
     setShowDropdown(false);
   }, []);
 
@@ -162,10 +198,11 @@ export default function AssetSelector({
     <div
       className={`flex items-center gap-1 sm:gap-2 p-1.5 sm:p-2 rounded-lg border ${t.border} ${t.card} ${className}`}
     >
-      {/* Asset Type Selector */}
+      {/* Asset Type Selector — fed the category, not the raw type, so a selected XCH
+          still shows "Token" instead of leaving the control with an unmatched value. */}
       <AssetTypeSelector
-        value={asset.type}
-        onChange={handleTypeChange}
+        value={assetCategoryOf(asset.type)}
+        onChange={handleCategoryChange}
         enabledAssetTypes={availableAssetTypes}
       />
 
@@ -183,7 +220,6 @@ export default function AssetSelector({
               })
             }
             onFocus={handleSearchFocus}
-            onBlur={handleSearchBlur}
             placeholder={isLoadingTickers ? "Loading..." : "Search tokens..."}
             disabled={isLoadingTickers}
             filteredTokens={filteredTokens(asset.searchQuery || "")}

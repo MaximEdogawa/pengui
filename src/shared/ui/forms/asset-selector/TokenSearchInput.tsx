@@ -8,7 +8,6 @@ interface TokenSearchInputProps {
   value: string;
   onChange: (value: string) => void;
   onFocus: () => void;
-  onBlur: () => void;
   placeholder: string;
   disabled: boolean;
   filteredTokens: Token[];
@@ -23,7 +22,6 @@ export default function TokenSearchInput({
   value,
   onChange,
   onFocus,
-  onBlur,
   placeholder,
   disabled,
   filteredTokens,
@@ -56,7 +54,6 @@ export default function TokenSearchInput({
           type="text"
           value={value}
           onFocus={onFocus}
-          onBlur={onBlur}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={(e) => {
             // Prevent Enter key from submitting the form or removing the asset

@@ -93,7 +93,7 @@ export default function TokenDropdown({
       <DialogContent
         className={cn(
           "[&>button:last-child]:hidden",
-          "max-w-3xl w-full max-h-[60vh] p-0 rounded-lg shadow-xl overflow-hidden",
+          "max-w-3xl w-full max-h-[60dvh] p-0 rounded-lg shadow-xl overflow-hidden",
           "backdrop-blur-[40px] border transition-all duration-300",
           isDark ? "bg-white/10 border-white/20" : "bg-white/60 border-white/70"
         )}
@@ -122,7 +122,9 @@ export default function TokenDropdown({
         <div
           className="overflow-y-auto"
           style={{
-            maxHeight: searchValue ? "calc(60vh - 60px)" : "calc(60vh - 20px)",
+            // dvh, not vh: vh ignores the on-screen keyboard, so on a phone the list
+            // rendered underneath the keyboard raised by this dropdown's own search box.
+            maxHeight: searchValue ? "calc(60dvh - 60px)" : "calc(60dvh - 20px)",
           }}
         >
           {useAssetList ? (
