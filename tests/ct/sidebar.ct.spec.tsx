@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/experimental-ct-react";
+import { DEFAULT_FEATURE_FLAGS, MENU_ID_TO_FLAG } from "@/shared/config/featureFlags";
 import { SidebarStory } from "./stories/SidebarStory";
 
 /**
@@ -9,12 +10,32 @@ import { SidebarStory } from "./stories/SidebarStory";
  * desktop sidebar is always rendered.
  */
 
+/**
+ * The CT sandbox has no NEXT_PUBLIC_FEATURE_FLAGS, so `useMenuItems()` applies
+ * DEFAULT_FEATURE_FLAGS (dashboard, offers, trading, wallet): four nav links
+ * plus the profile link. Derived from the flag config rather than hard-coded
+ * so the test follows the baseline instead of drifting from it.
+ */
+const ENABLED_NAV_LINKS = Object.values(MENU_ID_TO_FLAG).filter((flag) =>
+  DEFAULT_FEATURE_FLAGS.includes(flag)
+).length;
+
 test.describe("DashboardSidebar", () => {
-  test("renders all nav menu items", async ({ mount }) => {
+  test("renders the nav items enabled by the default feature flags plus the profile link", async ({
+    mount,
+  }) => {
     const component = await mount(<SidebarStory />);
-    // 7 nav links + 1 profile link = 8 links total
     const links = component.getByRole("link");
-    await expect(links).toHaveCount(8);
+    await expect(links).toHaveCount(ENABLED_NAV_LINKS + 1);
+    await expect(component.getByRole("link", { name: /dashboard/i })).toBeVisible();
+    await expect(component.getByRole("link", { name: /wallet/i })).toBeVisible();
+  });
+
+  test("hides nav items whose feature flag is off by default", async ({ mount }) => {
+    const component = await mount(<SidebarStory />);
+    await expect(component.getByRole("link", { name: /loans/i })).toHaveCount(0);
+    await expect(component.getByRole("link", { name: /piggy bank/i })).toHaveCount(0);
+    await expect(component.getByRole("link", { name: /option contracts/i })).toHaveCount(0);
   });
 
   test("active item has data-active=true", async ({ mount }) => {

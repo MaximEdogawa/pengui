@@ -48,7 +48,8 @@ What exists now:
 - unit and integration tests via `bun test`
 - Playwright suites under `tests/e2e`
 - smoke, regression, acceptance, and other browser coverage using mocked or deterministic wallet behavior
-- transitional authenticated and testnet-oriented browser coverage using the current wallet-mock infrastructure
+- Playwright component tests (`tests/ct`) and Sage snapshot checks (`tests/sage`)
+- a mock Sage host (`src/test-utils/mocks/sageBridge.ts`) for the in-Sage wallet path in unit and component tests
 
 What does not exist yet:
 
@@ -70,8 +71,8 @@ They should stay:
 
 Real wallet, real funds, and real chain behavior belong only in the dedicated live layers:
 
-- [`E2E_TESTNET_LIVE_SPEC.md`](/Users/leo-private/Projects/chia/pengui/tests/E2E_TESTNET_LIVE_SPEC.md)
-- [`E2E_MAINNET_LIVE_SPEC.md`](/Users/leo-private/Projects/chia/pengui/tests/E2E_MAINNET_LIVE_SPEC.md)
+- [`E2E_TESTNET_LIVE_SPEC.md`](./E2E_TESTNET_LIVE_SPEC.md)
+- [`E2E_MAINNET_LIVE_SPEC.md`](./E2E_MAINNET_LIVE_SPEC.md)
 
 ## Integration Definition
 
@@ -92,7 +93,7 @@ They should not require:
 - live relay connectivity
 - real blockchain confirmation
 
-If a future real wallet runtime is implemented, it can unlock a new higher-fidelity test layer. That work is separate and is specified in [`WALLET_RUNTIME_IMPLEMENTATION_SPEC.md`](/Users/leo-private/Projects/chia/pengui/tests/WALLET_RUNTIME_IMPLEMENTATION_SPEC.md). It is not the definition of the current integration suite.
+If a future real wallet runtime is implemented, it can unlock a new higher-fidelity test layer. That work is separate and is specified in [`WALLET_RUNTIME_IMPLEMENTATION_SPEC.md`](./WALLET_RUNTIME_IMPLEMENTATION_SPEC.md). It is not the definition of the current integration suite.
 
 ## E2E Definition
 
@@ -135,7 +136,6 @@ tests/e2e/
 ├── smoke/
 ├── regression/
 ├── acceptance/
-├── testnet/
 ├── fixtures/
 ├── page-objects/
 └── wallet-mock/
@@ -146,11 +146,11 @@ Interpretation for now:
 - `smoke` stays fast and unauthenticated
 - `regression` is the deterministic authenticated WalletConnect layer, with a worker-scoped mock wallet client and explicit auth setup per test page
 - `acceptance` stays mostly unauthenticated and should only take auth setup when a user story actually needs it
-- `testnet` is currently transitional and should not be treated as the final live-suite architecture
+- the former transitional `testnet` tier and its manual workflow were removed; nothing in `tests/e2e` touches real testnet state
 - live suites should be introduced later under explicit `e2e-testnet-live` and `e2e-mainnet-live` planning
 
 ## Related Specs
 
-- [`WALLET_RUNTIME_IMPLEMENTATION_SPEC.md`](/Users/leo-private/Projects/chia/pengui/tests/WALLET_RUNTIME_IMPLEMENTATION_SPEC.md): future wallet runtime dependency for higher-fidelity flows
-- [`E2E_TESTNET_LIVE_SPEC.md`](/Users/leo-private/Projects/chia/pengui/tests/E2E_TESTNET_LIVE_SPEC.md): implementation spec for real funded testnet live E2E
-- [`E2E_MAINNET_LIVE_SPEC.md`](/Users/leo-private/Projects/chia/pengui/tests/E2E_MAINNET_LIVE_SPEC.md): implementation spec for real funded mainnet live E2E
+- [`WALLET_RUNTIME_IMPLEMENTATION_SPEC.md`](./WALLET_RUNTIME_IMPLEMENTATION_SPEC.md): future wallet runtime dependency for higher-fidelity flows
+- [`E2E_TESTNET_LIVE_SPEC.md`](./E2E_TESTNET_LIVE_SPEC.md): implementation spec for real funded testnet live E2E
+- [`E2E_MAINNET_LIVE_SPEC.md`](./E2E_MAINNET_LIVE_SPEC.md): implementation spec for real funded mainnet live E2E
