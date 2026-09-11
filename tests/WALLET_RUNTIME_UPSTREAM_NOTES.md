@@ -4,7 +4,7 @@ This document consolidates the upstream context needed to build the Pengui test 
 
 It is a bridge between:
 
-- [`WALLET_RUNTIME_IMPLEMENTATION_SPEC.md`](/Users/leo-private/Projects/chia/pengui/tests/WALLET_RUNTIME_IMPLEMENTATION_SPEC.md)
+- [`WALLET_RUNTIME_IMPLEMENTATION_SPEC.md`](./WALLET_RUNTIME_IMPLEMENTATION_SPEC.md)
 - the upstream `chia-wallet-sdk`, `sage`, and `rue` repositories
 
 ## Goal

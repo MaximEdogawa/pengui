@@ -64,5 +64,5 @@ The implementation ticket should not be considered complete until:
 
 ## Dependencies
 
-- [`TESTING.md`](/Users/leo-private/Projects/chia/pengui/tests/TESTING.md)
-- [`E2E_TESTNET_LIVE_SPEC.md`](/Users/leo-private/Projects/chia/pengui/tests/E2E_TESTNET_LIVE_SPEC.md)
+- [`TESTING.md`](./TESTING.md)
+- [`E2E_TESTNET_LIVE_SPEC.md`](./E2E_TESTNET_LIVE_SPEC.md)

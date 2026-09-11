@@ -14,7 +14,7 @@ It may later support:
 - richer deterministic authenticated browser coverage
 - parts of future live-wallet orchestration
 
-It does not redefine the current test policy in [`TESTING.md`](/Users/leo-private/Projects/chia/pengui/tests/TESTING.md): unit through ordinary E2E stay mocked and deterministic.
+It does not redefine the current test policy in [`TESTING.md`](./TESTING.md): unit through ordinary E2E stay mocked and deterministic.
 
 ## Status
 
@@ -244,7 +244,7 @@ The runtime implementation ticket should not be considered complete until it can
 
 ## Related Documents
 
-- [`TESTING.md`](/Users/leo-private/Projects/chia/pengui/tests/TESTING.md)
-- [`E2E_TESTNET_LIVE_SPEC.md`](/Users/leo-private/Projects/chia/pengui/tests/E2E_TESTNET_LIVE_SPEC.md)
-- [`E2E_MAINNET_LIVE_SPEC.md`](/Users/leo-private/Projects/chia/pengui/tests/E2E_MAINNET_LIVE_SPEC.md)
-- [`WALLET_RUNTIME_UPSTREAM_NOTES.md`](/Users/leo-private/Projects/chia/pengui/tests/WALLET_RUNTIME_UPSTREAM_NOTES.md)
+- [`TESTING.md`](./TESTING.md)
+- [`E2E_TESTNET_LIVE_SPEC.md`](./E2E_TESTNET_LIVE_SPEC.md)
+- [`E2E_MAINNET_LIVE_SPEC.md`](./E2E_MAINNET_LIVE_SPEC.md)
+- [`WALLET_RUNTIME_UPSTREAM_NOTES.md`](./WALLET_RUNTIME_UPSTREAM_NOTES.md)

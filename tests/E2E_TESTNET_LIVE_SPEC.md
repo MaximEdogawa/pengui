@@ -119,6 +119,6 @@ The implementation ticket should not be considered complete until:
 
 ## Dependencies
 
-- [`TESTING.md`](/Users/leo-private/Projects/chia/pengui/tests/TESTING.md)
-- [`WALLET_RUNTIME_IMPLEMENTATION_SPEC.md`](/Users/leo-private/Projects/chia/pengui/tests/WALLET_RUNTIME_IMPLEMENTATION_SPEC.md)
-- [`WALLET_RUNTIME_UPSTREAM_NOTES.md`](/Users/leo-private/Projects/chia/pengui/tests/WALLET_RUNTIME_UPSTREAM_NOTES.md)
+- [`TESTING.md`](./TESTING.md)
+- [`WALLET_RUNTIME_IMPLEMENTATION_SPEC.md`](./WALLET_RUNTIME_IMPLEMENTATION_SPEC.md)
+- [`WALLET_RUNTIME_UPSTREAM_NOTES.md`](./WALLET_RUNTIME_UPSTREAM_NOTES.md)
