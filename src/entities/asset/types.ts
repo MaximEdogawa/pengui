@@ -1,5 +1,5 @@
 /**
- * Asset and Ticker types for the Penguin Pool application
+ * Asset and Ticker types for the Pengui application
  * These types are used throughout the app for asset selection, offers, and wallet requests
  */
 
