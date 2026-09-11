@@ -59,7 +59,7 @@ ENV NEXT_PUBLIC_DEXIE_SPLASH_RELAY_TESTNET_WS_URL=$NEXT_PUBLIC_DEXIE_SPLASH_RELA
 ENV NEXT_PUBLIC_FEATURE_FLAGS=$NEXT_PUBLIC_FEATURE_FLAGS
 
 # Sage static snapshot: built first into ./out (its own `next build --output export`
-# run), served by src/middleware.ts from the same origin as the hosted app below.
+# run), served by src/proxy.ts from the same origin as the hosted app below.
 # Must run before the standalone build - both invoke `next build` and would
 # otherwise overwrite each other's .next/ artifacts.
 RUN bun run build:sage
@@ -93,7 +93,7 @@ ENV HOSTNAME="0.0.0.0"
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-# Sage static snapshot, read by src/middleware.ts at request time (not part of
+# Sage static snapshot, read by src/proxy.ts at request time (not part of
 # Next's own module graph, so it must be copied explicitly - see the ARG/ENV
 # and comment above the `RUN bun run build:sage` step in the builder stage).
 COPY --from=builder --chown=nextjs:nodejs /app/out ./sage-snapshot
