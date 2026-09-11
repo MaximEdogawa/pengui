@@ -11,10 +11,24 @@ const getCurrentUrl = (): string => {
   return "https://pengui.space";
 };
 
+/**
+ * One-line description of the app.
+ *
+ * User-visible: it is what a wallet shows in its pairing / approval dialog via the
+ * WalletConnect metadata below. Keep it short — pairing dialogs truncate — and keep it
+ * true of the shipped build, not of the roadmap.
+ */
+export const APP_DESCRIPTION =
+  "Trade, swap and manage Chia offers — in your browser or inside the Sage wallet";
+
 export const environment = {
   appName: "Pengui",
-  appVersion: "1.0.0",
-  appDescription: "Decentralized trading platform on the Chia blockchain",
+  /**
+   * Set from `package.json` at build time by `next.config.ts`. Never hardcode it here:
+   * the previous literal ("1.0.0") drifted six releases away from the real version.
+   */
+  appVersion: process.env.NEXT_PUBLIC_APP_VERSION || "0.0.0",
+  appDescription: APP_DESCRIPTION,
 
   isDevelopment: process.env.NODE_ENV === "development",
   isProduction: process.env.NODE_ENV === "production",
@@ -25,7 +39,7 @@ export const environment = {
       projectId: process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID || "",
       metadata: {
         name: "Pengui",
-        description: "Decentralized trading platform on the Chia blockchain",
+        description: APP_DESCRIPTION,
         url: getCurrentUrl(),
         icons: [
           `${getCurrentUrl()}/icons/icon-192x192.png`,

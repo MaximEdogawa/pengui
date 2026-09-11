@@ -1,4 +1,4 @@
-// Offer types for the Penguin Pool application
+// Offer types for the Pengui application
 
 // Import shared asset types
 export type AssetAmount = number; // Always use float numbers for precision

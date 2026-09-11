@@ -1,7 +1,7 @@
 /**
  * Shared UI Component Library
  *
- * This is a custom-built component library for the Penguin Pool application.
+ * This is a custom-built component library for the Pengui application.
  * All components are self-programmed and reusable across the application.
  *
  * Components are organized by category:

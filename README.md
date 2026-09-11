@@ -2,18 +2,36 @@
 
 **Premium Financial Intelligence** - A decentralized financial platform built on the Chia Network.
 
-Pengui is a modern, full-featured DeFi application that enables users to trade assets, manage offers, participate in lending, and interact with the Chia blockchain through a beautiful, intuitive interface.
+Pengui is a DeFi application for the Chia ecosystem: trade against a live order book, create and take Chia offers, and manage your wallet — in an ordinary browser, or **installed directly inside the Sage wallet** with no WalletConnect pairing.
+
+**Current version: 0.0.8**
 
 ## 🎯 Overview
 
-Pengui provides a comprehensive suite of financial tools for the Chia ecosystem, including:
+- **Trading & Order Book** - Real-time order book with filtering and price discovery; market and limit orders
+- **Offer Management** - Create, browse, take and cancel Chia offers, with persistent local storage
+- **Live Offer Stream** - Offers streamed over the Splash libp2p relay
+- **Wallet** - Balances, asset detail, send and transaction history for XCH and CAT assets
+- **Two wallet transports, one codebase** - Sage via WalletConnect in a browser, or the Sage in-app bridge when installed as a Sage app
+- **Lending & Option Contracts** - UI preview; the on-chain flows are the next milestone
 
-- **Trading & Order Book** - Real-time order book with advanced filtering and price discovery
-- **Offer Management** - Create, view, and manage Chia offers with persistent storage
-- **Lending Platform** - Create and participate in decentralized loans
-- **Wallet Integration** - Sage wallet via WalletConnect in the browser, or natively as a Sage in-app
-- **Transaction Management** - Send transactions and track history
-- **Asset Management** - Support for XCH, CAT tokens, NFTs, and Options
+### What runs where
+
+| Target         | Build                | Wallet transport   | Login            |
+| -------------- | -------------------- | ------------------ | ---------------- |
+| Hosted web app | `bun run build`      | WalletConnect      | QR / pairing URI |
+| Sage app       | `bun run build:sage` | Sage in-app bridge | One tap, no QR   |
+
+Both are served from the same origin, so `https://pengui.space` is both the web app and the Sage _Install from URL_ target.
+
+### Status in 0.0.8
+
+- ✅ **Sage in-app integration** — runtime detection, bridge adapter, login without QR, balances, send, signing, theme and lifecycle
+- ✅ **Client-side offer construction** — the Sage bridge has no offer RPCs, so create/take/cancel offers are built in the browser with `chia-wallet-sdk-wasm` and signed through the bridge. XCH and CAT only; NFT, DID and option-contract offers are disabled with an explanation
+- ✅ **Static snapshot packaging** — `sage-manifest.json`, CSP-safe export, network whitelist
+- ⚠️ **Loans and Option Contracts are a UI mockup.** Milestone m-1 (_Loans as Offers_) makes them live
+- ⚠️ **Swap is off by default.** TibetSwap, the AMM behind it, is winding down; opt in with `NEXT_PUBLIC_FEATURE_FLAGS=...,swap`
+- ⏳ **In-Sage verification on desktop and mobile is not yet recorded** — see the checklist in the wiki
 
 ## ✨ Features
 
@@ -27,7 +45,7 @@ Pengui provides a comprehensive suite of financial tools for the Chia ecosystem,
 ### 📊 Trading
 
 - **Order Book** - View buy/sell orders with real-time updates
-- **Price Discovery** - Advanced filtering b y asset pairs
+- **Price Discovery** - Advanced filtering by asset pairs
 - **Market & Limit Orders** - Create and execute trades
 - **Order History** - Track your trading activity
 - **Price Charts** - Visualize market trends (coming soon)
@@ -40,18 +58,22 @@ Pengui provides a comprehensive suite of financial tools for the Chia ecosystem,
 - Persistent offer storage with IndexedDB
 - Offer inspection and validation
 
-### 🏠 Loans
+### 🏠 Loans — _UI preview_
 
 - Create lending opportunities
 - Browse available loans
 - Track loan income and analytics
 - Manage your loan portfolio
 
+> The `/loans` route is a mockup today. Milestone **m-1 (Loans as Offers)** turns it into
+> peer-to-peer loans built on Chia option contracts and traded as standard offers.
+
 ### 💳 Wallet
 
-- WalletConnect integration (Sage wallet)
-- Real-time balance updates
-- Send transactions
+- **Two transports behind one interface** — WalletConnect in a browser, the Sage in-app
+  bridge when running inside Sage. Feature code never knows which is active.
+- Real-time balance updates (XCH and CAT)
+- Send transactions, with the host wallet's own approval dialog inside Sage
 - Transaction history
 - Address management
 
@@ -60,10 +82,13 @@ Pengui provides a comprehensive suite of financial tools for the Chia ecosystem,
 - Savings and accumulation features
 - Asset management tools
 
-### 📈 Option Contracts
+### 📈 Option Contracts — _UI preview_
 
 - Create and manage option contracts
 - Options trading interface
+
+> Option-contract **offers** are not yet supported by the client-side offer driver; they
+> are disabled in the UI with an explanation. Milestone **m-1** implements them.
 
 ## 🛠️ Tech Stack
 
@@ -75,9 +100,12 @@ Pengui provides a comprehensive suite of financial tools for the Chia ecosystem,
 
 ### State Management
 
-- **TanStack Query (React Query)** - Server state management and caching
-- **Redux + Redux Persist** - Client state management
-- **React Context** - Component-level state
+- **TanStack Query (React Query)** - Server and chain data
+- **Redux + Redux Persist** - WalletConnect sessions only (an implementation detail of that
+  transport; nothing outside the WalletConnect adapter imports it)
+- **Zustand** - Local UI state (sidebar, order book filters)
+- **Dexie / IndexedDB** - Offer persistence across reloads
+- **React Context** - The active wallet provider, network and theme
 
 ### Styling
 
@@ -171,7 +199,7 @@ To include the **Splash Stream** terminal (libp2p WASM), build the WASM first, o
 ```bash
 bun run build:wasm   # Build splash-wasm → public/wasm/ (requires Rust)
 bun run build:relay  # Build the splash-relay binary (requires Rust)
-bun run build:all    # WASM, then relay, then Next.js
+bun run build:all    # WASM, relay, Next.js, Chia wasm, then the Sage snapshot
 ```
 
 `build:wasm` adds the `wasm32-unknown-unknown` Rust target if it is missing and uses the
@@ -406,7 +434,11 @@ Contributions are welcome! Please ensure:
 
 ## 📚 Additional Resources
 
-- [Architecture Documentation](https://github.com/maximedogawa/pengui-wiki/blob/main/architecture/fsd-structure.md) - Feature-Sliced Design structure and guidelines
+- [Architecture overview](https://github.com/maximedogawa/pengui-wiki/blob/main/architecture/overview.md) - Routes, provider tree, state, feature flags, WASM — **read this first**
+- [Feature-Sliced Design structure](https://github.com/maximedogawa/pengui-wiki/blob/main/architecture/fsd-structure.md) - Layer rules and folder conventions
+- [Wallet integration](https://github.com/maximedogawa/pengui-wiki/blob/main/architecture/wallet-integration.md) - The WalletProvider seam, WalletConnect and Sage
+- [Sage in-app integration](https://github.com/maximedogawa/pengui-wiki/blob/main/architecture/sage-in-app-integration.md) - Running inside the Sage wallet
+- [Development workflow](https://github.com/maximedogawa/pengui-wiki/blob/main/development/workflow.md) - Three repos, Backlog.md, scripts, CI, deploy
 - [Testing guide](https://github.com/maximedogawa/pengui-wiki/blob/main/testing/README.md) and [tests/TESTING.md](./tests/TESTING.md) - Test layers and how to run them
 - [Deployment](./deployment/README.md) - ONCE-based deployment of the app and relays
 - [WalletConnect Integration](./src/shared/lib/walletConnect/README.md) - WalletConnect RPC layer details
