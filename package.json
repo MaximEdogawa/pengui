@@ -29,6 +29,7 @@
     "test:ct:ui": "playwright test --config playwright-ct.config.ts --ui",
     "test:e2e": "playwright test --config playwright.config.ts",
     "test:e2e:ui": "playwright test --config playwright.config.ts --ui",
+    "test:e2e:testnet-live": "playwright test --config playwright-testnet-live.config.ts",
     "test:all": "bun run test:unit && bun run test:integration && bun run test:e2e && bun run test:ct",
     "test:api-proxy": "bun run scripts/test-api-proxy.ts",
     "format": "prettier --write .",

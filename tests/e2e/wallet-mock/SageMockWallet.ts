@@ -179,6 +179,18 @@ export class SageMockWallet {
     this.activeTopics.clear();
   }
 
+  /** `chia:<network>:<fingerprint>` accounts of every session this peer currently holds. */
+  sessionAccounts(): string[] {
+    if (!this.client) return [];
+    return Array.from(this.activeTopics).flatMap((topic) => {
+      try {
+        return this.client.session.get(topic).namespaces.chia?.accounts ?? [];
+      } catch {
+        return [];
+      }
+    });
+  }
+
   // ── WalletConnect event handlers ───────────────────────────────────────────
 
   private async onProposal(
@@ -216,7 +228,15 @@ export class SageMockWallet {
 
     const { topic, id, params } = event;
     const method = params.request.method as string;
-    const result = this.buildResponse(method);
+
+    let result: unknown;
+    try {
+      result = await this.buildResponse(method, params.request.params);
+    } catch (err) {
+      // A wallet-side failure (chain lookup, signing, broadcast) becomes a
+      // regular error result so the dApp shows it instead of timing out.
+      result = { success: false, error: err instanceof Error ? err.message : String(err) };
+    }
 
     try {
       await this.client.respond({
@@ -233,9 +253,10 @@ export class SageMockWallet {
 
   /**
    * Build the response payload for a given Sage method name.
-   * Subclasses may override this to mix in real data.
+   * Subclasses may override this to mix in real data; `params` is the request
+   * payload the dApp sent (`request.params`), and the result may be a promise.
    */
-  protected buildResponse(method: string): unknown {
+  protected buildResponse(method: string, _params: unknown): unknown | Promise<unknown> {
     return (
       mockResponses[method] ?? {
         success: false,

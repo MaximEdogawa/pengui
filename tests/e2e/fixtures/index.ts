@@ -80,16 +80,27 @@ export const test = base.extend<E2EFixtures>({
  *  5. Pairs the mock wallet — it auto-approves the session.
  *  6. Waits for WalletConnectionGuard to redirect to /dashboard.
  */
+export interface AuthenticateOptions {
+  /**
+   * Network the app should request in the WalletConnect namespace. Seeds the
+   * `pengui-network` preference before the page reloads; the wallet peer must
+   * approve the matching `chia:<network>` chain.
+   */
+  network?: "mainnet" | "testnet";
+}
+
 export async function authenticatePageWithWallet(
   page: Page,
-  wallet: SageMockWallet
+  wallet: SageMockWallet,
+  options: AuthenticateOptions = {}
 ): Promise<void> {
   // ── 1. Clear persisted state ───────────────────────────────────────────
   await page.goto("/login");
-  await page.evaluate(() => {
+  await page.evaluate((network) => {
     localStorage.clear();
     sessionStorage.clear();
-  });
+    if (network) localStorage.setItem("pengui-network", network);
+  }, options.network ?? null);
 
   // ── 2. Reload and wait for Connect Wallet button ───────────────────────
   await page.reload();

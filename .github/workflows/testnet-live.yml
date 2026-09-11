@@ -1,0 +1,83 @@
+name: E2E testnet live
+
+# The app against the funded testnet11 automation wallet (tests/e2e-testnet-live).
+# Spends TXCH and waits for block confirmation, so it never runs on pull requests:
+# manual dispatch, or a weekly schedule. One run at a time — two jobs sharing the
+# wallet would race for the same coins. Secrets: TESTNET_WALLET_MNEMONIC,
+# TESTNET_WALLET_FINGERPRINT, TESTNET_WALLET_ADDRESS, NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID;
+# variables: TESTNET_EXPECTED_NETWORK (testnet), optional TESTNET_MIN_BALANCE_MOJOS,
+# TESTNET_MAX_TRANSFER_MOJOS, TESTNET_NODE_RPC_URL.
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 6 * * 1" # Mondays 06:17 UTC
+
+concurrency:
+  group: e2e-testnet-live
+  cancel-in-progress: false
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  e2e-testnet-live:
+    name: e2e-testnet-live (real testnet11 wallet)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      CI: true
+      NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID }}
+      NEXT_PUBLIC_FEATURE_FLAGS: ${{ vars.NEXT_PUBLIC_FEATURE_FLAGS || 'dashboard,offers,trading,wallet' }}
+      TESTNET_WALLET_MNEMONIC: ${{ secrets.TESTNET_WALLET_MNEMONIC }}
+      TESTNET_WALLET_FINGERPRINT: ${{ secrets.TESTNET_WALLET_FINGERPRINT || vars.TESTNET_WALLET_FINGERPRINT }}
+      TESTNET_WALLET_ADDRESS: ${{ secrets.TESTNET_WALLET_ADDRESS || vars.TESTNET_WALLET_ADDRESS }}
+      TESTNET_EXPECTED_NETWORK: ${{ vars.TESTNET_EXPECTED_NETWORK || 'testnet' }}
+      TESTNET_MIN_BALANCE_MOJOS: ${{ vars.TESTNET_MIN_BALANCE_MOJOS }}
+      TESTNET_MAX_TRANSFER_MOJOS: ${{ vars.TESTNET_MAX_TRANSFER_MOJOS }}
+      TESTNET_NODE_RPC_URL: ${{ vars.TESTNET_NODE_RPC_URL }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.2.23
+
+      - name: Cache bun packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+
+      - name: Install Playwright browsers
+        run: bunx playwright install --with-deps chromium
+
+      - name: Build application
+        run: bun run build
+
+      - name: Run e2e-testnet-live
+        run: bun run test:e2e:testnet-live
+
+      - name: Upload report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e2e-testnet-live-report
+          path: |
+            playwright-testnet-live-report/
+            test-results-testnet-live/
+          retention-days: 30
