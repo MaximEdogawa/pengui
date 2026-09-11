@@ -52,10 +52,12 @@ export const INITIAL_SAGE_BRIDGE_STATE: WalletState = {
   kind: "sage-bridge",
 };
 
-const OFFERS_UNSUPPORTED =
-  "Offers need the wallet.sign_coin_spends and wallet.get_asset_coins capabilities, which Sage has not granted.";
+const BUILD_OFFERS_UNSUPPORTED =
+  "Creating offers needs the wallet.sign_coin_spends and wallet.get_asset_coins capabilities, which Sage has not granted.";
+const BROADCAST_OFFERS_UNSUPPORTED =
+  "Taking or cancelling offers needs wallet.sign_coin_spends, wallet.get_asset_coins and wallet.send_transaction, which Sage has not fully granted.";
 
-function unsupported<T>(error = OFFERS_UNSUPPORTED): WalletResult<T> {
+function unsupported<T>(error: string): WalletResult<T> {
   return { success: false, error, code: "unsupported" };
 }
 
@@ -518,7 +520,7 @@ export function createSageBridgeProvider(
 
     async createOffer(request: OfferRequest): Promise<WalletResult<OfferResponse>> {
       if (!client) return notConnected<OfferResponse>();
-      if (!canBuildOffers(granted)) return unsupported<OfferResponse>();
+      if (!canBuildOffers(granted)) return unsupported<OfferResponse>(BUILD_OFFERS_UNSUPPORTED);
       try {
         const driver = await getOfferDriver();
         const data = await sageCreateOffer(driver, client, request);
@@ -530,7 +532,7 @@ export function createSageBridgeProvider(
 
     async takeOffer(request: TakeOfferRequest): Promise<WalletResult<TakeOfferResponse>> {
       if (!client) return notConnected<TakeOfferResponse>();
-      if (!canBroadcastOffers(granted)) return unsupported<TakeOfferResponse>();
+      if (!canBroadcastOffers(granted)) return unsupported<TakeOfferResponse>(BROADCAST_OFFERS_UNSUPPORTED);
       try {
         const driver = await getOfferDriver();
         const data = await sageTakeOffer(driver, client, request);
@@ -542,7 +544,7 @@ export function createSageBridgeProvider(
 
     async cancelOffer(request: CancelOfferRequest): Promise<WalletResult<CancelOfferResponse>> {
       if (!client) return notConnected<CancelOfferResponse>();
-      if (!canBroadcastOffers(granted)) return unsupported<CancelOfferResponse>();
+      if (!canBroadcastOffers(granted)) return unsupported<CancelOfferResponse>(BROADCAST_OFFERS_UNSUPPORTED);
       try {
         const driver = await getOfferDriver();
         const data = await sageCancelOffer(driver, client, request);

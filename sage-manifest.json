@@ -1,7 +1,7 @@
 {
   "manifestVersion": 0,
   "name": "Pengui",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "icon": "icons/icon-512x512.png",
   "entry": "index.html",
   "sageVersion": {
