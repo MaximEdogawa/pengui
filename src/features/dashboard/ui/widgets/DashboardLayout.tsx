@@ -56,9 +56,7 @@ function LayoutInner({ children }: DashboardLayoutProps) {
 
   if (!mounted) {
     return (
-      <div
-        className={`flex fixed inset-0 w-screen max-w-screen h-screen items-center justify-center m-0 p-0 ${t.bg}`}
-      >
+      <div className={`flex fixed inset-0 items-center justify-center m-0 p-0 ${t.bg}`}>
         <div
           className="h-8 w-8 animate-spin rounded-full border-2 border-current border-t-transparent opacity-60"
           aria-hidden
@@ -69,7 +67,7 @@ function LayoutInner({ children }: DashboardLayoutProps) {
 
   return (
     <div
-      className={`flex fixed inset-0 w-screen max-w-screen h-screen m-0 p-0 overflow-hidden ${t.bg} transition-colors duration-300`}
+      className={`flex fixed inset-0 m-0 p-0 overflow-hidden ${t.bg} transition-colors duration-300`}
     >
       {/* Subtle static background gradient */}
       <BackgroundGradient t={t} />
@@ -78,7 +76,7 @@ function LayoutInner({ children }: DashboardLayoutProps) {
       <DashboardSidebar activeItem={activeItem} t={t} isDark={isDark} onToggleTheme={toggleTheme} />
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden relative z-10 w-full max-w-full">
+      <div className="flex-1 flex flex-col overflow-hidden relative z-10 w-full max-w-full px-safe">
         {/* Top bar — mobile trigger is handled internally by SidebarTrigger */}
         <Header t={t} isDark={isDark} />
 
@@ -89,7 +87,7 @@ function LayoutInner({ children }: DashboardLayoutProps) {
           style={{ scrollbarGutter: "auto" }}
         >
           <InfoBanner currentVersion={APP_VERSION} />
-          <div className="w-full max-w-full h-full flex flex-col">{children}</div>
+          <div className="w-full max-w-full h-full flex flex-col pb-safe">{children}</div>
         </main>
       </div>
 

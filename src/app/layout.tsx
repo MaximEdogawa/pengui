@@ -5,13 +5,22 @@ import "./globals.css";
 import "@maximedogawa/chia-wallet-connect-react/styles";
 import "./wallet-connect.css";
 
-/** Locks page scale on mobile (and matches prior meta) so pinch does not break layout. */
+/**
+ * Pinch-zoom is deliberately left enabled.
+ *
+ * This used to set `minimumScale: 1`, `maximumScale: 1` and `userScalable: false`,
+ * which fails WCAG 2.1 SC 1.4.4 (Resize Text) and is a real barrier for low-vision
+ * users. The comment justifying it said the lock stopped pinch "breaking layout" — but
+ * the breakage was the app shell pinning the layout viewport (`position: fixed` on
+ * html/body plus a `w-screen h-screen` shell), which left zoomed content nowhere to pan
+ * to. That is fixed in globals.css and DashboardLayout, so the lock is no longer needed.
+ *
+ * `viewportFit: "cover"` draws into the notch and home-indicator areas; the `*-safe`
+ * utilities in globals.css keep content out of them.
+ */
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  minimumScale: 1,
-  maximumScale: 1,
-  userScalable: false,
   viewportFit: "cover",
 };
 
@@ -36,21 +45,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="Pengui" />
       </head>
-      <body
-        className="w-full overflow-x-hidden font-sans"
-        style={{
-          width: "100vw",
-          maxWidth: "100vw",
-          margin: 0,
-          padding: 0,
-          borderRight: "none",
-        }}
-      >
-        {/*
-          beforeInteractive scripts must live in this file (Next.js requirement).
-          WebKit-only: blocks default pinch-zoom when viewport meta is ignored.
-          Chart pinch uses touch events on the canvas; gesture events are separate.
-        */}
+      {/*
+        No `100vw` and no `overflow-x-hidden`: `100vw` includes the classic scrollbar
+        width, so it overflows, and the hidden overflow then made that invisible. Sizing
+        comes from globals.css instead, and horizontal overflow is now a visible bug —
+        asserted against by the mobile overflow suite.
+      */}
+      <body className="w-full font-sans">
+        {/* beforeInteractive scripts must live in this file (Next.js requirement). */}
         <Script
           id="disable-lit-dev-mode"
           strategy="beforeInteractive"
@@ -62,19 +64,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             `,
           }}
         />
-        <Script
-          id="prevent-webkit-gesture-zoom"
-          strategy="beforeInteractive"
-          dangerouslySetInnerHTML={{
-            __html: `
-(function(){
-  var p=function(e){e.preventDefault();};
-  document.addEventListener('gesturestart',p,{passive:false,capture:true});
-  document.addEventListener('gesturechange',p,{passive:false,capture:true});
-})();
-            `.trim(),
-          }}
-        />
+        {/*
+          A `prevent-webkit-gesture-zoom` script used to sit here, cancelling
+          `gesturestart` / `gesturechange` with capture. Those events are WebKit-only —
+          Safari and iOS, which is exactly Sage on iPhone — so it was a second pinch-zoom
+          blocker behind the viewport lock. Removed for the same accessibility reason.
+        */}
         <AppProviders>{children}</AppProviders>
       </body>
     </html>

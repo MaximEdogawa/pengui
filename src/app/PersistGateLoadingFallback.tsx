@@ -38,7 +38,7 @@ export function PersistGateLoadingFallback() {
   };
 
   return (
-    <div className="flex min-h-screen w-full flex-col items-center justify-center gap-6 bg-[#0f172a] px-4">
+    <div className="flex min-h-dvh w-full flex-col items-center justify-center gap-6 bg-[#0f172a] px-4">
       <div
         className="h-8 w-8 animate-spin rounded-full border-2 border-white/20 border-t-white"
         aria-hidden

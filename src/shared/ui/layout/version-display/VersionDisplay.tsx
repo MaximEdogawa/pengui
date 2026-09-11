@@ -39,7 +39,7 @@ export default function VersionDisplay({
   return (
     <div
       className={`
-        fixed bottom-2 right-3 z-10
+        fixed bottom-safe-2 right-safe-3 z-10
         text-[10px] font-light tracking-wide
         ${isDark ? "text-white/20" : "text-black/20"}
         select-none pointer-events-none

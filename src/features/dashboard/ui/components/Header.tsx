@@ -27,6 +27,9 @@ export function Header({ t, isDark }: HeaderProps) {
         // Layout: fixed height, full-bleed, flex row
         "h-12 flex items-center justify-between gap-2",
         "pl-1 pr-3 sm:pr-4",
+        // The header is the top edge of the app, so it absorbs the notch / status bar:
+        // its own background extends under them while its contents sit below.
+        "box-content pt-safe",
         // Glass background + border
         "backdrop-blur-3xl border-b transition-colors duration-300",
         t.card,
