@@ -9,9 +9,11 @@ import { logger } from "@/shared/lib/logger";
 import type {
   AssetBalance,
   AssetCoins,
+  CancelOfferRequest,
   CancelOfferResponse,
   GetPublicKeysRequest,
   GetTransactionsRequest,
+  OfferRequest,
   OfferResponse,
   SendSpendBundleRequest,
   SendSpendBundleResponse,
@@ -19,6 +21,7 @@ import type {
   SignMessageRequest,
   SignMessageResponse,
   SpendBundle,
+  TakeOfferRequest,
   TakeOfferResponse,
   TransactionRequest,
   TransactionResponse,
@@ -33,6 +36,8 @@ import type {
 } from "../types";
 import { createWalletStateStore, DISCONNECTED_WALLET_STATE } from "../walletStateStore";
 import {
+  canBroadcastOffers,
+  canBuildOffers,
   computeSageWalletCapabilities,
   mapSageAssetCoins,
   mapSageNetwork,
@@ -40,16 +45,19 @@ import {
   SAGE_OPTIONAL_CAPABILITIES,
   SAGE_REQUIRED_CAPABILITIES,
 } from "./sageMappers";
+import { getOfferDriver, sageCancelOffer, sageCreateOffer, sageTakeOffer } from "./sageOfferAdapter";
 
 export const INITIAL_SAGE_BRIDGE_STATE: WalletState = {
   ...DISCONNECTED_WALLET_STATE,
   kind: "sage-bridge",
 };
 
-const OFFERS_UNSUPPORTED =
-  "Offers are not yet available inside Sage. The client-side offer builder lands with TASK-001.04.";
+const BUILD_OFFERS_UNSUPPORTED =
+  "Creating offers needs the wallet.sign_coin_spends and wallet.get_asset_coins capabilities, which Sage has not granted.";
+const BROADCAST_OFFERS_UNSUPPORTED =
+  "Taking or cancelling offers needs wallet.sign_coin_spends, wallet.get_asset_coins and wallet.send_transaction, which Sage has not fully granted.";
 
-function unsupported<T>(error = OFFERS_UNSUPPORTED): WalletResult<T> {
+function unsupported<T>(error: string): WalletResult<T> {
   return { success: false, error, code: "unsupported" };
 }
 
@@ -510,14 +518,40 @@ export function createSageBridgeProvider(
       }
     },
 
-    async createOffer(): Promise<WalletResult<OfferResponse>> {
-      return unsupported<OfferResponse>();
+    async createOffer(request: OfferRequest): Promise<WalletResult<OfferResponse>> {
+      if (!client) return notConnected<OfferResponse>();
+      if (!canBuildOffers(granted)) return unsupported<OfferResponse>(BUILD_OFFERS_UNSUPPORTED);
+      try {
+        const driver = await getOfferDriver();
+        const data = await sageCreateOffer(driver, client, request);
+        return { success: true, data };
+      } catch (error) {
+        return requestFailed<OfferResponse>(error);
+      }
     },
-    async takeOffer(): Promise<WalletResult<TakeOfferResponse>> {
-      return unsupported<TakeOfferResponse>();
+
+    async takeOffer(request: TakeOfferRequest): Promise<WalletResult<TakeOfferResponse>> {
+      if (!client) return notConnected<TakeOfferResponse>();
+      if (!canBroadcastOffers(granted)) return unsupported<TakeOfferResponse>(BROADCAST_OFFERS_UNSUPPORTED);
+      try {
+        const driver = await getOfferDriver();
+        const data = await sageTakeOffer(driver, client, request);
+        return { success: true, data };
+      } catch (error) {
+        return requestFailed<TakeOfferResponse>(error);
+      }
     },
-    async cancelOffer(): Promise<WalletResult<CancelOfferResponse>> {
-      return unsupported<CancelOfferResponse>();
+
+    async cancelOffer(request: CancelOfferRequest): Promise<WalletResult<CancelOfferResponse>> {
+      if (!client) return notConnected<CancelOfferResponse>();
+      if (!canBroadcastOffers(granted)) return unsupported<CancelOfferResponse>(BROADCAST_OFFERS_UNSUPPORTED);
+      try {
+        const driver = await getOfferDriver();
+        const data = await sageCancelOffer(driver, client, request);
+        return { success: true, data };
+      } catch (error) {
+        return requestFailed<CancelOfferResponse>(error);
+      }
     },
   };
 }

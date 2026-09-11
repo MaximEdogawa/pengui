@@ -67,6 +67,9 @@ export function useOfferDetailsHandlers({
       await cancelOfferMutation.mutateAsync({
         id: offer.tradeId,
         feeInXch: fee,
+        // Only the Sage bridge reads this (no offer book of its own); WalletConnect
+        // ignores it. See sageOfferAdapter.ts.
+        offerString: offer.offerString,
       });
 
       await offerStorage.updateOffer(offer.id, { status: "cancelled" });

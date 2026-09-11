@@ -282,12 +282,15 @@ describe("createSageBridgeProvider", () => {
     const state = provider.getState();
     expect(state.isConnected).toBe(true);
     // The fake auto-grants whatever is requested, so every optional
-    // capability the adapter asks for ends up granted.
+    // capability the adapter asks for ends up granted -- including
+    // wallet.sign_coin_spends / wallet.send_transaction, which is why offers
+    // end up enabled too (wallet.get_asset_coins is already required).
     expect(state.capabilities.sendXch).toBe(true);
     expect(state.capabilities.signCoinSpends).toBe(true);
     expect(state.capabilities.signMessage).toBe(true);
-    // Offers are never enabled by this task regardless of what Sage grants.
-    expect(state.capabilities.createOffer).toBe(false);
+    expect(state.capabilities.createOffer).toBe(true);
+    expect(state.capabilities.takeOffer).toBe(true);
+    expect(state.capabilities.cancelOffer).toBe(true);
     expect(provider.getGrantedCapabilities()).toContain("wallet.send_xch");
   });
 
@@ -518,7 +521,7 @@ describe("createSageBridgeProvider", () => {
     });
   });
 
-  it("createOffer/takeOffer/cancelOffer report unsupported regardless of connection state", async () => {
+  it("createOffer/takeOffer/cancelOffer report unsupported without sign_coin_spends", async () => {
     const { provider } = providerWith();
     await provider.initialize();
 
@@ -531,6 +534,58 @@ describe("createSageBridgeProvider", () => {
     );
 
     expect(createResult.code).toBe("unsupported");
+    expect(takeResult.code).toBe("unsupported");
+    expect(cancelResult.code).toBe("unsupported");
+  });
+
+  it("createOffer attempts the real build once sign_coin_spends + get_asset_coins are granted", async () => {
+    // Full offer construction (real coins, real driver, real signing) is covered by
+    // sageOfferAdapter.test.ts; this only checks the capability gate lets the call
+    // through instead of short-circuiting to "unsupported". The fake client's
+    // placeholder coin fixture is not a real puzzle reveal, so the actual build fails
+    // downstream -- that failure, not "unsupported", is the proof the gate opened.
+    const { provider } = providerWith({
+      capabilities: [
+        "app.get_capabilities",
+        "app.request_capability_grant",
+        "environment.get_network",
+        "wallet.get_key",
+        "wallet.get_sync_status",
+        "wallet.get_asset_balance",
+        "wallet.get_asset_coins",
+        "wallet.sign_coin_spends",
+      ],
+    });
+    await provider.initialize();
+
+    const result = await provider.createOffer({
+      walletId: 1,
+      offerAssets: [{ assetId: "", amount: 1000 }],
+      requestAssets: [{ assetId: "cat-asset-id", amount: 1 }],
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.code).toBe("request-failed");
+  });
+
+  it("takeOffer/cancelOffer still report unsupported without send_transaction, even with sign_coin_spends", async () => {
+    const { provider } = providerWith({
+      capabilities: [
+        "app.get_capabilities",
+        "app.request_capability_grant",
+        "environment.get_network",
+        "wallet.get_key",
+        "wallet.get_sync_status",
+        "wallet.get_asset_balance",
+        "wallet.get_asset_coins",
+        "wallet.sign_coin_spends",
+      ],
+    });
+    await provider.initialize();
+
+    const takeResult = await provider.takeOffer({ offer: "offer1..." });
+    const cancelResult = await provider.cancelOffer({ id: "abc" });
+
     expect(takeResult.code).toBe("unsupported");
     expect(cancelResult.code).toBe("unsupported");
   });

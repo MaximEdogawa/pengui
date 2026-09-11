@@ -63,7 +63,7 @@ describe("computeSageWalletCapabilities", () => {
     });
   });
 
-  it("enables sendXch/signCoinSpends/signMessage once granted, offers and switchNetwork always false", () => {
+  it("enables sendXch/signCoinSpends/signMessage once granted; offers stay false without get_asset_coins", () => {
     const granted = ["wallet.send_xch", "wallet.sign_coin_spends", "wallet.sign_message"];
     expect(computeSageWalletCapabilities(granted)).toEqual({
       createOffer: false,
@@ -74,6 +74,27 @@ describe("computeSageWalletCapabilities", () => {
       signMessage: true,
       switchNetwork: false,
     });
+  });
+
+  it("enables createOffer once sign_coin_spends + get_asset_coins are both granted", () => {
+    const granted = ["wallet.sign_coin_spends", "wallet.get_asset_coins"];
+    const capabilities = computeSageWalletCapabilities(granted);
+    expect(capabilities.createOffer).toBe(true);
+    expect(capabilities.takeOffer).toBe(false);
+    expect(capabilities.cancelOffer).toBe(false);
+  });
+
+  it("enables takeOffer/cancelOffer only once send_transaction is granted too", () => {
+    const granted = ["wallet.sign_coin_spends", "wallet.get_asset_coins", "wallet.send_transaction"];
+    const capabilities = computeSageWalletCapabilities(granted);
+    expect(capabilities.createOffer).toBe(true);
+    expect(capabilities.takeOffer).toBe(true);
+    expect(capabilities.cancelOffer).toBe(true);
+  });
+
+  it("switchNetwork is always false regardless of granted capabilities", () => {
+    const granted = ["wallet.sign_coin_spends", "wallet.get_asset_coins", "wallet.send_transaction"];
+    expect(computeSageWalletCapabilities(granted).switchNetwork).toBe(false);
   });
 });
 
