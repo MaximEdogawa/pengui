@@ -1,5 +1,4 @@
 import "@testing-library/jest-dom";
-import { cleanup } from "@testing-library/react";
 import { Window } from "happy-dom";
 import { afterEach, mock } from "bun:test";
 
@@ -98,6 +97,11 @@ global.IntersectionObserver = class IntersectionObserver {
     return [];
   }
 } as typeof IntersectionObserver;
+
+// Imported only after the DOM globals above exist: Testing Library binds
+// `screen` to `document` when it loads, so a static import would be hoisted
+// above the happy-dom setup and every query would fail.
+const { cleanup } = await import("@testing-library/react");
 
 // Clean up after each test to prevent test pollution.
 //
