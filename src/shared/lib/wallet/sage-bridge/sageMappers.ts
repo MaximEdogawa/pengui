@@ -69,17 +69,31 @@ export function mapSageNetwork(result: EnvironmentGetNetworkResult): WalletNetwo
 }
 
 /**
+ * Enough to build and sign an offer client-side (`shared/lib/wallet/offers/`,
+ * TASK-001.04): `wallet.get_asset_coins` for candidate coins, `wallet.sign_coin_spends`
+ * to sign them. The maker side never broadcasts.
+ */
+export function canBuildOffers(granted: readonly string[]): boolean {
+  return granted.includes("wallet.sign_coin_spends") && granted.includes("wallet.get_asset_coins");
+}
+
+/** Building plus `wallet.send_transaction`, needed to take or cancel (both broadcast). */
+export function canBroadcastOffers(granted: readonly string[]): boolean {
+  return canBuildOffers(granted) && granted.includes("wallet.send_transaction");
+}
+
+/**
  * Which `WalletCapabilities` flags are enabled given Sage's granted
- * capability list. Offer operations are always `false` here: the Sage bridge
- * has no offer RPCs, and the client-side builder (TASK-001.04) is wired in a
- * later pass. `switchNetwork` is always `false`: Sage owns the active network.
+ * capability list. The Sage bridge has no offer RPCs at all: see
+ * {@link canBuildOffers} / {@link canBroadcastOffers}. `switchNetwork` is
+ * always `false`: Sage owns the active network.
  */
 export function computeSageWalletCapabilities(granted: readonly string[]): WalletCapabilities {
   const has = (capability: UserBridgeCapability) => granted.includes(capability);
   return {
-    createOffer: false,
-    takeOffer: false,
-    cancelOffer: false,
+    createOffer: canBuildOffers(granted),
+    takeOffer: canBroadcastOffers(granted),
+    cancelOffer: canBroadcastOffers(granted),
     sendXch: has("wallet.send_xch"),
     signCoinSpends: has("wallet.sign_coin_spends"),
     signMessage: has("wallet.sign_message"),

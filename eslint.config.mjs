@@ -8,6 +8,7 @@ export default [
       "**/dist/**",
       "**/.next/**",
       "**/out/**",
+      "**/sage-snapshot/**",
       "**/node_modules/**",
       "**/*.d.ts",
       "**/next-env.d.ts",

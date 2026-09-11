@@ -57,6 +57,7 @@ export async function cancelSingleOffer(
       id: string;
       feeInXch?: number;
       feeInMojos?: number;
+      offerString?: string;
     }) => Promise<unknown>;
   },
   updateOffer: (id: string, updates: { status: "cancelled" }) => Promise<void>
@@ -69,6 +70,9 @@ export async function cancelSingleOffer(
   await cancelOfferMutation.mutateAsync({
     id: offer.tradeId,
     feeInXch: offer.fee,
+    // Only the Sage bridge reads this (no offer book of its own); WalletConnect
+    // ignores it. See sageOfferAdapter.ts / useMyOffersSingleActions.ts.
+    offerString: offer.offerString,
   });
   await updateOffer(offer.id, { status: "cancelled" });
 }
@@ -83,6 +87,7 @@ export async function cancelAllActiveOffers(
       id: string;
       feeInXch?: number;
       feeInMojos?: number;
+      offerString?: string;
     }) => Promise<unknown>;
   },
   updateOffer: (id: string, updates: { status: "cancelled" }) => Promise<void>
