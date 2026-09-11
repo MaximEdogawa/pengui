@@ -1,4 +1,5 @@
 import "@testing-library/jest-dom";
+import { cleanup } from "@testing-library/react";
 import { Window } from "happy-dom";
 import { afterEach, mock } from "bun:test";
 
@@ -98,11 +99,20 @@ global.IntersectionObserver = class IntersectionObserver {
   }
 } as typeof IntersectionObserver;
 
-// Clean up DOM after each test to prevent test pollution
-// Manually clear document.body to ensure tests don't interfere with each other
+// Clean up after each test to prevent test pollution.
+//
+// Testing Library only registers its own cleanup when `afterEach` is a global,
+// which it is not under bun:test, so every rendered tree would otherwise stay
+// mounted for the rest of the run. That matters beyond leaked DOM: Radix
+// overlays (Dialog, Select, ...) set `pointer-events: none` on <body> while
+// open and restore it on unmount, so a still-mounted modal from an earlier
+// file makes every later user-event click throw "element inherits
+// pointer-events: none". CI walks the test files in a different order than
+// macOS, which is why this only surfaced there.
 afterEach(() => {
+  cleanup();
   if (typeof document !== "undefined" && document.body) {
-    // Remove all children from body to prevent test pollution
     document.body.replaceChildren();
+    document.body.removeAttribute("style");
   }
 });
