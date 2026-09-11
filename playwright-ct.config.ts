@@ -31,8 +31,16 @@ export default defineConfig({
       preview: {
         host: "127.0.0.1",
       },
+      // The sandbox is a plain browser: Next's `process.env.*` reads are not
+      // inlined here, so give the modules under test an empty env instead of a
+      // `process is not defined` crash. Stories set what they need explicitly.
+      define: {
+        "process.env": JSON.stringify({ NODE_ENV: "test" }),
+      },
       resolve: {
         alias: {
+          // next/image needs the Next image loader/runtime; render a plain <img>.
+          "next/image": path.resolve(__dirname, "./src/test-utils/mocks/next-image.tsx"),
           "@": path.resolve(__dirname, "./src"),
           "@/widgets": path.resolve(__dirname, "./src/widgets"),
           "@/features": path.resolve(__dirname, "./src/features"),
