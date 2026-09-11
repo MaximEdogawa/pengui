@@ -9,3 +9,4 @@ export * from "./factories/transaction-factory";
 export * from "./factories/asset-factory";
 export * from "./mocks/wallet";
 export * from "./mocks/api";
+export * from "./mocks/sageBridge";
