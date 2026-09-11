@@ -85,3 +85,7 @@ test-results/
 /crates/splash-wasm/target
 /crates/splash-wasm/pkg
 /crates/splash-wasm/public.sage-manifest.generated.json
+
+# e2e-testnet-live artefacts
+playwright-testnet-live-report/
+test-results-testnet-live/

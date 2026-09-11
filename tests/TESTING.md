@@ -38,7 +38,7 @@ The live-wallet layers are separate and are not part of the default suite yet.
 | Regression         | Known bug scenarios                            | Every PR                         | Mocked/deterministic | Prevent bug reintroduction                                         |
 | Acceptance         | Browser-level user behavior                    | Every PR and pre-release         | Mocked/deterministic | Validate user-facing app flows without live infrastructure         |
 | E2E                | Full browser flow through running Pengui       | Main branch and pre-release runs | Mocked/deterministic | Validate rendering, routing, modal flow, and app wiring            |
-| `e2e-testnet-live` | Real wallet plus real testnet                  | Manual and scheduled only        | Live                 | Validate real WalletConnect and testnet chain behavior             |
+| `e2e-testnet-live` | Real wallet plus real testnet                  | Manual dispatch and weekly schedule (`testnet-live.yml`) | Live       | Validate real WalletConnect and testnet chain behavior             |
 | `e2e-mainnet-live` | Real wallet plus real mainnet                  | Manual only, if ever enabled     | Live                 | Validate production-like wallet integration with strict safeguards |
 
 ## Current State
@@ -51,11 +51,18 @@ What exists now:
 - Playwright component tests (`tests/ct`) and Sage snapshot checks (`tests/sage`)
 - a mock Sage host (`src/test-utils/mocks/sageBridge.ts`) for the in-Sage wallet path in unit and component tests
 
+- `e2e-testnet-live` (`tests/e2e-testnet-live`, `bun run test:e2e:testnet-live`): the app against
+  a real, funded testnet11 wallet through a WalletConnect wallet peer that derives its key from
+  `TESTNET_WALLET_MNEMONIC`, reads coins from a testnet11 full node, signs with real BLS keys and
+  broadcasts. Manual dispatch and a weekly schedule only (`.github/workflows/testnet-live.yml`);
+  never part of `bun run test:e2e`.
+
 What does not exist yet:
 
-- a production-ready minimal WalletConnect wallet runtime
-- a real live-wallet E2E harness
-- a stable real testnet signing setup
+- a production-ready minimal WalletConnect wallet runtime for the mocked tiers (the live peer is
+  the first real signing runtime; `WALLET_RUNTIME_IMPLEMENTATION_SPEC.md` still describes the
+  fixture-mode design)
+- live offer create/cancel through the UI (the live peer implements the RPCs; no test drives them)
 - any mainnet live automation
 
 ## Required Boundary

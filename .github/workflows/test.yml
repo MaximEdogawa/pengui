@@ -6,6 +6,11 @@ on:
   push:
     branches: [main]
 
+# A newer push to the same PR supersedes the running check; pushes to main never cancel each other.
+concurrency:
+  group: tests-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
@@ -25,8 +30,21 @@ jobs:
         with:
           bun-version: 1.2.23
 
+      - name: Cache bun packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
+
       - name: Install dependencies
-        run: bun install
+        run: bun install --frozen-lockfile
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('bun.lock') }}
 
       - name: Install Playwright browsers
         run: bunx playwright install --with-deps chromium
@@ -61,6 +79,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 60
     if: github.ref == 'refs/heads/main'
+    # The regression tier pairs a mock wallet through the WalletConnect relay and
+    # skips itself without a project id; give the main-branch run the id so it runs.
+    env:
+      NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID }}
 
     steps:
       - name: Checkout code
@@ -71,8 +93,21 @@ jobs:
         with:
           bun-version: 1.2.23
 
+      - name: Cache bun packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: bun-${{ runner.os }}-${{ hashFiles('bun.lock') }}
+          restore-keys: bun-${{ runner.os }}-
+
       - name: Install dependencies
-        run: bun install
+        run: bun install --frozen-lockfile
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('bun.lock') }}
 
       - name: Install Playwright browsers
         run: bunx playwright install --with-deps
