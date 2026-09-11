@@ -24,6 +24,9 @@ next-env.d.ts
 # next.js
 **/.next/*
 /out/
+# Sage static snapshot copied locally for src/proxy.ts to serve during
+# `bun run dev` testing (see deployment/Dockerfile for the production copy).
+/sage-snapshot/
 
 
 # production
