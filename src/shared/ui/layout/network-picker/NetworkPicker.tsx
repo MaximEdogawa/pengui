@@ -35,7 +35,7 @@ export default function NetworkPicker() {
     return (
       <div
         className={cn(
-          "relative flex items-center gap-1.5 px-2 py-1 rounded-lg",
+          "tap-target relative flex items-center gap-1.5 px-2 py-1 rounded-lg",
           "backdrop-blur-[40px]",
           isDark
             ? "bg-white/10 border border-white/20 text-white shadow-lg shadow-black/20"
@@ -63,7 +63,7 @@ export default function NetworkPicker() {
         <button
           type="button"
           className={cn(
-            "relative flex items-center gap-1.5 px-2 py-1 rounded-lg",
+            "tap-target relative flex items-center gap-1.5 px-2 py-1 rounded-lg",
             "backdrop-blur-[40px] transition-all duration-200",
             "disabled:opacity-50 disabled:cursor-not-allowed",
             "hover:scale-[1.02] active:scale-[0.98]",

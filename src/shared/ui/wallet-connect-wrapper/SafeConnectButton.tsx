@@ -189,7 +189,7 @@ export function SafeConnectButton() {
   const shortAddress = address ? `${address.slice(0, 6)}…${address.slice(-4)}` : null;
 
   const buttonClasses = cn(
-    "relative flex items-center gap-1.5 px-2 py-1 rounded-lg",
+    "tap-target relative flex items-center gap-1.5 px-2 py-1 rounded-lg",
     "backdrop-blur-[40px] transition-all duration-200",
     "hover:scale-[1.02] active:scale-[0.98]",
     "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-cyan-400/30",
@@ -253,7 +253,10 @@ export function SafeConnectButton() {
             <div className="flex items-center gap-1.5">
               <Wallet className={cn("w-3.5 h-3.5", isDark ? "text-white/70" : "text-slate-600")} />
               <span
-                className={cn("text-[10px] font-medium", isDark ? "text-white/70" : "text-slate-600")}
+                className={cn(
+                  "text-[10px] font-medium",
+                  isDark ? "text-white/70" : "text-slate-600"
+                )}
               >
                 {shortAddress ?? "Connected"}
               </span>

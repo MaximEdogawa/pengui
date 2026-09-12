@@ -29,7 +29,7 @@ export default function LoginForm() {
         {/* Logo and Title Section */}
         <div className="flex flex-col items-center gap-3 sm:gap-4 w-full">
           <div className="relative group">
-            <div className="relative h-14 w-14 sm:h-16 sm:w-16 md:h-20 md:w-20 lg:h-24 lg:w-24 rounded-xl sm:rounded-2xl md:rounded-3xl bg-gradient-to-br from-cyan-500/20 via-sky-600/15 to-slate-800/25 backdrop-blur-lg border-2 border-cyan-200/25 shadow-xl sm:shadow-2xl shadow-cyan-500/15 group-hover:border-cyan-200/40 group-hover:shadow-cyan-400/20 transition-all duration-300 overflow-hidden p-2.5 sm:p-3 md:p-2.5">
+            <div className="relative h-14 w-14 sm:h-16 sm:w-16 md:h-20 md:w-20 lg:h-24 lg:w-24 rounded-xl sm:rounded-2xl md:rounded-3xl bg-gradient-to-br from-cyan-500/20 via-sky-600/15 to-slate-800/25 backdrop-blur-lg border-2 border-cyan-200/25 shadow-xl sm:shadow-2xl shadow-cyan-500/15 group-hover:border-cyan-200/40 group-hover:shadow-cyan-400/20 transition-all duration-300 overflow-hidden p-2.5 sm:p-3">
               <PenguinLogo fill priority className="drop-shadow-xl sm:drop-shadow-2xl" />
             </div>
           </div>

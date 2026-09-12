@@ -902,3 +902,27 @@
     right: calc(0.75rem + env(safe-area-inset-right, 0px));
   }
 }
+
+/*
+ * Touch targets.
+ *
+ * WCAG 2.5.8 asks for 24x24 CSS px minimum; the iOS and Material guidelines both say 44
+ * and that is the number worth designing to. Measured at 375px, every interactive element
+ * in the app was under it — heights clustered between 19px and 38px.
+ *
+ * Gated on `pointer: coarse` rather than a width breakpoint, deliberately. The constraint
+ * is the input device, not the screen: a tablet with a 1024px viewport is still touched
+ * with a finger, and a small desktop window is still driven with a mouse. It also means
+ * desktop density is untouched, so this does not have to trade against the density
+ * question in TASK-013.04 AC#5.
+ *
+ * `min-height` / `min-width` grow the control itself, which is right for standalone
+ * controls. Where controls sit shoulder to shoulder in a dense row, growing them changes
+ * the layout — those need a spacing decision, not this utility.
+ */
+@media (pointer: coarse) {
+  .tap-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}

@@ -171,7 +171,7 @@ export default function AssetSelector({
 
       {/* Asset Selection */}
       <div
-        className={`relative h-8 sm:h-10 md:h-8 flex items-center min-w-0 ${hideAmountInput ? "flex-[1]" : "flex-[0.7]"}`}
+        className={`relative h-11 md:h-8 flex items-center min-w-0 ${hideAmountInput ? "flex-[1]" : "flex-[0.7]"}`}
       >
         {asset.type === "cat" || asset.type === "xch" ? (
           <TokenSearchInput

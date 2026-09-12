@@ -260,6 +260,7 @@ export default function InfoBanner({
         <button
           onClick={handleDismiss}
           className={`
+            tap-target flex items-center justify-center
             p-0.5 rounded transition-colors duration-200
             hover:bg-white/10 active:bg-white/20
             ${styles.iconColor}

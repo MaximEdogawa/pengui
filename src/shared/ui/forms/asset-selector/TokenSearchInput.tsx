@@ -66,8 +66,8 @@ export default function TokenSearchInput({
             }
           }}
           placeholder={placeholder}
-          className={`w-full h-8 sm:h-10 md:h-8 font-medium rounded-lg border ${t.border} ${t.bg} transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/50 disabled:opacity-50 ${
-            selectedToken ? "pl-8 sm:pl-10 pr-1.5 sm:pr-3 md:pl-8" : "px-1.5 sm:px-3 md:px-2"
+          className={`w-full h-11 md:h-8 font-medium rounded-lg border ${t.border} ${t.bg} transition-all focus:outline-none focus:ring-2 focus:ring-blue-500/50 disabled:opacity-50 ${
+            selectedToken ? "pl-10 pr-3 md:pl-8" : "px-3 md:px-2"
           } text-[11px] sm:text-base md:text-sm ${
             isDark
               ? "text-white placeholder:text-gray-400"

@@ -39,10 +39,12 @@ export default function Button({
 }: ButtonProps) {
   const { isDark } = useThemeClasses();
 
+  // `tap-target` (globals.css) enforces the 44px touch minimum under a coarse pointer
+  // only, so desktop keeps its compact density.
   const sizeClasses = {
-    sm: "h-auto px-2 py-1 text-xs gap-1",
-    md: "h-auto px-3 py-1.5 text-xs gap-1.5",
-    lg: "h-auto px-4 py-2 text-sm gap-2",
+    sm: "tap-target h-auto px-2 py-1 text-xs gap-1",
+    md: "tap-target h-auto px-3 py-1.5 text-xs gap-1.5",
+    lg: "tap-target h-auto px-4 py-2 text-sm gap-2",
   };
 
   const variantClasses =
