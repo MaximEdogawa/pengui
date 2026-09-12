@@ -1077,10 +1077,10 @@ export function LightweightChart({
         isMobile={isMobile}
       />
 
-      <div className="flex-1 relative min-h-[300px] sm:min-h-[400px]">
+      <div className="flex-1 relative min-h-[min(300px,55dvh)] sm:min-h-[400px]">
         <div
           ref={chartContainerRef}
-          className="w-full h-full min-h-[300px] sm:min-h-[400px] touch-manipulation"
+          className="w-full h-full min-h-[min(300px,55dvh)] sm:min-h-[400px] touch-manipulation"
           style={{ touchAction: "none" }}
         />
       </div>

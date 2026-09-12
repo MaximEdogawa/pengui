@@ -82,19 +82,19 @@ export default function AssetPriceChart({ assetId }: AssetPriceChartProps) {
 
   if (isLoading)
     return (
-      <div className="h-[200px] sm:h-[260px] rounded-xl overflow-hidden">
+      <div className="aspect-[16/9] min-h-[180px] max-h-[320px] rounded-xl overflow-hidden">
         <LoadingState />
       </div>
     );
   if (isError)
     return (
-      <div className="h-[200px] sm:h-[260px] rounded-xl overflow-hidden">
+      <div className="aspect-[16/9] min-h-[180px] max-h-[320px] rounded-xl overflow-hidden">
         <ErrorState error={error} />
       </div>
     );
 
   return (
-    <div className="h-[200px] sm:h-[260px] rounded-xl overflow-hidden flex flex-col relative bg-[#131722] [&_*]:!min-h-0">
+    <div className="aspect-[16/9] min-h-[180px] max-h-[320px] rounded-xl overflow-hidden flex flex-col relative bg-[#131722] [&_*]:!min-h-0">
       {/* Controls — same layout as trading PriceChart */}
       <div className="absolute top-2 sm:top-3 left-1/2 -translate-x-1/2 z-10 flex items-center gap-1.5 sm:gap-2">
         {/* Chart Type Toggle */}

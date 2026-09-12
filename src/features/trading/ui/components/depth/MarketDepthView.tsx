@@ -143,7 +143,7 @@ export default function MarketDepthView({
       {/* Chart Section */}
       <div
         ref={chartContainerRef}
-        className="flex-1 min-h-[300px] sm:min-h-[400px] relative touch-manipulation"
+        className="flex-1 min-h-[min(300px,55dvh)] sm:min-h-[400px] relative touch-manipulation"
         style={{ touchAction: "none" }}
       >
         {chartSize.width > 0 && chartSize.height > 0 && (

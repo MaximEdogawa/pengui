@@ -83,7 +83,7 @@ function LayoutInner({ children }: DashboardLayoutProps) {
         {/* Content Area */}
         <main
           key={pathname}
-          className={`flex-1 overflow-y-auto overflow-x-hidden pt-1 lg:pt-2 pb-1.5 sm:pb-2 lg:pb-4 pl-1.5 sm:pl-2 lg:pl-3 pr-1.5 sm:pr-3 w-full max-w-full relative z-[1] min-h-0 border-r-0 scrollbar-modern ${isScrolling ? "scrollbar-visible" : ""}`}
+          className={`flex-1 overflow-y-auto pt-1 lg:pt-2 pb-1.5 sm:pb-2 lg:pb-4 pl-1.5 sm:pl-2 lg:pl-3 pr-1.5 sm:pr-3 w-full max-w-full relative z-[1] min-h-0 border-r-0 scrollbar-modern ${isScrolling ? "scrollbar-visible" : ""}`}
           style={{ scrollbarGutter: "auto" }}
         >
           <InfoBanner currentVersion={APP_VERSION} />
